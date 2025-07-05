@@ -1,0 +1,70 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install
+        
+      - name: Get current version
+        id: current-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        
+      - name: Get published version
+        id: published-version
+        run: |
+          PUBLISHED_VERSION=$(npm view @firtoz/router-toolkit version 2>/dev/null || echo "0.0.0")
+          echo "version=$PUBLISHED_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Check if version changed
+        id: version-check
+        run: |
+          if [ "${{ steps.current-version.outputs.version }}" != "${{ steps.published-version.outputs.version }}" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Version changed: ${{ steps.published-version.outputs.version }} → ${{ steps.current-version.outputs.version }}"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Version unchanged: ${{ steps.current-version.outputs.version }}"
+          fi
+          
+      - name: Type check
+        if: steps.version-check.outputs.changed == 'true'
+        run: bun run typecheck
+        
+      - name: Lint
+        if: steps.version-check.outputs.changed == 'true'
+        run: bun run lint
+        
+      - name: Publish to npm
+        if: steps.version-check.outputs.changed == 'true'
+        run: bun run release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+      - name: Summary
+        run: |
+          if [ "${{ steps.version-check.outputs.changed }}" == "true" ]; then
+            echo "🚀 Successfully published version ${{ steps.current-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⏭️ Skipped publishing - version ${{ steps.current-version.outputs.version }} already published" >> $GITHUB_STEP_SUMMARY 

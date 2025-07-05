@@ -1,6 +1,6 @@
 {
   "name": "@firtoz/router-toolkit",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
@@ -11,7 +11,10 @@
       "import": "./src/index.ts",
       "require": "./src/index.ts"
     },
-    "./*": ["./src/*.ts", "./src/*.tsx"]
+    "./*": [
+      "./src/*.ts",
+      "./src/*.tsx"
+    ]
   },
   "files": [
     "src/**/*",
@@ -21,7 +24,10 @@
     "build": "echo 'No build step - using TypeScript source directly'",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "echo 'No tests yet'"
+    "test": "echo 'No tests yet'",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "keywords": [
     "react-router",
@@ -49,6 +55,7 @@
     "zod": "^3.25.69"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.5",
     "@types/react": "^19.1.8",
     "react": "^19.1.0",
     "react-router": "^7.6.3",

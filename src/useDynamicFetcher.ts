@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { href, useFetcher, type useLoaderData } from "react-router";
 import type { Func } from "./types/Func";
-import type { HrefArgs, RegisterPages } from "./types/HrefArgs";
+import type { HrefArgs } from "./types/HrefArgs";
+import type { RegisterPages } from "./types/RegisterPages";
 
 type RouteModule = {
 	file: keyof RegisterPages;

@@ -7,8 +7,9 @@ import {
 	useFetcher,
 } from "react-router";
 import type { z } from "zod/v4";
-import { HrefArgs, RegisterPages } from "./types/HrefArgs";
-import { Func } from "./types";
+import type { HrefArgs } from "./types/HrefArgs";
+import type { Func } from "./types/Func";
+import type { RegisterPages } from "./types/RegisterPages";
 
 type RouteModule = {
 	file: keyof RegisterPages;
