@@ -66,4 +66,5 @@ jobs:
           if [ "${{ steps.version-check.outputs.changed }}" == "true" ]; then
             echo "🚀 Successfully published version ${{ steps.current-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⏭️ Skipped publishing - version ${{ steps.current-version.outputs.version }} already published" >> $GITHUB_STEP_SUMMARY 
+            echo "⏭️ Skipped publishing - version ${{ steps.current-version.outputs.version }} already published" >> $GITHUB_STEP_SUMMARY
+          fi 
