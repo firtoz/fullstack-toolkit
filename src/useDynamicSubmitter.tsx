@@ -7,8 +7,8 @@ import {
 	useFetcher,
 } from "react-router";
 import type { z } from "zod/v4";
-import type { HrefArgs } from "./types/HrefArgs";
 import type { Func } from "./types/Func";
+import type { HrefArgs } from "./types/HrefArgs";
 import type { RegisterPages } from "./types/RegisterPages";
 
 type RouteModule = {
@@ -25,15 +25,23 @@ type SubmitFunc<TModule extends RouteModule> = (
 ) => Promise<void>;
 
 type SubmitForm = (
-	props: Omit<FetcherFormProps & React.RefAttributes<HTMLFormElement>, "action" | "method"> & {
+	props: Omit<
+		FetcherFormProps & React.RefAttributes<HTMLFormElement>,
+		"action" | "method"
+	> & {
 		method: Exclude<SubmitOptions["method"], "GET">;
 	},
 ) => React.ReactElement;
 
 export const useDynamicSubmitter = <TInfo extends RouteModule>(
 	path: TInfo["file"],
-	...args: TInfo["file"] extends "undefined" ? HrefArgs<"/"> : HrefArgs<TInfo["file"]>
-): Omit<ReturnType<typeof useFetcher<TInfo["action"]>>, "load" | "submit" | "Form"> & {
+	...args: TInfo["file"] extends "undefined"
+		? HrefArgs<"/">
+		: HrefArgs<TInfo["file"]>
+): Omit<
+	ReturnType<typeof useFetcher<TInfo["action"]>>,
+	"load" | "submit" | "Form"
+> & {
 	submit: SubmitFunc<TInfo>;
 	Form: SubmitForm;
 } => {

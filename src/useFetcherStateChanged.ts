@@ -8,7 +8,10 @@ import type { useFetcher } from "react-router";
  */
 export const useFetcherStateChanged = (
 	fetcher: Pick<ReturnType<typeof useFetcher>, "state">,
-	onChange: (lastState: typeof fetcher.state | undefined, newState: typeof fetcher.state) => void,
+	onChange: (
+		lastState: typeof fetcher.state | undefined,
+		newState: typeof fetcher.state,
+	) => void,
 ) => {
 	const lastStateRef = useRef<typeof fetcher.state>(fetcher.state);
 
@@ -18,4 +21,4 @@ export const useFetcherStateChanged = (
 			lastStateRef.current = fetcher.state;
 		}
 	}, [fetcher.state, onChange]);
-}; 
+};

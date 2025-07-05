@@ -11,7 +11,9 @@ type RouteModule = {
 
 export const useDynamicFetcher = <TInfo extends RouteModule>(
 	path: TInfo["file"],
-	...args: TInfo["file"] extends "undefined" ? HrefArgs<"/"> : HrefArgs<TInfo["file"]>
+	...args: TInfo["file"] extends "undefined"
+		? HrefArgs<"/">
+		: HrefArgs<TInfo["file"]>
 ): Omit<ReturnType<typeof useFetcher<TInfo["loader"]>>, "load" | "submit"> & {
 	load: (queryParams?: Record<string, string>) => Promise<void>;
 } => {
@@ -52,7 +54,9 @@ const fetchCache = new Map<string, unknown>();
 // Hook that uses regular fetch instead of useFetcher to avoid route invalidation
 export const useCachedFetch = <TInfo extends RouteModule>(
 	path: TInfo["file"],
-	...args: TInfo["file"] extends "undefined" ? HrefArgs<"/"> : HrefArgs<TInfo["file"]>
+	...args: TInfo["file"] extends "undefined"
+		? HrefArgs<"/">
+		: HrefArgs<TInfo["file"]>
 ): {
 	data: ReturnType<typeof useLoaderData<TInfo["loader"]>> | undefined;
 	isLoading: boolean;
@@ -74,7 +78,9 @@ export const useCachedFetch = <TInfo extends RouteModule>(
 		ReturnType<typeof useLoaderData<TInfo["loader"]>> | undefined
 	>(() =>
 		fetchCache.has(cacheKey)
-			? (fetchCache.get(cacheKey) as ReturnType<typeof useLoaderData<TInfo["loader"]>>)
+			? (fetchCache.get(cacheKey) as ReturnType<
+					typeof useLoaderData<TInfo["loader"]>
+				>)
 			: undefined,
 	);
 
@@ -112,4 +118,4 @@ export const useCachedFetch = <TInfo extends RouteModule>(
 	}, [url, cacheKey]);
 
 	return { data, isLoading, error };
-}; 
+};

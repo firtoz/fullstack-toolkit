@@ -23,7 +23,8 @@
   "scripts": {
     "build": "echo 'No build step - using TypeScript source directly'",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "biome check src",
+    "format": "biome format src --write",
     "test": "echo 'No tests yet'",
     "changeset": "changeset",
     "version": "changeset version",
@@ -55,6 +56,7 @@
     "zod": "^3.25.69"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.0.6",
     "@changesets/cli": "^2.29.5",
     "@types/react": "^19.1.8",
     "react": "^19.1.0",
