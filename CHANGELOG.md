@@ -1,5 +1,11 @@
 # @firtoz/router-toolkit
 
+## 0.2.0
+
+### Minor Changes
+
+- Update imports
+
 ## 0.1.5
 
 ### Patch Changes

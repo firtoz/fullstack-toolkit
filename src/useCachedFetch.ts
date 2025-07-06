@@ -19,8 +19,7 @@ export const useCachedFetch = <TInfo extends RouteWithLoaderModule>(
 } => {
 	// Generate URL using href, same as useDynamicFetcher
 	const url = useMemo(() => {
-		// biome-ignore lint/suspicious/noExplicitAny: Complex conditional typing prevents TypeScript from inferring args when spreading
-		return href<typeof path>(path, ...(args as any));
+		return href<typeof path>(path, ...args);
 	}, [path, args]);
 
 	// Use the generated URL as the cache key
