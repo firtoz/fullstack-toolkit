@@ -13,11 +13,14 @@ export type DefiniteSuccess<T = undefined> = {
 			result: T;
 		});
 
-export type MaybeError<T = undefined, TError = string> = DefiniteSuccess<T> | DefiniteError<TError>;
+export type MaybeError<T = undefined, TError = string> =
+	| DefiniteSuccess<T>
+	| DefiniteError<TError>;
 
-export type AssumeSuccess<T extends MaybeError<unknown>> = Exclude<T, undefined> extends MaybeError<
-	infer U
->
+export type AssumeSuccess<T extends MaybeError<unknown>> = Exclude<
+	T,
+	undefined
+> extends MaybeError<infer U>
 	? U
 	: never;
 
