@@ -26,7 +26,8 @@
     "lint": "biome check src",
     "format": "biome format src --write",
     "test": "echo 'No tests yet'",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "prepare": "husky"
   },
   "keywords": [
     "react-router",
@@ -55,11 +56,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.3",
     "@semantic-release/npm": "^12.0.2",
     "@types/react": "^19.1.8",
+    "husky": "^9.1.7",
     "react": "^19.1.0",
     "react-router": "^7.6.3",
     "semantic-release": "^24.2.7",
