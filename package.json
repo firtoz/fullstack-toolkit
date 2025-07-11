@@ -26,9 +26,7 @@
     "lint": "biome check src",
     "format": "biome format src --write",
     "test": "echo 'No tests yet'",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "changeset publish"
+    "semantic-release": "semantic-release"
   },
   "keywords": [
     "react-router",
@@ -57,10 +55,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",
-    "@changesets/cli": "^2.29.5",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.3",
+    "@semantic-release/npm": "^12.0.2",
     "@types/react": "^19.1.8",
     "react": "^19.1.0",
     "react-router": "^7.6.3",
+    "semantic-release": "^24.2.7",
     "typescript": "^5.8.3",
     "zod": "^3.25.74"
   },
