@@ -13,21 +13,7 @@
     "format": "bun run --filter='*' format",
     "test": "bun run --filter='*' test",
     "prepare": "husky",
-    "release": "multi-semantic-release"
-  },
-  "multi-semantic-release": {
-    "deps": {
-      "bump": false,
-      "release": false
-    },
-    "debug": false,
-    "sequentialInit": false,
-    "ignoreChanges": [
-      "*.md",
-      "docs/**",
-      "test/**",
-      "tests/**"
-    ]
+    "release": "bun workspaces run semantic-release -e semantic-release-monorepo"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",
@@ -40,10 +26,10 @@
     "@semantic-release/npm": "^12.0.2",
     "@types/react": "^19.1.8",
     "husky": "^9.1.7",
-    "multi-semantic-release": "^3.0.2",
     "react": "^19.1.0",
     "react-router": "^7.6.3",
     "semantic-release": "^24.2.7",
+    "semantic-release-monorepo": "^8.0.2",
     "typescript": "^5.8.3",
     "zod": "^3.25.74"
   },
