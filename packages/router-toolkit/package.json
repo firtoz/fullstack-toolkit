@@ -49,10 +49,8 @@
   "bugs": {
     "url": "https://github.com/firtoz/router-toolkit/issues"
   },
-  "dependencies": {
-    "@firtoz/maybe-error": "workspace:*"
-  },
   "peerDependencies": {
+    "@firtoz/maybe-error": "^1.0.0",
     "react": "^19.1.0",
     "react-router": "^7.6.3",
     "zod": "^3.25.69"
