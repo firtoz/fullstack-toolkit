@@ -1,3 +1,13 @@
+## @firtoz/router-toolkit [1.0.3](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.2...@firtoz/router-toolkit@1.0.3) (2025-07-12)
+
+
+
+
+
+### Dependencies
+
+* **@firtoz/maybe-error:** upgraded to 1.0.3
+
 ## @firtoz/router-toolkit [1.0.2](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.1...@firtoz/router-toolkit@1.0.2) (2025-07-12)
 
 
