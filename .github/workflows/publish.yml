@@ -32,14 +32,14 @@ jobs:
       - name: Install dependencies
         run: bun install
         
-      - name: Type check all packages
+      - name: Type check
         run: bun run typecheck
         
-      - name: Lint all packages
+      - name: Lint
         run: bun run lint
         
-      - name: Release packages
+      - name: Release
         run: bun run release
         env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_FIRTOZ_CI_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
