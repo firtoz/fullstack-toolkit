@@ -1,5 +1,6 @@
 {
   "branches": ["main"],
+  "tagFormat": "@firtoz/maybe-error@${version}",
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
