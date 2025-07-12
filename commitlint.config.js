@@ -1,126 +1,28 @@
-const fs = require('fs');
-const path = require('path');
 const { execSync } = require('child_process');
 
-// Strategy 1: Use bun workspaces command
-function getPackagesFromBun() {
+// Use npm query to discover workspace packages
+function getWorkspacePackages() {
   try {
-    const output = execSync('bun pm ls', { 
+    const output = execSync('npm query .workspace', { 
       encoding: 'utf8', 
       stdio: 'pipe',
       cwd: __dirname 
     });
     
-    // Parse workspace packages from bun output
-    const packages = [];
-    const lines = output.split('\n');
+    const workspaces = JSON.parse(output);
     
-    for (const line of lines) {
-      // Look for workspace packages (format: ├── @scope/package-name@workspace:packages/package-name)
-      const workspaceMatch = line.match(/[@]([^/]+)\/([^@]+)@workspace:/);
-      if (workspaceMatch) {
-        const packageName = workspaceMatch[2]; // Extract package-name from @scope/package-name
-        packages.push(packageName);
-      }
-    }
+    // Extract package names from workspace data
+    const packages = workspaces
+      .map(pkg => pkg.name) // Get full name like "@firtoz/maybe-error"
+      .filter(name => name && name.includes('/')) // Ensure it has a scope
+      .map(name => name.split('/')[1]); // Extract "maybe-error" from "@firtoz/maybe-error"
     
-    return packages.length > 0 ? packages : null;
-  } catch (error) {
-    console.warn('Could not detect packages via bun:', error.message);
-    return null;
-  }
-}
-
-// Strategy 2: Parse package.json workspaces
-function getPackagesFromWorkspaces() {
-  try {
-    const packageJsonPath = path.join(__dirname, 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    
-    if (!packageJson.workspaces) return null;
-    
-    const workspacePatterns = Array.isArray(packageJson.workspaces) 
-      ? packageJson.workspaces 
-      : packageJson.workspaces.packages || [];
-    
-    const packages = [];
-    
-    for (const pattern of workspacePatterns) {
-      // Handle simple patterns like "packages/*"
-      if (pattern.endsWith('/*')) {
-        const baseDir = pattern.slice(0, -2);
-        const fullPath = path.join(__dirname, baseDir);
-        
-        if (fs.existsSync(fullPath)) {
-          const dirs = fs.readdirSync(fullPath, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
-          
-          packages.push(...dirs);
-        }
-      }
-      // Handle specific package paths like "packages/specific-package"
-      else {
-        const packagePath = path.join(__dirname, pattern);
-        if (fs.existsSync(packagePath)) {
-          const packageName = path.basename(pattern);
-          packages.push(packageName);
-        }
-      }
-    }
-    
-    return packages.length > 0 ? packages : null;
-  } catch (error) {
-    console.warn('Could not detect packages via workspaces:', error.message);
-    return null;
-  }
-}
-
-// Strategy 3: Fallback to filesystem discovery
-function getPackagesFromFilesystem() {
-  try {
-    const packagesDir = path.join(__dirname, 'packages');
-    
-    if (!fs.existsSync(packagesDir)) return [];
-    
-    const packages = fs.readdirSync(packagesDir, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
-    
+    console.log('✅ Found workspace packages:', packages);
     return packages;
   } catch (error) {
-    console.warn('Could not detect packages via filesystem:', error.message);
+    console.warn('Could not detect workspace packages:', error.message);
     return [];
   }
-}
-
-// Multi-strategy package discovery
-function getWorkspacePackages() {
-  console.log('🔍 Detecting workspace packages...');
-  
-  // Try bun first
-  const bunPackages = getPackagesFromBun();
-  if (bunPackages) {
-    console.log('✅ Found packages via bun:', bunPackages);
-    return bunPackages;
-  }
-  
-  // Try package.json workspaces
-  const workspacePackages = getPackagesFromWorkspaces();
-  if (workspacePackages) {
-    console.log('✅ Found packages via workspaces:', workspacePackages);
-    return workspacePackages;
-  }
-  
-  // Fallback to filesystem
-  const filesystemPackages = getPackagesFromFilesystem();
-  if (filesystemPackages.length > 0) {
-    console.log('✅ Found packages via filesystem:', filesystemPackages);
-    return filesystemPackages;
-  }
-  
-  console.warn('⚠️  No packages detected, using empty array');
-  return [];
 }
 
 // Get valid scopes from workspace packages
@@ -156,7 +58,7 @@ module.exports = {
     'scope-enum': [
       2,
       'always',
-      workspacePackages, // 🚀 Multi-strategy package discovery!
+      workspacePackages, // 🚀 npm query workspace discovery!
     ],
     'type-case': [2, 'always', 'lower-case'],
     'type-empty': [2, 'never'],
