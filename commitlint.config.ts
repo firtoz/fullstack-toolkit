@@ -1,7 +1,15 @@
-const { execSync } = require("node:child_process");
+import { execSync } from "node:child_process";
+import type { UserConfig } from "@commitlint/types";
+
+interface WorkspacePackage {
+	name: string;
+	version: string;
+	location: string;
+	// Other properties exist but we only need these
+}
 
 // Use npm query to discover workspace packages
-function getWorkspacePackages() {
+function getWorkspacePackages(): string[] {
 	try {
 		const output = execSync("npm query .workspace", {
 			encoding: "utf8",
@@ -9,18 +17,18 @@ function getWorkspacePackages() {
 			cwd: __dirname,
 		});
 
-		const workspaces = JSON.parse(output);
+		const workspaces: WorkspacePackage[] = JSON.parse(output);
 
 		// Extract package names from workspace data
 		const packages = workspaces
 			.map((pkg) => pkg.name) // Get full name like "@firtoz/maybe-error"
-			.filter((name) => name?.includes("/")) // Ensure it has a scope
+			.filter((name): name is string => name?.includes("/")) // Type guard + ensure it has a scope
 			.map((name) => name.split("/")[1]); // Extract "maybe-error" from "@firtoz/maybe-error"
 
 		console.log("✅ Found workspace packages:", packages);
 		return packages;
 	} catch (error) {
-		console.warn("Could not detect workspace packages:", error.message);
+		console.warn("Could not detect workspace packages:", (error as Error).message);
 		return [];
 	}
 }
@@ -28,7 +36,7 @@ function getWorkspacePackages() {
 // Get valid scopes from workspace packages
 const workspacePackages = getWorkspacePackages();
 
-module.exports = {
+const configuration: UserConfig = {
 	extends: ["@commitlint/config-conventional"],
 	ignores: [
 		// Ignore semantic-release commits
@@ -77,3 +85,5 @@ module.exports = {
 		"footer-max-line-length": [2, "always", 100],
 	},
 };
+
+export default configuration; 
