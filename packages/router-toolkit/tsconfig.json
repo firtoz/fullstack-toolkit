@@ -19,12 +19,11 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@firtoz/maybe-error": ["./packages/maybe-error/src"],
-      "@firtoz/router-toolkit": ["./packages/router-toolkit/src"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
-    "packages/*/src/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules"

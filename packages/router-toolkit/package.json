@@ -1,0 +1,65 @@
+{
+  "name": "@firtoz/router-toolkit",
+  "version": "1.0.0",
+  "description": "Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
+    },
+    "./*": [
+      "./src/*.ts",
+      "./src/*.tsx"
+    ]
+  },
+  "files": [
+    "src/**/*",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "echo 'No build step - using TypeScript source directly'",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src",
+    "format": "biome format src --write",
+    "test": "echo 'No tests yet'"
+  },
+  "keywords": [
+    "react-router",
+    "react-router-7",
+    "framework-mode",
+    "hooks",
+    "typescript",
+    "form-submission",
+    "fetching",
+    "type-safe"
+  ],
+  "author": "Firtina Ozbalikchi <firtoz@github.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/firtoz/router-toolkit#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/firtoz/router-toolkit.git",
+    "directory": "packages/router-toolkit"
+  },
+  "bugs": {
+    "url": "https://github.com/firtoz/router-toolkit/issues"
+  },
+  "dependencies": {
+    "@firtoz/maybe-error": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-router": "^7.6.3",
+    "zod": "^3.25.69"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+} 

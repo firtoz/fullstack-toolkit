@@ -1,0 +1,14 @@
+{
+  "deps": {
+    "bump": "satisfy",
+    "release": "patch"
+  },
+  "debug": false,
+  "sequentialInit": false,
+  "ignoreChanges": [
+    "*.md",
+    "docs/**",
+    "test/**",
+    "tests/**"
+  ]
+} 

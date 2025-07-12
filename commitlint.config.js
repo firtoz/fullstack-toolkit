@@ -25,6 +25,14 @@ module.exports = {
         'revert',   // Reverting commits
       ],
     ],
+    'scope-enum': [
+      2,
+      'always',
+      [
+        'router-toolkit',  // Changes to router-toolkit package
+        'maybe-error',     // Changes to maybe-error package
+      ],
+    ],
     'type-case': [2, 'always', 'lower-case'],
     'type-empty': [2, 'never'],
     'scope-case': [2, 'always', 'lower-case'],

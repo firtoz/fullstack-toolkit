@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/ 
 
+# Build outputs (we ship TypeScript files directly)
+dist/
+
 # Environment variables
 .env.local
 .env.*.local 
