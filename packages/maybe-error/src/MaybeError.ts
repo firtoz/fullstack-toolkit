@@ -66,7 +66,7 @@ export type DefiniteSuccess<T = undefined> = {
 	: {
 			result: T;
 		});
- 
+
 /**
  * A discriminated union representing either a successful result or an error.
  *
