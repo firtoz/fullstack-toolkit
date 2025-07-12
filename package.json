@@ -13,7 +13,7 @@
     "format": "bun run --filter='*' format",
     "test": "bun run --filter='*' test",
     "prepare": "husky",
-    "release": "bun workspaces run semantic-release -e semantic-release-monorepo"
+    "release": "bun run --filter='*' semantic-release -e semantic-release-monorepo"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",
