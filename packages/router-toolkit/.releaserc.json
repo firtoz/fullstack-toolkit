@@ -27,6 +27,13 @@
           }
         ]
       }
+    ],
+    [
+      "@semantic-release/npm",
+      {
+        "npmPublish": true,
+        "tarball": false
+      }
     ]
   ]
 } 
