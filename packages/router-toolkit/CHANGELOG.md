@@ -1,3 +1,18 @@
+## @firtoz/router-toolkit [1.0.2](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.1...@firtoz/router-toolkit@1.0.2) (2025-07-12)
+
+
+### Bug Fixes
+
+* correct tag format for scoped packages ([edc51c5](https://github.com/firtoz/router-toolkit/commit/edc51c596128eb7bc3470e743e2600bdca24dfb4))
+
+
+
+
+
+### Dependencies
+
+* **@firtoz/maybe-error:** upgraded to 1.0.2
+
 ## @firtoz/router-toolkit [1.0.1](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.0...@firtoz/router-toolkit@1.0.1) (2025-07-12)
 
 
