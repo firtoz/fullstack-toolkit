@@ -25,7 +25,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check src",
     "format": "biome format src --write",
-    "test": "echo 'No tests yet'"
+    "test": "echo 'No tests yet'",
+    "semantic-release": "semantic-release -e semantic-release-monorepo"
   },
   "keywords": [
     "react-router",
