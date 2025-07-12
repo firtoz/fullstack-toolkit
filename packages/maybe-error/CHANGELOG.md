@@ -1,3 +1,10 @@
+## @firtoz/maybe-error [1.0.3](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.0.2...@firtoz/maybe-error@1.0.3) (2025-07-12)
+
+
+### Bug Fixes
+
+* **maybe-error:** improve documentation clarity ([17bd6a4](https://github.com/firtoz/router-toolkit/commit/17bd6a490ce920fbb1a5d779c9ea3fd0d3a2ce9b))
+
 ## @firtoz/maybe-error [1.0.2](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.0.1...@firtoz/maybe-error@1.0.2) (2025-07-12)
 
 
