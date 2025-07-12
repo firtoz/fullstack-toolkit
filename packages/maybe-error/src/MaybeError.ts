@@ -3,7 +3,6 @@
  *
  * This module provides a Result-like pattern for handling operations that may fail,
  * inspired by Rust's Result type and functional programming error handling patterns.
- * Compatible with TypeScript 5.0+ for optimal type inference.
  *
  * @example
  * ```typescript
