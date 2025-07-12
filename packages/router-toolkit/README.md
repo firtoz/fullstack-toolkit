@@ -1,6 +1,6 @@
 # @firtoz/router-toolkit
 
-Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management.
+Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management for React Router 7 framework mode.
 
 ## Features
 
