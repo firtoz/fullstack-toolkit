@@ -1,3 +1,19 @@
+## @firtoz/router-toolkit [1.0.4](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.0.4) (2025-07-12)
+
+
+### Bug Fixes
+
+* **maybe-error:** improve README description for better clarity ([f476222](https://github.com/firtoz/router-toolkit/commit/f476222e3ef8b636df4751ea190cc1ebc89df66e))
+* **maybe-error:** reorder release plugins for workspace deps ([0be6461](https://github.com/firtoz/router-toolkit/commit/0be64612955279f9dc015a2ac81260727a3eedb0))
+
+
+
+
+
+### Dependencies
+
+* **@firtoz/maybe-error:** upgraded to 1.0.4
+
 ## @firtoz/router-toolkit [1.0.3](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.2...@firtoz/router-toolkit@1.0.3) (2025-07-12)
 
 
