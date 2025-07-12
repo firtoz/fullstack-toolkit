@@ -42,4 +42,4 @@ jobs:
         run: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_FIRTOZ_CI_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
