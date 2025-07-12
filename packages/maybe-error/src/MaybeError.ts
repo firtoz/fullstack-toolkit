@@ -1,21 +1,21 @@
 /**
  * @fileoverview Type-safe error handling utilities using discriminated unions
- * 
+ *
  * This module provides a Result-like pattern for handling operations that may fail,
  * inspired by Rust's Result type and functional programming error handling patterns.
- * 
+ *
  * @example
  * ```typescript
  * // Basic usage
  * const result = success(42);
  * const error = fail("Something went wrong");
- * 
+ *
  * // Type-safe error handling
  * function divide(a: number, b: number): MaybeError<number> {
  *   if (b === 0) return fail("Division by zero");
  *   return success(a / b);
  * }
- * 
+ *
  * const result = divide(10, 2);
  * if (result.success) {
  *   console.log(result.result); // 5
@@ -27,7 +27,7 @@
 
 /**
  * Represents a failed operation with an error value.
- * 
+ *
  * @template TError - The type of the error value (defaults to string)
  * @example
  * ```typescript
@@ -45,10 +45,10 @@ export type DefiniteError<TError = string> = {
 
 /**
  * Represents a successful operation with an optional result value.
- * 
+ *
  * Uses conditional types to make the result field optional when T is undefined,
  * but required when T has a concrete type.
- * 
+ *
  * @template T - The type of the success value (defaults to undefined)
  * @example
  * ```typescript
@@ -68,10 +68,10 @@ export type DefiniteSuccess<T = undefined> = {
 
 /**
  * A discriminated union representing either a successful result or an error.
- * 
+ *
  * This is the main type for operations that may fail. The `success` field
  * acts as a discriminant, allowing TypeScript to narrow the type in conditionals.
- * 
+ *
  * @template T - The type of the success value (defaults to undefined)
  * @template TError - The type of the error value (defaults to string)
  * @example
@@ -79,7 +79,7 @@ export type DefiniteSuccess<T = undefined> = {
  * function fetchUser(id: string): MaybeError<User, ApiError> {
  *   // Implementation that returns either success(user) or fail(apiError)
  * }
- * 
+ *
  * const result = fetchUser("123");
  * if (result.success) {
  *   // TypeScript knows result.result is User
@@ -96,10 +96,10 @@ export type MaybeError<T = undefined, TError = string> =
 
 /**
  * Utility type to extract the success value type from a MaybeError type.
- * 
+ *
  * Useful for type manipulation when you need to work with the success type
  * without the error handling wrapper.
- * 
+ *
  * @template T - A MaybeError type
  * @example
  * ```typescript
@@ -116,10 +116,10 @@ export type AssumeSuccess<T extends MaybeError<unknown>> = Exclude<
 
 /**
  * Creates a successful result with an optional value.
- * 
+ *
  * Uses function overloading to provide different signatures based on whether
  * a value is provided or not.
- * 
+ *
  * @template T - The type of the success value
  * @param params - The success value (optional for void operations)
  * @returns A DefiniteSuccess instance
@@ -145,7 +145,7 @@ export const success = <T = undefined>(
 
 /**
  * Creates a failed result with an error value.
- * 
+ *
  * @template TError - The type of the error value
  * @param error - The error value
  * @returns A DefiniteError instance
