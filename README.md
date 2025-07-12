@@ -21,6 +21,7 @@ Type-safe result handling with the MaybeError pattern for TypeScript.
 - 🚀 **Zero dependencies** - Lightweight and fast
 - 📦 **Tree-shakeable** - Import only what you need
 - 🎯 **Simple API** - Easy to use and understand
+- 🔧 **Modern TypeScript** - Optimized for TypeScript 5.0+ with enhanced type inference
 
 ## Installation
 
