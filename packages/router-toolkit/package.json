@@ -49,7 +49,7 @@
     "url": "https://github.com/firtoz/router-toolkit/issues"
   },
   "dependencies": {
-    "@firtoz/maybe-error": "1.0.4"
+    "@firtoz/maybe-error": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.1.0",
