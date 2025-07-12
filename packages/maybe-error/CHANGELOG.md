@@ -1,3 +1,13 @@
+## @firtoz/maybe-error [1.0.4](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.0.3...@firtoz/maybe-error@1.0.4) (2025-07-12)
+
+
+### Bug Fixes
+
+* configure workspace deps to prevent cross-package updates ([c0c2784](https://github.com/firtoz/router-toolkit/commit/c0c2784fd13f0d225d386dffc0ca666c4cf27da6))
+* **maybe-error:** improve README description for better clarity ([f476222](https://github.com/firtoz/router-toolkit/commit/f476222e3ef8b636df4751ea190cc1ebc89df66e))
+* **maybe-error:** reorder release plugins for workspace deps ([0be6461](https://github.com/firtoz/router-toolkit/commit/0be64612955279f9dc015a2ac81260727a3eedb0))
+* remove npm plugin to test selective release ([4a75bfe](https://github.com/firtoz/router-toolkit/commit/4a75bfe81ab7e7a4e7674ecc20aa98cb7a1ce7f9))
+
 ## @firtoz/maybe-error [1.0.3](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.0.2...@firtoz/maybe-error@1.0.3) (2025-07-12)
 
 
