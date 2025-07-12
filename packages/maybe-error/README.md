@@ -1,6 +1,6 @@
 # @firtoz/maybe-error
 
-Type-safe result handling with the MaybeError pattern for TypeScript.
+Type-safe result handling with the MaybeError pattern for TypeScript. Perfect for error handling without exceptions.
 
 ## Features
 
