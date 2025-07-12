@@ -15,6 +15,20 @@
     "prepare": "husky",
     "release": "multi-semantic-release"
   },
+  "multi-semantic-release": {
+    "deps": {
+      "bump": false,
+      "release": false
+    },
+    "debug": false,
+    "sequentialInit": false,
+    "ignoreChanges": [
+      "*.md",
+      "docs/**",
+      "test/**",
+      "tests/**"
+    ]
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",
     "@commitlint/cli": "^19.8.1",
