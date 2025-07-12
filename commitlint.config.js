@@ -1,5 +1,12 @@
 module.exports = {
   extends: ['@commitlint/config-conventional'],
+  ignores: [
+    // Ignore semantic-release commits
+    (commit) => commit.includes('chore(release)'),
+    // Ignore merge commits
+    (commit) => commit.includes('Merge branch'),
+    (commit) => commit.includes('Merge pull request'),
+  ],
   rules: {
     'type-enum': [
       2,
