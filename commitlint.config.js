@@ -1,3 +1,25 @@
+const fs = require('fs');
+const path = require('path');
+
+// Dynamically discover workspace packages
+function getWorkspacePackages() {
+  const packagesDir = path.join(__dirname, 'packages');
+  
+  try {
+    const packages = fs.readdirSync(packagesDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+    
+    return packages;
+  } catch (error) {
+    console.warn('Could not read packages directory:', error.message);
+    return [];
+  }
+}
+
+// Get valid scopes from workspace packages
+const workspacePackages = getWorkspacePackages();
+
 module.exports = {
   extends: ['@commitlint/config-conventional'],
   ignores: [
@@ -28,10 +50,7 @@ module.exports = {
     'scope-enum': [
       2,
       'always',
-      [
-        'router-toolkit',  // Changes to router-toolkit package
-        'maybe-error',     // Changes to maybe-error package
-      ],
+      workspacePackages, // 🚀 Dynamic package discovery!
     ],
     'type-case': [2, 'always', 'lower-case'],
     'type-empty': [2, 'never'],
