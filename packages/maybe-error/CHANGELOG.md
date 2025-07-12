@@ -1,3 +1,10 @@
+## @firtoz/maybe-error [1.0.1](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.0.0...@firtoz/maybe-error@1.0.1) (2025-07-12)
+
+
+### Bug Fixes
+
+* **maybe-error:** format JSDoc comments to pass linting ([55fae56](https://github.com/firtoz/router-toolkit/commit/55fae56773b889f71497040b6d613b83abdf0338))
+
 # @firtoz/maybe-error 1.0.0 (2025-07-12)
 
 
