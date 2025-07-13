@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -41,8 +43,13 @@ jobs:
       - name: Test
         run: bun run test
         
-      - name: Release
-        run: bun run release
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@v1
+        with:
+          publish: bun run release
+          version: bun run version
+          commit: "chore: release packages"
+          title: "chore: release packages"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_FIRTOZ_CI_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_FIRTOZ_CI_TOKEN }}

@@ -14,21 +14,18 @@
     "format": "bun run --filter='*' format",
     "test": "bun run --filter='*' test",
     "prepare": "husky",
-    "release": "git pull && bun run --filter='*' --serial semantic-release -e semantic-release-monorepo"
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.6",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.5",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@commitlint/types": "^19.8.1",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/exec": "^7.1.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^11.0.3",
-    "@semantic-release/npm": "^12.0.2",
     "husky": "^9.1.7",
-    "semantic-release": "^24.2.7",
-    "semantic-release-monorepo": "^8.0.2",
     "typescript": "^5.8.3"
   },
   "engines": {
