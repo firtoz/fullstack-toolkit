@@ -12,9 +12,9 @@ import type { HrefArgs } from "./types/HrefArgs";
 import type { RegisterPages } from "./types/RegisterPages";
 
 type RouteModule = {
-	file: keyof RegisterPages;
+	route: keyof RegisterPages;
 	action: Func;
-	formSchema: z.ZodTypeAny;
+	formSchema: z.ZodType;
 };
 
 type SubmitFunc<TModule extends RouteModule> = (
@@ -34,10 +34,10 @@ type SubmitForm = (
 ) => React.ReactElement;
 
 export const useDynamicSubmitter = <TInfo extends RouteModule>(
-	path: TInfo["file"],
-	...args: TInfo["file"] extends "undefined"
+	path: TInfo["route"],
+	...args: TInfo["route"] extends "undefined"
 		? HrefArgs<"/">
-		: HrefArgs<TInfo["file"]>
+		: HrefArgs<TInfo["route"]>
 ): Omit<
 	ReturnType<typeof useFetcher<TInfo["action"]>>,
 	"load" | "submit" | "Form"
@@ -46,7 +46,8 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 	Form: SubmitForm;
 } => {
 	const url = useMemo(() => {
-		return href<typeof path>(path, ...args);
+		// biome-ignore lint/suspicious/noExplicitAny: Typechecks complain about this so we need to cast to any
+		return (href as any)(path, ...args);
 	}, [path, args]);
 
 	const fetcher = useFetcher<TInfo["action"]>({

@@ -31,7 +31,7 @@ This package requires the following peer dependencies:
 {
   "react": "^18.0.0 || ^19.0.0",
   "react-router": "^7.0.0",
-  "zod": "^4.0.0"
+  "zod": "^4.0.5"
 }
 ```
 
@@ -86,21 +86,37 @@ function CachedComponent() {
 
 Type-safe form submission with Zod validation and enhanced submit functionality.
 
+**Basic Usage Pattern:**
+
 ```tsx
-import { useDynamicSubmitter } from '@firtoz/router-toolkit';
+// app/routes/contact.tsx
+import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
 import { z } from 'zod/v4';
 
-const formSchema = z.object({
+// 1. Define your form schema
+export const formSchema = z.object({
   name: z.string(),
   email: z.string().email(),
 });
 
-function ContactForm() {
-  const submitter = useDynamicSubmitter('/api/contact');
+// 2. Export route constant
+export const route: RoutePath<"contact"> = "contact";
 
-  const handleSubmit = (formData: z.infer<typeof formSchema>) => {
-    submitter.submit(formData, { method: 'POST' });
-  };
+// 3. Define your action
+export const action = async ({ request }) => {
+  const formData = await request.formData();
+  // Handle submission
+  return { success: true };
+};
+
+// 4. Use the hook (requires full route module setup)
+export default function ContactForm() {
+  // Note: This requires proper route module registration
+  const submitter = useDynamicSubmitter<{
+    file: "contact";
+    action: typeof action;
+    formSchema: typeof formSchema;
+  }>("contact");
 
   return (
     <submitter.Form method="POST">
@@ -111,6 +127,8 @@ function ContactForm() {
   );
 }
 ```
+
+**Note:** `useDynamicSubmitter` requires advanced setup with route module registration and Zod schemas. For simpler use cases, you may prefer React Router's built-in `useFetcher`.
 
 ### `useFetcherStateChanged`
 
@@ -171,7 +189,44 @@ type ProfileArgs = HrefArgs<'/profile/:id'>;
 
 ## Usage with React Router 7 Framework Mode
 
-This toolkit is specifically designed for React Router 7's framework mode. Make sure your routes are properly typed in your `react-router.config.ts`:
+This toolkit is specifically designed for React Router 7's framework mode. Here's the recommended pattern for setting up routes with router-toolkit:
+
+### Route Setup Pattern
+
+For each route file, follow this pattern to enable full type safety:
+
+```tsx
+// app/routes/users.tsx
+import { useDynamicFetcher, type RoutePath } from '@firtoz/router-toolkit';
+
+// 1. Export your route constant with proper typing
+export const route: RoutePath<"users"> = "users";
+
+// 2. Define your loader/action as usual
+export const loader = async () => {
+  return { users: [] }; // Your data
+};
+
+// 3. Use the hook with typeof import for full type inference
+export default function UsersPage() {
+  const fetcher = useDynamicFetcher<typeof import("./users")>("users");
+
+  const handleRefresh = () => {
+    fetcher.load(); // No need to specify URL - it's inferred
+  };
+
+  return (
+    <div>
+      <button onClick={handleRefresh}>Refresh</button>
+      {fetcher.data && <div>{JSON.stringify(fetcher.data)}</div>}
+    </div>
+  );
+}
+```
+
+### Configuration
+
+Make sure your routes are properly typed in your `react-router.config.ts`:
 
 ```tsx
 // react-router.config.ts

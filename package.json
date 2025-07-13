@@ -4,7 +4,8 @@
   "private": true,
   "description": "Monorepo for router-toolkit and maybe-error packages",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "tests/*"
   ],
   "scripts": {
     "build": "bun run --filter='*' build",
@@ -24,14 +25,10 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.3",
     "@semantic-release/npm": "^12.0.2",
-    "@types/react": "^19.1.8",
     "husky": "^9.1.7",
-    "react": "^19.1.0",
-    "react-router": "^7.6.3",
     "semantic-release": "^24.2.7",
     "semantic-release-monorepo": "^8.0.2",
-    "typescript": "^5.8.3",
-    "zod": "^3.25.74"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=18.0.0"

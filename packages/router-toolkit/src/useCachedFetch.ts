@@ -8,10 +8,10 @@ const fetchCache = new Map<string, unknown>();
 
 // Hook that uses regular fetch instead of useFetcher to avoid route invalidation
 export const useCachedFetch = <TInfo extends RouteWithLoaderModule>(
-	path: TInfo["file"],
-	...args: TInfo["file"] extends "undefined"
+	path: TInfo["route"],
+	...args: TInfo["route"] extends "undefined"
 		? HrefArgs<"/">
-		: HrefArgs<TInfo["file"]>
+		: HrefArgs<TInfo["route"]>
 ): {
 	data: ReturnType<typeof useLoaderData<TInfo["loader"]>> | undefined;
 	isLoading: boolean;
@@ -19,7 +19,8 @@ export const useCachedFetch = <TInfo extends RouteWithLoaderModule>(
 } => {
 	// Generate URL using href, same as useDynamicFetcher
 	const url = useMemo(() => {
-		return href<typeof path>(path, ...args);
+		// biome-ignore lint/suspicious/noExplicitAny: Typechecks complain about this so we need to cast to any
+		return (href as any)(path, ...args);
 	}, [path, args]);
 
 	// Use the generated URL as the cache key

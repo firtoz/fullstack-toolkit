@@ -4,15 +4,16 @@ import type { HrefArgs } from "./types/HrefArgs";
 import type { RouteWithLoaderModule } from "./types/RouteWithLoaderModule";
 
 export const useDynamicFetcher = <TInfo extends RouteWithLoaderModule>(
-	path: TInfo["file"],
-	...args: TInfo["file"] extends "undefined"
+	path: TInfo["route"],
+	...args: TInfo["route"] extends "undefined"
 		? HrefArgs<"/">
-		: HrefArgs<TInfo["file"]>
+		: HrefArgs<TInfo["route"]>
 ): Omit<ReturnType<typeof useFetcher<TInfo["loader"]>>, "load" | "submit"> & {
 	load: (queryParams?: Record<string, string>) => Promise<void>;
 } => {
 	const url = useMemo(() => {
-		return href<typeof path>(path, ...args);
+		// biome-ignore lint/suspicious/noExplicitAny: Typechecks complain about this so we need to cast to any
+		return (href as any)(path, ...args);
 	}, [path, args]);
 
 	const fetcher = useFetcher<TInfo["loader"]>({
