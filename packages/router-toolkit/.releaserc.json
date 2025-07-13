@@ -12,10 +12,10 @@
       }
     ],
     [
-      "@semantic-release/git",
+      "@semantic-release/npm",
       {
-        "assets": ["CHANGELOG.md", "package.json"],
-        "message": "chore(release): @firtoz/router-toolkit@${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        "npmPublish": true,
+        "tarball": false
       }
     ],
     [
@@ -30,10 +30,10 @@
       }
     ],
     [
-      "@semantic-release/npm",
+      "@semantic-release/git",
       {
-        "npmPublish": true,
-        "tarball": false
+        "assets": ["CHANGELOG.md", "package.json"],
+        "message": "chore(release): @firtoz/router-toolkit@${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ]
   ]
