@@ -1,5 +1,11 @@
 # [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
 
+## 1.2.3
+
+### Patch Changes
+
+- [`f6bdf65`](https://github.com/firtoz/router-toolkit/commit/f6bdf657bd025c16423ae942f178046da13e58d7) Thanks [@firtoz](https://github.com/firtoz)! - test
+
 ## 1.2.2
 
 ### Patch Changes
