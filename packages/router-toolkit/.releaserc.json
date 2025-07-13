@@ -12,10 +12,10 @@
       }
     ],
     [
-      "@semantic-release/npm",
+      "../../semantic-release-bun-publish.ts",
       {
         "npmPublish": true,
-        "tarball": false
+        "access": "public"
       }
     ],
     [
