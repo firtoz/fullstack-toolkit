@@ -81,6 +81,12 @@ jobs:
             echo "ℹ️  No changes to commit"
           fi
           
+      - name: Setup npm authentication
+        if: steps.changesets.outputs.has-changesets == 'true'
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_FIRTOZ_CI_TOKEN }}" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          
       - name: Publish packages
         if: steps.changesets.outputs.has-changesets == 'true'
         run: |
