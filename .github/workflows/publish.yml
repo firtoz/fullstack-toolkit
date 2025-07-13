@@ -66,6 +66,8 @@ jobs:
         run: |
           echo "📝 Updating package versions..."
           bun run version
+        env:
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
           
       - name: Commit and push version changes
         if: steps.changesets.outputs.has-changesets == 'true'
