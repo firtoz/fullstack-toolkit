@@ -12,10 +12,11 @@
       }
     ],
     [
-      "../../semantic-release-bun-publish.ts",
+      "@semantic-release/exec",
       {
-        "npmPublish": true,
-        "access": "public"
+        "verifyConditionsCmd": "bun --version && bun pm whoami",
+        "prepareCmd": "bun pkg set version=${nextRelease.version}",
+        "publishCmd": "bun publish --access public"
       }
     ],
     [
