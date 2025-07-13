@@ -1,3 +1,10 @@
+# [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
+
+
+### Features
+
+* improve release commit messages with package names ([77d9b41](https://github.com/firtoz/router-toolkit/commit/77d9b41e06da17f0ac53ec295a83c324bed4cefe))
+
 # [@firtoz/maybe-error-v1.1.0](https://github.com/firtoz/router-toolkit/compare/@firtoz/maybe-error@1.0.3...@firtoz/maybe-error@1.1.0) (2025-07-12)
 
 
