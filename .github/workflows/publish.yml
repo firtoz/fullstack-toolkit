@@ -87,30 +87,10 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_FIRTOZ_CI_TOKEN }}" > ~/.npmrc
           echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
           
-      - name: Publish packages manually
+      - name: Publish packages with changesets
         if: steps.changesets.outputs.has-changesets == 'true'
         run: |
-          echo "🚀 Publishing packages with npm instead of bun..."
-          
-          # Check which packages have been updated
-          for package_dir in packages/*/; do
-            if [ -d "$package_dir" ]; then
-              package_name=$(node -p "require('./$package_dir/package.json').name")
-              package_version=$(node -p "require('./$package_dir/package.json').version")
-              
-              echo "📦 Checking $package_name@$package_version"
-              
-              # Check if this version is already published
-              if npm view "$package_name@$package_version" version 2>/dev/null; then
-                echo "⏭️  $package_name@$package_version already exists, skipping"
-              else
-                echo "🚀 Publishing $package_name@$package_version"
-                cd "$package_dir"
-                npm publish --access public
-                cd - > /dev/null
-                echo "✅ Published $package_name@$package_version"
-              fi
-            fi
-          done
+          echo "🚀 Publishing packages with changesets..."
+          bun run release
         env:
           NPM_TOKEN: ${{ secrets.NPM_FIRTOZ_CI_TOKEN }}
