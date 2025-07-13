@@ -13,6 +13,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      id-token: write
     
     steps:
       - name: Checkout code
@@ -44,53 +45,12 @@ jobs:
       - name: Test
         run: bun run test
         
-      - name: Check for changesets
+      - name: Create Release Pull Request or Publish to npm
         id: changesets
-        run: |
-          if [ -n "$(find .changeset -name '*.md' -not -name 'README.md' 2>/dev/null)" ]; then
-            echo "has-changesets=true" >> $GITHUB_OUTPUT
-            echo "📦 Found changesets, proceeding with release..."
-          else
-            echo "has-changesets=false" >> $GITHUB_OUTPUT
-            echo "ℹ️  No changesets found, skipping release"
-          fi
-      
-      - name: Setup Git
-        if: steps.changesets.outputs.has-changesets == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      
-      - name: Version packages
-        if: steps.changesets.outputs.has-changesets == 'true'
-        run: |
-          echo "📝 Updating package versions..."
-          bun run version
+        uses: changesets/action@v1
+        with:
+          # This expects you to have a script called release which does a build for your packages and calls changeset publish
+          publish: bun run release
         env:
-          GITHUB_TOKEN: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
-          
-      - name: Commit and push version changes
-        if: steps.changesets.outputs.has-changesets == 'true'
-        run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            git commit -m "chore: release packages [skip ci]"
-            git push origin main
-            echo "✅ Version changes committed and pushed"
-          else
-            echo "ℹ️  No changes to commit"
-          fi
-          
-      - name: Setup npm authentication
-        if: steps.changesets.outputs.has-changesets == 'true'
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_FIRTOZ_CI_TOKEN }}" > ~/.npmrc
-          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
-          
-      - name: Publish packages with changesets
-        if: steps.changesets.outputs.has-changesets == 'true'
-        run: |
-          echo "🚀 Publishing packages with changesets..."
-          bun run release
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_FIRTOZ_CI_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
