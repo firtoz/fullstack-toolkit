@@ -49,10 +49,10 @@
     "url": "https://github.com/firtoz/router-toolkit/issues"
   },
   "peerDependencies": {
-    "@firtoz/maybe-error": "^1.2.2",
+    "@firtoz/maybe-error": "^1.2.3",
     "react": "^19.1.0",
-    "react-router": "^7.6.3",
-    "zod": "^4.0.5"
+    "react-router": "^7.7.1",
+    "zod": "^4.0.9"
   },
   "engines": {
     "node": ">=18.0.0"
