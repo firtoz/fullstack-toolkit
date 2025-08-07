@@ -1,9 +1,9 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  // biome-ignore lint/suspicious/noExplicitAny: vite-tsconfig-paths plugin type compatibility issue
+  plugins: [tsconfigPaths() as any],
   test: {
     environment: 'jsdom',
     globals: true,
