@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 1.3.1
+
+### Patch Changes
+
+- [`b8ffa1d`](https://github.com/firtoz/router-toolkit/commit/b8ffa1d74038a1e9c8828c87acf8bad45d3466a1) Thanks [@firtoz](https://github.com/firtoz)! - Improve documentation
+
 ## 1.3.0
 
 ### Minor Changes
