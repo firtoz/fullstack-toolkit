@@ -1,4 +1,5 @@
-import { useCallback, useMemo } from "react";
+// biome-ignore lint/style/useImportType: We need to import React here.
+import React, { useCallback, useMemo } from "react";
 import {
 	type FetcherFormProps,
 	href,
