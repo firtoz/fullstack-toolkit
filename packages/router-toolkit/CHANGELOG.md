@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 2.0.0
+
+### Major Changes
+
+- [`b4e93f1`](https://github.com/firtoz/router-toolkit/commit/b4e93f1f92c4bc63157adc59e1cfe6e8a1553d3b) Thanks [@firtoz](https://github.com/firtoz)! - Add formAction support
+
 ## 1.3.1
 
 ### Patch Changes
