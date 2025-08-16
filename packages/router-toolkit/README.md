@@ -392,6 +392,228 @@ export default function NotificationForm() {
 - `idle` → `loading`: Data fetching started (with `useDynamicFetcher`)
 - `loading` → `idle`: Data fetching completed
 
+## Form Action Utilities
+
+### `formAction`
+
+Type-safe form action wrapper that provides Zod validation and structured error handling for React Router actions. This utility integrates seamlessly with `useDynamicSubmitter` and the `formSchema` export pattern.
+
+#### Features
+
+- ✅ **Automatic form data validation** using Zod schemas
+- 🛡️ **Type-safe error handling** with structured error types
+- 🔄 **MaybeError integration** for consistent error patterns
+- 🚀 **React Router compatibility** preserves redirects and responses
+- 📝 **Full TypeScript support** with inferred types from schemas
+
+#### Basic Usage
+
+```tsx
+// app/routes/register.tsx
+import { z } from "zod/v4";
+import { formAction, type RoutePath } from "@firtoz/router-toolkit";
+import { success, fail } from "@firtoz/maybe-error";
+
+// Export the schema for useDynamicSubmitter integration
+export const formSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export const action = formAction({
+  schema: formSchema,
+  handler: async (args, data) => {
+    // data is fully typed based on the schema
+    try {
+      const user = await createUser({
+        email: data.email,
+        password: data.password,
+      });
+      
+      return success({
+        message: "Registration successful!",
+        userId: user.id,
+      });
+    } catch (error) {
+      return fail("Email already exists");
+    }
+  },
+});
+
+export const route: RoutePath<"/register"> = "/register";
+```
+
+#### Using with useDynamicSubmitter
+
+The `formAction` utility works seamlessly with `useDynamicSubmitter` when you export a `formSchema`:
+
+```tsx
+// app/routes/register.tsx (component)
+import { useDynamicSubmitter } from "@firtoz/router-toolkit";
+
+export default function Register() {
+  const submitter = useDynamicSubmitter<typeof import("./register")>("/register");
+
+  return (
+    <submitter.Form method="post">
+      <input name="email" type="email" required />
+      <input name="password" type="password" required />
+      <input name="confirmPassword" type="password" required />
+      <button type="submit" disabled={submitter.state === "submitting"}>
+        {submitter.state === "submitting" ? "Registering..." : "Register"}
+      </button>
+    </submitter.Form>
+  );
+}
+```
+
+#### Error Handling
+
+The `formAction` utility returns structured errors that you can handle in your components:
+
+```tsx
+export default function Register() {
+  const submitter = useDynamicSubmitter<typeof import("./register")>("/register");
+
+  if (submitter.data && !submitter.data.success) {
+    const error = submitter.data.error;
+    
+    switch (error.type) {
+      case "validation":
+        // Handle Zod validation errors
+        console.log("Validation errors:", error.error);
+        break;
+      case "handler":
+        // Handle business logic errors
+        console.log("Handler error:", error.error);
+        break;
+      case "unknown":
+        // Handle unexpected errors
+        console.log("Unknown error occurred");
+        break;
+    }
+  }
+
+  // Rest of component...
+}
+```
+
+#### Error Types
+
+The `formAction` utility returns three types of errors:
+
+1. **Validation Errors** (`type: "validation"`)
+   - Occurs when form data doesn't match the Zod schema
+   - Contains detailed field-level validation errors from Zod
+   - The `error.error` field contains the result of `z.treeifyError()`
+
+2. **Handler Errors** (`type: "handler"`)
+   - Occurs when your handler function returns a `fail()` result
+   - Contains the custom error you provided to `fail()`
+   - The `error.error` field contains your custom error value
+
+3. **Unknown Errors** (`type: "unknown"`)
+   - Occurs when an unexpected exception is thrown
+   - Logs the error to console for debugging
+   - Does not expose the raw error to avoid information leakage
+
+#### Advanced Features
+
+**File Uploads**
+
+```tsx
+const uploadSchema = z.object({
+  title: z.string().min(1),
+  file: z.instanceof(File),
+  description: z.string().optional(),
+});
+
+export const action = formAction({
+  schema: uploadSchema,
+  handler: async (args, data) => {
+    const uploadResult = await uploadFile(data.file, {
+      title: data.title,
+      description: data.description,
+    });
+    
+    return success({ fileId: uploadResult.id });
+  },
+});
+```
+
+**Complex Validation**
+
+```tsx
+const complexSchema = z.object({
+  user: z.object({
+    name: z.string().min(2),
+    age: z.coerce.number().min(18),
+  }),
+  preferences: z.object({
+    newsletter: z.boolean().default(false),
+    theme: z.enum(["light", "dark"]).default("light"),
+  }),
+  terms: z.literal("on", { 
+    errorMap: () => ({ message: "You must accept the terms" }) 
+  }),
+});
+```
+
+**Redirects and Responses**
+
+React Router `Response` objects (like redirects) are automatically preserved:
+
+```tsx
+export const action = formAction({
+  schema: loginSchema,
+  handler: async (args, data) => {
+    const user = await authenticateUser(data.email, data.password);
+    
+    if (user) {
+      // This redirect will be properly handled by React Router
+      throw redirect("/dashboard");
+    }
+    
+    return fail("Invalid credentials");
+  },
+});
+```
+
+#### Type Safety
+
+The `formAction` utility provides full type safety:
+
+- **Schema inference**: Form data is typed based on your Zod schema
+- **Handler types**: Handler parameters are properly typed
+- **Error types**: Error handling is type-safe with discriminated unions
+- **Integration**: Works seamlessly with `useDynamicSubmitter` type inference
+
+#### API Reference
+
+```tsx
+function formAction<
+  TSchema extends z.ZodTypeAny,
+  TResult = undefined,
+  TError = string,
+  ActionArgs extends ActionFunctionArgs = ActionFunctionArgs,
+>(config: {
+  schema: TSchema;
+  handler: (
+    args: ActionArgs, 
+    data: z.infer<TSchema>
+  ) => Promise<MaybeError<TResult, TError>>;
+}): (args: ActionArgs) => Promise<MaybeError<TResult, FormActionError<TError>>>;
+
+type FormActionError<TError> =
+  | { type: "validation"; error: ReturnType<typeof z.treeifyError> }
+  | { type: "handler"; error: TError }
+  | { type: "unknown" };
+```
+
 ## Type Utilities
 
 ### `RoutePath<T>`

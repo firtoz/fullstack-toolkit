@@ -59,5 +59,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "zod-form-data": "^3.0.0"
   }
 }

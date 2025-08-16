@@ -25,7 +25,7 @@ export default function Home() {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 					{/* Loader Test Card */}
 					<div className="bg-white rounded-lg shadow-md p-6">
 						<h2 className="text-xl font-semibold text-blue-600 mb-3">
@@ -56,6 +56,23 @@ export default function Home() {
 							className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
 						>
 							Test Action →
+						</Link>
+					</div>
+
+					{/* Form Action Test Card */}
+					<div className="bg-white rounded-lg shadow-md p-6">
+						<h2 className="text-xl font-semibold text-orange-600 mb-3">
+							Form Action Test
+						</h2>
+						<p className="text-gray-600 mb-4">
+							Test formAction utility with Zod validation and type-safe error
+							handling.
+						</p>
+						<Link
+							to="/form-action-test"
+							className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+						>
+							Test formAction →
 						</Link>
 					</div>
 

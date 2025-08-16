@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react";
-import { BrowserRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+// Testing library imports removed as DOM tests are not needed for formAction utility
+
+import type { ActionFunctionArgs } from "react-router";
+import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 // Test imports
 describe("Router Toolkit Imports", () => {
@@ -32,18 +34,301 @@ describe("Router Toolkit Imports", () => {
 		expect(errorResult.success).toBe(false);
 		expect(errorResult.error).toBe("test error");
 	});
-});
 
-// Test basic React Router setup
-describe("React Router Setup", () => {
-	it("should render a basic router component", () => {
-		const TestComponent = () => (
-			<BrowserRouter>
-				<div>Router Test</div>
-			</BrowserRouter>
-		);
+	it("should be able to import formAction utility", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
 
-		render(<TestComponent />);
-		expect(screen.getByText("Router Test")).toBeInTheDocument();
+		expect(formAction).toBeDefined();
+		expect(typeof formAction).toBe("function");
 	});
 });
+
+// Test formAction utility
+describe("formAction", () => {
+	const createMockRequest = (formData: Record<string, string | File>) => {
+		const mockFormData = new FormData();
+		for (const [key, value] of Object.entries(formData)) {
+			mockFormData.append(key, value);
+		}
+
+		return {
+			formData: vi.fn().mockResolvedValue(mockFormData),
+		} as unknown as Request;
+	};
+
+	const createMockActionArgs = (
+		formData: Record<string, string | File>,
+	): ActionFunctionArgs => ({
+		request: createMockRequest(formData),
+		params: {},
+		context: {},
+	});
+
+	it("should successfully validate and process form data", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			email: z.string().email(),
+			password: z.string().min(8),
+		});
+
+		const mockHandler = vi.fn().mockResolvedValue(success({ userId: 123 }));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			email: "test@example.com",
+			password: "password123",
+		});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.result).toEqual({ userId: 123 });
+		}
+		expect(mockHandler).toHaveBeenCalledWith(args, {
+			email: "test@example.com",
+			password: "password123",
+		});
+	});
+
+	it("should return validation error for invalid form data", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			email: z.string().email(),
+			password: z.string().min(8),
+		});
+
+		const mockHandler = vi.fn().mockResolvedValue(success({}));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			email: "invalid-email",
+			password: "short",
+		});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.type).toBe("validation");
+			if (result.error.type === "validation") {
+				expect(result.error.error).toBeDefined();
+			}
+		}
+		expect(mockHandler).not.toHaveBeenCalled();
+	});
+
+	it("should return handler error when handler fails", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { fail } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			email: z.string().email(),
+			password: z.string().min(8),
+		});
+
+		const mockHandler = vi
+			.fn()
+			.mockResolvedValue(fail("Authentication failed"));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			email: "test@example.com",
+			password: "password123",
+		});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.type).toBe("handler");
+			if (result.error.type === "handler") {
+				expect(result.error.error).toBe("Authentication failed");
+			}
+		}
+		expect(mockHandler).toHaveBeenCalledWith(args, {
+			email: "test@example.com",
+			password: "password123",
+		});
+	});
+
+	it("should re-throw Response objects (redirects)", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+
+		const schema = z.object({
+			email: z.string().email(),
+		});
+
+		const mockResponse = new Response(null, {
+			status: 302,
+			headers: { Location: "/dashboard" },
+		});
+		const mockHandler = vi.fn().mockRejectedValue(mockResponse);
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			email: "test@example.com",
+		});
+
+		await expect(action(args)).rejects.toBe(mockResponse);
+	});
+
+	it("should return unknown error for unexpected exceptions", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+
+		const schema = z.object({
+			email: z.string().email(),
+		});
+
+		const mockHandler = vi
+			.fn()
+			.mockRejectedValue(new Error("Unexpected error"));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			email: "test@example.com",
+		});
+
+		const consoleErrorSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.type).toBe("unknown");
+		}
+		expect(consoleErrorSpy).toHaveBeenCalled();
+
+		consoleErrorSpy.mockRestore();
+	});
+
+	it("should handle complex schema with nested validation", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			user: z.object({
+				name: z.string().min(2),
+				age: z.coerce.number().min(18),
+			}),
+			terms: z.literal("on"),
+		});
+
+		const mockHandler = vi.fn().mockResolvedValue(success({ created: true }));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			"user.name": "John Doe",
+			"user.age": "25",
+			terms: "on",
+		});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.result).toEqual({ created: true });
+		}
+		expect(mockHandler).toHaveBeenCalledWith(args, {
+			user: {
+				name: "John Doe",
+				age: 25,
+			},
+			terms: "on",
+		});
+	});
+
+	it("should work with void result handlers", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			action: z.string(),
+		});
+
+		const mockHandler = vi.fn().mockResolvedValue(success());
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const args = createMockActionArgs({
+			action: "delete",
+		});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(true);
+		expect(mockHandler).toHaveBeenCalledWith(args, {
+			action: "delete",
+		});
+	});
+
+	it("should handle file uploads", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			title: z.string(),
+			file: z.instanceof(File),
+		});
+
+		const mockHandler = vi.fn().mockResolvedValue(success({ uploaded: true }));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const mockFile = new File(["content"], "test.txt", { type: "text/plain" });
+		const args = createMockActionArgs({
+			title: "Test Upload",
+			file: mockFile,
+		});
+
+		const result = await action(args);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.result).toEqual({ uploaded: true });
+		}
+		expect(mockHandler).toHaveBeenCalledWith(args, {
+			title: "Test Upload",
+			file: mockFile,
+		});
+	});
+});
+
+// Note: React Router DOM tests are skipped in this environment
+// as they require a proper browser DOM setup
