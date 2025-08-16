@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/router-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 2.0.1
+
+### Patch Changes
+
+- [`b369e5f`](https://github.com/firtoz/router-toolkit/commit/b369e5f9264b2fef09ba622ad706ee6664dde73d) Thanks [@firtoz](https://github.com/firtoz)! - Fix react import
+
 ## 2.0.0
 
 ### Major Changes
