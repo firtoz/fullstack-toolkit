@@ -190,7 +190,7 @@ Type-safe form submission with Zod validation and enhanced submit functionality.
 ```tsx
 // app/routes/contact.tsx
 import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import type { Route } from './+types/contact';
 
 // 1. Define your form schema
@@ -280,7 +280,7 @@ Track changes in fetcher state and react to them. Perfect for triggering side ef
 // app/routes/notification-form.tsx
 import { useDynamicSubmitter, useFetcherStateChanged, type RoutePath } from '@firtoz/router-toolkit';
 import { useState } from 'react';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import type { Route } from './+types/notification-form';
 
 export const route: RoutePath<"/notification-form"> = "/notification-form";
@@ -410,7 +410,7 @@ Type-safe form action wrapper that provides Zod validation and structured error 
 
 ```tsx
 // app/routes/register.tsx
-import { z } from "zod/v4";
+import { z } from "zod";
 import { formAction, type RoutePath } from "@firtoz/router-toolkit";
 import { success, fail } from "@firtoz/maybe-error";
 
@@ -777,7 +777,7 @@ export default function LoaderTest() {
 ```tsx
 // app/routes/action-test.tsx
 import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import type { Route } from './+types/action-test';
 
 interface ActionData {
@@ -896,7 +896,7 @@ import {
   type RoutePath,
 } from '@firtoz/router-toolkit';
 import { useLoaderData } from 'react-router';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import type { Route } from './+types/combined-test';
 
 interface User {
@@ -1164,7 +1164,7 @@ export default function UserProfile() {
 ```tsx
 // app/routes/create-user.tsx
 import { success, fail, type MaybeError, useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import type { Route } from './+types/create-user';
 
 export const route: RoutePath<"/create-user"> = "/create-user";

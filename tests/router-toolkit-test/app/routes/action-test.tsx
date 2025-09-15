@@ -1,5 +1,5 @@
 import { type RoutePath, useDynamicSubmitter } from "@firtoz/router-toolkit";
-import { z } from "zod/v4";
+import { z } from "zod";
 import type { Route } from "./+types/action-test";
 
 interface ActionData {

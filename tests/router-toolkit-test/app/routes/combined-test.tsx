@@ -4,7 +4,7 @@ import {
 	useDynamicSubmitter,
 } from "@firtoz/router-toolkit";
 import { useLoaderData } from "react-router";
-import { z } from "zod/v4";
+import { z } from "zod";
 import type { Route } from "./+types/combined-test";
 
 interface User {

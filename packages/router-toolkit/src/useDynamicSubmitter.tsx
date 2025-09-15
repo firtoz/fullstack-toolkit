@@ -7,7 +7,7 @@ import {
 	type SubmitTarget,
 	useFetcher,
 } from "react-router";
-import type { z } from "zod/v4";
+import type { z } from "zod";
 import type { Func } from "./types/Func";
 import type { HrefArgs } from "./types/HrefArgs";
 import type { RegisterPages } from "./types/RegisterPages";

@@ -4,11 +4,11 @@ import {
 	type RoutePath,
 	useDynamicSubmitter,
 } from "@firtoz/router-toolkit";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const formSchema = z.object({
 	name: z.string().min(2, "Name must be at least 2 characters"),
-	email: z.string().email("Invalid email format"),
+	email: z.email("Invalid email format"),
 	age: z.coerce.number().min(18, "Must be at least 18 years old"),
 	terms: z.literal("on").refine((val) => val === "on", {
 		message: "You must accept the terms",
@@ -29,7 +29,7 @@ export const action = formAction({
 		return success({
 			message: "Registration successful!",
 			user: {
-				id: Math.random().toString(36).substr(2, 9),
+				id: Math.random().toString(36).slice(2, 11),
 				name: data.name,
 				email: data.email,
 				age: data.age,

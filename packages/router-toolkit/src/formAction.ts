@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { z } from "zod/v4";
+ * import { z } from "zod";
  * import { formAction } from "@firtoz/router-toolkit";
  * import { success } from "@firtoz/maybe-error";
  *
@@ -28,7 +28,7 @@
 
 import { fail, type MaybeError } from "@firtoz/maybe-error";
 import type { ActionFunctionArgs } from "react-router";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { zfd } from "zod-form-data";
 
 /**
@@ -97,7 +97,7 @@ export interface FormActionConfig<
  *
  * @example
  * ```typescript
- * import { z } from "zod/v4";
+ * import { z } from "zod";
  * import { formAction } from "@firtoz/router-toolkit";
  * import { success, fail } from "@firtoz/maybe-error";
  *
