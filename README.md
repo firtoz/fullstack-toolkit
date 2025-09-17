@@ -29,18 +29,18 @@ Each package can be installed independently:
 
 ```bash
 # For React Router utilities
-npm install @firtoz/router-toolkit
+bun add @firtoz/router-toolkit
 
 # For error handling utilities
-npm install @firtoz/maybe-error
+bun add @firtoz/maybe-error
 
 # Or both
-npm install @firtoz/router-toolkit @firtoz/maybe-error
+bun add @firtoz/router-toolkit @firtoz/maybe-error
 ```
 
 ## Development
 
-This monorepo uses [Bun](https://bun.sh/) as the package manager and [multi-semantic-release](https://github.com/dhoulb/multi-semantic-release) for automated versioning with automatic package discovery.
+This monorepo uses [Bun](https://bun.sh/) as the package manager and [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing.
 
 ### Getting Started
 
@@ -87,21 +87,24 @@ docs: update README with new examples
 
 ## Releases
 
-Releases are fully automated using [multi-semantic-release](https://github.com/dhoulb/multi-semantic-release) with **automatic package discovery**. Simply commit using conventional commit messages and push to main:
+Releases are fully automated using [Changesets](https://github.com/changesets/changesets) with GitHub Actions:
 
-```bash
-# These commits will trigger releases automatically:
-git commit -m "feat(router-toolkit): add new feature"     # → Minor version bump
-git commit -m "fix(maybe-error): fix bug"                 # → Patch version bump  
-git commit -m "feat(router-toolkit)!: breaking change"    # → Major version bump
-git push origin main
-```
+1. **Make your changes** and commit them
+2. **Create a changeset** describing your changes:
+   ```bash
+   bun changeset
+   ```
+3. **Push to main** (or merge your PR)
+4. **GitHub Actions automatically**:
+   - Creates a "Release PR" with version bumps and changelog updates
+   - When you merge the Release PR → automatically publishes to npm
 
-### ✨ **Auto-Discovery Benefits:**
-- 🔍 **Automatic package detection** - No need to update CI workflow for new packages
-- 🎯 **Smart releases** - Only packages with relevant changes get released
-- 🚀 **Zero maintenance** - Add new packages by just creating them in `packages/`
-- 📦 **Dependency handling** - Automatically bumps dependent packages when dependencies change
+### 🤖 **Automated Workflow:**
+- 🔄 **Auto Release PRs** - GitHub Actions creates PRs with version bumps
+- 📦 **Auto Publishing** - Merging the Release PR triggers npm publish
+- 📝 **Rich changelogs** - Detailed release notes with GitHub integration
+- 🔗 **Dependency handling** - Automatically bumps dependent packages
+- 🎯 **Zero maintenance** - No manual version management needed
 
 ## License
 

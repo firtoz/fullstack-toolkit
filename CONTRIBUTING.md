@@ -135,44 +135,72 @@ BREAKING CHANGE: useFetch now returns different interface"
 
 ## Release Process
 
-Releases are **fully automated** using [multi-semantic-release](https://github.com/dhoulb/multi-semantic-release) with **automatic package discovery**:
+Releases are **fully automated** using [Changesets](https://github.com/changesets/changesets) with GitHub Actions:
 
-1. **Development**: Make changes and commit using conventional commit messages
-2. **Push**: Push to main branch (or merge PR)
-3. **Automatic Release**: multi-semantic-release will:
-   - **Automatically discover** all packages in `packages/`
-   - Analyze commits to determine which packages need releases
-   - Calculate version bumps based on commit types
-   - Generate changelogs
-   - Publish to npm
-   - Create GitHub releases
-   - Only release packages that have relevant changes
+### For Contributors
 
-### Examples of Release-triggering Commits
+1. **Make your changes** and commit them
+2. **Create a changeset** to describe your changes:
+   ```bash
+   bun changeset
+   ```
+3. **Follow the prompts** to:
+   - Select which packages are affected
+   - Choose the type of version bump (patch/minor/major)
+   - Write a summary of the changes
+4. **Commit the changeset** along with your code changes
+5. **Push to main** (or open a pull request and merge it)
+
+### For Maintainers
+
+The process is now **fully automated**:
+
+1. **GitHub Actions automatically** creates a "Release PR" when changesets are pushed to main
+2. **Review the Release PR** - it contains version bumps and updated changelogs
+3. **Merge the Release PR** - this automatically publishes all packages to npm
+
+**No manual commands needed!** 🎉
+
+### Changeset Types
+
+- **Patch** (0.1.0 → 0.1.1): Bug fixes, documentation updates
+- **Minor** (0.1.0 → 0.2.0): New features, non-breaking changes  
+- **Major** (0.1.0 → 1.0.0): Breaking changes
+
+### Example Workflow
 
 ```bash
-# These will trigger releases:
-feat(router-toolkit): add new hook           # → router-toolkit gets minor bump
-fix(maybe-error): resolve type issue         # → maybe-error gets patch bump
-feat(router-toolkit)!: breaking API change  # → router-toolkit gets major bump
+# 1. Make your changes
+git checkout -b feature/new-hook
+# ... make changes ...
 
-# These will NOT trigger releases:
-docs: update README                          # → no release (docs only)
-chore: update dependencies                   # → no release (maintenance)
-style(router-toolkit): fix formatting       # → no release (style only)
+# 2. Create changeset
+bun changeset
+# Select packages: @firtoz/router-toolkit
+# Select bump: minor
+# Summary: "Add useDynamicRouter hook for enhanced routing"
+
+# 3. Commit everything
+git add .
+git commit -m "feat(router-toolkit): add useDynamicRouter hook"
+git push origin feature/new-hook
+
+# 4. Open PR and merge it
+# 5. GitHub Actions automatically creates a Release PR
+# 6. Maintainer merges Release PR → automatic npm publish! 🚀
 ```
 
-### Manual Release (Maintainers Only)
+### 🤖 **What GitHub Actions Does:**
 
-If you need to manually test the release process:
-
-```bash
-# Test release for all packages
-bun run release --dry-run
-
-# Or run multi-semantic-release directly
-npx multi-semantic-release --dry-run
-```
+1. **Detects changesets** in commits pushed to main
+2. **Creates Release PR** with:
+   - Updated package versions
+   - Generated changelogs
+   - All affected packages included
+3. **When Release PR is merged**:
+   - Publishes packages to npm
+   - Creates GitHub releases
+   - Updates repository tags
 
 ## Code Quality
 
@@ -206,16 +234,17 @@ While we don't have extensive tests yet, when adding new features:
 
 ### Adding New Packages
 
-Adding a new package is now **super simple** thanks to automatic discovery:
+Adding a new package to the monorepo:
 
 1. **Create package directory**: `mkdir packages/your-new-package`
 2. **Add `package.json`** with the correct name and structure
 3. **Add `tsconfig.json`** (copy from existing packages)
-4. **Add `.releaserc.json`** (copy from existing packages)  
-5. **Add package scope** to `commitlint.config.js` scopes array
-6. **That's it!** 🎉 No need to update CI workflows or release configs
-
-The release system will **automatically discover and release** your new package when you make commits with the appropriate scope.
+4. **Add package scope** to `commitlint.config.ts` scopes array
+5. **Create a changeset** when ready to publish:
+   ```bash
+   bun changeset
+   ```
+6. **That's it!** 🎉 Changesets will handle the new package in releases
 
 ### Example: Adding `@firtoz/new-package`
 
@@ -229,19 +258,25 @@ cp ../maybe-error/package.json ./package.json
 
 # 3. Copy configs
 cp ../maybe-error/tsconfig.json ./
-cp ../maybe-error/.releaserc.json ./
 
 # 4. Create your code
 mkdir src && echo 'export const hello = "world";' > src/index.ts
 
 # 5. Update root commitlint config
-# Add "new-package" to the scope-enum array in commitlint.config.js
+# Add "new-package" to the scope-enum array in commitlint.config.ts
 
-# 6. Make your first commit
+# 6. Create changeset for initial release
+bun changeset
+# Select: @firtoz/new-package
+# Type: minor (for new package)
+# Summary: "Initial implementation of new-package"
+
+# 7. Commit and push
+git add .
 git commit -m "feat(new-package): initial implementation"
 git push origin main
 
-# 🎉 The package will be automatically discovered and released!
+# 🎉 Ready for release when maintainer runs changeset publish!
 ```
 
 ### Inter-package Dependencies
