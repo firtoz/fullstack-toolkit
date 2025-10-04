@@ -7,3 +7,5 @@ dist/
 # Environment variables
 .env.local
 .env.*.local 
+
+.turbo

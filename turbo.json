@@ -1,0 +1,25 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"ui": "tui",
+	"tasks": {
+		"build": {
+			"outputLogs": "new-only"
+		},
+		"typecheck": {
+			"outputLogs": "new-only"
+		},
+		"lint": {
+			"outputLogs": "new-only"
+		},
+		"format": {
+			"outputLogs": "new-only"
+		},
+		"test": {
+			"outputLogs": "new-only"
+		},
+		"test:watch": {
+			"persistent": true,
+			"outputLogs": "new-only"
+		}
+	}
+}

@@ -3,6 +3,7 @@ import {
 	useDynamicFetcher,
 	useDynamicSubmitter,
 } from "@firtoz/router-toolkit";
+import { useId } from "react";
 import { useLoaderData } from "react-router";
 import { z } from "zod";
 import type { Route } from "./+types/combined-test";
@@ -94,8 +95,8 @@ export default function CombinedTest() {
 		useDynamicFetcher<typeof import("./combined-test")>("/combined-test");
 	const submitter =
 		useDynamicSubmitter<typeof import("./combined-test")>("/combined-test");
-	// const fetcher = useFetcher<ActionData>();
-
+	const nameId = useId();
+	const emailId = useId();
 	return (
 		<div className="p-6">
 			<h1 className="text-2xl font-bold mb-4">Combined Test</h1>
@@ -118,11 +119,14 @@ export default function CombinedTest() {
 					<h2 className="text-lg font-semibold mb-3">Update User</h2>
 					<fetcher.Form method="post" className="space-y-4">
 						<div>
-							<label htmlFor="name" className="block text-sm font-medium mb-1">
+							<label
+								htmlFor={nameId}
+								className="block text-sm font-medium mb-1"
+							>
 								Name:
 							</label>
 							<input
-								id="name"
+								id={nameId}
 								name="name"
 								type="text"
 								defaultValue={loaderData.user.name}
@@ -132,11 +136,14 @@ export default function CombinedTest() {
 						</div>
 
 						<div>
-							<label htmlFor="email" className="block text-sm font-medium mb-1">
+							<label
+								htmlFor={emailId}
+								className="block text-sm font-medium mb-1"
+							>
 								Email:
 							</label>
 							<input
-								id="email"
+								id={emailId}
 								name="email"
 								type="email"
 								defaultValue={loaderData.user.email}

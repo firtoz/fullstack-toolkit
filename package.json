@@ -1,35 +1,37 @@
 {
-  "name": "router-toolkit-monorepo",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Monorepo for router-toolkit and maybe-error packages",
-  "workspaces": [
-    "packages/*",
-    "tests/*"
-  ],
-  "scripts": {
-    "build": "bun run --filter='*' build",
-    "typecheck": "bun run --filter='*' typecheck",
-    "lint": "bun run --filter='*' lint",
-    "format": "bun run --filter='*' format",
-    "test": "bun run --filter='*' test",
-    "prepare": "husky",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "changeset publish"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.2.4",
-    "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.29.7",
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
-    "@commitlint/types": "^19.8.1",
-    "husky": "^9.1.7",
-    "typescript": "^5.9.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "packageManager": "bun@1.2.22"
+	"name": "router-toolkit-monorepo",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Monorepo for router-toolkit and maybe-error packages",
+	"workspaces": [
+		"packages/*",
+		"tests/*"
+	],
+	"scripts": {
+		"build": "turbo run build",
+		"typecheck": "turbo run typecheck",
+		"lint": "turbo run lint",
+		"format": "turbo run format",
+		"test": "turbo run test",
+		"test:watch": "turbo run test:watch",
+		"prepare": "husky",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "changeset publish"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.5",
+		"@changesets/changelog-github": "^0.5.1",
+		"@changesets/cli": "^2.29.7",
+		"@commitlint/cli": "^20.1.0",
+		"@commitlint/config-conventional": "^20.0.0",
+		"@commitlint/types": "^20.0.0",
+		"husky": "^9.1.7",
+		"turbo": "^2.5.8",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"packageManager": "bun@1.2.23"
 }

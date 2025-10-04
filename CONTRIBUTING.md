@@ -39,16 +39,19 @@ Thank you for your interest in contributing to the Router Toolkit monorepo! This
 
 ### Package-specific Commands
 
+This monorepo uses [Turborepo](https://turbo.build/) for efficient task orchestration. Commands automatically run across all packages with intelligent caching and dependency management.
+
 You can also run commands on individual packages:
 
 ```bash
-# Type check only router-toolkit
+# Run across all packages (using Turborepo - recommended)
+bun run typecheck  # Runs typecheck in all packages with caching
+bun run lint       # Runs lint in all packages
+bun run format     # Runs format in all packages
+
+# Run on specific packages (using Bun workspaces)
 bun run --filter="@firtoz/router-toolkit" typecheck
-
-# Lint only maybe-error
 bun run --filter="@firtoz/maybe-error" lint
-
-# Format router-toolkit
 bun run --filter="@firtoz/router-toolkit" format
 ```
 

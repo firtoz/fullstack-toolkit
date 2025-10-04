@@ -1,4 +1,5 @@
 import { type RoutePath, useDynamicSubmitter } from "@firtoz/router-toolkit";
+import { useId } from "react";
 import { z } from "zod";
 import type { Route } from "./+types/action-test";
 
@@ -55,6 +56,9 @@ export default function ActionTest() {
 	const submitter =
 		useDynamicSubmitter<typeof import("./action-test")>("/action-test");
 
+	const nameId = useId();
+	const emailId = useId();
+
 	return (
 		<div className="p-6">
 			<h1 className="text-2xl font-bold mb-4">Action Test</h1>
@@ -62,11 +66,11 @@ export default function ActionTest() {
 
 			<submitter.Form method="post" className="space-y-4 max-w-md">
 				<div>
-					<label htmlFor="name" className="block text-sm font-medium mb-1">
+					<label htmlFor={nameId} className="block text-sm font-medium mb-1">
 						Name:
 					</label>
 					<input
-						id="name"
+						id={nameId}
 						name="name"
 						type="text"
 						required
@@ -75,11 +79,11 @@ export default function ActionTest() {
 				</div>
 
 				<div>
-					<label htmlFor="email" className="block text-sm font-medium mb-1">
+					<label htmlFor={emailId} className="block text-sm font-medium mb-1">
 						Email:
 					</label>
 					<input
-						id="email"
+						id={emailId}
 						name="email"
 						type="email"
 						required

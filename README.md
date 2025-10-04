@@ -40,7 +40,7 @@ bun add @firtoz/router-toolkit @firtoz/maybe-error
 
 ## Development
 
-This monorepo uses [Bun](https://bun.sh/) as the package manager and [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing.
+This monorepo uses [Bun](https://bun.sh/) as the package manager, [Turborepo](https://turbo.build/) for task orchestration, and [Changesets](https://github.com/changesets/changesets) for automated versioning and publishing.
 
 ### Getting Started
 
@@ -60,13 +60,16 @@ bun run format
 
 ### Package Scripts
 
-You can also run scripts on individual packages:
+Turborepo automatically runs scripts across all packages. You can also run scripts on individual packages:
 
 ```bash
-# Type check only router-toolkit
-bun run --filter="@firtoz/router-toolkit" typecheck
+# Run commands across all packages (using Turborepo)
+bun run typecheck  # Runs typecheck in all packages
+bun run lint       # Runs lint in all packages
+bun run format     # Runs format in all packages
 
-# Lint only maybe-error
+# Run commands on specific packages (using Bun workspaces)
+bun run --filter="@firtoz/router-toolkit" typecheck
 bun run --filter="@firtoz/maybe-error" lint
 ```
 

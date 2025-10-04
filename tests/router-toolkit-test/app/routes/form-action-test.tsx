@@ -4,6 +4,7 @@ import {
 	type RoutePath,
 	useDynamicSubmitter,
 } from "@firtoz/router-toolkit";
+import { useId } from "react";
 import { z } from "zod";
 
 export const formSchema = z.object({
@@ -56,6 +57,11 @@ export default function FormActionTest() {
 			"/form-action-test",
 		);
 
+	const nameId = useId();
+	const emailId = useId();
+	const ageId = useId();
+	const termsId = useId();
+
 	return (
 		<div className="p-6">
 			<h1 className="text-2xl font-bold mb-4">Form Action Test</h1>
@@ -66,11 +72,11 @@ export default function FormActionTest() {
 
 			<submitter.Form method="post" className="space-y-4 max-w-md">
 				<div>
-					<label htmlFor="name" className="block text-sm font-medium mb-1">
+					<label htmlFor={nameId} className="block text-sm font-medium mb-1">
 						Name:
 					</label>
 					<input
-						id="name"
+						id={nameId}
 						name="name"
 						type="text"
 						required
@@ -79,11 +85,11 @@ export default function FormActionTest() {
 				</div>
 
 				<div>
-					<label htmlFor="email" className="block text-sm font-medium mb-1">
+					<label htmlFor={emailId} className="block text-sm font-medium mb-1">
 						Email:
 					</label>
 					<input
-						id="email"
+						id={emailId}
 						name="email"
 						type="email"
 						required
@@ -92,28 +98,28 @@ export default function FormActionTest() {
 				</div>
 
 				<div>
-					<label htmlFor="age" className="block text-sm font-medium mb-1">
+					<label htmlFor={ageId} className="block text-sm font-medium mb-1">
 						Age:
 					</label>
 					<input
-						id="age"
+						id={ageId}
 						name="age"
 						type="number"
 						required
-						min="18"
+						min={18}
 						className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
 					/>
 				</div>
 
 				<div className="flex items-center">
 					<input
-						id="terms"
+						id={termsId}
 						name="terms"
 						type="checkbox"
 						required
 						className="mr-2"
 					/>
-					<label htmlFor="terms" className="text-sm">
+					<label htmlFor={termsId} className="text-sm">
 						I accept the terms and conditions
 					</label>
 				</div>
