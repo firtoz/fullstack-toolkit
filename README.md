@@ -1,6 +1,6 @@
-# Router Toolkit Monorepo
+# Fullstack Toolkit Monorepo
 
-A monorepo containing TypeScript utilities for React Router and general-purpose error handling.
+A monorepo containing TypeScript utilities for full-stack web development, including React Router, error handling, and edge computing utilities.
 
 ## Packages
 
@@ -115,7 +115,7 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 
 ## Links
 
-- [GitHub Repository](https://github.com/firtoz/router-toolkit)
+- [GitHub Repository](https://github.com/firtoz/fullstack-toolkit)
 - [Router Toolkit on NPM](https://npmjs.com/package/@firtoz/router-toolkit)
 - [Maybe Error on NPM](https://npmjs.com/package/@firtoz/maybe-error)
 - [React Router Documentation](https://reactrouter.com) 

@@ -235,7 +235,7 @@ async function fetchMultipleUsers(ids: string[]): Promise<MaybeError<User[]>> {
 
 ## Contributing
 
-Contributions are welcome! This package is part of the [router-toolkit monorepo](https://github.com/firtoz/router-toolkit).
+Contributions are welcome! This package is part of the [fullstack-toolkit monorepo](https://github.com/firtoz/fullstack-toolkit).
 
 ## License
 

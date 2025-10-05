@@ -1335,7 +1335,7 @@ useEffect(() => {
 
 - Check the [React Router 7 documentation](https://reactrouter.com) for framework mode setup
 - Look at the test application in the `tests/` directory for working examples
-- Open an issue on [GitHub](https://github.com/firtoz/router-toolkit) if you find a bug
+- Open an issue on [GitHub](https://github.com/firtoz/fullstack-toolkit) if you find a bug
 
 ## Contributing
 
@@ -1347,6 +1347,6 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 
 ## Links
 
-- [GitHub Repository](https://github.com/firtoz/router-toolkit)
+- [GitHub Repository](https://github.com/firtoz/fullstack-toolkit)
 - [NPM Package](https://npmjs.com/package/@firtoz/router-toolkit)
 - [React Router Documentation](https://reactrouter.com) 

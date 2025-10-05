@@ -1,6 +1,6 @@
-# Contributing to Router Toolkit Monorepo
+# Contributing to Fullstack Toolkit Monorepo
 
-Thank you for your interest in contributing to the Router Toolkit monorepo! This repository contains multiple packages that work together to provide TypeScript utilities for React Router and error handling.
+Thank you for your interest in contributing to the Fullstack Toolkit monorepo! This repository contains multiple packages that work together to provide TypeScript utilities for full-stack web development, including React Router, error handling, and edge computing.
 
 ## Packages
 

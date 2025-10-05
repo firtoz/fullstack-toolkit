@@ -34,14 +34,14 @@
 	],
 	"author": "Firtina Ozbalikchi <firtoz@github.com>",
 	"license": "MIT",
-	"homepage": "https://github.com/firtoz/router-toolkit#readme",
+	"homepage": "https://github.com/firtoz/fullstack-toolkit#readme",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/firtoz/router-toolkit.git",
+		"url": "https://github.com/firtoz/fullstack-toolkit.git",
 		"directory": "packages/maybe-error"
 	},
 	"bugs": {
-		"url": "https://github.com/firtoz/router-toolkit/issues"
+		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
 	},
 	"engines": {
 		"node": ">=18.0.0"
