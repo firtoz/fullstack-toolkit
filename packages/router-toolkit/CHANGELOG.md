@@ -1,5 +1,14 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 3.0.1
+
+### Patch Changes
+
+- [`3f5e0e7`](https://github.com/firtoz/fullstack-toolkit/commit/3f5e0e7fd8809eee064b64655c18a8c10e43c084) Thanks [@firtoz](https://github.com/firtoz)! - Rename monorepo
+
+- Updated dependencies [[`3f5e0e7`](https://github.com/firtoz/fullstack-toolkit/commit/3f5e0e7fd8809eee064b64655c18a8c10e43c084)]:
+  - @firtoz/maybe-error@1.3.1
+
 ## 3.0.0
 
 ### Minor Changes
