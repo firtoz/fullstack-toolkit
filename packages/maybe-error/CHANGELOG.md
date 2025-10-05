@@ -1,5 +1,11 @@
 # [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
 
+## 1.3.1
+
+### Patch Changes
+
+- [`3f5e0e7`](https://github.com/firtoz/fullstack-toolkit/commit/3f5e0e7fd8809eee064b64655c18a8c10e43c084) Thanks [@firtoz](https://github.com/firtoz)! - Rename monorepo
+
 ## 1.3.0
 
 ### Minor Changes
