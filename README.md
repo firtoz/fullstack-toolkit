@@ -23,6 +23,27 @@ Type-safe result handling with the MaybeError pattern for TypeScript.
 - 🎯 **Simple API** - Easy to use and understand
 - 🔧 **Modern TypeScript** - Optimized for TypeScript 5.0+ with enhanced type inference
 
+### [@firtoz/hono-fetcher](./packages/hono-fetcher)
+
+Type-safe Hono API client with full TypeScript inference for routes, params, and payloads.
+
+- 🔒 **Fully Type-Safe** - Complete TypeScript inference for routes, parameters, and responses
+- 🎯 **Path Parameters** - Automatic extraction and validation of path parameters
+- 📝 **Request Bodies** - Type-safe JSON and form data support
+- 🌐 **Cloudflare Workers** - First-class Durable Objects support
+- 🚀 **Zero Runtime Overhead** - All type inference at compile time
+
+### [@firtoz/websocket-do](./packages/websocket-do)
+
+Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration.
+
+- 🔒 **Type-safe** - Full TypeScript support with generic types for messages and session data
+- 🌐 **WebSocket Management** - Built on Cloudflare Durable Objects for stateful connections
+- 🎯 **Session-based** - Abstract session class for custom WebSocket logic
+- 🔄 **State Persistence** - Automatic serialization/deserialization of session data
+- 📡 **Broadcasting** - Built-in support for broadcasting messages
+- 🚀 **Hono Integration** - Seamless integration with Hono framework
+
 ## Installation
 
 Each package can be installed independently:
@@ -34,8 +55,14 @@ bun add @firtoz/router-toolkit
 # For error handling utilities
 bun add @firtoz/maybe-error
 
-# Or both
-bun add @firtoz/router-toolkit @firtoz/maybe-error
+# For Hono API client
+bun add @firtoz/hono-fetcher
+
+# For WebSocket Durable Objects
+bun add @firtoz/websocket-do
+
+# Or install multiple packages
+bun add @firtoz/router-toolkit @firtoz/maybe-error @firtoz/hono-fetcher @firtoz/websocket-do
 ```
 
 ## Development
@@ -85,6 +112,8 @@ Examples:
 ```bash
 feat(router-toolkit): add new hook for dynamic routing
 fix(maybe-error): resolve type inference issue
+feat(hono-fetcher): add support for custom headers
+fix(websocket-do): handle connection errors gracefully
 docs: update README with new examples
 ```
 
@@ -118,4 +147,8 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 - [GitHub Repository](https://github.com/firtoz/fullstack-toolkit)
 - [Router Toolkit on NPM](https://npmjs.com/package/@firtoz/router-toolkit)
 - [Maybe Error on NPM](https://npmjs.com/package/@firtoz/maybe-error)
-- [React Router Documentation](https://reactrouter.com) 
+- [Hono Fetcher on NPM](https://npmjs.com/package/@firtoz/hono-fetcher)
+- [WebSocket DO on NPM](https://npmjs.com/package/@firtoz/websocket-do)
+- [React Router Documentation](https://reactrouter.com)
+- [Hono Documentation](https://hono.dev)
+- [Cloudflare Durable Objects Documentation](https://developers.cloudflare.com/durable-objects) 

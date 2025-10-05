@@ -1,7 +1,7 @@
 // Testing library imports removed as DOM tests are not needed for formAction utility
 
+import { describe, expect, it, mock } from "bun:test";
 import type { ActionFunctionArgs } from "react-router";
-import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 // Test imports
@@ -52,7 +52,7 @@ describe("formAction", () => {
 		}
 
 		return {
-			formData: vi.fn().mockResolvedValue(mockFormData),
+			formData: mock(() => Promise.resolve(mockFormData)),
 		} as unknown as Request;
 	};
 
@@ -73,7 +73,7 @@ describe("formAction", () => {
 			password: z.string().min(8),
 		});
 
-		const mockHandler = vi.fn().mockResolvedValue(success({ userId: 123 }));
+		const mockHandler = mock(() => Promise.resolve(success({ userId: 123 })));
 
 		const action = formAction({
 			schema,
@@ -106,7 +106,7 @@ describe("formAction", () => {
 			password: z.string().min(8),
 		});
 
-		const mockHandler = vi.fn().mockResolvedValue(success({}));
+		const mockHandler = mock(() => Promise.resolve(success({})));
 
 		const action = formAction({
 			schema,
@@ -139,9 +139,9 @@ describe("formAction", () => {
 			password: z.string().min(8),
 		});
 
-		const mockHandler = vi
-			.fn()
-			.mockResolvedValue(fail("Authentication failed"));
+		const mockHandler = mock(() =>
+			Promise.resolve(fail("Authentication failed")),
+		);
 
 		const action = formAction({
 			schema,
@@ -179,7 +179,7 @@ describe("formAction", () => {
 			status: 302,
 			headers: { Location: "/dashboard" },
 		});
-		const mockHandler = vi.fn().mockRejectedValue(mockResponse);
+		const mockHandler = mock(() => Promise.reject(mockResponse));
 
 		const action = formAction({
 			schema,
@@ -200,9 +200,9 @@ describe("formAction", () => {
 			email: z.string().email(),
 		});
 
-		const mockHandler = vi
-			.fn()
-			.mockRejectedValue(new Error("Unexpected error"));
+		const mockHandler = mock(() =>
+			Promise.reject(new Error("Unexpected error")),
+		);
 
 		const action = formAction({
 			schema,
@@ -213,9 +213,9 @@ describe("formAction", () => {
 			email: "test@example.com",
 		});
 
-		const consoleErrorSpy = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {});
+		const originalConsoleError = console.error;
+		const consoleErrorMock = mock(() => {});
+		console.error = consoleErrorMock;
 
 		const result = await action(args);
 
@@ -223,9 +223,9 @@ describe("formAction", () => {
 		if (!result.success) {
 			expect(result.error.type).toBe("unknown");
 		}
-		expect(consoleErrorSpy).toHaveBeenCalled();
+		expect(consoleErrorMock).toHaveBeenCalled();
 
-		consoleErrorSpy.mockRestore();
+		console.error = originalConsoleError;
 	});
 
 	it("should handle complex schema with nested validation", async () => {
@@ -240,7 +240,7 @@ describe("formAction", () => {
 			terms: z.literal("on"),
 		});
 
-		const mockHandler = vi.fn().mockResolvedValue(success({ created: true }));
+		const mockHandler = mock(() => Promise.resolve(success({ created: true })));
 
 		const action = formAction({
 			schema,
@@ -276,7 +276,7 @@ describe("formAction", () => {
 			action: z.string(),
 		});
 
-		const mockHandler = vi.fn().mockResolvedValue(success());
+		const mockHandler = mock(() => Promise.resolve(success()));
 
 		const action = formAction({
 			schema,
@@ -304,7 +304,9 @@ describe("formAction", () => {
 			file: z.instanceof(File),
 		});
 
-		const mockHandler = vi.fn().mockResolvedValue(success({ uploaded: true }));
+		const mockHandler = mock(() =>
+			Promise.resolve(success({ uploaded: true })),
+		);
 
 		const action = formAction({
 			schema,

@@ -18,7 +18,6 @@
 		"README.md"
 	],
 	"scripts": {
-		"build": "echo 'No build step - using TypeScript source directly'",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint src --write",
 		"format": "biome format src --write",
