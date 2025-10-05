@@ -1,5 +1,9 @@
 # @firtoz/websocket-do
 
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fwebsocket-do.svg)](https://www.npmjs.com/package/@firtoz/websocket-do)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fwebsocket-do.svg)](https://www.npmjs.com/package/@firtoz/websocket-do)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fwebsocket-do.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
 Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration.
 
 ## Features

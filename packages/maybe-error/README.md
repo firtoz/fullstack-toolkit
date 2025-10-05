@@ -1,5 +1,9 @@
 # @firtoz/maybe-error
 
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fmaybe-error.svg)](https://www.npmjs.com/package/@firtoz/maybe-error)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fmaybe-error.svg)](https://www.npmjs.com/package/@firtoz/maybe-error)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fmaybe-error.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
 Type-safe result handling with the MaybeError pattern for TypeScript. Perfect for elegant error handling without exceptions.
 
 ## Features

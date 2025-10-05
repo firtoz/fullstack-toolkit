@@ -1,5 +1,9 @@
 # @firtoz/router-toolkit
 
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Frouter-toolkit.svg)](https://www.npmjs.com/package/@firtoz/router-toolkit)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Frouter-toolkit.svg)](https://www.npmjs.com/package/@firtoz/router-toolkit)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Frouter-toolkit.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
 Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management for React Router 7 framework mode.
 
 ## Features

@@ -1,5 +1,9 @@
 # @firtoz/hono-fetcher
 
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fhono-fetcher.svg)](https://www.npmjs.com/package/@firtoz/hono-fetcher)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fhono-fetcher.svg)](https://www.npmjs.com/package/@firtoz/hono-fetcher)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fhono-fetcher.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
 Type-safe Hono API client with full TypeScript inference for routes, params, and payloads.
 
 ## Features
