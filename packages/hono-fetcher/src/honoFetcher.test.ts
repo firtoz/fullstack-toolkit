@@ -1,9 +1,9 @@
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { type ServerType, serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Hono } from "hono";
 import { z } from "zod";
-import { type TypedHonoFetcher, honoFetcher } from "./honoFetcher";
+import { honoFetcher, type TypedHonoFetcher } from "./honoFetcher";
 
 describe("honoFetcher", () => {
 	const app = new Hono()
@@ -167,7 +167,12 @@ describe("honoFetcher", () => {
 		});
 
 		afterAll(async () => {
-			server.close();
+			// Small delay to allow pending requests to complete
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			// Close the server gracefully
+			await new Promise<void>((resolve) => {
+				server.close(() => resolve());
+			});
 		});
 
 		describe("direct fetcher", () => {

@@ -74,11 +74,30 @@ await api.post({
 
 ### Remote API Usage
 
+For remote APIs, you have two options:
+
+#### Option 1: Using `honoDirectFetcher` (Recommended)
+
+```typescript
+import { honoDirectFetcher } from '@firtoz/hono-fetcher';
+import type { AppType } from './backend/app'; // Your backend app type
+
+// Simply pass the base URL
+const api = honoDirectFetcher<AppType>('https://api.example.com');
+
+// Use it immediately
+const response = await api.get({
+  url: '/users/:id',
+  params: { id: '123' }
+});
+```
+
+#### Option 2: Using `honoFetcher` with Custom Fetch
+
 ```typescript
 import { honoFetcher } from '@firtoz/hono-fetcher';
 
-// For a remote API, you need to define the app type
-// (Usually exported from your backend)
+// For more control over the fetch behavior
 const api = honoFetcher<typeof app>((url, init) => {
   return fetch(`https://api.example.com${url}`, init);
 });
@@ -87,7 +106,7 @@ const api = honoFetcher<typeof app>((url, init) => {
 ### Durable Objects
 
 ```typescript
-import { honoDoFetcher, honoDoFetcherWithName } from '@firtoz/hono-fetcher/honoDoFetcher';
+import { honoDoFetcher, honoDoFetcherWithName } from '@firtoz/hono-fetcher';
 import { DurableObject } from 'cloudflare:workers';
 import { Hono } from 'hono';
 
@@ -142,6 +161,33 @@ A typed fetcher with methods for each HTTP verb: `get`, `post`, `put`, `delete`,
 
 ```typescript
 const api = honoFetcher<typeof app>(app.request);
+```
+
+### `honoDirectFetcher<T>(baseUrl)`
+
+Convenience wrapper around `honoFetcher` for remote APIs. Automatically prepends the base URL to all requests.
+
+#### Parameters
+
+- `baseUrl: string` - The base URL of your API (e.g., `'https://api.example.com'`)
+
+#### Returns
+
+A typed fetcher with methods for each HTTP verb: `get`, `post`, `put`, `delete`, `patch`
+
+#### Example
+
+```typescript
+import { honoDirectFetcher } from '@firtoz/hono-fetcher';
+import type { AppType } from './backend/app';
+
+const api = honoDirectFetcher<AppType>('https://api.example.com');
+
+// Make requests
+const response = await api.get({
+  url: '/users/:id',
+  params: { id: '123' }
+});
 ```
 
 ### Method Signature
@@ -322,7 +368,7 @@ type Params = ParsePathParams<'/users/:id/posts/:postId'>;
 Type for Durable Objects that expose a Hono app.
 
 ```typescript
-import type { DOWithHonoApp } from '@firtoz/hono-fetcher/honoDoFetcher';
+import type { DOWithHonoApp } from '@firtoz/hono-fetcher';
 
 export class MyDO extends DurableObject implements DOWithHonoApp {
   app = new Hono()

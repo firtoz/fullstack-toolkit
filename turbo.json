@@ -11,6 +11,9 @@
 		"lint": {
 			"outputLogs": "new-only"
 		},
+		"lint:ci": {
+			"outputLogs": "new-only"
+		},
 		"format": {
 			"outputLogs": "new-only"
 		},

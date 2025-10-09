@@ -1,7 +1,7 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { renderHook } from "@testing-library/react";
-import * as ReactRouter from "react-router";
 import React from "react";
+import * as ReactRouter from "react-router";
 
 // Mock the react-router module
 const mockSubmit = mock(() => Promise.resolve());
@@ -41,9 +41,9 @@ mock.module("react-router", () => ({
 // Type for test route paths
 type TestRoutePath = "/test/path" | "/api/submit";
 
-import { useDynamicSubmitter } from "./useDynamicSubmitter";
 import type { SubmitTarget } from "react-router";
 import type { $ZodAnyParams } from "zod/v4/core";
+import { useDynamicSubmitter } from "./useDynamicSubmitter";
 
 describe("useDynamicSubmitter", () => {
 	beforeEach(() => {

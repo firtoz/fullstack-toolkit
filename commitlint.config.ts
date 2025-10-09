@@ -28,7 +28,10 @@ function getWorkspacePackages(): string[] {
 		console.log("✅ Found workspace packages:", packages);
 		return packages;
 	} catch (error) {
-		console.warn("Could not detect workspace packages:", (error as Error).message);
+		console.warn(
+			"Could not detect workspace packages:",
+			(error as Error).message,
+		);
 		return [];
 	}
 }
@@ -78,12 +81,13 @@ const configuration: UserConfig = {
 		],
 		"subject-empty": [2, "never"],
 		"subject-full-stop": [2, "never", "."],
-		"header-max-length": [2, "always", 72],
+		// Line length rules disabled - only check conventional commit format
+		"header-max-length": [0],
 		"body-leading-blank": [1, "always"],
-		"body-max-line-length": [2, "always", 100],
+		"body-max-line-length": [0],
 		"footer-leading-blank": [1, "always"],
-		"footer-max-line-length": [2, "always", 100],
+		"footer-max-line-length": [0],
 	},
 };
 
-export default configuration; 
+export default configuration;
