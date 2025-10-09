@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/hono-fetcher",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "Type-safe Hono API client with full TypeScript inference for routes, params, and payloads",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
