@@ -35,6 +35,7 @@
 			"outputs": []
 		},
 		"test:watch": {
+			"dependsOn": ["typegen"],
 			"cache": false,
 			"persistent": true
 		}

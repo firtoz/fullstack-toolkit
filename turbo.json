@@ -20,6 +20,12 @@
 		"test": {
 			"outputLogs": "new-only"
 		},
+		"test:ci": {
+			"outputLogs": "new-only"
+		},
+		"typegen": {
+			"outputLogs": "new-only"
+		},
 		"test:watch": {
 			"persistent": true,
 			"outputLogs": "new-only"
