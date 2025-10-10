@@ -1,5 +1,14 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 3.0.3
+
+### Patch Changes
+
+- [`8b85af2`](https://github.com/firtoz/fullstack-toolkit/commit/8b85af2940ae002fb376885bedfbfb341950b29c) Thanks [@firtoz](https://github.com/firtoz)! - Update peer dependencies (react-router, zod) and dev dependencies
+
+- Updated dependencies [[`8b85af2`](https://github.com/firtoz/fullstack-toolkit/commit/8b85af2940ae002fb376885bedfbfb341950b29c)]:
+  - @firtoz/maybe-error@1.3.3
+
 ## 3.0.2
 
 ### Patch Changes
