@@ -1,20 +1,18 @@
-name: CI
+name: Pull Request Checks
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: CI
+  checks:
+    name: Run Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
