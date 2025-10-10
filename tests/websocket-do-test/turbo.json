@@ -1,0 +1,42 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"typegen": {
+			"inputs": [
+				"wrangler.jsonc",
+				"wrangler.toml",
+				".env",
+				".env.local",
+				".dev.vars",
+				"package.json",
+				"src/**/*.ts",
+				"src/**/*.js"
+			],
+			"outputs": ["worker-configuration.d.ts"]
+		},
+		"typecheck": {
+			"dependsOn": ["typegen"],
+			"outputs": []
+		},
+		"lint": {
+			"dependsOn": ["typegen"],
+			"outputs": []
+		},
+		"lint:ci": {
+			"dependsOn": ["typegen"],
+			"outputs": []
+		},
+		"format": {
+			"outputs": []
+		},
+		"test": {
+			"dependsOn": ["typegen"],
+			"outputs": []
+		},
+		"test:watch": {
+			"cache": false,
+			"persistent": true
+		}
+	}
+}

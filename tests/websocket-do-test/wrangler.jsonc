@@ -1,0 +1,38 @@
+{
+	// JSON Schema enables IDE autocomplete and validation for wrangler config
+	// Points to the schema bundled with wrangler package
+	// Reference: https://developers.cloudflare.com/workers/wrangler/configuration/
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+
+	"name": "websocket-do-test",
+	"main": "src/test-fixtures/worker.ts",
+	"compatibility_date": "2025-10-01",
+	// Current compatibility date for October 2025 - includes all latest features
+	// Enables ctx.exports API and Node.js process v2 implementation (after 2025-09-15)
+	// Reference: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
+
+	// Durable Object configuration
+	// Reference: https://developers.cloudflare.com/durable-objects/
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "CHAT_ROOM",
+				"class_name": "ChatRoomDO"
+				// CRITICAL: Do NOT add "script_name" here for vitest-pool-workers testing
+				// When script_name is present, it looks for an external service
+				// For testing, the DO class must be in the same worker (exported from main)
+				// Reference: https://developers.cloudflare.com/workers/testing/vitest-integration/configuration/
+			}
+		]
+	},
+
+	// Migrations track DO schema changes over time
+	// Required even for new DOs to register them with Cloudflare
+	// Reference: https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["ChatRoomDO"]
+		}
+	]
+}

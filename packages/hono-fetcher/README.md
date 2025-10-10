@@ -29,11 +29,13 @@ This package requires the following peer dependencies:
 bun add hono
 ```
 
-For Durable Object support:
+For Durable Object support, use `wrangler types` to generate accurate types:
 
 ```bash
-bun add @cloudflare/workers-types
+wrangler types
 ```
+
+This generates `worker-configuration.d.ts` with types for your specific environment bindings.
 
 ## Quick Start
 
@@ -129,11 +131,11 @@ export class ChatRoomDO extends DurableObject {
 // In your worker
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Option 1: From a stub
-    const stub = env.CHAT_ROOM.get(env.CHAT_ROOM.idFromName('room-1'));
+    // Option 1: From a stub (using new getByName API)
+    const stub = env.CHAT_ROOM.getByName('room-1');
     const api = honoDoFetcher(stub);
     
-    // Option 2: Directly with name
+    // Option 2: Directly with name (recommended)
     const api2 = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
     
     // Use it!
@@ -303,7 +305,7 @@ await api.get({
 Creates a typed fetcher for a Durable Object stub.
 
 ```typescript
-const stub = env.MY_DO.get(env.MY_DO.idFromName('example'));
+const stub = env.MY_DO.getByName('example');
 const api = honoDoFetcher(stub);
 
 await api.get({ url: '/status' });

@@ -106,7 +106,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for 
 
 ### Commit Message Format
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation.
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for consistent commit message formatting, while [Changesets](https://github.com/changesets/changesets) handles automated versioning and changelog generation.
 
 Examples:
 ```bash

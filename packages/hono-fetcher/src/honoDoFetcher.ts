@@ -44,7 +44,7 @@ export const honoDoFetcherWithName = <
 	namespace: DurableObjectNamespace<T>,
 	name: string,
 ): TypedDoFetcher<DurableObjectStub<T>> => {
-	return honoDoFetcher(namespace.get(namespace.idFromName(name)));
+	return honoDoFetcher(namespace.getByName(name));
 };
 
 export const honoDoFetcherWithId = <

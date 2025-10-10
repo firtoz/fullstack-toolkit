@@ -1,0 +1,27 @@
+{
+	"name": "websocket-do-test",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Integration tests for @firtoz/websocket-do package",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest watch",
+		"typecheck": "tsc --noEmit",
+		"typegen": "wrangler types",
+		"lint": "biome check --write src",
+		"lint:ci": "biome ci src",
+		"format": "biome format src --write"
+	},
+	"dependencies": {
+		"@firtoz/hono-fetcher": "^1.1.0",
+		"@firtoz/websocket-do": "workspace:*",
+		"hono": "^4.9.10"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.9.12",
+		"vitest": "^3.2.4",
+		"wrangler": "^4.42.2",
+		"typescript": "^5.9.3"
+	}
+}

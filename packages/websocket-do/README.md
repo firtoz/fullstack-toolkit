@@ -26,8 +26,16 @@ bun add @firtoz/websocket-do
 This package requires the following peer dependencies:
 
 ```bash
-bun add hono @cloudflare/workers-types @firtoz/hono-fetcher
+bun add hono @firtoz/hono-fetcher
 ```
+
+For TypeScript support, use `wrangler types` to generate accurate types from your `wrangler.jsonc`:
+
+```bash
+wrangler types
+```
+
+This generates `worker-configuration.d.ts` with types for your specific environment bindings, replacing the need for `@cloudflare/workers-types`.
 
 ## Quick Start
 
@@ -115,16 +123,24 @@ export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
 
 ### 4. Configure Your Worker
 
-```typescript
-// wrangler.toml
-[[durable_objects.bindings]]
-name = "CHAT_ROOM"
-class_name = "ChatRoomDO"
-script_name = "your-worker-name"
-
-[[migrations]]
-tag = "v1"
-new_classes = ["ChatRoomDO"]
+```jsonc
+// wrangler.jsonc
+{
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CHAT_ROOM",
+        "class_name": "ChatRoomDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["ChatRoomDO"]
+    }
+  ]
+}
 ```
 
 ### 5. Access from Your Worker
@@ -135,8 +151,8 @@ export default {
     const url = new URL(request.url);
     
     if (url.pathname === '/chat') {
-      const id = env.CHAT_ROOM.idFromName('global-chat');
-      const stub = env.CHAT_ROOM.get(id);
+      // Use getByName() for deterministic DO routing (2025+ compatibility)
+      const stub = env.CHAT_ROOM.getByName('global-chat');
       
       // Proxy to the Durable Object
       return stub.fetch(request);
@@ -314,6 +330,21 @@ async handleMessage(message: ClientMessage): Promise<void> {
   }
 }
 ```
+
+## Testing
+
+This package includes comprehensive integration tests in a separate test package using `@cloudflare/vitest-pool-workers`, which provides full WebSocket testing capabilities in a Miniflare-based environment that closely mirrors production.
+
+**What can be tested:**
+- ✅ Worker routing to Durable Objects
+- ✅ HTTP endpoints on DOs  
+- ✅ DO state management and isolation
+- ✅ Full WebSocket connection lifecycle
+- ✅ Real-time WebSocket message exchange
+- ✅ WebSocket session management
+- ✅ Type-safe DO client integration
+
+For detailed information about testing capabilities, example implementations, comprehensive test coverage, and setup instructions, see the [websocket-do-test](../../tests/websocket-do-test/) package.
 
 ## License
 

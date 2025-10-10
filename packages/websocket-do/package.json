@@ -21,9 +21,7 @@
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
-		"format": "biome format src --write",
-		"test": "bun test",
-		"test:watch": "bun test --watch"
+		"format": "biome format src --write"
 	},
 	"keywords": [
 		"typescript",
@@ -58,6 +56,7 @@
 		"access": "public"
 	},
 	"devDependencies": {
-		"bun-types": "^1.2.23"
+		"bun-types": "^1.2.23",
+		"typescript": "^5.9.3"
 	}
 }

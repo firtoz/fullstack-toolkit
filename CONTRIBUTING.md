@@ -6,6 +6,8 @@ Thank you for your interest in contributing to the Fullstack Toolkit monorepo! T
 
 - **[@firtoz/router-toolkit](./packages/router-toolkit)** - React Router 7 utilities
 - **[@firtoz/maybe-error](./packages/maybe-error)** - Type-safe error handling
+- **[@firtoz/hono-fetcher](./packages/hono-fetcher)** - Type-safe Hono API client
+- **[@firtoz/websocket-do](./packages/websocket-do)** - WebSocket Durable Objects utilities
 
 ## Development Setup
 
@@ -57,257 +59,108 @@ bun run --filter="@firtoz/router-toolkit" format
 
 ## Commit Message Format
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation. All commit messages are validated by commitlint.
+We use [Conventional Commits](https://www.conventionalcommits.org/) for consistency. Format: `<type>[scope]: <description>`
 
-### Format
+**Important:** Commit messages are for organization only. **[Changesets](https://github.com/changesets/changesets) handle all versioning and releases.**
 
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-### Types
-
-- **feat**: A new feature (triggers minor version bump)
-- **fix**: A bug fix (triggers patch version bump)
-- **docs**: Documentation only changes
-- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
-- **refactor**: A code change that neither fixes a bug nor adds a feature
-- **perf**: A code change that improves performance
-- **test**: Adding missing tests or correcting existing tests
-- **build**: Changes that affect the build system or external dependencies
-- **ci**: Changes to our CI configuration files and scripts
-- **chore**: Other changes that don't modify src or test files
-- **revert**: Reverts a previous commit
-
-### Scopes
-
-Use the package name as the scope when making changes specific to a package:
-
-- `router-toolkit`: Changes to the router-toolkit package
-- `maybe-error`: Changes to the maybe-error package
+### Types & Scopes
+- **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- **Scopes**: `router-toolkit`, `maybe-error`, `hono-fetcher`, `websocket-do` (or no scope)
 
 ### Examples
-
 ```bash
-# New feature in router-toolkit (0.3.0 → 0.4.0)
-git commit -m "feat(router-toolkit): add new hook for dynamic routing"
-
-# Bug fix in maybe-error (0.3.0 → 0.3.1)
-git commit -m "fix(maybe-error): resolve type inference issue"
-
-# Documentation update
-git commit -m "docs: update README with new examples"
-
-# Breaking change (0.3.0 → 1.0.0)
-git commit -m "feat(router-toolkit)!: redesign API for better type safety"
-
-# With scope and body
-git commit -m "feat(router-toolkit): add useDynamicSubmitter hook
-
-Add new hook for handling dynamic form submissions with automatic
-validation and loading states."
-```
-
-### Breaking Changes
-
-To indicate a breaking change, add `!` after the type or add `BREAKING CHANGE:` in the footer:
-
-```bash
-git commit -m "feat(router-toolkit)!: remove deprecated useLegacyFetch hook"
-# or
-git commit -m "feat(router-toolkit): update API design
-
-BREAKING CHANGE: useFetch now returns different interface"
+feat(router-toolkit): add new hook for dynamic routing
+fix(maybe-error): resolve type inference issue
+docs: update README with new examples
 ```
 
 ## Making Changes
 
-### Adding New Features
-
-1. Create a new branch from `main`
-2. Make your changes in the appropriate package
-3. Add tests if applicable
-4. Update documentation
-5. Run `bun run typecheck` and `bun run lint` to ensure quality
-6. Commit your changes following the conventional commit format
-7. Open a pull request
+1. Create branch from `main`
+2. Make changes in appropriate package
+3. Add tests and update docs
+4. Run `bun run typecheck` and `bun run lint`
+5. Commit with conventional format
+6. Open pull request
 
 ## Release Process
 
-Releases are **fully automated** using [Changesets](https://github.com/changesets/changesets) with GitHub Actions:
+Releases use [Changesets](https://github.com/changesets/changesets) with GitHub Actions automation.
 
-### For Contributors
+### Workflow
 
-1. **Make your changes** and commit them
-2. **Create a changeset** to describe your changes:
-   ```bash
-   bun changeset
-   ```
-3. **Follow the prompts** to:
-   - Select which packages are affected
-   - Choose the type of version bump (patch/minor/major)
-   - Write a summary of the changes
-4. **Commit the changeset** along with your code changes
-5. **Push to main** (or open a pull request and merge it)
+1. **Make changes** and commit with conventional format
+2. **Create changeset**: `bun changeset`
+   - Select affected packages
+   - Choose version bump type (patch/minor/major)
+   - Write changelog summary
+3. **Commit and push** (or open PR)
+4. **GitHub Actions** automatically creates Release PR
+5. **Merge Release PR** → automatic npm publish
 
-### For Maintainers
+### Version Types
+- **Patch**: Bug fixes, docs (`1.0.0 → 1.0.1`)
+- **Minor**: New features (`1.0.0 → 1.1.0`)  
+- **Major**: Breaking changes (`1.0.0 → 2.0.0`)
 
-The process is now **fully automated**:
-
-1. **GitHub Actions automatically** creates a "Release PR" when changesets are pushed to main
-2. **Review the Release PR** - it contains version bumps and updated changelogs
-3. **Merge the Release PR** - this automatically publishes all packages to npm
-
-**No manual commands needed!** 🎉
-
-### Changeset Types
-
-- **Patch** (0.1.0 → 0.1.1): Bug fixes, documentation updates
-- **Minor** (0.1.0 → 0.2.0): New features, non-breaking changes  
-- **Major** (0.1.0 → 1.0.0): Breaking changes
-
-### Example Workflow
-
+### Example
 ```bash
-# 1. Make your changes
-git checkout -b feature/new-hook
-# ... make changes ...
+# Make changes
+git commit -m "feat(router-toolkit): add email validation"
 
-# 2. Create changeset
+# Create changeset
 bun changeset
-# Select packages: @firtoz/router-toolkit
-# Select bump: minor
-# Summary: "Add useDynamicRouter hook for enhanced routing"
+# Select: @firtoz/router-toolkit, minor, "Add email validation"
 
-# 3. Commit everything
-git add .
-git commit -m "feat(router-toolkit): add useDynamicRouter hook"
-git push origin feature/new-hook
+# Commit and push
+git add .changeset/ && git commit -m "chore: add changeset"
+git push
 
-# 4. Open PR and merge it
-# 5. GitHub Actions automatically creates a Release PR
-# 6. Maintainer merges Release PR → automatic npm publish! 🚀
+# GitHub Actions creates Release PR automatically
+# Merge Release PR → publishes to npm
 ```
-
-### 🤖 **What GitHub Actions Does:**
-
-1. **Detects changesets** in commits pushed to main
-2. **Creates Release PR** with:
-   - Updated package versions
-   - Generated changelogs
-   - All affected packages included
-3. **When Release PR is merged**:
-   - Publishes packages to npm
-   - Creates GitHub releases
-   - Updates repository tags
 
 ## Code Quality
 
 ### TypeScript
-
-All packages use TypeScript with strict settings. Make sure your code:
-- Has proper type annotations
-- Passes `bun run typecheck`
-- Follows the existing code patterns
+- Use strict settings and proper type annotations
+- Ensure `bun run typecheck` passes
+- Follow existing patterns
 
 ### Linting
-
-We use [Biome](https://biomejs.dev/) for linting and formatting:
-
+We use [Biome](https://biomejs.dev/):
 ```bash
-# Check for linting issues
-bun run lint
-
-# Fix auto-fixable issues
-bun run format
+bun run lint    # Check issues
+bun run format  # Fix auto-fixable issues
 ```
 
 ### Testing
+- Add tests for complex logic
+- Test changes manually
+- Ensure existing functionality works
 
-While we don't have extensive tests yet, when adding new features:
-- Consider adding tests for complex logic
-- Test your changes manually
-- Ensure existing functionality isn't broken
+## Adding New Packages
 
-## Package Structure
-
-### Adding New Packages
-
-Adding a new package to the monorepo:
-
-1. **Create package directory**: `mkdir packages/your-new-package`
-2. **Add `package.json`** with the correct name and structure
-3. **Add `tsconfig.json`** (copy from existing packages)
-4. **Add package scope** to `commitlint.config.ts` scopes array
-5. **Create a changeset** when ready to publish:
-   ```bash
-   bun changeset
-   ```
-6. **That's it!** 🎉 Changesets will handle the new package in releases
-
-### Example: Adding `@firtoz/new-package`
-
-```bash
-# 1. Create the package
-mkdir packages/new-package
-cd packages/new-package
-
-# 2. Create package.json (update name, description, etc.)
-cp ../maybe-error/package.json ./package.json
-
-# 3. Copy configs
-cp ../maybe-error/tsconfig.json ./
-
-# 4. Create your code
-mkdir src && echo 'export const hello = "world";' > src/index.ts
-
-# 5. Update root commitlint config
-# Add "new-package" to the scope-enum array in commitlint.config.ts
-
-# 6. Create changeset for initial release
-bun changeset
-# Select: @firtoz/new-package
-# Type: minor (for new package)
-# Summary: "Initial implementation of new-package"
-
-# 7. Commit and push
-git add .
-git commit -m "feat(new-package): initial implementation"
-git push origin main
-
-# 🎉 Ready for release when maintainer runs changeset publish!
-```
+1. Create package directory: `mkdir packages/your-package`
+2. Copy `package.json` and `tsconfig.json` from existing package
+3. Update package name and details
+4. Add scope to `commitlint.config.ts` (optional)
+5. Create changeset for release: `bun changeset`
 
 ### Inter-package Dependencies
-
-When one package depends on another:
-- Use `workspace:*` in `package.json`
-- Import using the full package name (e.g., `@firtoz/maybe-error`)
-- Update TypeScript path mappings if needed
+- Use `workspace:*` in `package.json` 
+- Import with full package name (e.g., `@firtoz/maybe-error`)
 
 ## Documentation
 
-### README Updates
-
-- Update package READMEs when adding new features
-- Keep examples up-to-date
-- Use TypeScript in all code examples
-
-### API Documentation
-
-- Use JSDoc comments for public APIs
-- Include usage examples in comments
-- Document parameter types and return values
+- Update package READMEs when adding features
+- Use TypeScript in all examples
+- Add JSDoc comments for public APIs
 
 ## Questions?
 
-If you have questions about contributing:
-- Check existing issues and discussions
-- Create a new issue for bugs or feature requests
-- Start a discussion for general questions
+- Check existing issues/discussions
+- Create new issue for bugs/features
+- Start discussion for general questions
 
-Thank you for contributing! 🎉 
+Thank you for contributing! 

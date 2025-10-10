@@ -8,4 +8,9 @@ dist/
 .env.local
 .env.*.local 
 
+# Turbo cache
 .turbo
+
+# Wrangler local dev
+.wrangler
+worker-configuration.d.ts
