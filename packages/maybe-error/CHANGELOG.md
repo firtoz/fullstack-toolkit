@@ -1,5 +1,11 @@
 # [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
 
+## 1.3.3
+
+### Patch Changes
+
+- [`8b85af2`](https://github.com/firtoz/fullstack-toolkit/commit/8b85af2940ae002fb376885bedfbfb341950b29c) Thanks [@firtoz](https://github.com/firtoz)! - Update lint scripts and improve documentation
+
 ## 1.3.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.0.0
+
+### Major Changes
+
+- [`8b85af2`](https://github.com/firtoz/fullstack-toolkit/commit/8b85af2940ae002fb376885bedfbfb341950b29c) Thanks [@firtoz](https://github.com/firtoz)! - Breaking change: Replace namespace.get(namespace.idFromName(name)) with namespace.getByName(name) in honoDoFetcherWithName function
+
 ## 1.1.0
 
 ### Minor Changes
