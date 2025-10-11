@@ -20,6 +20,6 @@ export {
 	type JsonResponse,
 	type ParsePathParams,
 	type TypedHonoFetcher,
-	type WebSocketConfig,
 	type TypedWebSocketFetcher,
+	type WebSocketConfig,
 } from "./honoFetcher";
