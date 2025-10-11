@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/websocket-do",
-	"version": "3.0.0",
+	"version": "4.0.0",
 	"description": "Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
