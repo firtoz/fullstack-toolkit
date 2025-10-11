@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.1.0
+
+### Minor Changes
+
+- [`c38877a`](https://github.com/firtoz/fullstack-toolkit/commit/c38877a21b3879eb41ae457aac35ea9d5eac6db7) Thanks [@firtoz](https://github.com/firtoz)! - Enable websocket connections in honoFetcher
+
 ## 2.0.0
 
 ### Major Changes

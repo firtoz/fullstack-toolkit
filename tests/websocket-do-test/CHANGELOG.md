@@ -1,5 +1,13 @@
 # websocket-do-test
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`c38877a`](https://github.com/firtoz/fullstack-toolkit/commit/c38877a21b3879eb41ae457aac35ea9d5eac6db7), [`c38877a`](https://github.com/firtoz/fullstack-toolkit/commit/c38877a21b3879eb41ae457aac35ea9d5eac6db7)]:
+  - @firtoz/websocket-do@4.0.0
+  - @firtoz/hono-fetcher@2.1.0
+
 ## 1.0.1
 
 ### Patch Changes

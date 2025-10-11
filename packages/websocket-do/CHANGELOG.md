@@ -1,5 +1,16 @@
 # @firtoz/websocket-do
 
+## 4.0.0
+
+### Minor Changes
+
+- [`c38877a`](https://github.com/firtoz/fullstack-toolkit/commit/c38877a21b3879eb41ae457aac35ea9d5eac6db7) Thanks [@firtoz](https://github.com/firtoz)! - Add zod-based helpers to websocket-do
+
+### Patch Changes
+
+- Updated dependencies [[`c38877a`](https://github.com/firtoz/fullstack-toolkit/commit/c38877a21b3879eb41ae457aac35ea9d5eac6db7)]:
+  - @firtoz/hono-fetcher@2.1.0
+
 ## 3.0.0
 
 ### Patch Changes
