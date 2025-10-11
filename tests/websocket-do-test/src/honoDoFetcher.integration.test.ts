@@ -298,4 +298,181 @@ describe("honoDoFetcher Integration Tests", () => {
 			ws.close();
 		});
 	});
+
+	describe("WebSocket Connection via honoDoFetcher", () => {
+		it("should support WebSocket connections via honoDoFetcher.websocket()", async () => {
+			const roomId = "test-websocket-via-fetcher";
+			const api = honoDoFetcherWithName(env.CHAT_ROOM, roomId);
+
+			// Use the new websocket method on the fetcher
+			// WebSocket is auto-accepted by default for convenience
+			const wsResp = await api.websocket({ url: "/websocket" });
+
+			// Should get a WebSocket upgrade response
+			expect(wsResp.status).toBe(101);
+			expect(wsResp.webSocket).not.toBeNull();
+
+			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
+			const ws = wsResp.webSocket;
+			// No need to call ws.accept() - it's done automatically!
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Verify the session was created
+			const infoResp = await api.post({ url: "/info" });
+			const info = await infoResp.json();
+			expect(info.sessionCount).toBe(1);
+
+			ws.close();
+		});
+
+		it("should support multiple WebSocket connections via honoDoFetcher", async () => {
+			const roomId = "test-multi-websocket-via-fetcher";
+			const api = honoDoFetcherWithName(env.CHAT_ROOM, roomId);
+
+			// Connect first WebSocket via fetcher (auto-accepted)
+			const wsResp1 = await api.websocket({ url: "/websocket" });
+			expect(wsResp1.status).toBe(101);
+			if (!wsResp1.webSocket) throw new Error("Expected WebSocket 1");
+			const ws1 = wsResp1.webSocket;
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Connect second WebSocket via fetcher (auto-accepted)
+			const wsResp2 = await api.websocket({ url: "/websocket" });
+			expect(wsResp2.status).toBe(101);
+			if (!wsResp2.webSocket) throw new Error("Expected WebSocket 2");
+			const ws2 = wsResp2.webSocket;
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Should have 2 sessions
+			const infoResp = await api.post({ url: "/info" });
+			const info = await infoResp.json();
+			expect(info.sessionCount).toBe(2);
+
+			ws1.close();
+			ws2.close();
+		});
+
+		it("should support sending/receiving messages via honoDoFetcher websocket", async () => {
+			const roomId = "test-messages-via-fetcher";
+			const api = honoDoFetcherWithName(env.CHAT_ROOM, roomId);
+
+			// Connect WebSocket via fetcher (auto-accepted)
+			const wsResp = await api.websocket({ url: "/websocket" });
+			expect(wsResp.status).toBe(101);
+			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
+			const ws = wsResp.webSocket;
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Set up message handler
+			const messages: unknown[] = [];
+			ws.addEventListener("message", (event) => {
+				messages.push(JSON.parse(event.data as string));
+			});
+
+			// Change name
+			ws.send(JSON.stringify({ type: "setName", name: "Bob" }));
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Should have received nameChanged message
+			expect(messages.length).toBeGreaterThan(0);
+			const nameChangedMsg = messages.find(
+				(m: any) => m.type === "nameChanged",
+			);
+			expect(nameChangedMsg).toBeDefined();
+			if (nameChangedMsg) {
+				expect((nameChangedMsg as any).newName).toBe("Bob");
+			}
+
+			// Verify via API
+			const infoResp = await api.post({ url: "/info" });
+			const info = await infoResp.json();
+			expect(info.sessionCount).toBe(1);
+			assert(info.sessions[0]);
+			expect(info.sessions[0].name).toBe("Bob");
+
+			ws.close();
+		});
+
+		it("should work with honoDoFetcher (stub-based)", async () => {
+			// Create a DO stub directly
+			const stub = env.CHAT_ROOM.getByName("test-stub-websocket");
+			const api = honoDoFetcher(stub);
+
+			// Use websocket method (auto-accepted)
+			const wsResp = await api.websocket({ url: "/websocket" });
+			expect(wsResp.status).toBe(101);
+			expect(wsResp.webSocket).not.toBeNull();
+
+			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
+			const ws = wsResp.webSocket;
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Verify session via POST
+			const infoResp = await api.post({ url: "/info" });
+			const info = await infoResp.json();
+			expect(info.sessionCount).toBe(1);
+
+			ws.close();
+		});
+
+		it("should work with honoDoFetcherWithId", async () => {
+			// Get a valid ID
+			const stub = env.CHAT_ROOM.getByName("test-id-websocket");
+			const idString = stub.id.toString();
+
+			const api = honoDoFetcherWithId(env.CHAT_ROOM, idString);
+
+			// Use websocket method (auto-accepted)
+			const wsResp = await api.websocket({ url: "/websocket" });
+			expect(wsResp.status).toBe(101);
+			expect(wsResp.webSocket).not.toBeNull();
+
+			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
+			const ws = wsResp.webSocket;
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Verify session
+			const infoResp = await api.post({ url: "/info" });
+			const info = await infoResp.json();
+			expect(info.sessionCount).toBe(1);
+
+			ws.close();
+		});
+
+		it("should allow manual accept when autoAccept is false", async () => {
+			const roomId = "test-manual-accept";
+			const api = honoDoFetcherWithName(env.CHAT_ROOM, roomId);
+
+			// Disable auto-accept for manual control
+			const wsResp = await api.websocket({
+				url: "/websocket",
+				config: { autoAccept: false },
+			});
+
+			expect(wsResp.status).toBe(101);
+			expect(wsResp.webSocket).not.toBeNull();
+
+			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
+			const ws = wsResp.webSocket;
+
+			// Manually accept when ready
+			ws.accept();
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Should work just like auto-accept
+			const infoResp = await api.post({ url: "/info" });
+			const info = await infoResp.json();
+			expect(info.sessionCount).toBe(1);
+
+			ws.close();
+		});
+	});
 });

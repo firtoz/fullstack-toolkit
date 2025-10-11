@@ -22,7 +22,15 @@
 				// When script_name is present, it looks for an external service
 				// For testing, the DO class must be in the same worker (exported from main)
 				// Reference: https://developers.cloudflare.com/workers/testing/vitest-integration/configuration/
-			}
+			},
+		{
+			"name": "ZOD_CHAT_ROOM",
+			"class_name": "ZodChatRoomDO"
+		},
+		{
+			"name": "ZOD_CHAT_ROOM_JSON",
+			"class_name": "ZodChatRoomDO_JSON"
+		}
 		]
 	},
 
@@ -33,6 +41,10 @@
 		{
 			"tag": "v1",
 			"new_classes": ["ChatRoomDO"]
+		},
+		{
+			"tag": "v2", 
+			"new_classes": ["ZodChatRoomDO", "ZodChatRoomDO_JSON"]
 		}
 	]
 }

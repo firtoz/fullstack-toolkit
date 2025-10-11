@@ -97,9 +97,33 @@ type AvailableMethods<T extends Hono> = {
 	[M in HttpMethod]: keyof HonoSchema<T>[M] extends never ? never : M;
 }[HttpMethod];
 
+export interface WebSocketConfig {
+	/**
+	 * Whether to automatically call accept() on the WebSocket before returning.
+	 * Defaults to true for convenience.
+	 *
+	 * In Cloudflare Workers, you must call accept() before using a WebSocket.
+	 * Setting this to false allows you to call accept() manually if needed.
+	 *
+	 * @default true
+	 */
+	autoAccept?: boolean;
+}
+
+export type TypedWebSocketFetcher<T extends Hono> = <
+	SchemaPath extends string & keyof HonoSchema<T>["get"],
+>(
+	request: {
+		url: SchemaPath;
+		config?: WebSocketConfig;
+	} & FetcherParams<SchemaPath>,
+) => Promise<Response>;
+
 export type BaseTypedHonoFetcher<T extends Hono> = {
 	[M in AvailableMethods<T>]: TypedMethodFetcher<T, M>;
-};
+} & (keyof HonoSchema<T>["get"] extends never
+	? {}
+	: { websocket: TypedWebSocketFetcher<T> });
 
 const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
 	fetcher: (
@@ -158,6 +182,48 @@ const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
 	}) as TypedMethodFetcher<T, M>;
 };
 
+const createWebSocketFetcher = <T extends Hono>(
+	fetcher: (
+		request: string,
+		init?: RequestInit,
+	) => ReturnType<T["request"]> | Promise<ReturnType<T["request"]>>,
+): TypedWebSocketFetcher<T> => {
+	return (async (request) => {
+		let finalUrl: string = request.url;
+
+		const { init = {}, params, config } = request;
+		const autoAccept = config?.autoAccept ?? true; // Default to true
+
+		if (params && typeof params === "object") {
+			finalUrl = Object.entries(params).reduce((acc, [key, value]) => {
+				return acc.replace(`:${key}`, value as string);
+			}, finalUrl);
+		}
+
+		// biome-ignore lint/suspicious/noExplicitAny: Different runtimes have incompatible HeadersInit types
+		const newHeaders = new Headers(init.headers as any);
+		newHeaders.set("Upgrade", "websocket");
+
+		try {
+			const response = await fetcher(finalUrl, {
+				method: "GET",
+				headers: newHeaders,
+				...init,
+			});
+
+			// Auto-accept the WebSocket if configured (default: true)
+			if (autoAccept && response.webSocket) {
+				response.webSocket.accept();
+			}
+
+			return response;
+		} catch (error) {
+			console.error("Error upgrading to WebSocket", error);
+			throw new Error(`Failed to upgrade WebSocket at ${finalUrl}: ${error}`);
+		}
+	}) as TypedWebSocketFetcher<T>;
+};
+
 export type TypedHonoFetcher<T extends Hono> = BaseTypedHonoFetcher<T>;
 
 export const honoFetcher = <T extends Hono>(
@@ -182,6 +248,11 @@ export const honoFetcher = <T extends Hono>(
 		},
 		{} as TypedHonoFetcher<T>,
 	);
+
+	// Add websocket method
+	(
+		result as TypedHonoFetcher<T> & { websocket?: TypedWebSocketFetcher<T> }
+	).websocket = createWebSocketFetcher(fetcher);
 
 	return result;
 };

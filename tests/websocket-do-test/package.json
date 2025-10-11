@@ -16,7 +16,9 @@
 	"dependencies": {
 		"@firtoz/hono-fetcher": "^2.0.0",
 		"@firtoz/websocket-do": "workspace:*",
-		"hono": "^4.9.10"
+		"hono": "^4.9.10",
+		"zod": "^4.1.12",
+		"msgpackr": "^1.11.5"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.9.12",

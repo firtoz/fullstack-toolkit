@@ -31,18 +31,21 @@ Type-safe Hono API client with full TypeScript inference for routes, params, and
 - 🎯 **Path Parameters** - Automatic extraction and validation of path parameters
 - 📝 **Request Bodies** - Type-safe JSON and form data support
 - 🌐 **Cloudflare Workers** - First-class Durable Objects support
+- 🔌 **WebSocket Support** - Type-safe WebSocket connections with auto-accept
 - 🚀 **Zero Runtime Overhead** - All type inference at compile time
 
 ### [@firtoz/websocket-do](./packages/websocket-do)
 
-Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration.
+Type-safe WebSocket session management for Cloudflare Durable Objects with Zod validation.
 
 - 🔒 **Type-safe** - Full TypeScript support with generic types for messages and session data
+- ✨ **Zod Validation** - Runtime message validation with `ZodWebSocketClient` and `ZodSession`
 - 🌐 **WebSocket Management** - Built on Cloudflare Durable Objects for stateful connections
 - 🎯 **Session-based** - Abstract session class for custom WebSocket logic
 - 🔄 **State Persistence** - Automatic serialization/deserialization of session data
 - 📡 **Broadcasting** - Built-in support for broadcasting messages
-- 🚀 **Hono Integration** - Seamless integration with Hono framework
+- 📦 **Buffer Mode** - Efficient msgpack serialization for binary messaging
+- 🚀 **Hono Integration** - Seamless integration with Hono framework and `@firtoz/hono-fetcher`
 
 ## Installation
 

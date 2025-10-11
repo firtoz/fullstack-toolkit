@@ -12,6 +12,7 @@ Type-safe Hono API client with full TypeScript inference for routes, params, and
 - 🎯 **Path Parameters** - Automatic extraction and validation of path parameters (`:id`, `:slug`, etc.)
 - 📝 **Request Bodies** - Type-safe JSON and form data support with automatic serialization
 - 🌐 **Cloudflare Workers** - First-class support for Durable Objects with `honoDoFetcher`
+- 🔌 **WebSocket Support** - Type-safe WebSocket connections with automatic acceptance and configuration
 - 🚀 **Zero Runtime Overhead** - All type inference happens at compile time
 - 🔄 **Full HTTP Methods** - Support for GET, POST, PUT, DELETE, and PATCH
 
@@ -298,17 +299,132 @@ await api.get({
 });
 ```
 
+## WebSocket Support
+
+`hono-fetcher` provides first-class support for WebSocket connections with full type safety.
+
+### Basic WebSocket Connection
+
+```typescript
+import { honoFetcher } from '@firtoz/hono-fetcher';
+
+const api = honoFetcher<typeof app>(fetcher);
+
+// Connect to a WebSocket endpoint
+const wsResponse = await api.websocket({
+  url: '/chat',
+});
+
+// Access the WebSocket
+const ws = wsResponse.webSocket;
+if (ws) {
+  ws.send(JSON.stringify({ type: 'hello' }));
+  
+  ws.addEventListener('message', (event) => {
+    console.log('Received:', event.data);
+  });
+}
+```
+
+### WebSocket with Auto-Accept
+
+By default, WebSockets are **automatically accepted** for convenience:
+
+```typescript
+// Default behavior - WebSocket is auto-accepted
+const wsResp = await api.websocket({
+  url: '/websocket',
+  // config.autoAccept defaults to true
+});
+
+// WebSocket is ready to use immediately!
+wsResp.webSocket?.send('Hello!');
+```
+
+### Manual WebSocket Acceptance
+
+For advanced scenarios where you need control over when the WebSocket is accepted:
+
+```typescript
+const wsResp = await api.websocket({
+  url: '/websocket',
+  config: { autoAccept: false }, // Disable auto-accept
+});
+
+const ws = wsResp.webSocket;
+if (ws) {
+  // Set up your listeners first
+  ws.addEventListener('message', (event) => {
+    console.log('Message:', event.data);
+  });
+  
+  // Then manually accept when ready
+  ws.accept();
+}
+```
+
+### WebSocket with Path Parameters
+
+```typescript
+const api = honoFetcher<typeof app>(fetcher);
+
+// WebSocket endpoint with path parameters
+const wsResp = await api.websocket({
+  url: '/rooms/:roomId/websocket',
+  params: { roomId: 'room-123' }, // Type-safe params!
+});
+```
+
+### Integration with ZodWebSocketClient
+
+For even better type safety, combine with `@firtoz/websocket-do`'s `ZodWebSocketClient`:
+
+```typescript
+import { ZodWebSocketClient } from '@firtoz/websocket-do';
+import { honoDoFetcherWithName } from '@firtoz/hono-fetcher';
+
+// 1. Connect to DO WebSocket
+const api = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
+const wsResp = await api.websocket({
+  url: '/websocket',
+  config: { autoAccept: false }, // Let ZodWebSocketClient handle acceptance
+});
+
+// 2. Wrap with type-safe client
+const client = new ZodWebSocketClient({
+  webSocket: wsResp.webSocket,
+  clientSchema: ClientMessageSchema,
+  serverSchema: ServerMessageSchema,
+  onMessage: (message) => {
+    // Fully typed message!
+    console.log('Received:', message);
+  },
+});
+
+// 3. Now accept
+wsResp.webSocket?.accept();
+
+// 4. Send type-safe messages
+client.send({ type: 'chat', text: 'Hello!' }); // Validated with Zod!
+```
+
+See the [ZodWebSocketClient documentation](#) for more details on type-safe WebSocket communication.
+
 ## Durable Objects API
 
 ### `honoDoFetcher<T>(stub)`
 
-Creates a typed fetcher for a Durable Object stub.
+Creates a typed fetcher for a Durable Object stub with support for both HTTP and WebSocket connections.
 
 ```typescript
 const stub = env.MY_DO.getByName('example');
 const api = honoDoFetcher(stub);
 
+// HTTP requests
 await api.get({ url: '/status' });
+
+// WebSocket connections
+const wsResp = await api.websocket({ url: '/ws' });
 ```
 
 ### `honoDoFetcherWithName<T>(namespace, name)`
@@ -317,7 +433,12 @@ Convenience method to create a fetcher from a namespace and name.
 
 ```typescript
 const api = honoDoFetcherWithName(env.MY_DO, 'example');
+
+// HTTP
 await api.get({ url: '/status' });
+
+// WebSocket
+await api.websocket({ url: '/chat' });
 ```
 
 ### `honoDoFetcherWithId<T>(namespace, id)`
@@ -353,6 +474,23 @@ import type { JsonResponse } from '@firtoz/hono-fetcher';
 const response: JsonResponse<{ id: string }> = await api.get({ url: '/user' });
 const data = await response.json(); // Type: { id: string }
 ```
+
+### `WebSocketConfig`
+
+Configuration options for WebSocket connections.
+
+```typescript
+import type { WebSocketConfig } from '@firtoz/hono-fetcher';
+
+const config: WebSocketConfig = {
+  autoAccept: false, // Default: true
+};
+
+await api.websocket({ url: '/ws', config });
+```
+
+**Options:**
+- `autoAccept?: boolean` - Whether to automatically call `accept()` on the WebSocket. Defaults to `true` for convenience. Set to `false` if you need manual control over when the WebSocket is accepted (e.g., when using with `ZodWebSocketClient`).
 
 ### `ParsePathParams<T>`
 

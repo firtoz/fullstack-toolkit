@@ -19,6 +19,6 @@
 		"baseUrl": ".",
 		"types": ["bun-types", "@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "examples/**/*"],
 	"exclude": ["node_modules"]
 }
