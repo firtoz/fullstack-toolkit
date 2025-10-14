@@ -18,7 +18,7 @@ export interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
 	onOpen?: (event: Event) => void;
 	onClose?: (event: CloseEvent) => void;
 	onError?: (event: Event) => void;
-	onValidationError?: (error: unknown, rawMessage: unknown) => void;
+	onValidationError?: (error: Error, rawMessage: unknown) => void;
 }
 
 export class ZodWebSocketClient<TClientMessage, TServerMessage> {
@@ -28,7 +28,7 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 	private readonly enableBufferMessages: boolean;
 	private readonly onMessageCallback?: (message: TServerMessage) => void;
 	private readonly onValidationError?: (
-		error: unknown,
+		error: Error,
 		rawMessage: unknown,
 	) => void;
 
@@ -116,7 +116,10 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 			this.onMessageCallback?.(parsedMessage);
 		} catch (error) {
 			console.error("Failed to process message:", error);
-			this.onValidationError?.(error, event.data);
+			this.onValidationError?.(
+				error instanceof Error ? error : new Error(String(error)),
+				event.data,
+			);
 		}
 	}
 

@@ -1,9 +1,10 @@
 import { SELF } from "cloudflare:test";
 import { pack, unpack } from "msgpackr";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import type {
 	ClientMessage,
 	ServerMessage,
+	SessionData,
 } from "./test-fixtures/ZodChatRoomDO";
 
 // Import the worker to load it into the test environment
@@ -24,7 +25,8 @@ describe("ZodSession Integration Tests", () => {
 			expect(response.status).toBe(101);
 			expect(response.webSocket).toBeDefined();
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 
 			// Mock message handling
 			const messages: ServerMessage[] = [];
@@ -67,7 +69,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			ws.addEventListener("message", (event) => {
@@ -108,7 +111,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			ws.addEventListener("message", (event) => {
@@ -118,7 +122,7 @@ describe("ZodSession Integration Tests", () => {
 			ws.accept();
 
 			// Test message that's too long (over 1000 chars)
-			const longMessage: any = {
+			const longMessage: ClientMessage = {
 				type: "message",
 				text: "a".repeat(1001), // Exceeds max length
 			};
@@ -152,7 +156,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			// Listen for BUFFER messages (not string)
@@ -200,7 +205,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			// Listen for BUFFER messages
@@ -246,7 +252,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			// Listen for BUFFER messages
@@ -290,8 +297,9 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
-			const messages: any[] = [];
+			const ws = response.webSocket;
+			assert(ws);
+			const messages: ServerMessage[] = [];
 
 			// Listen for any messages (JSON or buffer)
 			ws.addEventListener("message", (event) => {
@@ -332,7 +340,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			ws.addEventListener("message", (event) => {
@@ -369,7 +378,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			ws.addEventListener("message", (event) => {
@@ -419,7 +429,8 @@ describe("ZodSession Integration Tests", () => {
 				},
 			);
 
-			const ws = response.webSocket!;
+			const ws = response.webSocket;
+			assert(ws);
 			const messages: ServerMessage[] = [];
 
 			ws.addEventListener("message", (event) => {
@@ -465,7 +476,7 @@ describe("ZodSession Integration Tests", () => {
 
 			const info = (await infoResponse.json()) as {
 				sessionCount: number;
-				sessions: any[];
+				sessions: SessionData[];
 			};
 			expect(info).toHaveProperty("sessionCount");
 			expect(info).toHaveProperty("sessions");
@@ -486,19 +497,23 @@ describe("ZodSession Integration Tests", () => {
 			const websockets = connections.map((response) => {
 				expect(response.status).toBe(101);
 				expect(response.webSocket).toBeDefined();
-				return response.webSocket!;
+				return response.webSocket;
 			});
 
 			// Accept all connections
 			websockets.forEach((ws) => {
+				assert(ws);
 				ws.accept();
 			});
 
+			assert(websockets[0]);
+			assert(websockets[1]);
+
 			// Send messages from different sessions
-			websockets[0]!.send(
+			websockets[0].send(
 				JSON.stringify({ type: "message", text: "From session 1" }),
 			);
-			websockets[1]!.send(
+			websockets[1].send(
 				JSON.stringify({ type: "message", text: "From session 2" }),
 			);
 
@@ -514,7 +529,7 @@ describe("ZodSession Integration Tests", () => {
 			);
 			const info = (await infoResponse.json()) as {
 				sessionCount: number;
-				sessions: any[];
+				sessions: SessionData[];
 			};
 
 			expect(info.sessionCount).toBe(2);

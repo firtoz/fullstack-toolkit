@@ -7,7 +7,7 @@
 	"scripts": {
 		"test": "vitest run",
 		"test:watch": "vitest watch",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"typegen": "wrangler types",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",

@@ -9,9 +9,13 @@ export interface ZodSessionOptions<TClientMessage, TServerMessage> {
 }
 
 export abstract class ZodSession<
+	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the environment
 	TEnv extends object = any,
+	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the data
 	TData = any,
+	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the server message
 	TServerMessage = any,
+	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the client message
 	TClientMessage = any,
 > extends BaseSession<TEnv, TData, TServerMessage, TClientMessage> {
 	protected readonly clientCodec: ReturnType<typeof zodMsgpack<TClientMessage>>;

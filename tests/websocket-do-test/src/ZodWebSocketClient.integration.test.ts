@@ -1,6 +1,6 @@
 import { SELF } from "cloudflare:test";
 import { ZodWebSocketClient } from "@firtoz/websocket-do";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import type {
 	ClientMessage,
 	ServerMessage,
@@ -26,7 +26,8 @@ describe("ZodWebSocketClient Integration Tests", () => {
 				},
 			);
 
-			const serverWs = response.webSocket!;
+			const serverWs = response.webSocket;
+			assert(serverWs);
 			const receivedMessages: ClientMessage[] = [];
 
 			// Server-side message handler
@@ -112,12 +113,12 @@ describe("ZodWebSocketClient Integration Tests", () => {
 				client.send({
 					type: "message",
 					// Missing 'text' field
-				} as any);
+				} as ClientMessage);
 			}).toThrow();
 		});
 
 		it("should handle validation errors on incoming messages", async () => {
-			const validationErrors: any[] = [];
+			const validationErrors: { error: Error; rawMessage: unknown }[] = [];
 			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
@@ -140,6 +141,7 @@ describe("ZodWebSocketClient Integration Tests", () => {
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			expect(validationErrors).toHaveLength(1);
+			assert(validationErrors[0]);
 			expect(validationErrors[0].rawMessage).toContain("unknown");
 		});
 	});
@@ -156,7 +158,8 @@ describe("ZodWebSocketClient Integration Tests", () => {
 				},
 			);
 
-			const serverWs = response.webSocket!;
+			const serverWs = response.webSocket;
+			assert(serverWs);
 			const receivedMessages: ArrayBuffer[] = [];
 
 			// Server-side message handler (buffers)
@@ -209,7 +212,7 @@ describe("ZodWebSocketClient Integration Tests", () => {
 		});
 
 		it("should reject JSON messages in buffer mode", () => {
-			const validationErrors: any[] = [];
+			const validationErrors: { error: Error; rawMessage: unknown }[] = [];
 			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,

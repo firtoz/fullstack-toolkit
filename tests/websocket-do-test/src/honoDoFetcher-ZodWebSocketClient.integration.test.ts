@@ -8,10 +8,10 @@
  * Together they provide end-to-end type safety from DO connection to message validation.
  */
 
-import { env, SELF } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { honoDoFetcherWithName } from "@firtoz/hono-fetcher";
 import { ZodWebSocketClient } from "@firtoz/websocket-do";
-import { assert, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	type ClientMessage as BufferClientMessage,
 	ClientMessageSchema as BufferClientMessageSchema,

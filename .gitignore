@@ -13,4 +13,3 @@ dist/
 
 # Wrangler local dev
 .wrangler
-worker-configuration.d.ts

@@ -122,7 +122,8 @@ export type TypedWebSocketFetcher<T extends Hono> = <
 export type BaseTypedHonoFetcher<T extends Hono> = {
 	[M in AvailableMethods<T>]: TypedMethodFetcher<T, M>;
 } & (keyof HonoSchema<T>["get"] extends never
-	? {}
+	? // biome-ignore lint/complexity/noBannedTypes: We really do want an empty object if the get method is not available
+		{}
 	: { websocket: TypedWebSocketFetcher<T> });
 
 const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
@@ -161,8 +162,9 @@ const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
 			body = JSON.stringify(requestAsOptionalFormBody.body) as BodyInit;
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: Different runtimes have incompatible HeadersInit types
-		const newHeaders = new Headers(init.headers as any);
+		const newHeaders = new Headers(
+			init.headers as unknown as ConstructorParameters<typeof Headers>[0],
+		);
 
 		if (body && !requestAsOptionalFormBody.form) {
 			newHeaders.set("Content-Type", "application/json");
@@ -200,8 +202,9 @@ const createWebSocketFetcher = <T extends Hono>(
 			}, finalUrl);
 		}
 
-		// biome-ignore lint/suspicious/noExplicitAny: Different runtimes have incompatible HeadersInit types
-		const newHeaders = new Headers(init.headers as any);
+		const newHeaders = new Headers(
+			init.headers as unknown as ConstructorParameters<typeof Headers>[0],
+		);
 		newHeaders.set("Upgrade", "websocket");
 
 		try {

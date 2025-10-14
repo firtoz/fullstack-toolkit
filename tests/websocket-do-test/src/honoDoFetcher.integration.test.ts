@@ -17,6 +17,7 @@ import {
 } from "@firtoz/hono-fetcher";
 import { assert, describe, expect, it } from "vitest";
 import "./test-fixtures/worker";
+import type { ServerMessage } from "./test-fixtures/ChatRoomDO";
 
 describe("honoDoFetcher Integration Tests", () => {
 	describe("honoDoFetcher", () => {
@@ -368,7 +369,7 @@ describe("honoDoFetcher Integration Tests", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Set up message handler
-			const messages: unknown[] = [];
+			const messages: ServerMessage[] = [];
 			ws.addEventListener("message", (event) => {
 				messages.push(JSON.parse(event.data as string));
 			});
@@ -380,12 +381,10 @@ describe("honoDoFetcher Integration Tests", () => {
 
 			// Should have received nameChanged message
 			expect(messages.length).toBeGreaterThan(0);
-			const nameChangedMsg = messages.find(
-				(m: any) => m.type === "nameChanged",
-			);
+			const nameChangedMsg = messages.find((m) => m.type === "nameChanged");
 			expect(nameChangedMsg).toBeDefined();
 			if (nameChangedMsg) {
-				expect((nameChangedMsg as any).newName).toBe("Bob");
+				expect(nameChangedMsg.newName).toBe("Bob");
 			}
 
 			// Verify via API

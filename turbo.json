@@ -5,15 +5,9 @@
 		"build": {
 			"outputLogs": "new-only"
 		},
-		"typecheck": {
-			"outputLogs": "new-only"
-		},
-		"lint": {
-			"outputLogs": "new-only"
-		},
-		"lint:ci": {
-			"outputLogs": "new-only"
-		},
+		"typecheck": {},
+		"lint": {},
+		"lint:ci": {},
 		"format": {
 			"outputLogs": "new-only"
 		},
