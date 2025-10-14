@@ -37,7 +37,7 @@ import { zfd } from "zod-form-data";
 export type FormActionError<TError, TSchema extends z.ZodTypeAny> =
 	| {
 			type: "validation";
-			error: ReturnType<typeof z.treeifyError<TSchema>>;
+			error: ReturnType<typeof z.treeifyError<z.infer<TSchema>>>;
 	  }
 	| {
 			type: "handler";
@@ -158,8 +158,8 @@ export const formAction = <
 			if (!formData.success) {
 				return fail({
 					type: "validation" as const,
-					error: z.treeifyError<TSchema>(
-						formData.error as z.core.$ZodError<TSchema>,
+					error: z.treeifyError<z.infer<TSchema>>(
+						formData.error as z.core.$ZodError<z.infer<TSchema>>,
 					),
 				});
 			}
