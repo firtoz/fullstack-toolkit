@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/router-toolkit",
-	"version": "3.0.4",
+	"version": "3.0.5",
 	"description": "Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
