@@ -1,29 +1,55 @@
-import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { UserConfig } from "@commitlint/types";
 
-interface WorkspacePackage {
-	name: string;
-	version: string;
-	location: string;
-	// Other properties exist but we only need these
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+interface PackageJson {
+	name?: string;
+	workspaces?: string[];
 }
 
-// Use npm query to discover workspace packages
+// Discover workspace packages by reading root package.json and scanning workspace globs
 function getWorkspacePackages(): string[] {
 	try {
-		const output = execSync("npm query .workspace", {
-			encoding: "utf8",
-			stdio: "pipe",
-			cwd: __dirname,
-		});
+		// Read root package.json
+		const rootPkgPath = join(__dirname, "package.json");
+		const rootPkg: PackageJson = JSON.parse(readFileSync(rootPkgPath, "utf8"));
 
-		const workspaces: WorkspacePackage[] = JSON.parse(output);
+		if (!rootPkg.workspaces || rootPkg.workspaces.length === 0) {
+			console.warn("No workspaces defined in package.json");
+			return [];
+		}
 
-		// Extract package names from workspace data
-		const packages = workspaces
-			.map((pkg) => pkg.name) // Get full name like "@firtoz/maybe-error"
-			.filter((name): name is string => name?.includes("/")) // Type guard + ensure it has a scope
-			.map((name) => name.split("/")[1]); // Extract "maybe-error" from "@firtoz/maybe-error"
+		const packages: string[] = [];
+
+		// For each workspace glob pattern
+		for (const workspaceGlob of rootPkg.workspaces) {
+			// Convert glob pattern to actual paths (e.g., "packages/*" -> "packages/*/package.json")
+			const pattern = join(__dirname, workspaceGlob, "package.json");
+
+			// Use sync glob from fs
+			const { globSync } = require("node:fs");
+			const pkgJsonPaths = globSync(pattern);
+
+			// Read each package.json and extract the name
+			for (const pkgPath of pkgJsonPaths) {
+				try {
+					const pkg: PackageJson = JSON.parse(readFileSync(pkgPath, "utf8"));
+					if (pkg.name) {
+						// Extract "maybe-error" from "@firtoz/maybe-error"
+						const shortName = pkg.name.includes("/")
+							? pkg.name.split("/")[1]
+							: pkg.name;
+						packages.push(shortName);
+					}
+				} catch (err) {
+					console.warn(`Could not read ${pkgPath}:`, (err as Error).message);
+				}
+			}
+		}
 
 		console.log("✅ Found workspace packages:", packages);
 		return packages;

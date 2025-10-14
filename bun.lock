@@ -11,7 +11,6 @@
         "@commitlint/cli": "^20.1.0",
         "@commitlint/config-conventional": "^20.0.0",
         "@commitlint/types": "^20.0.0",
-        "@firtoz/websocket-do": "workspace:*",
         "husky": "^9.1.7",
         "turbo": "^2.5.8",
         "typescript": "^5.9.3",
@@ -21,7 +20,7 @@
     },
     "packages/hono-fetcher": {
       "name": "@firtoz/hono-fetcher",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "devDependencies": {
         "@hono/node-server": "^1.19.5",
         "@hono/zod-validator": "^0.7.4",
@@ -62,7 +61,7 @@
     },
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
-      "version": "3.0.0",
+      "version": "4.0.0",
       "devDependencies": {
         "@types/react": "^19.2.2",
         "bun-types": "^1.3.0",
@@ -108,7 +107,7 @@
     },
     "tests/websocket-do-test": {
       "name": "websocket-do-test",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "dependencies": {
         "@firtoz/hono-fetcher": "^2.0.0",
         "@firtoz/websocket-do": "workspace:*",

@@ -34,10 +34,10 @@ import { zfd } from "zod-form-data";
 /**
  * Error types that can be returned by formAction
  */
-export type FormActionError<TError> =
+export type FormActionError<TError, TSchema extends z.ZodTypeAny> =
 	| {
 			type: "validation";
-			error: ReturnType<typeof z.treeifyError<z.ZodTypeAny>>;
+			error: ReturnType<typeof z.treeifyError<TSchema>>;
 	  }
 	| {
 			type: "handler";
@@ -150,7 +150,7 @@ export const formAction = <
 }: FormActionConfig<TSchema, TResult, TError, ActionArgs>) => {
 	return async (
 		args: ActionArgs,
-	): Promise<MaybeError<TResult, FormActionError<TError>>> => {
+	): Promise<MaybeError<TResult, FormActionError<TError, TSchema>>> => {
 		try {
 			const rawFormData = await args.request.formData();
 			const formData = await zfd.formData(schema).safeParseAsync(rawFormData);
