@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 3.0.4
+
+### Patch Changes
+
+- [`9ed020c`](https://github.com/firtoz/fullstack-toolkit/commit/9ed020c6b340ede97222302b4a5c581932e6dd7b) Thanks [@firtoz](https://github.com/firtoz)! - Improve typing of formAction errors
+
 ## 3.0.3
 
 ### Patch Changes
