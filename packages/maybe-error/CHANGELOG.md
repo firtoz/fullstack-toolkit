@@ -1,5 +1,11 @@
 # [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
 
+## 1.5.1
+
+### Patch Changes
+
+- [`e879407`](https://github.com/firtoz/fullstack-toolkit/commit/e8794074e3803b45cbf1d754b99b5cfb82e7fb2c) Thanks [@firtoz](https://github.com/firtoz)! - fix npmrc
+
 ## 1.5.0
 
 ### Minor Changes
