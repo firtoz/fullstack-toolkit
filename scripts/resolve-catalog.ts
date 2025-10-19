@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Script to resolve catalog: references in package.json files before publishing
- * This replaces all "catalog:" values with actual versions from the root package.json catalog
+ * Script to resolve catalog: and workspace: references in package.json files before publishing
+ * - Replaces all "catalog:" values with actual versions from the root package.json catalog
+ * - Replaces all "workspace:*" values with actual versions from workspace packages
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -32,22 +33,39 @@ for (const [pkg, version] of Object.entries(catalog)) {
 }
 console.log();
 
-// Find all package.json files in packages/
+// Build a map of workspace package names to their versions
+const workspacePackages: Record<string, string> = {};
 const glob = new Glob("packages/*/package.json");
-const packageJsonFiles = Array.from(glob.scanSync({ cwd: rootDir })).map(
+const allPackageJsonFiles = Array.from(glob.scanSync({ cwd: rootDir })).map(
 	(file) => join(rootDir, file),
 );
 
+for (const packageJsonPath of allPackageJsonFiles) {
+	const packageJson: PackageJson = JSON.parse(
+		readFileSync(packageJsonPath, "utf-8"),
+	);
+	if (packageJson.name && packageJson.version) {
+		workspacePackages[packageJson.name as string] =
+			packageJson.version as string;
+	}
+}
+
+console.log("📦 Workspace packages:");
+for (const [pkg, version] of Object.entries(workspacePackages)) {
+	console.log(`  ${pkg}: ${version}`);
+}
+console.log();
+
 let totalReplacements = 0;
 
-for (const packageJsonPath of packageJsonFiles) {
+for (const packageJsonPath of allPackageJsonFiles) {
 	const packageJson: PackageJson = JSON.parse(
 		readFileSync(packageJsonPath, "utf-8"),
 	);
 	const packageName = packageJson.name as string;
 	let replacements = 0;
 
-	// Helper function to resolve catalog references in a dependency section
+	// Helper function to resolve catalog and workspace references in a dependency section
 	function resolveCatalogRefs(
 		deps: Record<string, string> | undefined,
 	): boolean {
@@ -64,6 +82,19 @@ for (const packageJsonPath of packageJsonFiles) {
 					process.exit(1);
 				}
 				deps[dep] = catalogVersion;
+				changed = true;
+				replacements++;
+			} else if (version.startsWith("workspace:")) {
+				// Handle workspace:* and other workspace: patterns
+				const workspaceVersion = workspacePackages[dep];
+				if (!workspaceVersion) {
+					console.error(
+						`❌ Error: "${dep}" not found in workspace packages for ${packageName}`,
+					);
+					process.exit(1);
+				}
+				// Use ^version for workspace dependencies to match common practice
+				deps[dep] = `^${workspaceVersion}`;
 				changed = true;
 				replacements++;
 			}
@@ -86,15 +117,15 @@ for (const packageJsonPath of packageJsonFiles) {
 			`${JSON.stringify(packageJson, null, "\t")}\n`,
 			"utf-8",
 		);
-		console.log(
-			`✅ ${packageName}: resolved ${replacements} catalog references`,
-		);
+		console.log(`✅ ${packageName}: resolved ${replacements} references`);
 		totalReplacements += replacements;
 	}
 }
 
 if (totalReplacements === 0) {
-	console.log("✨ No catalog references found - already resolved!");
+	console.log(
+		"✨ No catalog or workspace references found - already resolved!",
+	);
 } else {
-	console.log(`\n✨ Total: resolved ${totalReplacements} catalog references`);
+	console.log(`\n✨ Total: resolved ${totalReplacements} references`);
 }
