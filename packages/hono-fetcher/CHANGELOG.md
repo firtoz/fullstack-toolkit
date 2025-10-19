@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.3.0
+
+### Minor Changes
+
+- [`0317659`](https://github.com/firtoz/fullstack-toolkit/commit/0317659a87fa7be9bb47130fe6ad8004562fd277) Thanks [@firtoz](https://github.com/firtoz)! - Try fixing catalogs maybe
+
 ## 2.2.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
 
+## 1.5.0
+
+### Minor Changes
+
+- [`0317659`](https://github.com/firtoz/fullstack-toolkit/commit/0317659a87fa7be9bb47130fe6ad8004562fd277) Thanks [@firtoz](https://github.com/firtoz)! - Try fixing catalogs maybe
+
 ## 1.4.0
 
 ### Minor Changes

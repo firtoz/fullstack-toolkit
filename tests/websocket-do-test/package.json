@@ -1,6 +1,6 @@
 {
 	"name": "websocket-do-test",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"private": true,
 	"description": "Integration tests for @firtoz/websocket-do package",
 	"type": "module",
@@ -14,7 +14,7 @@
 		"format": "biome format src --write"
 	},
 	"dependencies": {
-		"@firtoz/hono-fetcher": "^2.2.0",
+		"@firtoz/hono-fetcher": "^2.3.0",
 		"@firtoz/websocket-do": "workspace:*",
 		"hono": "catalog:",
 		"zod": "catalog:",
