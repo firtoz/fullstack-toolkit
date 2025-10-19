@@ -1,5 +1,11 @@
 # @firtoz/websocket-do
 
+## 6.0.2
+
+### Patch Changes
+
+- [`60a6a3d`](https://github.com/firtoz/fullstack-toolkit/commit/60a6a3da58de1a7b0210ef6ad2fb12047d3d5be0) Thanks [@firtoz](https://github.com/firtoz)! - Try to fix workspace ref
+
 ## 6.0.1
 
 ### Patch Changes
