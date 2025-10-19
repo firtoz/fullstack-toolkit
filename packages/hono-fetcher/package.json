@@ -52,8 +52,8 @@
 		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20251008.0",
-		"hono": "^4.9.10"
+		"@cloudflare/workers-types": "catalog:",
+		"hono": "catalog:"
 	},
 	"engines": {
 		"node": ">=18.0.0"
@@ -64,7 +64,7 @@
 	"devDependencies": {
 		"@hono/node-server": "^1.19.5",
 		"@hono/zod-validator": "^0.7.4",
-		"bun-types": "^1.3.0",
-		"zod": "^4.1.12"
+		"bun-types": "catalog:",
+		"zod": "catalog:"
 	}
 }
