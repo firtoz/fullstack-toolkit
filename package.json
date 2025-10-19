@@ -32,7 +32,9 @@
 		"prepare": "husky",
 		"changeset": "changeset",
 		"version": "changeset version",
-		"release": "changeset publish"
+		"release": "bun scripts/release.ts",
+		"resolve-catalog": "bun scripts/resolve-catalog.ts",
+		"restore-catalog": "bun scripts/restore-catalog.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.6",
@@ -42,6 +44,8 @@
 		"@commitlint/cli": "^20.1.0",
 		"@commitlint/config-conventional": "^20.0.0",
 		"@commitlint/types": "^20.0.0",
+		"@types/node": "^24.8.1",
+		"bun-types": "catalog:",
 		"husky": "^9.1.7",
 		"turbo": "^2.5.8",
 		"typescript": "catalog:",

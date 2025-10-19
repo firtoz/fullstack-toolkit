@@ -4,13 +4,15 @@
     "": {
       "name": "fullstack-toolkit-monorepo",
       "devDependencies": {
-        "@biomejs/biome": "^2.2.5",
+        "@biomejs/biome": "^2.2.6",
         "@changesets/changelog-github": "^0.5.1",
         "@changesets/cli": "^2.29.7",
         "@cloudflare/vitest-pool-workers": "catalog:",
         "@commitlint/cli": "^20.1.0",
         "@commitlint/config-conventional": "^20.0.0",
         "@commitlint/types": "^20.0.0",
+        "@types/node": "^24.8.1",
+        "bun-types": "catalog:",
         "husky": "^9.1.7",
         "turbo": "^2.5.8",
         "typescript": "catalog:",
