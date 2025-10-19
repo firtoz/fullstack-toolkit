@@ -1,5 +1,14 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.0.1
+
+### Patch Changes
+
+- [`e879407`](https://github.com/firtoz/fullstack-toolkit/commit/e8794074e3803b45cbf1d754b99b5cfb82e7fb2c) Thanks [@firtoz](https://github.com/firtoz)! - fix npmrc
+
+- Updated dependencies [[`e879407`](https://github.com/firtoz/fullstack-toolkit/commit/e8794074e3803b45cbf1d754b99b5cfb82e7fb2c)]:
+  - @firtoz/maybe-error@1.5.1
+
 ## 5.0.0
 
 ### Minor Changes

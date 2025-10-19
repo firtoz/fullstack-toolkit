@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.3.1
+
+### Patch Changes
+
+- [`e879407`](https://github.com/firtoz/fullstack-toolkit/commit/e8794074e3803b45cbf1d754b99b5cfb82e7fb2c) Thanks [@firtoz](https://github.com/firtoz)! - fix npmrc
+
 ## 2.3.0
 
 ### Minor Changes
