@@ -63,10 +63,11 @@ export interface SessionData {
 	userId: string;
 	name: string;
 	joinedAt: number;
+	format: "json" | "buffer"; // Track the format used for this session
 }
 
-// ZodSession implementation for JSON-only testing
-export class ZodChatSession_JSON extends ZodSession<
+// ZodSession implementation for dynamic format switching
+export class ZodChatSession_Dynamic extends ZodSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage
@@ -76,6 +77,7 @@ export class ZodChatSession_JSON extends ZodSession<
 			userId: crypto.randomUUID(),
 			name: `User-${Date.now()}`,
 			joinedAt: Date.now(),
+			format: this.enableBufferMessages ? "buffer" : "json",
 		};
 	}
 
@@ -141,13 +143,20 @@ export class ZodChatSession_JSON extends ZodSession<
 	}
 }
 
-// ZodWebSocketDO implementation for JSON-only testing
-export class ZodChatRoomDO_JSON extends ZodWebSocketDO<ZodChatSession_JSON> {
+// ZodWebSocketDO implementation that switches format based on query param
+export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<ZodChatSession_Dynamic> {
 	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, {
-			clientSchema: ClientMessageSchema,
-			serverSchema: ServerMessageSchema,
-			enableBufferMessages: false, // JSON-only mode
+		// Pass a function that determines the format based on the query parameter
+		super(ctx, env, (honoCtx, _websocket) => {
+			// Check query parameter to determine format
+			const format = honoCtx.req.query("format");
+			const enableBufferMessages = format === "buffer";
+
+			return {
+				clientSchema: ClientMessageSchema,
+				serverSchema: ServerMessageSchema,
+				enableBufferMessages,
+			};
 		});
 	}
 
@@ -158,15 +167,16 @@ export class ZodChatRoomDO_JSON extends ZodWebSocketDO<ZodChatSession_JSON> {
 				userId: session.data.userId,
 				name: session.data.name,
 				joinedAt: session.data.joinedAt,
+				format: session.data.format,
 			})),
 		});
 	});
 
 	protected createZodSession(
-		_ctx: Context<{ Bindings: Env }> | undefined,
+		_ctx: Context<{ Bindings: Env }>,
 		websocket: WebSocket,
 		options: ZodSessionOptions<ClientMessage, ServerMessage>,
-	): ZodChatSession_JSON {
-		return new ZodChatSession_JSON(websocket, this.sessions, options);
+	): ZodChatSession_Dynamic {
+		return new ZodChatSession_Dynamic(websocket, this.sessions, options);
 	}
 }

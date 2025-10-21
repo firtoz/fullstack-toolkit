@@ -9,15 +9,11 @@ export interface ZodSessionOptions<TClientMessage, TServerMessage> {
 }
 
 export abstract class ZodSession<
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the environment
-	TEnv extends object = any,
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the data
-	TData = any,
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the server message
-	TServerMessage = any,
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the client message
-	TClientMessage = any,
-> extends BaseSession<TEnv, TData, TServerMessage, TClientMessage> {
+	TData,
+	TServerMessage,
+	TClientMessage,
+	TEnv extends object = Cloudflare.Env,
+> extends BaseSession<TData, TServerMessage, TClientMessage, TEnv> {
 	protected readonly clientCodec: ReturnType<typeof zodMsgpack<TClientMessage>>;
 	protected readonly serverCodec: ReturnType<typeof zodMsgpack<TServerMessage>>;
 	protected readonly enableBufferMessages: boolean;
@@ -26,7 +22,7 @@ export abstract class ZodSession<
 		websocket: WebSocket,
 		sessions: Map<
 			WebSocket,
-			ZodSession<TEnv, TData, TServerMessage, TClientMessage>
+			ZodSession<TData, TServerMessage, TClientMessage, TEnv>
 		>,
 		protected options: ZodSessionOptions<TClientMessage, TServerMessage>,
 	) {

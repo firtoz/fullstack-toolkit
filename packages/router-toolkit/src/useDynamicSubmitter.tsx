@@ -47,8 +47,7 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 	Form: SubmitForm;
 } => {
 	const url = useMemo(() => {
-		// biome-ignore lint/suspicious/noExplicitAny: Typechecks complain about this so we need to cast to any
-		return (href as any)(path, ...args);
+		return href(path, ...args);
 	}, [path, args]);
 
 	const fetcher = useFetcher<TInfo["action"]>({

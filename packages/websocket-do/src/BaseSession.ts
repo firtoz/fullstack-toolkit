@@ -1,20 +1,58 @@
 import type { Context } from "hono";
 import { WebsocketWrapper } from "./WebsocketWrapper";
 
-export type SessionClientMessage<TSession extends BaseSession> =
-	TSession extends BaseSession<never, never, infer TClientMessage, never>
-		? TClientMessage
+// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+export type SessionData<TSession extends BaseSession<any, any, any, any>> =
+	TSession extends BaseSession<
+		infer TData,
+		infer _TServerMessage,
+		infer _TClientMessage,
+		infer _TEnv
+	>
+		? TData
 		: never;
 
+export type SessionClientMessage<
+	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+	TSession extends BaseSession<any, any, any, any>,
+> = TSession extends BaseSession<
+	infer _TData,
+	infer _TServerMessage,
+	infer TClientMessage,
+	infer _TEnv
+>
+	? TClientMessage
+	: never;
+
+export type SessionServerMessage<
+	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+	TSession extends BaseSession<any, any, any, any>,
+> = TSession extends BaseSession<
+	infer _TData,
+	infer TServerMessage,
+	infer _TClientMessage,
+	infer _TEnv
+>
+	? TServerMessage
+	: never;
+
+export type SessionEnv<
+	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+	TSession extends BaseSession<any, any, any, any>,
+> = TSession extends BaseSession<
+	infer _TData,
+	infer _TServerMessage,
+	infer _TClientMessage,
+	infer TEnv extends Cloudflare.Env
+>
+	? TEnv
+	: never;
+
 export abstract class BaseSession<
-	// biome-ignore lint/suspicious/noExplicitAny: Generic type parameter with flexible default
-	TEnv extends object = any,
-	// biome-ignore lint/suspicious/noExplicitAny: Generic type parameter with flexible default
-	TData = any,
-	// biome-ignore lint/suspicious/noExplicitAny: Generic type parameter with flexible default
-	TServerMessage = any,
-	// biome-ignore lint/suspicious/noExplicitAny: Generic type parameter with flexible default
-	TClientMessage = any,
+	TData,
+	TServerMessage,
+	TClientMessage,
+	TEnv extends object = Cloudflare.Env,
 > {
 	private _data!: TData;
 
@@ -32,7 +70,7 @@ export abstract class BaseSession<
 		public websocket: WebSocket,
 		protected sessions: Map<
 			WebSocket,
-			BaseSession<TEnv, TData, TServerMessage, TClientMessage>
+			BaseSession<TData, TServerMessage, TClientMessage, TEnv>
 		>,
 	) {
 		this.wrapper = new WebsocketWrapper<TData, TServerMessage>(websocket);

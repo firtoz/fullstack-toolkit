@@ -21,7 +21,6 @@ export interface SessionData {
 
 // Session implementation for testing
 export class ChatSession extends BaseSession<
-	Env,
 	SessionData,
 	ServerMessage,
 	ClientMessage
@@ -84,7 +83,7 @@ export class ChatSession extends BaseSession<
 }
 
 // Durable Object implementation for testing
-export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
+export class ChatRoomDO extends BaseWebSocketDO<ChatSession> {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
 			sessionCount: this.sessions.size,
@@ -96,7 +95,10 @@ export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
 		});
 	});
 
-	protected createSession(websocket: WebSocket): ChatSession {
+	protected createSession(
+		_ctx: Context<{ Bindings: Env }> | undefined,
+		websocket: WebSocket,
+	): ChatSession {
 		return new ChatSession(websocket, this.sessions);
 	}
 }

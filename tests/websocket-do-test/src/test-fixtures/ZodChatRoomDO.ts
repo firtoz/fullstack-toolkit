@@ -67,10 +67,10 @@ export interface SessionData {
 
 // ZodSession implementation for testing
 export class ZodChatSession extends ZodSession<
-	Env,
 	SessionData,
 	ServerMessage,
-	ClientMessage
+	ClientMessage,
+	Env
 > {
 	protected createData(_ctx: Context<{ Bindings: Env }>): SessionData {
 		return {
@@ -143,12 +143,15 @@ export class ZodChatSession extends ZodSession<
 }
 
 // ZodWebSocketDO implementation for testing
-export class ZodChatRoomDO extends ZodWebSocketDO<
-	Env,
-	ZodChatSession,
-	ClientMessage,
-	ServerMessage
-> {
+export class ZodChatRoomDO extends ZodWebSocketDO<ZodChatSession> {
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env, {
+			clientSchema: ClientMessageSchema,
+			serverSchema: ServerMessageSchema,
+			enableBufferMessages: true, // Enable msgpack buffer messages
+		});
+	}
+
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
 			sessionCount: this.sessions.size,
@@ -160,15 +163,8 @@ export class ZodChatRoomDO extends ZodWebSocketDO<
 		});
 	});
 
-	protected getZodOptions(): ZodSessionOptions<ClientMessage, ServerMessage> {
-		return {
-			clientSchema: ClientMessageSchema,
-			serverSchema: ServerMessageSchema,
-			enableBufferMessages: true, // Enable msgpack buffer messages
-		};
-	}
-
 	protected createZodSession(
+		_ctx: Context<{ Bindings: Env }> | undefined,
 		websocket: WebSocket,
 		options: ZodSessionOptions<ClientMessage, ServerMessage>,
 	): ZodChatSession {

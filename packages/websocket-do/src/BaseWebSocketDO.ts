@@ -1,11 +1,25 @@
 import { DurableObject } from "cloudflare:workers";
 import type { DOWithHonoApp } from "@firtoz/hono-fetcher/honoDoFetcher";
 import { type Context, Hono } from "hono";
-import type { BaseSession, SessionClientMessage } from "./BaseSession";
+import type {
+	BaseSession,
+	SessionClientMessage,
+	SessionEnv,
+} from "./BaseSession";
 
 export abstract class BaseWebSocketDO<
-		TEnv extends object,
-		TSession extends BaseSession<TEnv>,
+		// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+		TSession extends BaseSession<any, any, any, any> = BaseSession<
+			// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+			any,
+			// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+			any,
+			// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+			any,
+			// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+			any
+		>,
+		TEnv extends SessionEnv<TSession> = SessionEnv<TSession>,
 	>
 	extends DurableObject<TEnv>
 	implements DOWithHonoApp
@@ -20,7 +34,9 @@ export abstract class BaseWebSocketDO<
 			await Promise.all(
 				websockets.map(async (websocket) => {
 					try {
-						const session = await this.createSession(websocket);
+						// For resumed sessions, we don't have a Hono context
+						// Pass undefined and let implementers handle it
+						const session = await this.createSession(undefined, websocket);
 						session.resume();
 						this.sessions.set(websocket, session);
 					} catch (error) {
@@ -68,6 +84,7 @@ export abstract class BaseWebSocketDO<
 	abstract app: Hono<{ Bindings: TEnv }>;
 
 	protected abstract createSession(
+		ctx: Context<{ Bindings: TEnv }> | undefined,
 		websocket: WebSocket,
 	): TSession | Promise<TSession>;
 
@@ -77,7 +94,7 @@ export abstract class BaseWebSocketDO<
 	): Promise<void> {
 		this.ctx.acceptWebSocket(ws);
 		try {
-			const session = await this.createSession(ws);
+			const session = await this.createSession(ctx, ws);
 			session.startFresh(ctx);
 			this.sessions.set(ws, session);
 		} catch (error) {

@@ -6,5 +6,8 @@ export {
 	ZodWebSocketClient,
 	type ZodWebSocketClientOptions,
 } from "./ZodWebSocketClient";
-export { ZodWebSocketDO } from "./ZodWebSocketDO";
+export {
+	type ZodSessionOptionsOrFactory,
+	ZodWebSocketDO,
+} from "./ZodWebSocketDO";
 export { zodMsgpack } from "./zodMsgpack";

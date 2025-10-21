@@ -1,27 +1,65 @@
+import type { Context } from "hono";
+import type {
+	SessionClientMessage,
+	SessionEnv,
+	SessionServerMessage,
+} from "./BaseSession";
 import { BaseWebSocketDO } from "./BaseWebSocketDO";
 import type { ZodSession, ZodSessionOptions } from "./ZodSession";
 
+export type ZodSessionOptionsOrFactory<
+	TClientMessage,
+	TServerMessage,
+	TEnv extends Cloudflare.Env = Cloudflare.Env,
+> =
+	| ZodSessionOptions<TClientMessage, TServerMessage>
+	| ((
+			ctx: Context<{ Bindings: TEnv }>,
+			websocket: WebSocket,
+	  ) => ZodSessionOptions<TClientMessage, TServerMessage>);
+
 export abstract class ZodWebSocketDO<
-	TEnv extends object,
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the session
-	TSession extends ZodSession<TEnv, any, any, any>,
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the client message
-	TClientMessage = any,
-	// biome-ignore lint/suspicious/noExplicitAny: We need to allow any for the server message
-	TServerMessage = any,
-> extends BaseWebSocketDO<TEnv, TSession> {
-	protected abstract getZodOptions(): ZodSessionOptions<
-		TClientMessage,
-		TServerMessage
-	>;
+	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+	TSession extends ZodSession<any, any, any, any>,
+	TClientMessage extends
+		SessionClientMessage<TSession> = SessionClientMessage<TSession>,
+	TServerMessage extends
+		SessionServerMessage<TSession> = SessionServerMessage<TSession>,
+	TEnv extends SessionEnv<TSession> = SessionEnv<TSession>,
+> extends BaseWebSocketDO<TSession> {
+	constructor(
+		ctx: DurableObjectState,
+		env: TEnv,
+		protected zodSessionOptions?: ZodSessionOptionsOrFactory<
+			TClientMessage,
+			TServerMessage,
+			TEnv
+		>,
+	) {
+		super(ctx, env);
+	}
 
 	protected abstract createZodSession(
+		ctx: Context<{ Bindings: TEnv }>,
 		websocket: WebSocket,
 		options: ZodSessionOptions<TClientMessage, TServerMessage>,
 	): TSession | Promise<TSession>;
 
-	protected createSession(websocket: WebSocket): TSession | Promise<TSession> {
-		const options = this.getZodOptions();
-		return this.createZodSession(websocket, options);
+	protected createSession(
+		ctx: Context<{ Bindings: TEnv }>,
+		websocket: WebSocket,
+	): TSession | Promise<TSession> {
+		const options =
+			typeof this.zodSessionOptions === "function"
+				? this.zodSessionOptions(ctx, websocket)
+				: this.zodSessionOptions;
+
+		if (!options) {
+			throw new Error(
+				"zodSessionOptions must be provided either in constructor or via getZodOptions override",
+			);
+		}
+
+		return this.createZodSession(ctx, websocket, options);
 	}
 }
