@@ -1,7 +1,18 @@
-export { BaseSession, type SessionClientMessage } from "./BaseSession";
-export { BaseWebSocketDO } from "./BaseWebSocketDO";
+export {
+	BaseSession,
+	type BaseSessionHandlers,
+	type SessionClientMessage,
+} from "./BaseSession";
+export {
+	BaseWebSocketDO,
+	type BaseWebSocketDOOptions,
+} from "./BaseWebSocketDO";
 export { WebsocketWrapper } from "./WebsocketWrapper";
-export { ZodSession, type ZodSessionOptions } from "./ZodSession";
+export {
+	ZodSession,
+	type ZodSessionHandlers,
+	type ZodSessionOptions,
+} from "./ZodSession";
 export {
 	ZodWebSocketClient,
 	type ZodWebSocketClientOptions,
@@ -9,5 +20,6 @@ export {
 export {
 	type ZodSessionOptionsOrFactory,
 	ZodWebSocketDO,
+	type ZodWebSocketDOOptions,
 } from "./ZodWebSocketDO";
 export { zodMsgpack } from "./zodMsgpack";

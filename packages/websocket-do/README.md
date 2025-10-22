@@ -67,44 +67,81 @@ interface SessionData {
 ### 2. Implement Your Session
 
 ```typescript
-import { BaseSession } from '@firtoz/websocket-do';
+import { BaseSession, type BaseSessionHandlers } from '@firtoz/websocket-do';
 import type { Context } from 'hono';
 
-class ChatSession extends BaseSession<
-  Env,
+// Define handlers for your session
+const chatSessionHandlers: BaseSessionHandlers<
   SessionData,
   ServerMessage,
-  ClientMessage
-> {
-  protected createData(ctx: Context<{ Bindings: Env }>): SessionData {
-    return {
-      userId: crypto.randomUUID(),
-      joinedAt: Date.now(),
-    };
-  }
+  ClientMessage,
+  Env
+> = {
+  createData: (ctx: Context<{ Bindings: Env }>) => ({
+    userId: crypto.randomUUID(),
+    joinedAt: Date.now(),
+  }),
 
-  async handleMessage(message: ClientMessage): Promise<void> {
+  handleMessage: async (message: ClientMessage) => {
+    // 'this' context will be the session instance
     switch (message.type) {
       case 'chat':
-        // Broadcast to all sessions
-        this.broadcast({
-          type: 'chat',
-          message: message.message,
-          from: this.data.userId,
-        });
+        // Access session via closure or bind
+        // Note: handlers receive session context when called
         break;
       case 'ping':
-        this.send({ type: 'welcome', userId: this.data.userId });
+        // Send messages
         break;
     }
-  }
+  },
 
-  async handleBufferMessage(message: ArrayBuffer): Promise<void> {
+  handleBufferMessage: async (message: ArrayBuffer) => {
     // Handle binary messages if needed
-  }
+  },
 
-  async handleClose(): Promise<void> {
-    console.log(`Session closed for user ${this.data.userId}`);
+  handleClose: async () => {
+    console.log('Session closed');
+  },
+};
+
+// Create session class (can be extended if needed)
+class ChatSession extends BaseSession<
+  SessionData,
+  ServerMessage,
+  ClientMessage,
+  Env
+> {
+  constructor(
+    websocket: WebSocket,
+    sessions: Map<WebSocket, ChatSession>
+  ) {
+    super(websocket, sessions, {
+      createData: (ctx) => ({
+        userId: crypto.randomUUID(),
+        joinedAt: Date.now(),
+      }),
+      handleMessage: async (message) => {
+        switch (message.type) {
+          case 'chat':
+            // Broadcast to all sessions
+            this.broadcast({
+              type: 'chat',
+              message: message.message,
+              from: this.data.userId,
+            });
+            break;
+          case 'ping':
+            this.send({ type: 'welcome', userId: this.data.userId });
+            break;
+        }
+      },
+      handleBufferMessage: async (message) => {
+        // Handle binary messages if needed
+      },
+      handleClose: async () => {
+        console.log(`Session closed for user ${this.data.userId}`);
+      },
+    });
   }
 }
 ```
@@ -115,7 +152,7 @@ class ChatSession extends BaseSession<
 import { BaseWebSocketDO } from '@firtoz/websocket-do';
 import { Hono } from 'hono';
 
-export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
+export class ChatRoomDO extends BaseWebSocketDO<ChatSession, Env> {
   app = this.getBaseApp()
     .get('/info', (ctx) => {
       return ctx.json({
@@ -123,8 +160,12 @@ export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
       });
     });
 
-  protected createSession(websocket: WebSocket): ChatSession {
-    return new ChatSession(websocket, this.sessions);
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env, {
+      createSession: (ctx, websocket) => {
+        return new ChatSession(websocket, this.sessions);
+      },
+    });
   }
 }
 ```
@@ -342,39 +383,42 @@ interface SessionData {
 
 // Implement validated session
 class ChatSession extends ZodSession<
-  Env,
   SessionData,
   ServerMessage,
-  ClientMessage
+  ClientMessage,
+  Env
 > {
-  protected clientSchema = ClientMessageSchema;
-  protected serverSchema = ServerMessageSchema;
-
-  protected createData(ctx: Context<{ Bindings: Env }>): SessionData {
-    return { name: 'Anonymous' };
-  }
-
-  async handleMessage(message: ClientMessage): Promise<void> {
-    // Message is already validated!
-    switch (message.type) {
-      case 'setName':
-        this.data.name = message.name;
-        this.update();
-        this.send({ type: 'nameChanged', newName: message.name });
-        break;
+  constructor(
+    websocket: WebSocket,
+    sessions: Map<WebSocket, ChatSession>,
+    options: ZodSessionOptions<ClientMessage, ServerMessage>
+  ) {
+    super(websocket, sessions, options, {
+      createData: (ctx) => ({ name: 'Anonymous' }),
       
-      case 'message':
-        this.broadcast({
-          type: 'message',
-          text: message.text,
-          from: this.data.name,
-        });
-        break;
-    }
-  }
+      handleValidatedMessage: async (message) => {
+        // Message is already validated!
+        switch (message.type) {
+          case 'setName':
+            this.data.name = message.name;
+            this.update();
+            this.send({ type: 'nameChanged', newName: message.name });
+            break;
+          
+          case 'message':
+            this.broadcast({
+              type: 'message',
+              text: message.text,
+              from: this.data.name,
+            });
+            break;
+        }
+      },
 
-  async handleClose(): Promise<void> {
-    console.log(`${this.data.name} disconnected`);
+      handleClose: async () => {
+        console.log(`${this.data.name} disconnected`);
+      },
+    });
   }
 }
 ```
@@ -383,34 +427,61 @@ class ChatSession extends ZodSession<
 
 ```typescript
 class ChatSession extends ZodSession<...> {
-  // Enable buffer mode for msgpack
-  protected enableBufferMessages = true;
-  
-  protected clientSchema = ClientMessageSchema;
-  protected serverSchema = ServerMessageSchema;
-  
-  // Messages automatically decoded from msgpack
-  async handleMessage(message: ClientMessage): Promise<void> {
-    // Handle validated message
+  constructor(
+    websocket: WebSocket,
+    sessions: Map<WebSocket, ChatSession>
+  ) {
+    super(websocket, sessions, {
+      clientSchema: ClientMessageSchema,
+      serverSchema: ServerMessageSchema,
+      enableBufferMessages: true, // Enable buffer mode for msgpack
+    }, {
+      createData: (ctx) => ({ name: 'Anonymous' }),
+      handleValidatedMessage: async (message) => {
+        // Messages automatically decoded from msgpack
+        // Handle validated message
+      },
+      handleClose: async () => {
+        console.log('Session closed');
+      },
+    });
   }
 }
 ```
 
 ## API Reference
 
-### `BaseWebSocketDO<TEnv, TSession>`
+### `BaseWebSocketDO<TSession, TEnv>`
 
-Abstract class for creating WebSocket-enabled Durable Objects.
+Base class for creating WebSocket-enabled Durable Objects. Uses composition instead of inheritance.
 
 #### Type Parameters
 
-- `TEnv` - Your Cloudflare Worker environment bindings
 - `TSession` - Your session class extending `BaseSession`
+- `TEnv` - Your Cloudflare Worker environment bindings
+
+#### Constructor
+
+```typescript
+constructor(
+  ctx: DurableObjectState,
+  env: TEnv,
+  options: BaseWebSocketDOOptions<TSession, TEnv>
+)
+```
+
+#### Options Type
+
+```typescript
+type BaseWebSocketDOOptions<TSession, TEnv> = {
+  createSession: (
+    ctx: Context<{ Bindings: TEnv }> | undefined,
+    websocket: WebSocket
+  ) => TSession | Promise<TSession>;
+};
+```
 
 #### Methods
-
-- `abstract createSession(websocket: WebSocket): TSession | Promise<TSession>`
-  - Factory method to create session instances
 
 - `getBaseApp(): Hono`
   - Returns a base Hono app with `/websocket` endpoint configured
@@ -423,35 +494,44 @@ Abstract class for creating WebSocket-enabled Durable Objects.
 - `sessions: Map<WebSocket, TSession>` - Map of all active sessions
 - `app: Hono` - Your Hono application (must be implemented)
 
-### `BaseSession<TEnv, TData, TServerMessage, TClientMessage>`
+### `BaseSession<TData, TServerMessage, TClientMessage, TEnv>`
 
-Abstract class for managing individual WebSocket sessions.
+Concrete class for managing individual WebSocket sessions. Uses composition pattern with handlers.
 
 #### Type Parameters
 
-- `TEnv` - Your Cloudflare Worker environment bindings
 - `TData` - Type of data stored in the session
 - `TServerMessage` - Union type of messages sent to clients
 - `TClientMessage` - Union type of messages received from clients
+- `TEnv` - Your Cloudflare Worker environment bindings (default: `Cloudflare.Env`)
+
+#### Constructor
+
+```typescript
+constructor(
+  websocket: WebSocket,
+  sessions: Map<WebSocket, BaseSession<TData, TServerMessage, TClientMessage, TEnv>>,
+  handlers: BaseSessionHandlers<TData, TServerMessage, TClientMessage, TEnv>
+)
+```
+
+#### Handlers Type
+
+```typescript
+type BaseSessionHandlers<TData, TServerMessage, TClientMessage, TEnv> = {
+  createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
+  handleMessage: (message: TClientMessage) => Promise<void>;
+  handleBufferMessage: (message: ArrayBuffer) => Promise<void>;
+  handleClose: () => Promise<void>;
+};
+```
 
 #### Methods
 
-- `abstract createData(ctx: Context): TData`
-  - Creates initial session data
-
-- `abstract handleMessage(message: TClientMessage): Promise<void>`
-  - Handles text messages from client
-
-- `abstract handleBufferMessage(message: ArrayBuffer): Promise<void>`
-  - Handles binary messages from client
-
-- `abstract handleClose(): Promise<void>`
-  - Cleanup when session closes
-
-- `protected send(message: TServerMessage): void`
+- `send(message: TServerMessage): void`
   - Send message to this session's client
 
-- `protected broadcast(message: TServerMessage, excludeSelf?: boolean): void`
+- `broadcast(message: TServerMessage, excludeSelf?: boolean): void`
   - Send message to all connected sessions
 
 - `startFresh(ctx: Context): void`
@@ -490,7 +570,7 @@ Low-level wrapper for typed WebSocket operations.
 You can extend the base app with custom routes:
 
 ```typescript
-export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
+export class ChatRoomDO extends BaseWebSocketDO<ChatSession, Env> {
   app = this.getBaseApp()
     .get('/stats', (ctx) => {
       const users = Array.from(this.sessions.values()).map(s => ({
@@ -509,6 +589,14 @@ export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
       
       return ctx.json({ success: true });
     });
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env, {
+      createSession: (ctx, websocket) => {
+        return new ChatSession(websocket, this.sessions);
+      },
+    });
+  }
 }
 ```
 
@@ -517,25 +605,38 @@ export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
 Session data is automatically serialized and persists across hibernation:
 
 ```typescript
-class GameSession extends BaseSession<Env, GameData, ServerMsg, ClientMsg> {
-  protected createData(ctx: Context): GameData {
-    return {
-      playerName: ctx.req.query('name') || 'Anonymous',
-      score: 0,
-      inventory: [],
-    };
-  }
+class GameSession extends BaseSession<GameData, ServerMsg, ClientMsg, Env> {
+  constructor(
+    websocket: WebSocket,
+    sessions: Map<WebSocket, GameSession>
+  ) {
+    super(websocket, sessions, {
+      createData: (ctx) => ({
+        playerName: ctx.req.query('name') || 'Anonymous',
+        score: 0,
+        inventory: [],
+      }),
 
-  async handleMessage(message: ClientMsg): Promise<void> {
-    if (message.type === 'collectItem') {
-      this.data.inventory.push(message.item);
-      this.data.score += 10;
-      
-      // Persist changes
-      this.update();
-      
-      this.send({ type: 'scoreUpdate', score: this.data.score });
-    }
+      handleMessage: async (message) => {
+        if (message.type === 'collectItem') {
+          this.data.inventory.push(message.item);
+          this.data.score += 10;
+          
+          // Persist changes
+          this.update();
+          
+          this.send({ type: 'scoreUpdate', score: this.data.score });
+        }
+      },
+
+      handleBufferMessage: async (message) => {
+        // Handle buffer messages if needed
+      },
+
+      handleClose: async () => {
+        console.log('Game session closed');
+      },
+    });
   }
 }
 ```
@@ -545,21 +646,40 @@ class GameSession extends BaseSession<Env, GameData, ServerMsg, ClientMsg> {
 Errors in message handlers are caught and logged, but don't crash the connection:
 
 ```typescript
-async handleMessage(message: ClientMessage): Promise<void> {
-  try {
-    // Your logic here
-    if (message.type === 'dangerous') {
-      throw new Error('Invalid operation');
-    }
-  } catch (error) {
-    // Send error to client
-    this.send({ 
-      type: 'error', 
-      message: error instanceof Error ? error.message : 'Unknown error' 
+class MySession extends BaseSession<...> {
+  constructor(
+    websocket: WebSocket,
+    sessions: Map<WebSocket, MySession>
+  ) {
+    super(websocket, sessions, {
+      createData: (ctx) => ({ /* ... */ }),
+
+      handleMessage: async (message) => {
+        try {
+          // Your logic here
+          if (message.type === 'dangerous') {
+            throw new Error('Invalid operation');
+          }
+        } catch (error) {
+          // Send error to client
+          this.send({ 
+            type: 'error', 
+            message: error instanceof Error ? error.message : 'Unknown error' 
+          });
+          
+          // Optionally close the connection
+          this.websocket.close(1008, 'Policy violation');
+        }
+      },
+
+      handleBufferMessage: async (message) => {
+        // Handle buffer messages
+      },
+
+      handleClose: async () => {
+        console.log('Session closed');
+      },
     });
-    
-    // Optionally close the connection
-    this.websocket.close(1008, 'Policy violation');
   }
 }
 ```
@@ -569,17 +689,24 @@ async handleMessage(message: ClientMessage): Promise<void> {
 This package exports the following:
 
 ### Classes
-- `BaseWebSocketDO` - Abstract base class for WebSocket Durable Objects
-- `BaseSession` - Abstract base class for WebSocket sessions
+- `BaseWebSocketDO` - Base class for WebSocket Durable Objects (composition-based)
+- `BaseSession` - Concrete session class with handler injection
 - `ZodWebSocketClient` - Type-safe WebSocket client with Zod validation
-- `ZodSession` - Session base class with Zod validation built-in
+- `ZodSession` - Concrete session class with Zod validation and handler injection
+- `ZodWebSocketDO` - Base class for WebSocket DOs with Zod validation
 - `WebsocketWrapper` - Low-level WebSocket wrapper with typed attachments
+
+### Types
+- `BaseSessionHandlers` - Handler interface for `BaseSession`
+- `BaseWebSocketDOOptions` - Options interface for `BaseWebSocketDO`
+- `ZodSessionHandlers` - Handler interface for `ZodSession`
+- `ZodSessionOptions` - Options interface for `ZodSession`
+- `ZodSessionOptionsOrFactory` - Options or factory function for `ZodSession`
+- `ZodWebSocketDOOptions` - Options interface for `ZodWebSocketDO`
+- `ZodWebSocketClientOptions` - Options interface for `ZodWebSocketClient`
 
 ### Utilities
 - `zodMsgpack` - Msgpack encode/decode with Zod validation
-
-### Types
-All classes export their type parameters and interfaces for custom implementations.
 
 ## Complete Example
 
@@ -605,7 +732,7 @@ export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
 
 // do.ts - Server-side (Durable Object)
-import { BaseWebSocketDO, ZodSession } from '@firtoz/websocket-do';
+import { BaseWebSocketDO, ZodSession, type ZodSessionOptions } from '@firtoz/websocket-do';
 import { ClientMessageSchema, ServerMessageSchema } from './schemas';
 
 interface SessionData {
@@ -613,45 +740,47 @@ interface SessionData {
   joinedAt: number;
 }
 
-class ChatSession extends ZodSession<Env, SessionData, ServerMessage, ClientMessage> {
-  protected clientSchema = ClientMessageSchema;
-  protected serverSchema = ServerMessageSchema;
-  protected enableBufferMessages = true; // Use msgpack for efficiency
+class ChatSession extends ZodSession<SessionData, ServerMessage, ClientMessage, Env> {
+  constructor(
+    websocket: WebSocket,
+    sessions: Map<WebSocket, ChatSession>,
+    options: ZodSessionOptions<ClientMessage, ServerMessage>
+  ) {
+    super(websocket, sessions, options, {
+      createData: () => ({
+        name: 'Anonymous',
+        joinedAt: Date.now(),
+      }),
 
-  protected createData(): SessionData {
-    return {
-      name: 'Anonymous',
-      joinedAt: Date.now(),
-    };
-  }
+      handleValidatedMessage: async (message) => {
+        switch (message.type) {
+          case 'setName':
+            const oldName = this.data.name;
+            this.data.name = message.name;
+            this.update();
+            
+            this.send({ type: 'nameChanged', newName: message.name });
+            this.broadcast({ type: 'userJoined', name: message.name }, true);
+            break;
+          
+          case 'message':
+            this.broadcast({
+              type: 'message',
+              text: message.text,
+              from: this.data.name,
+            });
+            break;
+        }
+      },
 
-  async handleMessage(message: ClientMessage): Promise<void> {
-    switch (message.type) {
-      case 'setName':
-        const oldName = this.data.name;
-        this.data.name = message.name;
-        this.update();
-        
-        this.send({ type: 'nameChanged', newName: message.name });
-        this.broadcast({ type: 'userJoined', name: message.name }, true);
-        break;
-      
-      case 'message':
-        this.broadcast({
-          type: 'message',
-          text: message.text,
-          from: this.data.name,
-        });
-        break;
-    }
-  }
-
-  async handleClose(): Promise<void> {
-    console.log(`${this.data.name} disconnected`);
+      handleClose: async () => {
+        console.log(`${this.data.name} disconnected`);
+      },
+    });
   }
 }
 
-export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
+export class ChatRoomDO extends BaseWebSocketDO<ChatSession, Env> {
   app = this.getBaseApp()
     .get('/info', (ctx) => {
       const users = Array.from(this.sessions.values()).map(s => ({
@@ -661,8 +790,16 @@ export class ChatRoomDO extends BaseWebSocketDO<Env, ChatSession> {
       return ctx.json({ users, count: users.length });
     });
 
-  protected createSession(websocket: WebSocket): ChatSession {
-    return new ChatSession(websocket, this.sessions);
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env, {
+      createSession: (ctx, websocket) => {
+        return new ChatSession(websocket, this.sessions, {
+          clientSchema: ClientMessageSchema,
+          serverSchema: ServerMessageSchema,
+          enableBufferMessages: true, // Use msgpack for efficiency
+        });
+      },
+    });
   }
 }
 

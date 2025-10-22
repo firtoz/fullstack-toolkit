@@ -52,6 +52,12 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 		type: l("error"),
 		message: errorMessageSchema,
 	}),
+	// Custom protocol error format
+	z.object({
+		type: l("protocolError"),
+		code: z.string(),
+		details: z.string(),
+	}),
 ]);
 
 // Infer types from schemas
@@ -137,7 +143,7 @@ class ZodChatRoomSession extends ZodSession<
 	}
 }
 
-export class ZodChatRoomDO extends ZodWebSocketDO<
+export class ZodChatRoomDO_CustomProtocolError extends ZodWebSocketDO<
 	ZodSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
@@ -157,6 +163,18 @@ export class ZodChatRoomDO extends ZodWebSocketDO<
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: true, // Enable msgpack buffer messages
+				// Custom protocol error handler
+				sendProtocolError: async (websocket, errorMessage) => {
+					if (websocket.readyState !== WebSocket.OPEN) return;
+					// Send custom format protocol error
+					websocket.send(
+						JSON.stringify({
+							type: "protocolError",
+							code: "PROTOCOL_VIOLATION",
+							details: errorMessage,
+						}),
+					);
+				},
 			},
 			createZodSession: (_ctx, websocket, options) => {
 				return new ZodChatRoomSession(websocket, this.sessions, options);

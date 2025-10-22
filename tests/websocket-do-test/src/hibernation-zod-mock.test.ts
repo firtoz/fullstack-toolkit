@@ -2,9 +2,12 @@
  * Unit tests for ZodWebSocketDO hibernation logic by mocking the base class
  */
 
+import type {
+	ZodSessionOptions,
+	ZodSessionOptionsOrFactory,
+} from "@firtoz/websocket-do";
 import type { Context } from "hono";
 import { describe, expect, it, vi } from "vitest";
-import type { ZodSessionOptions } from "@firtoz/websocket-do";
 import { z } from "zod";
 
 describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
@@ -35,7 +38,11 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 
 		const mockEnv = {} as Env;
 
-		const staticOptions: ZodSessionOptions<ClientMessage, ServerMessage> = {
+		const staticOptions: ZodSessionOptionsOrFactory<
+			ClientMessage,
+			ServerMessage,
+			Env
+		> = {
 			clientSchema: ClientMessageSchema,
 			serverSchema: ServerMessageSchema,
 			enableBufferMessages: true,
@@ -65,7 +72,11 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions: typeof staticOptions,
+				protected zodSessionOptions: ZodSessionOptionsOrFactory<
+					ClientMessage,
+					ServerMessage,
+					Env
+				>,
 			) {
 				super(ctx, env);
 
@@ -471,7 +482,9 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions?: undefined,
+				protected zodSessionOptions?:
+					| ZodSessionOptionsOrFactory<ClientMessage, ServerMessage, Env>
+					| undefined,
 			) {
 				super(ctx, env);
 
@@ -506,7 +519,7 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 
 		// Constructor itself doesn't throw immediately due to blockConcurrencyWhile,
 		// but the error will be thrown when processing hibernated connections
-		let thrownError: Error | null = null;
+		let thrownError = null as Error | null;
 		const errorHandler = vi.fn((error: unknown) => {
 			thrownError = error as Error;
 		});

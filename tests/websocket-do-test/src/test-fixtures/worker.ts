@@ -12,6 +12,7 @@
 import { Hono } from "hono";
 import { ChatRoomDO } from "./ChatRoomDO";
 import { ZodChatRoomDO } from "./ZodChatRoomDO";
+import { ZodChatRoomDO_CustomProtocolError } from "./ZodChatRoomDO_CustomProtocolError";
 import { ZodChatRoomDO_Dynamic } from "./ZodChatRoomDO_Dynamic";
 import { ZodChatRoomDO_JSON } from "./ZodChatRoomDO_JSON";
 
@@ -81,6 +82,19 @@ app.all("/zod-chat-dynamic/*", async (c) => {
 	return stub.fetch(new Request(url.toString(), c.req.raw));
 });
 
+// Routes for ZodChatRoomDO_CustomProtocolError with custom protocol error handling
+app.all("/zod-chat-custom-error/*", async (c) => {
+	const stub = c.env.ZOD_CHAT_ROOM_CUSTOM_ERROR.getByName(
+		"zod-test-room-custom-error",
+	);
+
+	const url = new URL(c.req.url);
+	const path = url.pathname.replace("/zod-chat-custom-error", "");
+	url.pathname = path || "/";
+
+	return stub.fetch(new Request(url.toString(), c.req.raw));
+});
+
 app.get("/", (c) => {
 	return c.text("WebSocket DO Test Worker");
 });
@@ -90,4 +104,10 @@ export default app;
 // IMPORTANT: Must export DO class for wrangler to bind it
 // The class_name in wrangler.jsonc refers to this exported name
 // Reference: https://developers.cloudflare.com/durable-objects/get-started/#durable-object-class
-export { ChatRoomDO, ZodChatRoomDO, ZodChatRoomDO_JSON, ZodChatRoomDO_Dynamic };
+export {
+	ChatRoomDO,
+	ZodChatRoomDO,
+	ZodChatRoomDO_JSON,
+	ZodChatRoomDO_Dynamic,
+	ZodChatRoomDO_CustomProtocolError,
+};

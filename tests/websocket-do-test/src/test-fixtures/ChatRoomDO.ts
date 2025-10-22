@@ -13,77 +13,78 @@ export type ServerMessage =
 	| { type: "nameChanged"; oldName: string; newName: string; userId: string }
 	| { type: "error"; message: string };
 
-export interface SessionData {
+export type SessionData = {
 	userId: string;
 	name: string;
 	joinedAt: number;
-}
+};
 
-// Session implementation for testing
-export class ChatSession extends BaseSession<
+class ChatRoomSession extends BaseSession<
 	SessionData,
 	ServerMessage,
-	ClientMessage
+	ClientMessage,
+	Env
 > {
-	protected createData(_ctx: Context<{ Bindings: Env }>): SessionData {
-		return {
-			userId: crypto.randomUUID(),
-			name: `User-${Date.now()}`,
-			joinedAt: Date.now(),
-		};
-	}
+	constructor(websocket: WebSocket, sessions: Map<WebSocket, ChatRoomSession>) {
+		super(websocket, sessions, {
+			createData: (_ctx: Context<{ Bindings: Env }>) => ({
+				userId: crypto.randomUUID(),
+				name: `User-${Date.now()}`,
+				joinedAt: Date.now(),
+			}),
+			handleMessage: async (message: ClientMessage) => {
+				switch (message.type) {
+					case "message":
+						// Broadcast message to all sessions
+						this.broadcast({
+							type: "message",
+							text: message.text,
+							from: this.data.name,
+							userId: this.data.userId,
+						});
+						break;
 
-	async handleMessage(message: ClientMessage): Promise<void> {
-		switch (message.type) {
-			case "message":
-				// Broadcast message to all sessions
-				this.broadcast({
-					type: "message",
-					text: message.text,
-					from: this.data.name,
-					userId: this.data.userId,
-				});
-				break;
+					case "setName": {
+						const oldName = this.data.name;
+						this.data.name = message.name;
+						this.update();
 
-			case "setName": {
-				const oldName = this.data.name;
-				this.data.name = message.name;
-				this.update();
-
-				// Broadcast name change
-				this.broadcast({
-					type: "nameChanged",
-					oldName,
-					newName: message.name,
-					userId: this.data.userId,
-				});
-				break;
-			}
-		}
-	}
-
-	async handleBufferMessage(_message: ArrayBuffer): Promise<void> {
-		this.send({
-			type: "error",
-			message: "Binary messages not supported",
-		});
-	}
-
-	async handleClose(): Promise<void> {
-		// Broadcast that user left
-		this.broadcast(
-			{
-				type: "userLeft",
-				name: this.data.name,
-				userId: this.data.userId,
+						// Broadcast name change
+						this.broadcast({
+							type: "nameChanged",
+							oldName,
+							newName: message.name,
+							userId: this.data.userId,
+						});
+						break;
+					}
+				}
 			},
-			true, // exclude self
-		);
+			handleBufferMessage: async (_message: ArrayBuffer) => {
+				this.send({
+					type: "error",
+					message: "Binary messages not supported",
+				});
+			},
+			handleClose: async () => {
+				// Broadcast that user left
+				this.broadcast(
+					{
+						type: "userLeft",
+						name: this.data.name,
+						userId: this.data.userId,
+					},
+					true, // exclude self
+				);
+			},
+		});
 	}
 }
 
 // Durable Object implementation for testing
-export class ChatRoomDO extends BaseWebSocketDO<ChatSession> {
+export class ChatRoomDO extends BaseWebSocketDO<
+	BaseSession<SessionData, ServerMessage, ClientMessage>
+> {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
 			sessionCount: this.sessions.size,
@@ -95,10 +96,11 @@ export class ChatRoomDO extends BaseWebSocketDO<ChatSession> {
 		});
 	});
 
-	protected createSession(
-		_ctx: Context<{ Bindings: Env }> | undefined,
-		websocket: WebSocket,
-	): ChatSession {
-		return new ChatSession(websocket, this.sessions);
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env, {
+			createSession: (_ctx, websocket) => {
+				return new ChatRoomSession(websocket, this.sessions);
+			},
+		});
 	}
 }

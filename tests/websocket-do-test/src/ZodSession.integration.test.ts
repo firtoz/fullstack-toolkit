@@ -11,6 +11,92 @@ import type {
 import "./test-fixtures/worker";
 
 describe("ZodSession Integration Tests", () => {
+	describe("Custom Protocol Error Handling", () => {
+		it("should use custom protocol error handler when provided", async () => {
+			const response = await SELF.fetch(
+				"http://example.com/zod-chat-custom-error/websocket",
+				{
+					headers: {
+						Upgrade: "websocket",
+					},
+				},
+			);
+
+			const ws = response.webSocket;
+			assert(ws);
+			const messages: ServerMessage[] = [];
+
+			// Listen for any messages (JSON or buffer)
+			ws.addEventListener("message", (event) => {
+				if (typeof event.data === "string") {
+					messages.push(JSON.parse(event.data));
+				}
+			});
+
+			ws.accept();
+
+			// Try to send JSON message when buffer mode is enabled (should trigger protocol error)
+			const jsonMessage = { type: "message", text: "Should be rejected" };
+			ws.send(JSON.stringify(jsonMessage));
+
+			// Wait for custom protocol error
+			await vi.waitFor(
+				() => {
+					expect(messages).toHaveLength(1);
+				},
+				{ timeout: 1000, interval: 20 },
+			);
+
+			// Should receive custom protocol error format
+			expect(messages[0]).toMatchObject({
+				type: "protocolError",
+				code: "PROTOCOL_VIOLATION",
+				details: "String messages are not allowed. Please use buffer messages.",
+			});
+		});
+
+		it("should still use default protocol error handler when not provided", async () => {
+			const response = await SELF.fetch(
+				"http://example.com/zod-chat/websocket",
+				{
+					headers: {
+						Upgrade: "websocket",
+					},
+				},
+			);
+
+			const ws = response.webSocket;
+			assert(ws);
+			const messages: ServerMessage[] = [];
+
+			// Listen for any messages
+			ws.addEventListener("message", (event) => {
+				if (typeof event.data === "string") {
+					messages.push(JSON.parse(event.data));
+				}
+			});
+
+			ws.accept();
+
+			// Try to send JSON message when buffer mode is enabled
+			const jsonMessage = { type: "message", text: "Should be rejected" };
+			ws.send(JSON.stringify(jsonMessage));
+
+			// Wait for default protocol error
+			await vi.waitFor(
+				() => {
+					expect(messages).toHaveLength(1);
+				},
+				{ timeout: 1000, interval: 20 },
+			);
+
+			// Should receive default protocol error format
+			expect(messages[0]).toMatchObject({
+				error: "String messages are not allowed. Please use buffer messages.",
+			});
+		});
+	});
+
 	describe("WebSocket Connection with Zod Validation (JSON mode)", () => {
 		it("should establish websocket connection and validate messages", async () => {
 			const response = await SELF.fetch(

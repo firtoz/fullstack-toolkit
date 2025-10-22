@@ -8,17 +8,18 @@
 		"tests/*"
 	],
 	"catalog": {
-		"bun-types": "^1.3.0",
+		"bun-types": "^1.3.1",
 		"typescript": "^5.9.3",
 		"@types/react": "^19.2.2",
-		"@cloudflare/vitest-pool-workers": "^0.9.12",
+		"@types/node": "^24.9.1",
+		"@cloudflare/vitest-pool-workers": "^0.9.14",
 		"@cloudflare/workers-types": "^4.20251008.0",
-		"hono": "^4.10.1",
+		"hono": "^4.10.2",
 		"msgpackr": "^1.11.5",
 		"react": "^19.2.0",
 		"react-router": "^7.9.4",
 		"vitest": "^3.2.4",
-		"wrangler": "^4.42.2",
+		"wrangler": "^4.44.0",
 		"zod": "^4.1.12"
 	},
 	"scripts": {
@@ -44,7 +45,7 @@
 		"@commitlint/cli": "^20.1.0",
 		"@commitlint/config-conventional": "^20.0.0",
 		"@commitlint/types": "^20.0.0",
-		"@types/node": "^24.8.1",
+		"@types/node": "catalog:",
 		"bun-types": "catalog:",
 		"husky": "^9.1.7",
 		"turbo": "^2.5.8",

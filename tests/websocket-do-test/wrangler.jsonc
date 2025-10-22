@@ -34,6 +34,10 @@
 			{
 				"name": "ZOD_CHAT_ROOM_DYNAMIC",
 				"class_name": "ZodChatRoomDO_Dynamic"
+			},
+			{
+				"name": "ZOD_CHAT_ROOM_CUSTOM_ERROR",
+				"class_name": "ZodChatRoomDO_CustomProtocolError"
 			}
 		]
 	},
@@ -53,6 +57,10 @@
 		{
 			"tag": "v3",
 			"new_classes": ["ZodChatRoomDO_Dynamic"]
+		},
+		{
+			"tag": "v4",
+			"new_classes": ["ZodChatRoomDO_CustomProtocolError"]
 		}
 	]
 }

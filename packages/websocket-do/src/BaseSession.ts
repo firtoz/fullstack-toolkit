@@ -48,7 +48,19 @@ export type SessionEnv<
 	? TEnv
 	: never;
 
-export abstract class BaseSession<
+export type BaseSessionHandlers<
+	TData,
+	_TServerMessage,
+	TClientMessage,
+	TEnv extends object = Cloudflare.Env,
+> = {
+	createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
+	handleMessage: (message: TClientMessage) => Promise<void>;
+	handleBufferMessage: (message: ArrayBuffer) => Promise<void>;
+	handleClose: () => Promise<void>;
+};
+
+export class BaseSession<
 	TData,
 	TServerMessage,
 	TClientMessage,
@@ -65,6 +77,12 @@ export abstract class BaseSession<
 	}
 
 	private readonly wrapper: WebsocketWrapper<TData, TServerMessage>;
+	protected readonly handlers: BaseSessionHandlers<
+		TData,
+		TServerMessage,
+		TClientMessage,
+		TEnv
+	>;
 
 	constructor(
 		public websocket: WebSocket,
@@ -72,12 +90,14 @@ export abstract class BaseSession<
 			WebSocket,
 			BaseSession<TData, TServerMessage, TClientMessage, TEnv>
 		>,
+		handlers: BaseSessionHandlers<TData, TServerMessage, TClientMessage, TEnv>,
 	) {
 		this.wrapper = new WebsocketWrapper<TData, TServerMessage>(websocket);
+		this.handlers = handlers;
 	}
 
 	public startFresh(ctx: Context<{ Bindings: TEnv }>) {
-		this.data = this.createData(ctx);
+		this.data = this.handlers.createData(ctx);
 		this.wrapper.serializeAttachment(this.data);
 	}
 
@@ -94,20 +114,26 @@ export abstract class BaseSession<
 		this.wrapper.serializeAttachment(this.data);
 	}
 
-	protected abstract createData(ctx: Context<{ Bindings: TEnv }>): TData;
-
-	protected broadcast(message: TServerMessage, excludeSelf = false) {
+	public broadcast(message: TServerMessage, excludeSelf = false) {
 		for (const session of this.sessions.values()) {
 			if (excludeSelf && session === this) continue;
 			session.send(message);
 		}
 	}
 
-	protected send(message: TServerMessage) {
+	public send(message: TServerMessage) {
 		this.wrapper.send(message);
 	}
 
-	abstract handleMessage(message: TClientMessage): Promise<void>;
-	abstract handleBufferMessage(message: ArrayBuffer): Promise<void>;
-	abstract handleClose(): Promise<void>;
+	async handleMessage(message: TClientMessage): Promise<void> {
+		return this.handlers.handleMessage(message);
+	}
+
+	async handleBufferMessage(message: ArrayBuffer): Promise<void> {
+		return this.handlers.handleBufferMessage(message);
+	}
+
+	async handleClose(): Promise<void> {
+		return this.handlers.handleClose();
+	}
 }

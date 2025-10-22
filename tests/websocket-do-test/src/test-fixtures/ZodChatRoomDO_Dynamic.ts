@@ -3,7 +3,6 @@ import {
 	type ZodSessionOptions,
 	ZodWebSocketDO,
 } from "@firtoz/websocket-do";
-import type { Context } from "hono";
 import { z } from "zod";
 
 // Shared validation schemas - DRY principle
@@ -59,107 +58,91 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
 
-export interface SessionData {
+export type SessionData = {
 	userId: string;
 	name: string;
 	joinedAt: number;
 	format: "json" | "buffer"; // Track the format used for this session
-}
+};
 
-// ZodSession implementation for dynamic format switching
-export class ZodChatSession_Dynamic extends ZodSession<
+class ZodChatRoomSession_Dynamic extends ZodSession<
 	SessionData,
 	ServerMessage,
-	ClientMessage
+	ClientMessage,
+	Env
 > {
-	protected createData(_ctx: Context<{ Bindings: Env }>): SessionData {
-		return {
-			userId: crypto.randomUUID(),
-			name: `User-${Date.now()}`,
-			joinedAt: Date.now(),
-			format: this.enableBufferMessages ? "buffer" : "json",
-		};
-	}
+	constructor(
+		websocket: WebSocket,
+		sessions: Map<WebSocket, ZodChatRoomSession_Dynamic>,
+		options: ZodSessionOptions<ClientMessage, ServerMessage>,
+	) {
+		super(websocket, sessions, options, {
+			createData: (_ctx) => ({
+				userId: crypto.randomUUID(),
+				name: `User-${Date.now()}`,
+				joinedAt: Date.now(),
+				format: options.enableBufferMessages ? "buffer" : "json",
+			}),
+			handleValidatedMessage: async (message: ClientMessage) => {
+				switch (message.type) {
+					case "message":
+						// Broadcast message to all sessions
+						this.broadcast({
+							type: "message",
+							text: message.text,
+							from: this.data.name,
+							userId: this.data.userId,
+						});
+						break;
 
-	protected async handleValidatedMessage(
-		message: ClientMessage,
-	): Promise<void> {
-		switch (message.type) {
-			case "message":
-				// Broadcast message to all sessions
-				this.broadcast({
-					type: "message",
-					text: message.text,
-					from: this.data.name,
-					userId: this.data.userId,
-				});
-				break;
+					case "setName": {
+						const oldName = this.data.name;
+						this.data.name = message.name;
+						this.update();
 
-			case "setName": {
-				const oldName = this.data.name;
-				this.data.name = message.name;
-				this.update();
-
-				// Broadcast name change
-				this.broadcast({
-					type: "nameChanged",
-					oldName,
-					newName: message.name,
-					userId: this.data.userId,
-				});
-				break;
-			}
-		}
-	}
-
-	// Override to send error messages to clients for validation errors
-	protected async handleValidationError(
-		error: unknown,
-		originalMessage: unknown,
-	): Promise<void> {
-		console.error(
-			"Validation error:",
-			error,
-			"Original message:",
-			originalMessage,
-		);
-
-		this.send({
-			type: "error",
-			message: "Invalid message format",
-		});
-	}
-
-	async handleClose(): Promise<void> {
-		// Broadcast that user left
-		this.broadcast(
-			{
-				type: "userLeft",
-				name: this.data.name,
-				userId: this.data.userId,
+						// Broadcast name change
+						this.broadcast({
+							type: "nameChanged",
+							oldName,
+							newName: message.name,
+							userId: this.data.userId,
+						});
+						break;
+					}
+				}
 			},
-			true, // exclude self
-		);
+			handleValidationError: async (error, originalMessage) => {
+				console.error(
+					"Validation error:",
+					error,
+					"Original message:",
+					originalMessage,
+				);
+
+				this.send({
+					type: "error",
+					message: "Invalid message format",
+				});
+			},
+			handleClose: async () => {
+				// Broadcast that user left
+				this.broadcast(
+					{
+						type: "userLeft",
+						name: this.data.name,
+						userId: this.data.userId,
+					},
+					true, // exclude self
+				);
+			},
+		});
 	}
 }
 
 // ZodWebSocketDO implementation that switches format based on query param
-export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<ZodChatSession_Dynamic> {
-	constructor(ctx: DurableObjectState, env: Env) {
-		// Pass a function that determines the format based on the query parameter
-		super(ctx, env, (honoCtx, _websocket) => {
-			// Check query parameter to determine format
-			const format = honoCtx.req.query("format");
-			const enableBufferMessages = format === "buffer";
-
-			return {
-				clientSchema: ClientMessageSchema,
-				serverSchema: ServerMessageSchema,
-				enableBufferMessages,
-			};
-		});
-	}
-
+export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<
+	ZodSession<SessionData, ServerMessage, ClientMessage, Env>
+> {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
 			sessionCount: this.sessions.size,
@@ -172,11 +155,27 @@ export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<ZodChatSession_Dynamic
 		});
 	});
 
-	protected createZodSession(
-		_ctx: Context<{ Bindings: Env }>,
-		websocket: WebSocket,
-		options: ZodSessionOptions<ClientMessage, ServerMessage>,
-	): ZodChatSession_Dynamic {
-		return new ZodChatSession_Dynamic(websocket, this.sessions, options);
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env, {
+			// Pass a function that determines the format based on the query parameter
+			zodSessionOptions: (honoCtx, _websocket) => {
+				// Check query parameter to determine format
+				const format = honoCtx?.req.query("format") ?? "json";
+				const enableBufferMessages = format === "buffer";
+
+				return {
+					clientSchema: ClientMessageSchema,
+					serverSchema: ServerMessageSchema,
+					enableBufferMessages,
+				};
+			},
+			createZodSession: (_ctx, websocket, options) => {
+				return new ZodChatRoomSession_Dynamic(
+					websocket,
+					this.sessions,
+					options,
+				);
+			},
+		});
 	}
 }

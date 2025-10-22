@@ -1,21 +1,41 @@
+import type { Context } from "hono";
 import type { ZodType } from "zod";
 import { BaseSession } from "./BaseSession";
 import { zodMsgpack } from "./zodMsgpack";
 
-export interface ZodSessionOptions<TClientMessage, TServerMessage> {
+export type ZodSessionOptions<TClientMessage, TServerMessage> = {
 	clientSchema: ZodType<TClientMessage>;
 	serverSchema: ZodType<TServerMessage>;
 	enableBufferMessages?: boolean;
-}
+	sendProtocolError?: (
+		websocket: WebSocket,
+		errorMessage: string,
+	) => Promise<void>;
+};
 
-export abstract class ZodSession<
+export type ZodSessionHandlers<
+	TData,
+	_TServerMessage,
+	TClientMessage,
+	TEnv extends object,
+> = {
+	createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
+	handleValidatedMessage: (message: TClientMessage) => Promise<void>;
+	handleValidationError?: (
+		error: unknown,
+		originalMessage: unknown,
+	) => Promise<void>;
+	handleClose: () => Promise<void>;
+};
+
+export class ZodSession<
 	TData,
 	TServerMessage,
 	TClientMessage,
 	TEnv extends object = Cloudflare.Env,
 > extends BaseSession<TData, TServerMessage, TClientMessage, TEnv> {
-	protected readonly clientCodec: ReturnType<typeof zodMsgpack<TClientMessage>>;
-	protected readonly serverCodec: ReturnType<typeof zodMsgpack<TServerMessage>>;
+	private readonly clientCodec: ReturnType<typeof zodMsgpack<TClientMessage>>;
+	private readonly serverCodec: ReturnType<typeof zodMsgpack<TServerMessage>>;
 	protected readonly enableBufferMessages: boolean;
 
 	constructor(
@@ -24,17 +44,34 @@ export abstract class ZodSession<
 			WebSocket,
 			ZodSession<TData, TServerMessage, TClientMessage, TEnv>
 		>,
-		protected options: ZodSessionOptions<TClientMessage, TServerMessage>,
+		private readonly options: ZodSessionOptions<TClientMessage, TServerMessage>,
+		private readonly zodHandlers: ZodSessionHandlers<
+			TData,
+			TServerMessage,
+			TClientMessage,
+			TEnv
+		>,
 	) {
-		super(websocket, sessions);
+		super(websocket, sessions, {
+			createData: zodHandlers.createData,
+			handleMessage: async (message) => {
+				return this._internalHandleMessage(message);
+			},
+			handleBufferMessage: async (message) => {
+				return this._internalHandleBufferMessage(message);
+			},
+			handleClose: async () => {
+				return zodHandlers.handleClose();
+			},
+		});
 
 		this.clientCodec = zodMsgpack(options.clientSchema);
 		this.serverCodec = zodMsgpack(options.serverSchema);
 		this.enableBufferMessages = options.enableBufferMessages ?? false;
 	}
 
-	// Override the base handleMessage to add validation
-	async handleMessage(message: TClientMessage): Promise<void> {
+	// Internal method used by the base class handlers
+	private async _internalHandleMessage(message: TClientMessage): Promise<void> {
 		// If buffer messages are enabled, reject JSON messages
 		if (this.enableBufferMessages) {
 			console.error(
@@ -49,15 +86,17 @@ export abstract class ZodSession<
 		try {
 			// Validate the message using the client schema
 			const validatedMessage = this.options.clientSchema.parse(message);
-			await this.handleValidatedMessage(validatedMessage);
+			await this.zodHandlers.handleValidatedMessage(validatedMessage);
 		} catch (error) {
 			console.error("Invalid client message received:", error);
-			await this.handleValidationError(error, message);
+			await this._internalHandleValidationError(error, message);
 		}
 	}
 
-	// Override buffer message handling to support msgpack decoding
-	async handleBufferMessage(buffer: ArrayBuffer): Promise<void> {
+	// Internal method used by the base class handlers
+	private async _internalHandleBufferMessage(
+		buffer: ArrayBuffer,
+	): Promise<void> {
 		// If buffer messages are disabled, reject buffer messages
 		if (!this.enableBufferMessages) {
 			console.error(
@@ -71,15 +110,33 @@ export abstract class ZodSession<
 		try {
 			const bytes = new Uint8Array(buffer);
 			const decodedMessage = this.clientCodec.decode(bytes);
-			await this.handleValidatedMessage(decodedMessage);
+			await this.zodHandlers.handleValidatedMessage(decodedMessage);
 		} catch (error) {
 			console.error("Failed to decode buffer message:", error);
-			await this.handleValidationError(error, buffer);
+			await this._internalHandleValidationError(error, buffer);
+		}
+	}
+
+	// Internal validation error handler
+	private async _internalHandleValidationError(
+		error: unknown,
+		originalMessage: unknown,
+	): Promise<void> {
+		if (this.zodHandlers.handleValidationError) {
+			await this.zodHandlers.handleValidationError(error, originalMessage);
+		} else {
+			// Default implementation logs and continues
+			console.error(
+				"Validation error:",
+				error,
+				"Original message:",
+				originalMessage,
+			);
 		}
 	}
 
 	// Type-safe send method that automatically uses the correct format
-	protected send(message: TServerMessage): void {
+	public send(message: TServerMessage): void {
 		if (this.enableBufferMessages) {
 			this.sendBuffer(message);
 		} else {
@@ -114,12 +171,17 @@ export abstract class ZodSession<
 		}
 	}
 
-	// Send a protocol error message (always as JSON for compatibility)
+	// Send a protocol error message (always as JSON for compatibility by default)
 	private async sendProtocolError(errorMessage: string): Promise<void> {
 		try {
-			// Send a simple error object - no schema validation needed
-			if (this.websocket.readyState !== WebSocket.OPEN) return;
-			this.websocket.send(JSON.stringify({ error: errorMessage }));
+			// Use custom handler if provided, otherwise use default
+			if (this.options.sendProtocolError) {
+				await this.options.sendProtocolError(this.websocket, errorMessage);
+			} else {
+				// Default implementation: send a simple error object - no schema validation needed
+				if (this.websocket.readyState !== WebSocket.OPEN) return;
+				this.websocket.send(JSON.stringify({ error: errorMessage }));
+			}
 		} catch (error) {
 			console.error("Failed to send protocol error:", error);
 		}
@@ -127,31 +189,12 @@ export abstract class ZodSession<
 
 	// Type-safe broadcast that validates server messages
 	// Automatically uses the correct format based on session configuration
-	protected broadcast(message: TServerMessage, excludeSelf = false): void {
+	public broadcast(message: TServerMessage, excludeSelf = false): void {
 		for (const session of this.sessions.values()) {
 			if (excludeSelf && session === this) continue;
 			if (session instanceof ZodSession) {
 				session.send(message); // send() automatically uses correct format
 			}
 		}
-	}
-
-	// Abstract methods for implementers
-	protected abstract handleValidatedMessage(
-		message: TClientMessage,
-	): Promise<void>;
-
-	// Optional error handling - default implementation logs and continues
-	protected async handleValidationError(
-		error: unknown,
-		originalMessage: unknown,
-	): Promise<void> {
-		console.error(
-			"Validation error:",
-			error,
-			"Original message:",
-			originalMessage,
-		);
-		// Implementers can override this to send error responses to clients
 	}
 }

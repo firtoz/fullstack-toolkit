@@ -3,7 +3,6 @@ import {
 	type ZodSessionOptions,
 	ZodWebSocketDO,
 } from "@firtoz/websocket-do";
-import type { Context } from "hono";
 import { z } from "zod";
 
 // Shared validation schemas - DRY principle
@@ -59,98 +58,88 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
 
-export interface SessionData {
+export type SessionData = {
 	userId: string;
 	name: string;
 	joinedAt: number;
-}
+};
 
-// ZodSession implementation for JSON-only testing
-export class ZodChatSession_JSON extends ZodSession<
+class ZodChatRoomSession_JSON extends ZodSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage
 > {
-	protected createData(_ctx: Context<{ Bindings: Env }>): SessionData {
-		return {
-			userId: crypto.randomUUID(),
-			name: `User-${Date.now()}`,
-			joinedAt: Date.now(),
-		};
-	}
+	constructor(
+		websocket: WebSocket,
+		sessions: Map<WebSocket, ZodChatRoomSession_JSON>,
+		options: ZodSessionOptions<ClientMessage, ServerMessage>,
+	) {
+		super(websocket, sessions, options, {
+			createData: (_ctx) => ({
+				userId: crypto.randomUUID(),
+				name: `User-${Date.now()}`,
+				joinedAt: Date.now(),
+			}),
+			handleValidatedMessage: async (message: ClientMessage) => {
+				switch (message.type) {
+					case "message":
+						// Broadcast message to all sessions
+						this.broadcast({
+							type: "message",
+							text: message.text,
+							from: this.data.name,
+							userId: this.data.userId,
+						});
+						break;
 
-	protected async handleValidatedMessage(
-		message: ClientMessage,
-	): Promise<void> {
-		switch (message.type) {
-			case "message":
-				// Broadcast message to all sessions
-				this.broadcast({
-					type: "message",
-					text: message.text,
-					from: this.data.name,
-					userId: this.data.userId,
-				});
-				break;
+					case "setName": {
+						const oldName = this.data.name;
+						this.data.name = message.name;
+						this.update();
 
-			case "setName": {
-				const oldName = this.data.name;
-				this.data.name = message.name;
-				this.update();
-
-				// Broadcast name change
-				this.broadcast({
-					type: "nameChanged",
-					oldName,
-					newName: message.name,
-					userId: this.data.userId,
-				});
-				break;
-			}
-		}
-	}
-
-	// Override to send error messages to clients for validation errors
-	protected async handleValidationError(
-		error: unknown,
-		originalMessage: unknown,
-	): Promise<void> {
-		console.error(
-			"Validation error:",
-			error,
-			"Original message:",
-			originalMessage,
-		);
-
-		this.send({
-			type: "error",
-			message: "Invalid message format",
-		});
-	}
-
-	async handleClose(): Promise<void> {
-		// Broadcast that user left
-		this.broadcast(
-			{
-				type: "userLeft",
-				name: this.data.name,
-				userId: this.data.userId,
+						// Broadcast name change
+						this.broadcast({
+							type: "nameChanged",
+							oldName,
+							newName: message.name,
+							userId: this.data.userId,
+						});
+						break;
+					}
+				}
 			},
-			true, // exclude self
-		);
+			handleValidationError: async (error, originalMessage) => {
+				console.error(
+					"Validation error:",
+					error,
+					"Original message:",
+					originalMessage,
+				);
+
+				this.send({
+					type: "error",
+					message: "Invalid message format",
+				});
+			},
+			handleClose: async () => {
+				// Broadcast that user left
+				this.broadcast(
+					{
+						type: "userLeft",
+						name: this.data.name,
+						userId: this.data.userId,
+					},
+					true, // exclude self
+				);
+			},
+		});
 	}
 }
 
 // ZodWebSocketDO implementation for JSON-only testing
-export class ZodChatRoomDO_JSON extends ZodWebSocketDO<ZodChatSession_JSON> {
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, {
-			clientSchema: ClientMessageSchema,
-			serverSchema: ServerMessageSchema,
-			enableBufferMessages: false, // JSON-only mode
-		});
-	}
-
+export class ZodChatRoomDO_JSON extends ZodWebSocketDO<
+	ZodSession<SessionData, ServerMessage, ClientMessage, Env>
+> {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
 			sessionCount: this.sessions.size,
@@ -162,11 +151,16 @@ export class ZodChatRoomDO_JSON extends ZodWebSocketDO<ZodChatSession_JSON> {
 		});
 	});
 
-	protected createZodSession(
-		_ctx: Context<{ Bindings: Env }> | undefined,
-		websocket: WebSocket,
-		options: ZodSessionOptions<ClientMessage, ServerMessage>,
-	): ZodChatSession_JSON {
-		return new ZodChatSession_JSON(websocket, this.sessions, options);
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env, {
+			zodSessionOptions: {
+				clientSchema: ClientMessageSchema,
+				serverSchema: ServerMessageSchema,
+				enableBufferMessages: false, // JSON-only mode
+			},
+			createZodSession: (_ctx, websocket, options) => {
+				return new ZodChatRoomSession_JSON(websocket, this.sessions, options);
+			},
+		});
 	}
 }

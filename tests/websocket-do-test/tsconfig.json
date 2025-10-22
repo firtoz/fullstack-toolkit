@@ -1,19 +1,16 @@
 {
+	"files": [],
+	"references": [
+		{
+			"path": "./tsconfig.cloudflare.json"
+		}
+	],
 	"compilerOptions": {
-		"module": "ESNext",
-		"target": "ESNext",
-		"lib": ["ESNext"],
-		"types": ["@cloudflare/vitest-pool-workers"],
-		"jsx": "react-jsx",
+		"checkJs": true,
+		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
-		"moduleResolution": "Bundler",
-		"resolveJsonModule": true,
-		"isolatedModules": true,
 		"strict": true,
-		"noUncheckedIndexedAccess": true,
-		"forceConsistentCasingInFileNames": true,
-		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true
-	},
-	"include": ["src/**/*", "worker-configuration.d.ts"]
+		"noEmit": true,
+		"types": []
+	}
 }

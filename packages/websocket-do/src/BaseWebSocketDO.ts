@@ -7,6 +7,17 @@ import type {
 	SessionEnv,
 } from "./BaseSession";
 
+export type BaseWebSocketDOOptions<
+	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
+	TSession extends BaseSession<any, any, any, any>,
+	TEnv extends SessionEnv<TSession>,
+> = {
+	createSession: (
+		ctx: Context<{ Bindings: TEnv }> | undefined,
+		websocket: WebSocket,
+	) => TSession | Promise<TSession>;
+};
+
 export abstract class BaseWebSocketDO<
 		// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
 		TSession extends BaseSession<any, any, any, any> = BaseSession<
@@ -25,8 +36,13 @@ export abstract class BaseWebSocketDO<
 	implements DOWithHonoApp
 {
 	protected readonly sessions = new Map<WebSocket, TSession>();
+	abstract readonly app: Hono<{ Bindings: TEnv }>;
 
-	constructor(ctx: DurableObjectState, env: TEnv) {
+	constructor(
+		ctx: DurableObjectState,
+		env: TEnv,
+		private readonly options: BaseWebSocketDOOptions<TSession, TEnv>,
+	) {
 		super(ctx, env);
 
 		this.ctx.blockConcurrencyWhile(async () => {
@@ -36,7 +52,7 @@ export abstract class BaseWebSocketDO<
 					try {
 						// For resumed sessions, we don't have a Hono context
 						// Pass undefined and let implementers handle it
-						const session = await this.createSession(undefined, websocket);
+						const session = await options.createSession(undefined, websocket);
 						session.resume();
 						this.sessions.set(websocket, session);
 					} catch (error) {
@@ -81,20 +97,13 @@ export abstract class BaseWebSocketDO<
 		);
 	}
 
-	abstract app: Hono<{ Bindings: TEnv }>;
-
-	protected abstract createSession(
-		ctx: Context<{ Bindings: TEnv }> | undefined,
-		websocket: WebSocket,
-	): TSession | Promise<TSession>;
-
 	async handleSession(
 		ctx: Context<{ Bindings: TEnv }>,
 		ws: WebSocket,
 	): Promise<void> {
 		this.ctx.acceptWebSocket(ws);
 		try {
-			const session = await this.createSession(ctx, ws);
+			const session = await this.options.createSession(ctx, ws);
 			session.startFresh(ctx);
 			this.sessions.set(ws, session);
 		} catch (error) {
