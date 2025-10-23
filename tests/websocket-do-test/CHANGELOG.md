@@ -1,5 +1,12 @@
 # websocket-do-test
 
+## 1.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`8edcbdc`](https://github.com/firtoz/fullstack-toolkit/commit/8edcbdc008aab12d416b23f90d7f59ebf75ef969)]:
+  - @firtoz/websocket-do@7.0.0
+
 ## 1.2.2
 
 ### Patch Changes
