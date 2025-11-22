@@ -1,5 +1,22 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.2.0
+
+### Minor Changes
+
+- [`58d2cba`](https://github.com/firtoz/fullstack-toolkit/commit/58d2cbac8ea4e540b5460b7088b6b62e50357558) Thanks [@firtoz](https://github.com/firtoz)! - Add sync mode functionality for IndexedDB and SQLite collections
+
+  - Introduced support for both eager and on-demand sync modes in Drizzle providers
+  - Implemented operation tracking via interceptors to monitor database operations during queries
+  - Enhanced DrizzleIndexedDBProvider and DrizzleSqliteProvider to accept interceptors for debugging and testing purposes
+  - Added createInsertSchemaWithDefaults and createInsertSchemaWithIdDefault utilities for better schema management
+  - Refactored collection utilities to improve data handling and consistency across collections
+
+### Patch Changes
+
+- Updated dependencies [[`58d2cba`](https://github.com/firtoz/fullstack-toolkit/commit/58d2cbac8ea4e540b5460b7088b6b62e50357558)]:
+  - @firtoz/drizzle-utils@0.2.0
+
 ## 0.1.0
 
 ### Minor Changes
