@@ -1,15 +1,5 @@
-// const selectSchema = createSelectSchema(todoTable);
-
-import type {
-	CollectionConfig,
-	InferSchemaOutput,
-	LoadSubsetOptions,
-	SyncConfig,
-	SyncConfigRes,
-	SyncMode,
-} from "@tanstack/db";
+import type { InferSchemaOutput, SyncMode } from "@tanstack/db";
 import type { IR } from "@tanstack/db";
-import { DeduplicatedLoadSubset } from "@tanstack/db";
 import {
 	eq,
 	sql,
@@ -29,25 +19,24 @@ import {
 	asc,
 	desc,
 	type SQL,
-	getTableColumns,
 } from "drizzle-orm";
 import type {
 	SQLiteUpdateSetSource,
 	BaseSQLiteDatabase,
 	SQLiteInsertValue,
 } from "drizzle-orm/sqlite-core";
-import { createInsertSchema } from "drizzle-valibot";
-import * as v from "valibot";
 import type {
 	SelectSchema,
 	TableWithRequiredFields,
+	BaseSyncConfig,
+	SyncBackend,
 } from "@firtoz/drizzle-utils";
-
-// WORKAROUND: DeduplicatedLoadSubset has a bug where toggling queries (e.g., isNull/isNotNull)
-// creates invalid expressions like not(or(isNull(...), not(isNull(...))))
-// See: https://github.com/TanStack/db/issues/828
-// TODO: Re-enable once the bug is fixed
-const useDedupe = false as boolean;
+import {
+	createSyncFunction,
+	createInsertSchemaWithIdDefault,
+	createGetKeyFunction,
+	createCollectionConfig,
+} from "@firtoz/drizzle-utils";
 
 export type AnyDrizzleDatabase = BaseSQLiteDatabase<
 	"async",
@@ -193,21 +182,10 @@ export function sqliteCollectionOptions<
 	const TTableName extends string & ValidTableNames<DrizzleSchema<TDrizzle>>,
 	TTable extends DrizzleSchema<TDrizzle>[TTableName] & TableWithRequiredFields,
 >(config: DrizzleCollectionConfig<TDrizzle, TTableName>) {
-	type CollectionType = CollectionConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
-	>;
-
 	const tableName = config.tableName as string &
 		ValidTableNames<DrizzleSchema<TDrizzle>>;
 
 	const table = config.drizzle?._.fullSchema[tableName] as TTable;
-
-	let insertListener: CollectionType["onInsert"] | null = null;
-	let updateListener: CollectionType["onUpdate"] | null = null;
-	let deleteListener: CollectionType["onDelete"] | null = null;
 
 	// Transaction queue to serialize SQLite transactions (SQLite only supports one transaction at a time)
 	// The queue ensures transactions run sequentially and continues even if one fails
@@ -225,52 +203,60 @@ export function sqliteCollectionOptions<
 		return result;
 	};
 
-	const sync: SyncConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		string
-	>["sync"] = (params) => {
-		const { begin, write, commit, markReady } = params;
+	// Create backend-specific implementation
+	const backend: SyncBackend<TTable> = {
+		initialLoad: async (write) => {
+			const items = (await config.drizzle
+				.select()
+				.from(table)) as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
 
-		const initialSync = async () => {
-			await config.readyPromise;
-
-			try {
-				begin();
-
-				const items = (await config.drizzle
-					.select()
-					.from(table)) as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
-
-				for (const item of items) {
-					write({
-						type: "insert",
-						value: item,
-					});
-				}
-
-				commit();
-			} finally {
-				markReady();
+			for (const item of items) {
+				write(item);
 			}
-		};
+		},
 
-		if (config.syncMode === "eager" || !config.syncMode) {
-			initialSync();
-		} else {
-			markReady();
-		}
+		loadSubset: async (options, write) => {
+			// Build the query with optional where, orderBy, and limit
+			// Use $dynamic() to enable dynamic query building
+			let query = config.drizzle.select().from(table).$dynamic();
 
-		insertListener = async (params) => {
-			// Store results to write after transaction succeeds
+			// Convert TanStack DB IR expressions to Drizzle expressions
+			if (options.where) {
+				const drizzleWhere = convertBasicExpressionToDrizzle(
+					options.where,
+					table,
+				);
+				query = query.where(drizzleWhere);
+			}
+
+			if (options.orderBy) {
+				const drizzleOrderBy = convertOrderByToDrizzle(options.orderBy, table);
+				query = query.orderBy(...drizzleOrderBy);
+			}
+
+			if (options.limit !== undefined) {
+				query = query.limit(options.limit);
+			}
+
+			const items = (await query) as unknown as InferSchemaOutput<
+				SelectSchema<TTable>
+			>[];
+
+			for (const item of items) {
+				write(item);
+			}
+		},
+
+		handleInsert: async (mutations) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
 			// Queue the transaction to serialize SQLite operations
 			await queueTransaction(async () => {
 				await config.drizzle.transaction(async (tx) => {
-					for (const item of params.transaction.mutations) {
+					for (const mutation of mutations) {
 						// TanStack DB applies schema transform (including ID default) before calling this listener
-						// So item.modified already has the ID from insertSchemaWithIdDefault
-						const itemToInsert = item.modified;
+						// So mutation.modified already has the ID from insertSchemaWithIdDefault
+						const itemToInsert = mutation.modified;
 
 						if (config.debug) {
 							console.log(
@@ -306,27 +292,20 @@ export function sqliteCollectionOptions<
 				}
 			});
 
-			// Only update reactive store after transaction succeeds
-			begin();
-			for (const result of results) {
-				write({
-					type: "insert",
-					value: result as unknown as InferSchemaOutput<SelectSchema<TTable>>,
-				});
-			}
-			commit();
-		};
+			return results;
+		},
 
-		updateListener = async (params) => {
-			// Queue the transaction to serialize SQLite operations
+		handleUpdate: async (mutations) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
+
+			// Queue the transaction to serialize SQLite operations
 			await queueTransaction(async () => {
 				await config.drizzle.transaction(async (tx) => {
-					for (const item of params.transaction.mutations) {
+					for (const mutation of mutations) {
 						if (config.debug) {
 							console.log(
 								`[${new Date().toISOString()}] updateListener updating`,
-								item,
+								mutation,
 							);
 						}
 
@@ -335,10 +314,11 @@ export function sqliteCollectionOptions<
 							(await tx
 								.update(table)
 								.set({
-									...item.changes,
+									...mutation.changes,
 									updatedAt: updateTime,
 								} as SQLiteUpdateSetSource<typeof table>)
-								.where(eq(table.id, item.key))
+								// biome-ignore lint/suspicious/noExplicitAny: Key is string but table.id is branded type
+								.where(eq(table.id, mutation.key as any))
 								.returning()) as Array<InferSchemaOutput<SelectSchema<TTable>>>;
 
 						if (config.debug) {
@@ -359,24 +339,16 @@ export function sqliteCollectionOptions<
 				}
 			});
 
-			// Update the reactive store with actual database results
-			// This happens after checkpoint completes
-			begin();
-			for (const result of results) {
-				write({
-					type: "update",
-					value: result,
-				});
-			}
-			commit();
-		};
+			return results;
+		},
 
-		deleteListener = async (params) => {
+		handleDelete: async (mutations) => {
 			// Queue the transaction to serialize SQLite operations
 			await queueTransaction(async () => {
 				await config.drizzle.transaction(async (tx) => {
-					for (const item of params.transaction.mutations) {
-						await tx.delete(table).where(eq(table.id, item.key));
+					for (const mutation of mutations) {
+						// biome-ignore lint/suspicious/noExplicitAny: Key is string but table.id is branded type
+						await tx.delete(table).where(eq(table.id, mutation.key as any));
 					}
 				});
 
@@ -384,149 +356,47 @@ export function sqliteCollectionOptions<
 				if (config.checkpoint) {
 					await config.checkpoint();
 				}
-
-				begin();
-				for (const item of params.transaction.mutations) {
-					if (config.debug) {
-						console.log(
-							`[${new Date().toISOString()}] deleteListener write`,
-							item,
-						);
-					}
-					write({
-						type: "delete",
-						value: item.modified,
-					});
-				}
-				commit();
 			});
-		};
-
-		const loadSubset = async (options: LoadSubsetOptions) => {
-			await config.readyPromise;
-
-			begin();
-
-			try {
-				// Build the query with optional where, orderBy, and limit
-				// Use $dynamic() to enable dynamic query building
-				let query = config.drizzle.select().from(table).$dynamic();
-
-				// Convert TanStack DB IR expressions to Drizzle expressions
-				if (options.where) {
-					const drizzleWhere = convertBasicExpressionToDrizzle(
-						options.where,
-						table,
-					);
-					query = query.where(drizzleWhere);
-				}
-
-				if (options.orderBy) {
-					const drizzleOrderBy = convertOrderByToDrizzle(
-						options.orderBy,
-						table,
-					);
-					query = query.orderBy(...drizzleOrderBy);
-				}
-
-				if (options.limit !== undefined) {
-					query = query.limit(options.limit);
-				}
-
-				const items = (await query) as unknown as InferSchemaOutput<
-					SelectSchema<TTable>
-				>[];
-
-				for (const item of items) {
-					write({
-						type: "insert",
-						value: item,
-					});
-				}
-
-				commit();
-			} catch (error) {
-				// If there's an error, we should still commit to maintain consistency
-				commit();
-				throw error;
-			}
-		};
-
-		// Create deduplicated loadSubset wrapper to avoid redundant queries
-		let loadSubsetDedupe: DeduplicatedLoadSubset | null = null;
-		if (useDedupe) {
-			loadSubsetDedupe = new DeduplicatedLoadSubset({
-				loadSubset,
-			});
-		}
-
-		return {
-			cleanup: () => {
-				insertListener = null;
-				updateListener = null;
-				deleteListener = null;
-				loadSubsetDedupe?.reset();
-			},
-			loadSubset: loadSubsetDedupe?.loadSubset ?? loadSubset,
-		} satisfies SyncConfigRes;
+		},
 	};
 
-	// Create insert schema and augment it to apply ID default
-	// (Other defaults like createdAt/updatedAt are handled by SQLite)
-	const insertSchema = createInsertSchema(table);
-	const columns = getTableColumns(table);
-	const idColumn = columns.id;
-
-	const insertSchemaWithIdDefault = v.pipe(
-		insertSchema,
-		v.transform((input) => {
-			const result = { ...input } as Record<string, unknown>;
-
-			// Apply ID default if missing
-			if (result.id === undefined && idColumn?.defaultFn) {
-				result.id = idColumn.defaultFn();
-			}
-
-			return result as typeof input;
-		}),
-	);
-
-	return {
-		schema: insertSchemaWithIdDefault,
-		getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => {
-			const id = (item as { id: string }).id;
-			return id;
-		},
-		sync: {
-			sync,
-		},
-		onInsert: async (
-			params: Parameters<NonNullable<CollectionType["onInsert"]>>[0],
-		) => {
-			if (config.debug) {
-				console.log("onInsert", params);
-			}
-
-			await insertListener?.(params);
-		},
-		onUpdate: async (
-			params: Parameters<NonNullable<CollectionType["onUpdate"]>>[0],
-		) => {
-			if (config.debug) {
-				console.log("onUpdate", params);
-			}
-
-			await updateListener?.(params);
-		},
-		onDelete: async (
-			params: Parameters<NonNullable<CollectionType["onDelete"]>>[0],
-		) => {
-			if (config.debug) {
-				console.log("onDelete", params);
-			}
-
-			await deleteListener?.(params);
-		},
+	// Create sync function using shared utilities
+	const baseSyncConfig: BaseSyncConfig<TTable> = {
+		table,
+		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
-	} satisfies CollectionType;
+		debug: config.debug,
+	};
+
+	const syncResult = createSyncFunction(baseSyncConfig, backend);
+
+	// Create insert schema with ID default
+	// (Other defaults like createdAt/updatedAt are handled by SQLite)
+	const schema = createInsertSchemaWithIdDefault(table);
+
+	// Create collection config using shared utilities
+	const collectionConfig = createCollectionConfig({
+		schema,
+		getKey: createGetKeyFunction<TTable>(),
+		syncResult,
+		onInsert: config.debug
+			? async (params) => {
+					console.log("onInsert", params);
+				}
+			: undefined,
+		onUpdate: config.debug
+			? async (params) => {
+					console.log("onUpdate", params);
+				}
+			: undefined,
+		onDelete: config.debug
+			? async (params) => {
+					console.log("onDelete", params);
+				}
+			: undefined,
+		syncMode: config.syncMode,
+	});
+
+	// biome-ignore lint/suspicious/noExplicitAny: Collection schema type needs to be flexible
+	return collectionConfig as any;
 }

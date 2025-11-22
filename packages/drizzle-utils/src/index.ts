@@ -24,9 +24,19 @@ export type {
 	InsertSchema,
 	GetTableFromSchema,
 	InferCollectionFromTable,
+	BaseSyncConfig,
+	SyncBackend,
 } from "./collection-utils";
 
-export { makeId } from "./collection-utils";
+export {
+	makeId,
+	USE_DEDUPE,
+	createSyncFunction,
+	createInsertSchemaWithDefaults,
+	createInsertSchemaWithIdDefault,
+	createGetKeyFunction,
+	createCollectionConfig,
+} from "./collection-utils";
 
 export {
 	createdAtColumn,

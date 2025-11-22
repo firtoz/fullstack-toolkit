@@ -57,11 +57,13 @@
 	"peerDependencies": {
 		"@tanstack/db": "catalog:",
 		"drizzle-orm": "catalog:",
-		"drizzle-valibot": "^0.4.2"
+		"drizzle-valibot": "^0.4.2",
+		"valibot": "^1.0.0"
 	},
 	"devDependencies": {
 		"@tanstack/db": "catalog:",
 		"drizzle-orm": "catalog:",
-		"drizzle-valibot": "^0.4.2"
+		"drizzle-valibot": "^0.4.2",
+		"valibot": "^1.0.0"
 	}
 }

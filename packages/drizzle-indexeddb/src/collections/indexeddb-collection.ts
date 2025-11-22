@@ -1,22 +1,18 @@
-import type {
-	CollectionConfig,
-	InferSchemaOutput,
-	LoadSubsetOptions,
-	SyncConfig,
-	SyncConfigRes,
-	SyncMode,
-} from "@tanstack/db";
+import type { InferSchemaOutput, SyncMode } from "@tanstack/db";
 import type { IR } from "@tanstack/db";
-import {
-	extractSimpleComparisons,
-	parseOrderByExpression,
-	DeduplicatedLoadSubset,
-} from "@tanstack/db";
-import { getTableColumns, SQL, type Table } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-valibot";
-import * as v from "valibot";
+import { extractSimpleComparisons, parseOrderByExpression } from "@tanstack/db";
+import type { Table } from "drizzle-orm";
 
-import type { IdOf, SelectSchema } from "@firtoz/drizzle-utils";
+import {
+	type IdOf,
+	type SelectSchema,
+	type BaseSyncConfig,
+	type SyncBackend,
+	createSyncFunction,
+	createInsertSchemaWithDefaults,
+	createGetKeyFunction,
+	createCollectionConfig,
+} from "@firtoz/drizzle-utils";
 
 // biome-ignore lint/suspicious/noExplicitAny: intentional
 type AnyId = IdOf<any>;
@@ -31,12 +27,6 @@ export type IndexedDBSyncItem = {
 	deletedAt: Date | null;
 	[key: string]: unknown;
 };
-
-// WORKAROUND: DeduplicatedLoadSubset has a bug where toggling queries (e.g., isNull/isNotNull)
-// creates invalid expressions like not(or(isNull(...), not(isNull(...))))
-// See: https://github.com/TanStack/db/issues/828
-// TODO: Re-enable once the bug is fixed
-const useDedupe = false as boolean;
 
 export interface IndexedDBCollectionConfig<TTable extends Table> {
 	/**
@@ -494,218 +484,40 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	let discoveredIndexes: Record<string, string> = {};
 	let indexesDiscovered = false;
 
-	type CollectionType = CollectionConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
-	>;
-
 	const table = config.table;
 
-	let insertListener: CollectionType["onInsert"] | null = null;
-	let updateListener: CollectionType["onUpdate"] | null = null;
-	let deleteListener: CollectionType["onDelete"] | null = null;
+	// Discover indexes once when the database is ready
+	const discoverIndexesOnce = async () => {
+		await config.readyPromise;
 
-	const sync: SyncConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		string
-	>["sync"] = (params) => {
-		const { begin, write, commit, markReady } = params;
+		if (!indexesDiscovered) {
+			discoveredIndexes = discoverIndexes(
+				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+				config.indexedDBRef.current!,
+				config.storeName,
+			);
 
-		// Discover indexes once when the database is ready, regardless of sync mode
-		const discoverIndexesOnce = async () => {
-			await config.readyPromise;
+			indexesDiscovered = true;
+		}
+	};
 
-			if (!indexesDiscovered) {
-				discoveredIndexes = discoverIndexes(
-					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-					config.indexedDBRef.current!,
-					config.storeName,
-				);
-
-				indexesDiscovered = true;
-			}
-		};
-
-		const initialSync = async () => {
+	// Create backend-specific implementation
+	const backend: SyncBackend<TTable> = {
+		initialLoad: async (write) => {
 			await discoverIndexesOnce();
 
-			try {
-				begin();
-
-				const items = await getAllFromStore(
-					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-					config.indexedDBRef.current!,
-					config.storeName,
-				);
-
-				for (const item of items) {
-					write({
-						type: "insert",
-						value: item as unknown as InferSchemaOutput<SelectSchema<TTable>>,
-					});
-				}
-
-				commit();
-			} finally {
-				markReady();
-			}
-		};
-
-		if (config.syncMode === "eager" || !config.syncMode) {
-			initialSync();
-		} else {
-			// For non-eager sync modes, still discover indexes but don't load data
-			discoverIndexesOnce().then(() => markReady());
-		}
-
-		insertListener = async (params) => {
-			try {
-				// Use a single transaction for all inserts
+			const items = await getAllFromStore(
 				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				const transaction = config.indexedDBRef.current!.transaction(
-					config.storeName,
-					"readwrite",
-				);
-				const store = transaction.objectStore(config.storeName);
+				config.indexedDBRef.current!,
+				config.storeName,
+			);
 
-				// Optimistically update the reactive store while parallelizing IndexedDB writes
-				begin();
-				const addPromises: Promise<void>[] = [];
-
-				for (const item of params.transaction.mutations) {
-					// Parse and apply defaults using valibot
-					// const itemToInsert = v.parse(insertSchemaWithDefaults, item.modified);
-					const itemToInsert = item.modified;
-
-					// Write to reactive store immediately (optimistic)
-					write({
-						type: "insert",
-						value: itemToInsert as unknown as InferSchemaOutput<
-							SelectSchema<TTable>
-						>,
-					});
-
-					// Add to IndexedDB in parallel (don't await yet)
-					addPromises.push(
-						addToStoreInTransaction(store, itemToInsert as IndexedDBSyncItem),
-					);
-				}
-
-				commit();
-
-				// Wait for all IndexedDB writes to complete
-				await Promise.all(addPromises);
-				await commitTransaction(transaction);
-			} catch (error) {
-				begin();
-				for (const item of params.transaction.mutations) {
-					write({
-						type: "delete",
-						value: item.modified,
-					});
-				}
-				commit();
-
-				throw error;
+			for (const item of items) {
+				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
 			}
-		};
+		},
 
-		updateListener = async (params) => {
-			begin();
-			for (const item of params.transaction.mutations) {
-				write({
-					type: "update",
-					value: item.modified,
-				});
-			}
-			commit();
-
-			try {
-				// Use a single transaction for all updates
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				const transaction = config.indexedDBRef.current!.transaction(
-					config.storeName,
-					"readwrite",
-				);
-				const store = transaction.objectStore(config.storeName);
-
-				for (const item of params.transaction.mutations) {
-					const existing = await getFromStoreInTransaction(store, item.key);
-
-					if (existing) {
-						const updateTime = new Date();
-						const updatedItem = {
-							...existing,
-							...item.changes,
-							updatedAt: updateTime,
-						} as IndexedDBSyncItem;
-
-						await updateInStoreInTransaction(store, updatedItem);
-					}
-				}
-
-				// Wait for transaction to complete
-				await commitTransaction(transaction);
-			} catch (error) {
-				begin();
-				for (const item of params.transaction.mutations) {
-					const original = item.original;
-					write({
-						type: "update",
-						value: original,
-					});
-				}
-				commit();
-
-				throw error;
-			}
-		};
-
-		deleteListener = async (params) => {
-			begin();
-			for (const item of params.transaction.mutations) {
-				write({
-					type: "delete",
-					value: item.modified,
-				});
-			}
-			commit();
-
-			try {
-				// Use a single transaction for all deletes
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				const transaction = config.indexedDBRef.current!.transaction(
-					config.storeName,
-					"readwrite",
-				);
-				const store = transaction.objectStore(config.storeName);
-
-				for (const item of params.transaction.mutations) {
-					await deleteFromStoreInTransaction(store, item.key);
-				}
-
-				// Wait for transaction to complete
-				await commitTransaction(transaction);
-			} catch (error) {
-				begin();
-				for (const item of params.transaction.mutations) {
-					const original = item.original;
-					write({
-						type: "insert",
-						value: original,
-					});
-				}
-				commit();
-
-				throw error;
-			}
-		};
-
-		const loadSubset = async (options: LoadSubsetOptions) => {
-			await config.readyPromise;
-
+		loadSubset: async (options, write) => {
 			// Ensure indexes are discovered before we try to use them
 			if (!indexesDiscovered) {
 				discoveredIndexes = discoverIndexes(
@@ -716,200 +528,215 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				indexesDiscovered = true;
 			}
 
-			begin();
+			let items: IndexedDBSyncItem[];
+
+			// Try to use an index for efficient querying
+			const indexedQuery = options.where
+				? tryExtractIndexedQuery(options.where, discoveredIndexes, config.debug)
+				: null;
+
+			if (indexedQuery) {
+				// Use indexed query for better performance
+				items = await getAllFromIndex(
+					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+					config.indexedDBRef.current!,
+					config.storeName,
+					indexedQuery.indexName,
+					indexedQuery.keyRange,
+				);
+			} else {
+				// Fall back to getting all items
+				items = await getAllFromStore(
+					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+					config.indexedDBRef.current!,
+					config.storeName,
+				);
+
+				// Apply where filter in memory
+				if (options.where) {
+					const whereExpression = options.where;
+					items = items.filter((item) =>
+						evaluateExpression(
+							whereExpression,
+							item as Record<string, unknown>,
+						),
+					);
+				}
+			}
+
+			// Apply orderBy
+			if (options.orderBy) {
+				const sorts = parseOrderByExpression(options.orderBy);
+				items.sort((a, b) => {
+					for (const sort of sorts) {
+						// Access nested field (though typically will be single level)
+						// biome-ignore lint/suspicious/noExplicitAny: Need any for dynamic field access
+						let aValue: any = a;
+						// biome-ignore lint/suspicious/noExplicitAny: Need any for dynamic field access
+						let bValue: any = b;
+						for (const fieldName of sort.field) {
+							aValue = aValue?.[fieldName];
+							bValue = bValue?.[fieldName];
+						}
+
+						if (aValue < bValue) {
+							return sort.direction === "asc" ? -1 : 1;
+						}
+						if (aValue > bValue) {
+							return sort.direction === "asc" ? 1 : -1;
+						}
+					}
+					return 0;
+				});
+			}
+
+			// Apply limit
+			if (options.limit !== undefined) {
+				items = items.slice(0, options.limit);
+			}
+
+			for (const item of items) {
+				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
+			}
+		},
+
+		handleInsert: async (mutations) => {
+			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
 			try {
-				let items: IndexedDBSyncItem[];
+				// Use a single transaction for all inserts
+				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+				const transaction = config.indexedDBRef.current!.transaction(
+					config.storeName,
+					"readwrite",
+				);
+				const store = transaction.objectStore(config.storeName);
 
-				// Try to use an index for efficient querying
-				const indexedQuery = options.where
-					? tryExtractIndexedQuery(
-							options.where,
-							discoveredIndexes,
-							config.debug,
-						)
-					: null;
+				const addPromises: Promise<void>[] = [];
 
-				if (indexedQuery) {
-					// Use indexed query for better performance
+				for (const mutation of mutations) {
+					const itemToInsert = mutation.modified;
 
-					items = await getAllFromIndex(
-						// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-						config.indexedDBRef.current!,
-						config.storeName,
-						indexedQuery.indexName,
-						indexedQuery.keyRange,
+					// Add result for reactive store
+					results.push(itemToInsert);
+
+					// Add to IndexedDB in parallel (don't await yet)
+					addPromises.push(
+						addToStoreInTransaction(store, itemToInsert as IndexedDBSyncItem),
 					);
-				} else {
-					// Fall back to getting all items
+				}
 
-					items = await getAllFromStore(
-						// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-						config.indexedDBRef.current!,
-						config.storeName,
-					);
+				// Wait for all IndexedDB writes to complete
+				await Promise.all(addPromises);
+				await commitTransaction(transaction);
+			} catch (error) {
+				// Clear results on error so nothing gets written to reactive store
+				results.length = 0;
+				throw error;
+			}
 
-					// Apply where filter in memory
-					if (options.where) {
-						const whereExpression = options.where;
-						items = items.filter((item) =>
-							evaluateExpression(
-								whereExpression,
-								item as Record<string, unknown>,
-							),
+			return results;
+		},
+
+		handleUpdate: async (mutations) => {
+			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
+			const originalValues: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
+
+			try {
+				// Use a single transaction for all updates
+				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+				const transaction = config.indexedDBRef.current!.transaction(
+					config.storeName,
+					"readwrite",
+				);
+				const store = transaction.objectStore(config.storeName);
+
+				for (const mutation of mutations) {
+					originalValues.push(mutation.original);
+
+					const existing = await getFromStoreInTransaction(store, mutation.key);
+
+					if (existing) {
+						const updateTime = new Date();
+						const updatedItem = {
+							...existing,
+							...mutation.changes,
+							updatedAt: updateTime,
+						} as IndexedDBSyncItem;
+
+						await updateInStoreInTransaction(store, updatedItem);
+						results.push(
+							updatedItem as unknown as InferSchemaOutput<SelectSchema<TTable>>,
 						);
+					} else {
+						// If item doesn't exist, push original to maintain order
+						results.push(mutation.original);
 					}
 				}
 
-				// Apply orderBy
-				if (options.orderBy) {
-					const sorts = parseOrderByExpression(options.orderBy);
-					items.sort((a, b) => {
-						for (const sort of sorts) {
-							// Access nested field (though typically will be single level)
-							// biome-ignore lint/suspicious/noExplicitAny: Need any for dynamic field access
-							let aValue: any = a;
-							// biome-ignore lint/suspicious/noExplicitAny: Need any for dynamic field access
-							let bValue: any = b;
-							for (const fieldName of sort.field) {
-								aValue = aValue?.[fieldName];
-								bValue = bValue?.[fieldName];
-							}
-
-							if (aValue < bValue) {
-								return sort.direction === "asc" ? -1 : 1;
-							}
-							if (aValue > bValue) {
-								return sort.direction === "asc" ? 1 : -1;
-							}
-						}
-						return 0;
-					});
-				}
-
-				// Apply limit
-				if (options.limit !== undefined) {
-					items = items.slice(0, options.limit);
-				}
-
-				for (const item of items) {
-					write({
-						type: "insert",
-						value: item as unknown as InferSchemaOutput<SelectSchema<TTable>>,
-					});
-				}
-
-				commit();
+				// Wait for transaction to complete
+				await commitTransaction(transaction);
 			} catch (error) {
-				commit();
+				// On error, return original values to rollback the reactive store
 				throw error;
 			}
-		};
 
-		// Create deduplicated loadSubset wrapper to avoid redundant queries
-		let loadSubsetDedupe: DeduplicatedLoadSubset | null = null;
-		if (useDedupe) {
-			loadSubsetDedupe = new DeduplicatedLoadSubset({
-				loadSubset,
-			});
-		}
+			return results;
+		},
 
-		return {
-			cleanup: () => {
-				insertListener = null;
-				updateListener = null;
-				deleteListener = null;
-				loadSubsetDedupe?.reset();
-			},
-			loadSubset: loadSubsetDedupe?.loadSubset ?? loadSubset,
-		} satisfies SyncConfigRes;
+		handleDelete: async (mutations) => {
+			try {
+				// Use a single transaction for all deletes
+				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+				const transaction = config.indexedDBRef.current!.transaction(
+					config.storeName,
+					"readwrite",
+				);
+				const store = transaction.objectStore(config.storeName);
+
+				for (const mutation of mutations) {
+					await deleteFromStoreInTransaction(store, mutation.key);
+				}
+
+				// Wait for transaction to complete
+				await commitTransaction(transaction);
+			} catch (error) {
+				throw error;
+			}
+		},
 	};
 
-	const insertSchema = createInsertSchema(table);
-	const columns = getTableColumns(table);
-
-	for (const columnName in columns) {
-		const column = columns[columnName];
-
-		let defaultValue: unknown | undefined;
-		if (column.defaultFn) {
-			defaultValue = column.defaultFn();
-		} else if (column.default !== undefined) {
-			defaultValue = column.default;
-		}
-
-		if (defaultValue instanceof SQL) {
-			throw new Error(
-				`Default value for column ${columnName} is a SQL expression, which is not supported for IndexedDB`,
-			);
-		}
-	}
-
-	// Augment the schema to handle defaultFn and defaults
-	const insertSchemaWithDefaults = v.pipe(
-		insertSchema,
-		v.transform((input) => {
-			const result = { ...input } as Record<string, unknown>;
-
-			for (const columnName in columns) {
-				const column = columns[columnName];
-				if (result[columnName] !== undefined) continue;
-
-				let defaultValue: unknown | undefined;
-				if (column.defaultFn) {
-					defaultValue = column.defaultFn();
-				} else if (column.default !== undefined) {
-					defaultValue = column.default;
-				}
-
-				if (defaultValue instanceof SQL) {
-					throw new Error(
-						`Default value for column ${columnName} is a SQL expression, which is not supported for IndexedDB`,
-					);
-				}
-
-				if (defaultValue !== undefined) {
-					result[columnName] = defaultValue;
-					continue;
-				}
-
-				if (column.notNull) {
-					throw new Error(`Column ${columnName} is not nullable`);
-				}
-
-				result[columnName] = null;
+	// For non-eager sync modes, still discover indexes before marking ready
+	const wrappedBackend: SyncBackend<TTable> = {
+		...backend,
+		initialLoad: async (write) => {
+			if (config.syncMode === "eager" || !config.syncMode) {
+				await backend.initialLoad(write);
+			} else {
+				// For non-eager sync modes, still discover indexes but don't load data
+				await discoverIndexesOnce();
 			}
+		},
+	};
 
-			return result;
-		}),
-	);
-
-	const result = {
-		schema: insertSchemaWithDefaults,
-		getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => {
-			const id = (item as { id: string }).id;
-			return id;
-		},
-		sync: {
-			sync,
-		},
-		onInsert: async (
-			params: Parameters<NonNullable<CollectionType["onInsert"]>>[0],
-		) => {
-			await insertListener?.(params);
-		},
-		onUpdate: async (
-			params: Parameters<NonNullable<CollectionType["onUpdate"]>>[0],
-		) => {
-			await updateListener?.(params);
-		},
-		onDelete: async (
-			params: Parameters<NonNullable<CollectionType["onDelete"]>>[0],
-		) => {
-			await deleteListener?.(params);
-		},
+	// Create sync function using shared utilities
+	const baseSyncConfig: BaseSyncConfig<TTable> = {
+		table,
+		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
-	} satisfies CollectionType;
+		debug: config.debug,
+	};
 
-	return result;
+	const syncResult = createSyncFunction(baseSyncConfig, wrappedBackend);
+
+	// Create insert schema with all defaults (IndexedDB needs them upfront)
+	const schema = createInsertSchemaWithDefaults(table);
+
+	// Create collection config using shared utilities
+	return createCollectionConfig({
+		schema,
+		getKey: createGetKeyFunction<TTable>(),
+		syncResult,
+		syncMode: config.syncMode,
+	});
 }

@@ -1,6 +1,18 @@
-import type { Table } from "drizzle-orm";
+import { type Table, SQL, getTableColumns } from "drizzle-orm";
 import type { BuildSchema } from "drizzle-valibot";
-import type { Collection, UtilsRecord } from "@tanstack/db";
+import { createInsertSchema } from "drizzle-valibot";
+import * as v from "valibot";
+import type {
+	Collection,
+	UtilsRecord,
+	CollectionConfig,
+	InferSchemaOutput,
+	SyncConfig,
+	SyncConfigRes,
+	SyncMode,
+	LoadSubsetOptions,
+} from "@tanstack/db";
+import { DeduplicatedLoadSubset } from "@tanstack/db";
 
 /**
  * Utility type for branded IDs
@@ -74,3 +86,423 @@ export type InferCollectionFromTable<TTable extends Table> = Collection<
 		id?: IdOf<TTable>;
 	}
 >;
+
+// WORKAROUND: DeduplicatedLoadSubset has a bug where toggling queries (e.g., isNull/isNotNull)
+// creates invalid expressions like not(or(isNull(...), not(isNull(...))))
+// See: https://github.com/TanStack/db/issues/828
+// TODO: Re-enable once the bug is fixed
+export const USE_DEDUPE = false as boolean;
+
+/**
+ * Base configuration for sync lifecycle management
+ */
+export interface BaseSyncConfig<TTable extends Table> {
+	/**
+	 * The Drizzle table definition
+	 */
+	table: TTable;
+	/**
+	 * Promise that resolves when the database is ready
+	 */
+	readyPromise: Promise<void>;
+	/**
+	 * Sync mode: 'eager' (immediate) or 'lazy' (on-demand)
+	 */
+	syncMode?: SyncMode;
+	/**
+	 * Enable debug logging
+	 */
+	debug?: boolean;
+}
+
+/**
+ * Backend-specific implementations required for sync
+ */
+export interface SyncBackend<TTable extends Table> {
+	/**
+	 * Initial data load - should call write() for each item
+	 */
+	initialLoad: (
+		write: (value: InferSchemaOutput<SelectSchema<TTable>>) => void,
+	) => Promise<void>;
+	/**
+	 * Load a subset of data based on query options
+	 */
+	loadSubset: (
+		options: LoadSubsetOptions,
+		write: (value: InferSchemaOutput<SelectSchema<TTable>>) => void,
+	) => Promise<void>;
+	/**
+	 * Handle insert mutations
+	 */
+	handleInsert: (
+		mutations: Array<{
+			modified: InferSchemaOutput<SelectSchema<TTable>>;
+		}>,
+	) => Promise<Array<InferSchemaOutput<SelectSchema<TTable>>>>;
+	/**
+	 * Handle update mutations
+	 */
+	handleUpdate: (
+		mutations: Array<{
+			key: string;
+			changes: Partial<InferSchemaOutput<SelectSchema<TTable>>>;
+			original: InferSchemaOutput<SelectSchema<TTable>>;
+		}>,
+	) => Promise<Array<InferSchemaOutput<SelectSchema<TTable>>>>;
+	/**
+	 * Handle delete mutations
+	 */
+	handleDelete: (
+		mutations: Array<{
+			key: string;
+			modified: InferSchemaOutput<SelectSchema<TTable>>;
+			original: InferSchemaOutput<SelectSchema<TTable>>;
+		}>,
+	) => Promise<void>;
+}
+
+/**
+ * Return type for createSyncFunction that includes both sync config and listeners
+ */
+export type SyncFunctionResult<TTable extends Table> = {
+	sync: SyncConfig<InferSchemaOutput<SelectSchema<TTable>>, string>["sync"];
+	onInsert: CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>["onInsert"];
+	onUpdate: CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>["onUpdate"];
+	onDelete: CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>["onDelete"];
+};
+
+/**
+ * Creates the sync function with common lifecycle management
+ */
+export function createSyncFunction<TTable extends Table>(
+	config: BaseSyncConfig<TTable>,
+	backend: SyncBackend<TTable>,
+): SyncFunctionResult<TTable> {
+	type CollectionType = CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>;
+
+	let insertListener: CollectionType["onInsert"];
+	let updateListener: CollectionType["onUpdate"];
+	let deleteListener: CollectionType["onDelete"];
+
+	const syncFn: SyncConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string
+	>["sync"] = (params) => {
+		const { begin, write, commit, markReady } = params;
+
+		const initialSync = async () => {
+			await config.readyPromise;
+
+			try {
+				begin();
+				await backend.initialLoad((item) => {
+					write({
+						type: "insert",
+						value: item,
+					});
+				});
+				commit();
+			} finally {
+				markReady();
+			}
+		};
+
+		if (config.syncMode === "eager" || !config.syncMode) {
+			initialSync();
+		} else {
+			markReady();
+		}
+
+		insertListener = async (params) => {
+			const results = await backend.handleInsert(
+				params.transaction.mutations.map((m) => ({
+					modified: m.modified,
+				})),
+			);
+
+			begin();
+			for (const result of results) {
+				write({
+					type: "insert",
+					value: result,
+				});
+			}
+			commit();
+		};
+
+		updateListener = async (params) => {
+			const results = await backend.handleUpdate(params.transaction.mutations);
+
+			begin();
+			for (const result of results) {
+				write({
+					type: "update",
+					value: result,
+				});
+			}
+			commit();
+		};
+
+		deleteListener = async (params) => {
+			await backend.handleDelete(params.transaction.mutations);
+
+			begin();
+			for (const item of params.transaction.mutations) {
+				write({
+					type: "delete",
+					value: item.modified,
+				});
+			}
+			commit();
+		};
+
+		const loadSubset = async (options: LoadSubsetOptions) => {
+			await config.readyPromise;
+
+			begin();
+
+			try {
+				await backend.loadSubset(options, (item) => {
+					write({
+						type: "insert",
+						value: item,
+					});
+				});
+				commit();
+			} catch (error) {
+				commit();
+				throw error;
+			}
+		};
+
+		// Create deduplicated loadSubset wrapper to avoid redundant queries
+		let loadSubsetDedupe: DeduplicatedLoadSubset | null = null;
+		if (USE_DEDUPE) {
+			loadSubsetDedupe = new DeduplicatedLoadSubset({
+				loadSubset,
+			});
+		}
+
+		return {
+			cleanup: () => {
+				insertListener = undefined;
+				updateListener = undefined;
+				deleteListener = undefined;
+				loadSubsetDedupe?.reset();
+			},
+			loadSubset: loadSubsetDedupe?.loadSubset ?? loadSubset,
+		} satisfies SyncConfigRes;
+	};
+
+	return {
+		sync: syncFn,
+		onInsert: async (params) => {
+			if (!insertListener) {
+				throw new Error(
+					"insertListener not initialized - sync function may not have been called yet",
+				);
+			}
+			return insertListener(params);
+		},
+		onUpdate: async (params) => {
+			if (!updateListener) {
+				throw new Error(
+					"updateListener not initialized - sync function may not have been called yet",
+				);
+			}
+			return updateListener(params);
+		},
+		onDelete: async (params) => {
+			if (!deleteListener) {
+				throw new Error(
+					"deleteListener not initialized - sync function may not have been called yet",
+				);
+			}
+			return deleteListener(params);
+		},
+	};
+}
+
+/**
+ * Creates an insert schema with default value handling
+ * Validates that SQL expressions are not used for defaults (IndexedDB compatibility)
+ */
+export function createInsertSchemaWithDefaults<TTable extends Table>(
+	table: TTable,
+): v.GenericSchema<unknown> {
+	const insertSchema = createInsertSchema(table);
+	const columns = getTableColumns(table);
+
+	// Validate that no SQL expressions are used as defaults
+	for (const columnName in columns) {
+		const column = columns[columnName];
+
+		let defaultValue: unknown | undefined;
+		if (column.defaultFn) {
+			defaultValue = column.defaultFn();
+		} else if (column.default !== undefined) {
+			defaultValue = column.default;
+		}
+
+		if (defaultValue instanceof SQL) {
+			throw new Error(
+				`Default value for column ${columnName} is a SQL expression, which is not supported for IndexedDB`,
+			);
+		}
+	}
+
+	// Transform the schema to apply defaults
+	return v.pipe(
+		insertSchema,
+		v.transform((input) => {
+			const result = { ...input } as Record<string, unknown>;
+
+			for (const columnName in columns) {
+				const column = columns[columnName];
+				if (result[columnName] !== undefined) continue;
+
+				let defaultValue: unknown | undefined;
+				if (column.defaultFn) {
+					defaultValue = column.defaultFn();
+				} else if (column.default !== undefined) {
+					defaultValue = column.default;
+				}
+
+				if (defaultValue instanceof SQL) {
+					throw new Error(
+						`Default value for column ${columnName} is a SQL expression, which is not supported for IndexedDB`,
+					);
+				}
+
+				if (defaultValue !== undefined) {
+					result[columnName] = defaultValue;
+					continue;
+				}
+
+				if (column.notNull) {
+					throw new Error(`Column ${columnName} is not nullable`);
+				}
+
+				result[columnName] = null;
+			}
+
+			return result;
+		}),
+	) as v.GenericSchema<unknown>;
+}
+
+/**
+ * Creates a minimal insert schema that only applies ID defaults
+ * Other defaults (like timestamps) are handled by the database
+ */
+export function createInsertSchemaWithIdDefault<TTable extends Table>(
+	table: TTable,
+): v.GenericSchema<unknown> {
+	const insertSchema = createInsertSchema(table);
+	const columns = getTableColumns(table);
+	const idColumn = columns.id;
+
+	return v.pipe(
+		insertSchema,
+		v.transform((input) => {
+			const result = { ...input } as Record<string, unknown>;
+
+			// Apply ID default if missing
+			if (result.id === undefined && idColumn?.defaultFn) {
+				result.id = idColumn.defaultFn();
+			}
+
+			return result;
+		}),
+	) as v.GenericSchema<unknown>;
+}
+
+/**
+ * Standard getKey function for collections
+ */
+export function createGetKeyFunction<TTable extends Table>() {
+	return (item: InferSchemaOutput<SelectSchema<TTable>>) => {
+		const id = (item as { id: string }).id;
+		return id;
+	};
+}
+
+/**
+ * Base collection config factory
+ * Combines schema, sync, and event handlers into a collection config
+ */
+export function createCollectionConfig<
+	TTable extends Table,
+	TSchema extends v.GenericSchema<unknown>,
+>(config: {
+	schema: TSchema;
+	getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => string;
+	syncResult: SyncFunctionResult<TTable>;
+	onInsert?: CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>["onInsert"];
+	onUpdate?: CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>["onUpdate"];
+	onDelete?: CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>["onDelete"];
+	syncMode?: SyncMode;
+}): CollectionConfig<
+	InferSchemaOutput<SelectSchema<TTable>>,
+	string,
+	// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+	any
+> & {
+	schema: TSchema;
+} {
+	return {
+		schema: config.schema,
+		getKey: config.getKey,
+		sync: {
+			sync: config.syncResult.sync,
+		},
+		// Merge provided handlers with sync result handlers (provided handlers take precedence)
+		onInsert: config.onInsert ?? config.syncResult.onInsert,
+		onUpdate: config.onUpdate ?? config.syncResult.onUpdate,
+		onDelete: config.onDelete ?? config.syncResult.onDelete,
+		syncMode: config.syncMode,
+	} as CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	> & {
+		schema: TSchema;
+	};
+}

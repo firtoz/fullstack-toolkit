@@ -109,7 +109,7 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 								? () => sqliteClient.checkpoint()
 								: undefined,
 					}),
-				);
+				) as any;
 				collections.set(cacheKey, {
 					collection,
 					refCount: 0,
