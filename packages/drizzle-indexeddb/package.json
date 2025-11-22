@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/drizzle-indexeddb",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "IndexedDB migrations powered by Drizzle ORM snapshots",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
