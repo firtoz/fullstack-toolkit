@@ -2,7 +2,6 @@ import type { RoutePath } from "@firtoz/router-toolkit";
 import {
 	DrizzleIndexedDBProvider,
 	useDrizzleIndexedDB,
-	type IndexedDBMigrationFunction,
 } from "@firtoz/drizzle-indexeddb";
 import * as schema from "test-schema/schema";
 import { migrations } from "test-schema/drizzle/indexeddb-migrations";

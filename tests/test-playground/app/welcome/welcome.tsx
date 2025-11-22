@@ -90,6 +90,18 @@ const collectionRoutes = [
 			"Test generated IndexedDB migrations from Drizzle schema snapshots",
 	},
 	{
+		path: `${href("/collections/sync-mode-test")}?mode=on-demand`,
+		text: "Sync Mode Integration Test (IndexedDB)",
+		description:
+			"Compare eager vs on-demand sync modes with IndexedDB operation tracking",
+	},
+	{
+		path: "/collections/sqlite-sync-mode-test?mode=on-demand",
+		text: "Sync Mode Integration Test (SQLite WASM)",
+		description:
+			"Compare eager vs on-demand sync modes with SQLite operation tracking",
+	},
+	{
 		path: href("/api/clear-opfs"),
 		text: "Clear OPFS Storage",
 		description:

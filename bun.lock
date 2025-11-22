@@ -151,6 +151,7 @@
       "dependencies": {
         "@firtoz/drizzle-indexeddb": "workspace:*",
         "@firtoz/drizzle-sqlite-wasm": "workspace:*",
+        "@firtoz/drizzle-utils": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
         "@firtoz/router-toolkit": "workspace:*",
         "@firtoz/worker-helper": "workspace:*",

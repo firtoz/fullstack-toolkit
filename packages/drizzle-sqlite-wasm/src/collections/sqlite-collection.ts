@@ -20,10 +20,11 @@ import {
 	desc,
 	type SQL,
 } from "drizzle-orm";
-import type {
-	SQLiteUpdateSetSource,
-	BaseSQLiteDatabase,
-	SQLiteInsertValue,
+import {
+	type SQLiteUpdateSetSource,
+	type BaseSQLiteDatabase,
+	type SQLiteInsertValue,
+	SQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 import type {
 	SelectSchema,
@@ -48,6 +49,70 @@ export type AnyDrizzleDatabase = BaseSQLiteDatabase<
 export type DrizzleSchema<TDrizzle extends AnyDrizzleDatabase> =
 	TDrizzle["_"]["fullSchema"];
 
+/**
+ * Operation tracking for SQLite queries
+ * Useful for testing and debugging to verify what operations are actually performed
+ *
+ * Uses discriminated unions for type safety - TypeScript can narrow the type based on the 'type' field
+ */
+export type SQLOperation =
+	| {
+			type: "select-all";
+			tableName: string;
+			itemsReturned: unknown[];
+			itemCount: number;
+			context: string;
+			sql?: string;
+			timestamp: number;
+	  }
+	| {
+			type: "select-where";
+			tableName: string;
+			whereClause: string;
+			itemsReturned: unknown[];
+			itemCount: number;
+			context: string;
+			sql?: string;
+			timestamp: number;
+	  }
+	| {
+			type: "write";
+			tableName: string;
+			itemsWritten: unknown[];
+			writeCount: number;
+			context: string;
+			timestamp: number;
+	  }
+	| {
+			type: "insert";
+			tableName: string;
+			item: unknown;
+			sql?: string;
+			timestamp: number;
+	  }
+	| {
+			type: "update";
+			tableName: string;
+			updates: unknown;
+			sql?: string;
+			timestamp: number;
+	  }
+	| {
+			type: "delete";
+			tableName: string;
+			sql?: string;
+			timestamp: number;
+	  };
+
+/**
+ * Interceptor interface for tracking SQLite operations
+ * Allows tests and debugging tools to observe what operations are performed
+ */
+export interface SQLInterceptor {
+	/** Called when any SQLite operation is performed */
+	onOperation?: (operation: SQLOperation) => void;
+}
+
 export interface DrizzleCollectionConfig<
 	TDrizzle extends AnyDrizzleDatabase,
 	TTableName extends ValidTableNames<DrizzleSchema<TDrizzle>>,
@@ -69,6 +134,10 @@ export interface DrizzleCollectionConfig<
 	 * This ensures WAL is flushed to the main database file for OPFS persistence
 	 */
 	checkpoint?: () => Promise<void>;
+	/**
+	 * Optional interceptor for tracking SQLite operations (for testing/debugging)
+	 */
+	interceptor?: SQLInterceptor;
 }
 
 export type ValidTableNames<TSchema extends Record<string, unknown>> = {
@@ -77,6 +146,12 @@ export type ValidTableNames<TSchema extends Record<string, unknown>> = {
 
 /**
  * Converts TanStack DB IR BasicExpression to Drizzle SQL expression
+ *
+ * Supported operators that TanStack DB pushes down to backend (SUPPORTED_COLLECTION_FUNCS):
+ * - eq, gt, lt, gte, lte, and, or, in, isNull, isUndefined, not
+ *
+ * Additional operators handled for completeness (won't be pushed down in on-demand mode):
+ * - ne, isNotNull, like
  */
 function convertBasicExpressionToDrizzle<TTable extends Table>(
 	expression: IR.BasicExpression,
@@ -88,7 +163,13 @@ function convertBasicExpressionToDrizzle<TTable extends Table>(
 		const columnName = propRef.path[propRef.path.length - 1];
 		const column = table[columnName as keyof typeof table];
 
-		if (!column || typeof column !== "object" || !("_" in column)) {
+		if (!column || !(column instanceof SQLiteColumn)) {
+			console.error("[SQLite Collection] Column lookup failed:", {
+				columnName,
+				column,
+				tableKeys: Object.keys(table),
+				hasColumn: columnName in table,
+			});
 			throw new Error(`Column ${String(columnName)} not found in table`);
 		}
 
@@ -210,6 +291,30 @@ export function sqliteCollectionOptions<
 				.select()
 				.from(table)) as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
 
+			// Log SQL operation
+			if (config.interceptor?.onOperation) {
+				config.interceptor.onOperation({
+					type: "select-all",
+					tableName: config.tableName as string,
+					itemsReturned: items,
+					itemCount: items.length,
+					context: "Initial load (eager mode)",
+					timestamp: Date.now(),
+				});
+			}
+
+			// Log write operation
+			if (config.interceptor?.onOperation) {
+				config.interceptor.onOperation({
+					type: "write",
+					tableName: config.tableName as string,
+					itemsWritten: items,
+					writeCount: items.length,
+					context: "Initial load (eager mode)",
+					timestamp: Date.now(),
+				});
+			}
+
 			for (const item of items) {
 				write(item);
 			}
@@ -221,12 +326,14 @@ export function sqliteCollectionOptions<
 			let query = config.drizzle.select().from(table).$dynamic();
 
 			// Convert TanStack DB IR expressions to Drizzle expressions
+			let hasWhere = false;
 			if (options.where) {
 				const drizzleWhere = convertBasicExpressionToDrizzle(
 					options.where,
 					table,
 				);
 				query = query.where(drizzleWhere);
+				hasWhere = true;
 			}
 
 			if (options.orderBy) {
@@ -241,6 +348,61 @@ export function sqliteCollectionOptions<
 			const items = (await query) as unknown as InferSchemaOutput<
 				SelectSchema<TTable>
 			>[];
+
+			// Log SQL operation
+			if (config.interceptor?.onOperation) {
+				const contextParts: string[] = ["On-demand load"];
+				if (options.orderBy) {
+					contextParts.push("with sorting");
+				}
+				if (options.limit !== undefined) {
+					contextParts.push(`limit ${options.limit}`);
+				}
+
+				if (hasWhere) {
+					config.interceptor.onOperation({
+						type: "select-where",
+						tableName: config.tableName as string,
+						whereClause: "WHERE clause applied",
+						itemsReturned: items,
+						itemCount: items.length,
+						context: contextParts.join(", "),
+						timestamp: Date.now(),
+					});
+				} else {
+					config.interceptor.onOperation({
+						type: "select-all",
+						tableName: config.tableName as string,
+						itemsReturned: items,
+						itemCount: items.length,
+						context: contextParts.join(", "),
+						timestamp: Date.now(),
+					});
+				}
+			}
+
+			// Log write operation
+			if (config.interceptor?.onOperation) {
+				const contextParts: string[] = ["On-demand load"];
+				if (hasWhere) {
+					contextParts.push("with WHERE clause");
+				}
+				if (options.orderBy) {
+					contextParts.push("with sorting");
+				}
+				if (options.limit !== undefined) {
+					contextParts.push(`limit ${options.limit}`);
+				}
+
+				config.interceptor.onOperation({
+					type: "write",
+					tableName: config.tableName as string,
+					itemsWritten: items,
+					writeCount: items.length,
+					context: contextParts.join(", "),
+					timestamp: Date.now(),
+				});
+			}
 
 			for (const item of items) {
 				write(item);

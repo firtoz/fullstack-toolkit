@@ -19,6 +19,7 @@ import { getTableName, type Table } from "drizzle-orm";
 import {
 	indexedDBCollectionOptions,
 	type IndexedDBCollectionConfig,
+	type IDBInterceptor,
 } from "@firtoz/drizzle-indexeddb";
 import type {
 	IdOf,
@@ -79,6 +80,10 @@ type DrizzleIndexedDBProviderProps<TSchema extends Record<string, unknown>> =
 		) => Promise<IDBDatabase>;
 		debug?: boolean;
 		syncMode?: SyncMode;
+		/**
+		 * Optional interceptor for tracking IndexedDB operations (for testing/debugging)
+		 */
+		interceptor?: IDBInterceptor;
 	}>;
 
 export function DrizzleIndexedDBProvider<
@@ -91,6 +96,7 @@ export function DrizzleIndexedDBProvider<
 	migrateFunction = migrateIndexedDBWithFunctions,
 	debug = false,
 	syncMode = "eager",
+	interceptor,
 }: DrizzleIndexedDBProviderProps<TSchema>) {
 	const [indexedDB, setIndexedDB] = useState<IDBDatabase | null>(null);
 	const indexedDBRef = useRef<IDBDatabase | null>(null);
@@ -179,6 +185,7 @@ export function DrizzleIndexedDBProvider<
 						readyPromise: readyPromise.promise,
 						debug,
 						syncMode,
+						interceptor,
 					} as IndexedDBCollectionConfig<Table>),
 				);
 
@@ -200,6 +207,7 @@ export function DrizzleIndexedDBProvider<
 			debug,
 			dbName,
 			syncMode,
+			interceptor,
 		],
 	);
 

@@ -8,6 +8,13 @@
       "when": 1763580490375,
       "tag": "0000_luxuriant_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1763805659971,
+      "tag": "0001_purple_inhumans",
+      "breakpoints": true
     }
   ]
 }

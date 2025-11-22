@@ -15,6 +15,11 @@ export default [
 			"indexeddb-migration-test",
 			"routes/collections/indexeddb-migration-test.tsx",
 		),
+		route("sync-mode-test", "routes/collections/sync-mode-test.tsx"),
+		route(
+			"sqlite-sync-mode-test",
+			"routes/collections/sqlite-sync-mode-test.tsx",
+		),
 	]),
 	...prefix("router-toolkit", [
 		route("loader-test", "routes/router-toolkit/loader-test.tsx"),

@@ -14,6 +14,8 @@ export {
 	indexedDBCollectionOptions,
 	type IndexedDBCollectionConfig,
 	type IndexedDBSyncItem,
+	type IDBInterceptor,
+	type IDBOperation,
 } from "./collections/indexeddb-collection";
 
 // IndexedDB Provider

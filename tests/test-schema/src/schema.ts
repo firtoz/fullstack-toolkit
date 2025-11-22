@@ -20,6 +20,11 @@ export const todoTable = syncableTable(
 			.default(false),
 		parentId: integer("parent_id").$type<TableId<"todo">>(),
 		userId: integer("user_id").$type<IdOf<typeof userTable>>(),
+		// Fields for comprehensive expression testing
+		content: text("content"), // For LIKE/ILIKE queries
+		priority: integer("priority"), // For range queries (gt, gte, lt, lte) and IN queries
+		status: text("status"), // For eq/ne and IN queries
+		tags: text("tags"), // For LIKE pattern matching
 	},
 	(t) => [
 		index("todo_user_id_index").on(t.userId),
@@ -28,6 +33,9 @@ export const todoTable = syncableTable(
 		index("todo_created_at_index").on(t.createdAt),
 		index("todo_updated_at_index").on(t.updatedAt),
 		index("todo_deleted_at_index").on(t.deletedAt),
+		// New indexes for testing index hits vs on-demand evaluation
+		index("todo_priority_index").on(t.priority),
+		index("todo_status_index").on(t.status),
 	],
 );
 

@@ -26,6 +26,12 @@ type Pages = {
   "/collections/indexeddb-migration-test": {
     params: {};
   };
+  "/collections/sync-mode-test": {
+    params: {};
+  };
+  "/collections/sqlite-sync-mode-test": {
+    params: {};
+  };
   "/router-toolkit/loader-test": {
     params: {};
   };
@@ -49,7 +55,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -70,6 +76,14 @@ type RouteFiles = {
   "routes/collections/indexeddb-migration-test.tsx": {
     id: "routes/collections/indexeddb-migration-test";
     page: "/collections/indexeddb-migration-test";
+  };
+  "routes/collections/sync-mode-test.tsx": {
+    id: "routes/collections/sync-mode-test";
+    page: "/collections/sync-mode-test";
+  };
+  "routes/collections/sqlite-sync-mode-test.tsx": {
+    id: "routes/collections/sqlite-sync-mode-test";
+    page: "/collections/sqlite-sync-mode-test";
   };
   "routes/router-toolkit/loader-test.tsx": {
     id: "routes/router-toolkit/loader-test";
@@ -104,6 +118,8 @@ type RouteModules = {
   "routes/collections/sqlite-test": typeof import("./app/routes/collections/sqlite-test.tsx");
   "routes/collections/indexeddb-test": typeof import("./app/routes/collections/indexeddb-test.tsx");
   "routes/collections/indexeddb-migration-test": typeof import("./app/routes/collections/indexeddb-migration-test.tsx");
+  "routes/collections/sync-mode-test": typeof import("./app/routes/collections/sync-mode-test.tsx");
+  "routes/collections/sqlite-sync-mode-test": typeof import("./app/routes/collections/sqlite-sync-mode-test.tsx");
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");
   "routes/router-toolkit/action-test": typeof import("./app/routes/router-toolkit/action-test.tsx");
   "routes/router-toolkit/form-action-test": typeof import("./app/routes/router-toolkit/form-action-test.tsx");

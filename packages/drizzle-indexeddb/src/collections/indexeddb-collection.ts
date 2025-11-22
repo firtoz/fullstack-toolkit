@@ -28,6 +28,73 @@ export type IndexedDBSyncItem = {
 	[key: string]: unknown;
 };
 
+/**
+ * Operation tracking for IndexedDB queries
+ * Useful for testing and debugging to verify what operations are actually performed
+ *
+ * Uses discriminated unions for type safety - TypeScript can narrow the type based on the 'type' field
+ */
+export type IDBOperation =
+	| {
+			type: "getAll";
+			storeName: string;
+			itemsReturned: unknown[];
+			itemCount: number;
+			context: string;
+			timestamp: number;
+	  }
+	| {
+			type: "index-getAll";
+			storeName: string;
+			indexName: string;
+			keyRange?: IDBKeyRange;
+			itemsReturned: unknown[];
+			itemCount: number;
+			context: string;
+			timestamp: number;
+	  }
+	| {
+			type: "write";
+			storeName: string;
+			itemsWritten: unknown[];
+			writeCount: number;
+			context: string;
+			timestamp: number;
+	  }
+	| {
+			type: "get";
+			storeName: string;
+			key: IDBValidKey;
+			itemReturned?: unknown;
+			timestamp: number;
+	  }
+	| {
+			type: "put";
+			storeName: string;
+			item: unknown;
+			timestamp: number;
+	  }
+	| {
+			type: "delete";
+			storeName: string;
+			key: IDBValidKey;
+			timestamp: number;
+	  }
+	| {
+			type: "clear";
+			storeName: string;
+			timestamp: number;
+	  };
+
+/**
+ * Interceptor interface for tracking IndexedDB operations
+ * Allows tests and debugging tools to observe what operations are performed
+ */
+export interface IDBInterceptor {
+	/** Called when any IndexedDB operation is performed */
+	onOperation?: (operation: IDBOperation) => void;
+}
+
 export interface IndexedDBCollectionConfig<TTable extends Table> {
 	/**
 	 * Ref to the IndexedDB database instance
@@ -57,12 +124,17 @@ export interface IndexedDBCollectionConfig<TTable extends Table> {
 	 * Enable debug logging for index discovery and query optimization
 	 */
 	debug?: boolean;
+	/**
+	 * Optional interceptor for tracking IndexedDB operations (for testing/debugging)
+	 */
+	interceptor?: IDBInterceptor;
 }
 
 /**
  * Evaluates a TanStack DB IR expression against an IndexedDB item
+ * @internal Exported for testing
  */
-function evaluateExpression(
+export function evaluateExpression(
 	expression: IR.BasicExpression,
 	item: Record<string, unknown>,
 ): boolean {
@@ -164,8 +236,9 @@ function evaluateExpression(
 
 /**
  * Gets the value from an IR expression
+ * @internal Exported for testing
  */
-function getExpressionValue(
+export function getExpressionValue(
 	expression: IR.BasicExpression,
 	item: Record<string, unknown>,
 	// biome-ignore lint/suspicious/noExplicitAny: We need any here for dynamic values
@@ -190,6 +263,7 @@ function getExpressionValue(
 function getAllFromStore(
 	db: IDBDatabase,
 	storeName: string,
+	interceptor?: IDBInterceptor,
 ): Promise<IndexedDBSyncItem[]> {
 	return new Promise((resolve, reject) => {
 		if (!db.objectStoreNames.contains(storeName)) {
@@ -204,7 +278,21 @@ function getAllFromStore(
 		const request = store.getAll();
 
 		request.onsuccess = () => {
-			resolve(request.result as IndexedDBSyncItem[]);
+			const items = request.result as IndexedDBSyncItem[];
+
+			// Log operation after executing with results
+			if (interceptor?.onOperation) {
+				interceptor.onOperation({
+					type: "getAll",
+					storeName,
+					itemsReturned: items,
+					itemCount: items.length,
+					context: "Full table scan",
+					timestamp: Date.now(),
+				});
+			}
+
+			resolve(items);
 		};
 
 		request.onerror = () => {
@@ -222,6 +310,7 @@ function getAllFromIndex(
 	storeName: string,
 	indexName: string,
 	keyRange?: IDBKeyRange,
+	interceptor?: IDBInterceptor,
 ): Promise<IndexedDBSyncItem[]> {
 	return new Promise((resolve, reject) => {
 		const transaction = db.transaction(storeName, "readonly");
@@ -233,7 +322,26 @@ function getAllFromIndex(
 		const request = keyRange ? index.getAll(keyRange) : index.getAll();
 
 		request.onsuccess = () => {
-			resolve(request.result as IndexedDBSyncItem[]);
+			const items = request.result as IndexedDBSyncItem[];
+
+			// Log operation after executing with results
+			if (interceptor?.onOperation) {
+				const rangeDesc = keyRange
+					? `[${keyRange.lower ?? ""}..${keyRange.upper ?? ""}]`
+					: "all";
+				interceptor.onOperation({
+					type: "index-getAll",
+					storeName,
+					indexName,
+					keyRange,
+					itemsReturned: items,
+					itemCount: items.length,
+					context: `Index query on ${indexName}, range: ${rangeDesc}`,
+					timestamp: Date.now(),
+				});
+			}
+
+			resolve(items);
 		};
 
 		request.onerror = () => {
@@ -255,8 +363,9 @@ function getAllFromIndex(
  * - Define indexes using index().on() in your schema
  * - Run migrations to create them in IndexedDB
  * - This collection automatically detects and uses them
+ * @internal Exported for testing
  */
-function tryExtractIndexedQuery(
+export function tryExtractIndexedQuery(
 	expression: IR.BasicExpression,
 	indexes?: Record<string, string>,
 	debug?: boolean,
@@ -510,7 +619,20 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
 				config.indexedDBRef.current!,
 				config.storeName,
+				config.interceptor,
 			);
+
+			// Log what's being written to the collection
+			if (config.interceptor?.onOperation) {
+				config.interceptor.onOperation({
+					type: "write",
+					storeName: config.storeName,
+					itemsWritten: items,
+					writeCount: items.length,
+					context: "Initial load (eager mode)",
+					timestamp: Date.now(),
+				});
+			}
 
 			for (const item of items) {
 				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
@@ -543,6 +665,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 					config.storeName,
 					indexedQuery.indexName,
 					indexedQuery.keyRange,
+					config.interceptor,
 				);
 			} else {
 				// Fall back to getting all items
@@ -550,6 +673,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
 					config.indexedDBRef.current!,
 					config.storeName,
+					config.interceptor,
 				);
 
 				// Apply where filter in memory
@@ -593,6 +717,31 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 			// Apply limit
 			if (options.limit !== undefined) {
 				items = items.slice(0, options.limit);
+			}
+
+			// Log what's being written to the collection
+			if (config.interceptor?.onOperation) {
+				const contextParts: string[] = ["On-demand load"];
+				if (indexedQuery) {
+					contextParts.push(`via index ${indexedQuery.indexName}`);
+				} else if (options.where) {
+					contextParts.push("via full scan + in-memory filter");
+				}
+				if (options.orderBy) {
+					contextParts.push("with sorting");
+				}
+				if (options.limit !== undefined) {
+					contextParts.push(`limit ${options.limit}`);
+				}
+
+				config.interceptor.onOperation({
+					type: "write",
+					storeName: config.storeName,
+					itemsWritten: items,
+					writeCount: items.length,
+					context: contextParts.join(", "),
+					timestamp: Date.now(),
+				});
 			}
 
 			for (const item of items) {
@@ -641,68 +790,58 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		handleUpdate: async (mutations) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 			const originalValues: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
+			// Use a single transaction for all updates
+			// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+			const transaction = config.indexedDBRef.current!.transaction(
+				config.storeName,
+				"readwrite",
+			);
+			const store = transaction.objectStore(config.storeName);
 
-			try {
-				// Use a single transaction for all updates
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				const transaction = config.indexedDBRef.current!.transaction(
-					config.storeName,
-					"readwrite",
-				);
-				const store = transaction.objectStore(config.storeName);
+			for (const mutation of mutations) {
+				originalValues.push(mutation.original);
 
-				for (const mutation of mutations) {
-					originalValues.push(mutation.original);
+				const existing = await getFromStoreInTransaction(store, mutation.key);
 
-					const existing = await getFromStoreInTransaction(store, mutation.key);
+				if (existing) {
+					const updateTime = new Date();
+					const updatedItem = {
+						...existing,
+						...mutation.changes,
+						updatedAt: updateTime,
+					} as IndexedDBSyncItem;
 
-					if (existing) {
-						const updateTime = new Date();
-						const updatedItem = {
-							...existing,
-							...mutation.changes,
-							updatedAt: updateTime,
-						} as IndexedDBSyncItem;
-
-						await updateInStoreInTransaction(store, updatedItem);
-						results.push(
-							updatedItem as unknown as InferSchemaOutput<SelectSchema<TTable>>,
-						);
-					} else {
-						// If item doesn't exist, push original to maintain order
-						results.push(mutation.original);
-					}
+					await updateInStoreInTransaction(store, updatedItem);
+					results.push(
+						updatedItem as unknown as InferSchemaOutput<SelectSchema<TTable>>,
+					);
+				} else {
+					// If item doesn't exist, push original to maintain order
+					results.push(mutation.original);
 				}
-
-				// Wait for transaction to complete
-				await commitTransaction(transaction);
-			} catch (error) {
-				// On error, return original values to rollback the reactive store
-				throw error;
 			}
+
+			// Wait for transaction to complete
+			await commitTransaction(transaction);
 
 			return results;
 		},
 
 		handleDelete: async (mutations) => {
-			try {
-				// Use a single transaction for all deletes
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				const transaction = config.indexedDBRef.current!.transaction(
-					config.storeName,
-					"readwrite",
-				);
-				const store = transaction.objectStore(config.storeName);
+			// Use a single transaction for all deletes
+			// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+			const transaction = config.indexedDBRef.current!.transaction(
+				config.storeName,
+				"readwrite",
+			);
+			const store = transaction.objectStore(config.storeName);
 
-				for (const mutation of mutations) {
-					await deleteFromStoreInTransaction(store, mutation.key);
-				}
-
-				// Wait for transaction to complete
-				await commitTransaction(transaction);
-			} catch (error) {
-				throw error;
+			for (const mutation of mutations) {
+				await deleteFromStoreInTransaction(store, mutation.key);
 			}
+
+			// Wait for transaction to complete
+			await commitTransaction(transaction);
 		},
 	};
 

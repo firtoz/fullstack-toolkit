@@ -8,6 +8,7 @@ import type { ValidTableNames } from "../collections/sqlite-collection";
 
 export type UseDrizzleSqliteReturn<TSchema extends Record<string, unknown>> = {
 	drizzle: DrizzleSqliteContextValue<TSchema>["drizzle"];
+	readyPromise: DrizzleSqliteContextValue<TSchema>["readyPromise"];
 	useCollection: <TTableName extends string & ValidTableNames<TSchema>>(
 		tableName: TTableName,
 	) => ReturnType<typeof useSqliteCollection<TSchema, TTableName>>;
@@ -28,6 +29,7 @@ export function useDrizzleSqlite<
 
 	return {
 		drizzle: context.drizzle,
+		readyPromise: context.readyPromise,
 		useCollection: <TTableName extends string & ValidTableNames<TSchema>>(
 			tableName: TTableName,
 		) => useSqliteCollection(context, tableName),

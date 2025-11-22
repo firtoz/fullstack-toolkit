@@ -5,12 +5,14 @@ import {
 	createCollection,
 	type Collection,
 	type InferSchemaOutput,
+	type UtilsRecord,
 } from "@tanstack/db";
 import {
 	type AnyDrizzleDatabase,
 	type ValidTableNames,
 	type DrizzleSchema,
 	sqliteCollectionOptions,
+	type SQLInterceptor,
 } from "../collections/sqlite-collection";
 import { useDrizzleSqliteDb } from "../hooks/useDrizzleSqliteDb";
 import type { DurableSqliteMigrationConfig } from "../migration/migrator";
@@ -44,6 +46,7 @@ type SqliteCollection<
 export type DrizzleSqliteContextValue<TSchema extends Record<string, unknown>> =
 	{
 		drizzle: SqliteRemoteDatabase<TSchema>;
+		readyPromise: Promise<void>;
 		getCollection: <TTableName extends string & ValidTableNames<TSchema>>(
 			tableName: TTableName,
 		) => SqliteCollection<TSchema, TTableName>;
@@ -63,6 +66,14 @@ type DrizzleSqliteProviderProps<TSchema extends Record<string, unknown>> =
 		migrations: DurableSqliteMigrationConfig;
 		debug?: boolean;
 		enableCheckpoint?: boolean;
+		/**
+		 * Sync mode: 'eager' (immediate) or 'on-demand' (lazy)
+		 */
+		syncMode?: "eager" | "on-demand";
+		/**
+		 * Optional interceptor for tracking SQLite operations (for testing/debugging)
+		 */
+		interceptor?: SQLInterceptor;
 	}>;
 
 export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
@@ -73,6 +84,8 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 	migrations,
 	debug,
 	enableCheckpoint = false,
+	syncMode = "eager",
+	interceptor,
 }: DrizzleSqliteProviderProps<TSchema>) {
 	const { drizzle, readyPromise, sqliteClient } = useDrizzleSqliteDb(
 		worker,
@@ -103,13 +116,14 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 						tableName: tableName as string &
 							ValidTableNames<DrizzleSchema<AnyDrizzleDatabase>>,
 						readyPromise,
-						// syncMode: "on-demand",
+						syncMode,
 						checkpoint:
 							enableCheckpoint && sqliteClient
 								? () => sqliteClient.checkpoint()
 								: undefined,
+						interceptor,
 					}),
-				) as any;
+				) as Collection<Record<string, unknown>, string, UtilsRecord>;
 				collections.set(cacheKey, {
 					collection,
 					refCount: 0,
@@ -120,7 +134,16 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 			return collections.get(cacheKey)!
 				.collection as unknown as SqliteCollection<TSchema, TTableName>;
 		},
-		[drizzle, collections, readyPromise, sqliteClient, enableCheckpoint],
+		[
+			drizzle,
+			collections,
+			schema,
+			readyPromise,
+			sqliteClient,
+			enableCheckpoint,
+			syncMode,
+			interceptor,
+		],
 	);
 
 	const incrementRefCount: DrizzleSqliteContextValue<TSchema>["incrementRefCount"] =
@@ -153,11 +176,18 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 	const contextValue: DrizzleSqliteContextValue<TSchema> = useMemo(
 		() => ({
 			drizzle,
+			readyPromise,
 			getCollection,
 			incrementRefCount,
 			decrementRefCount,
 		}),
-		[drizzle, getCollection, incrementRefCount, decrementRefCount],
+		[
+			drizzle,
+			readyPromise,
+			getCollection,
+			incrementRefCount,
+			decrementRefCount,
+		],
 	);
 
 	return (
