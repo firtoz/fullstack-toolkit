@@ -863,9 +863,10 @@ for (const config of COLLECTION_CONFIGS) {
 
 			// Efficient approach: fill first input, fill second input, then spam the + button
 			await page.getByTestId("todo-input").fill("Dummy");
-			await page.waitForTimeout(50);
+			await expect(page.getByTestId("todo-input-1")).toBeEditable({
+				timeout: 3000,
+			});
 			await page.getByTestId("todo-input-1").fill("Stress Task");
-			await page.waitForTimeout(100);
 
 			// Click the add button on line 2 many times
 			const addButton = page.getByTestId("add-1");
@@ -874,10 +875,6 @@ for (const config of COLLECTION_CONFIGS) {
 
 			for (let i = 0; i < taskCount; i++) {
 				await addButton.click();
-				// Small delay to avoid overwhelming the UI
-				if (i % 10 === 0 && i > 0) {
-					await page.waitForTimeout(100);
-				}
 			}
 
 			// Verify all tasks were added
@@ -889,7 +886,10 @@ for (const config of COLLECTION_CONFIGS) {
 			// Perform bulk operation on all
 			const selectAllButton = page.getByTestId("select-all");
 			await selectAllButton.click();
-			await page.waitForTimeout(500);
+
+			await expect(page.getByTestId("select-all")).toHaveText("Deselect All", {
+				timeout: 500,
+			});
 
 			const bulkCompleteButton = page.getByRole("button", {
 				name: /Complete \(\d+\)/,
@@ -903,9 +903,7 @@ for (const config of COLLECTION_CONFIGS) {
 			);
 
 			// Wait a bit to ensure persistence completes
-			if (config.name.includes("WASM")) {
-				await page.waitForTimeout(200);
-			}
+			await page.waitForTimeout(200);
 
 			// Reload and verify persistence
 			await page.reload();

@@ -28,7 +28,7 @@
 		"@react-router/serve": "^7.9.6",
 		"@sqlite.org/sqlite-wasm": "catalog:",
 		"@tanstack/db": "catalog:",
-		"@tanstack/react-db": "^0.1.44",
+		"@tanstack/react-db": "^0.1.49",
 		"drizzle-orm": "catalog:",
 		"isbot": "^5.1.32",
 		"react": "catalog:",
@@ -48,7 +48,7 @@
 		"bun-types": "catalog:",
 		"playwright": "^1.56.1",
 		"typescript": "catalog:",
-		"vite": "^7.2.2",
+		"vite": "^7.2.4",
 		"vite-plugin-devtools-json": "^1.0.0",
 		"vite-tsconfig-paths": "^5.1.4"
 	}

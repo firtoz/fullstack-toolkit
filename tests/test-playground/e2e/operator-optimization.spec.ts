@@ -11,10 +11,10 @@ import { expect, test, type Page } from "@playwright/test";
  * our implementation to take advantage of the new optimizations!
  *
  * Current SUPPORTED_COLLECTION_FUNCS (as of TanStack DB 0.5.0):
- * - eq, gt, lt, gte, lte, and, or, in, isNull, isUndefined, not
+ * - eq, gt, lt, gte, lte, and, or, in, isNull, isUndefined, not, like
  *
  * Known unsupported (filtered in memory):
- * - like, ilike, ne, isNotNull
+ * - ilike, ne, isNotNull
  */
 
 // Helper to get operation types from the interceptor log
@@ -358,7 +358,7 @@ test.describe("SQLite Operator Optimization", () => {
 		expect(types).not.toContain("select-all");
 	});
 
-	test("LIKE operator should ALWAYS use select-all (not pushed down)", async ({
+	test("LIKE operator should use select-where (SQL WHERE clause)", async ({
 		page,
 	}) => {
 		await clearOperations(page);
@@ -373,13 +373,9 @@ test.describe("SQLite Operator Optimization", () => {
 		const types = await getSQLOperationTypes(page);
 		console.log("SQLite LIKE operation types:", types);
 
-		// LIKE is NOT in SUPPORTED_COLLECTION_FUNCS
-		// TanStack DB will NOT push it to the backend
-		// Should do select-all and filter in memory
-		expect(types).toContain("select-all");
-		expect(types).not.toContain("select-where");
-
-		// ⚠️ IF THIS TEST FAILS: TanStack DB may have added LIKE to SUPPORTED_COLLECTION_FUNCS!
-		// Check the changelog and update our SQLite collection to handle it more efficiently.
+		// LIKE is now in SUPPORTED_COLLECTION_FUNCS! 🎉
+		// TanStack DB pushes it to the backend as SQL LIKE
+		expect(types).toContain("select-where");
+		expect(types).not.toContain("select-all");
 	});
 });

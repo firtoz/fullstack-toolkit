@@ -1,6 +1,6 @@
 /**
  * Example: Using ZodWebSocketClient with msgpack buffer messages
- * 
+ *
  * This file demonstrates various patterns for using ZodWebSocketClient,
  * including integration with honoDoFetcher for Cloudflare Durable Objects.
  */
@@ -55,14 +55,15 @@ type ClientMessage = z.infer<typeof ClientMessageSchema>;
 type ServerMessage = z.infer<typeof ServerMessageSchema>;
 
 // Example 1: Buffer mode (msgpack) client
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function createBufferClient() {
 	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
 		url: "wss://your-server.com/websocket",
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
 		enableBufferMessages: true, // Use msgpack!
-		
+
 		onMessage: (msg) => {
 			// Type-safe message handling
 			switch (msg.type) {
@@ -83,21 +84,21 @@ function createBufferClient() {
 					break;
 			}
 		},
-		
+
 		onOpen: () => {
 			console.log("Connected!");
 			// Send a message after connecting
 			client.send({ type: "setName", name: "Alice" });
 		},
-		
+
 		onClose: (event) => {
 			console.log("Disconnected:", event.code, event.reason);
 		},
-		
+
 		onError: (event) => {
 			console.error("WebSocket error:", event);
 		},
-		
+
 		onValidationError: (error, rawMessage) => {
 			console.error("Validation error:", error);
 			console.error("Raw message:", rawMessage);
@@ -108,18 +109,19 @@ function createBufferClient() {
 }
 
 // Example 2: JSON mode client
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function createJsonClient() {
 	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
 		url: "wss://your-server.com/websocket",
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
 		enableBufferMessages: false, // JSON mode
-		
+
 		onMessage: (msg) => {
 			console.log("Received:", msg);
 		},
-		
+
 		onOpen: () => {
 			console.log("Connected in JSON mode!");
 		},
@@ -129,7 +131,8 @@ function createJsonClient() {
 }
 
 // Example 3: Using async/await with the client
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
 async function exampleAsyncUsage() {
 	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
 		url: "wss://your-server.com/websocket",
@@ -140,7 +143,7 @@ async function exampleAsyncUsage() {
 
 	// Wait for connection to open
 	await client.waitForOpen();
-	
+
 	console.log("Connection established!");
 
 	// Send messages
@@ -154,11 +157,13 @@ async function exampleAsyncUsage() {
 }
 
 // Example 4: Integration with honoDoFetcher (Durable Objects)
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
+// biome-ignore lint/suspicious/noExplicitAny: this is only an example
 async function connectToDurableObject(env: any, roomName: string) {
 	// Step 1: Use honoDoFetcher to get WebSocket connection
 	const api = honoDoFetcherWithName(env.CHAT_ROOM, roomName);
-    // @ts-ignore - this is only an example
+	// @ts-expect-error - this is only an example
 	const wsResp = await api.websocket({
 		url: "/websocket",
 		config: { autoAccept: false }, // Let ZodWebSocketClient control acceptance
@@ -174,7 +179,7 @@ async function connectToDurableObject(env: any, roomName: string) {
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
 		enableBufferMessages: true, // Use msgpack for efficiency
-		
+
 		onMessage: (msg) => {
 			switch (msg.type) {
 				case "message":
@@ -194,7 +199,7 @@ async function connectToDurableObject(env: any, roomName: string) {
 					break;
 			}
 		},
-		
+
 		onValidationError: (error) => {
 			console.error("❌ Message validation failed:", error);
 		},
@@ -215,10 +220,14 @@ async function connectToDurableObject(env: any, roomName: string) {
 }
 
 // Example 5: React hook pattern
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function useWebSocketChat(url: string) {
 	const [messages, setMessages] = useState<ServerMessage[]>([]);
-	const [client, setClient] = useState<ZodWebSocketClient<ClientMessage, ServerMessage> | null>(null);
+	const [client, setClient] = useState<ZodWebSocketClient<
+		ClientMessage,
+		ServerMessage
+	> | null>(null);
 
 	useEffect(() => {
 		const ws = new ZodWebSocketClient<ClientMessage, ServerMessage>({
@@ -226,9 +235,9 @@ function useWebSocketChat(url: string) {
 			clientSchema: ClientMessageSchema,
 			serverSchema: ServerMessageSchema,
 			enableBufferMessages: true,
-			
+
 			onMessage: (msg) => {
-				setMessages(prev => [...prev, msg]);
+				setMessages((prev) => [...prev, msg]);
 			},
 		});
 
@@ -251,10 +260,15 @@ function useWebSocketChat(url: string) {
 }
 
 // Example 6: React hook with honoDoFetcher integration
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
+// biome-ignore lint/suspicious/noExplicitAny: this is only an example
 function useDurableObjectChat(env: any, roomName: string) {
 	const [messages, setMessages] = useState<ServerMessage[]>([]);
-	const [client, setClient] = useState<ZodWebSocketClient<ClientMessage, ServerMessage> | null>(null);
+	const [client, setClient] = useState<ZodWebSocketClient<
+		ClientMessage,
+		ServerMessage
+	> | null>(null);
 	const [isConnected, setIsConnected] = useState(false);
 
 	useEffect(() => {
@@ -264,7 +278,7 @@ function useDurableObjectChat(env: any, roomName: string) {
 			try {
 				// Connect via honoDoFetcher
 				const api = honoDoFetcherWithName(env.CHAT_ROOM, roomName);
-				// @ts-ignore - this is only an example
+				// @ts-expect-error - this is only an example
 				const wsResp = await api.websocket({
 					url: "/websocket",
 					config: { autoAccept: false },
@@ -278,19 +292,19 @@ function useDurableObjectChat(env: any, roomName: string) {
 					clientSchema: ClientMessageSchema,
 					serverSchema: ServerMessageSchema,
 					enableBufferMessages: true,
-					
+
 					onMessage: (msg) => {
 						if (mounted) {
-							setMessages(prev => [...prev, msg]);
+							setMessages((prev) => [...prev, msg]);
 						}
 					},
-					
+
 					onOpen: () => {
 						if (mounted) {
 							setIsConnected(true);
 						}
 					},
-					
+
 					onClose: () => {
 						if (mounted) {
 							setIsConnected(false);
@@ -329,7 +343,8 @@ function useDurableObjectChat(env: any, roomName: string) {
 }
 
 // Example 7: Error handling and reconnection
-// @ts-ignore - this is only an example
+// @ts-expect-error - this is only an example
+// biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function createRobustClient() {
 	let reconnectAttempts = 0;
 	const maxReconnectAttempts = 5;
@@ -340,12 +355,12 @@ function createRobustClient() {
 			clientSchema: ClientMessageSchema,
 			serverSchema: ServerMessageSchema,
 			enableBufferMessages: true,
-			
+
 			onMessage: (msg) => {
 				reconnectAttempts = 0; // Reset on successful message
 				console.log("Message:", msg);
 			},
-			
+
 			onClose: (_event) => {
 				if (reconnectAttempts < maxReconnectAttempts) {
 					reconnectAttempts++;
@@ -357,7 +372,7 @@ function createRobustClient() {
 					console.error("Max reconnection attempts reached");
 				}
 			},
-			
+
 			onValidationError: (error, _rawMessage) => {
 				// Log validation errors but don't disconnect
 				console.error("Invalid message received:", error);
@@ -369,4 +384,3 @@ function createRobustClient() {
 
 	return connect();
 }
-
