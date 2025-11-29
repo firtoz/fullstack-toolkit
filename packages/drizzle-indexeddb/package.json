@@ -60,7 +60,7 @@
 		"@tanstack/db": "catalog:",
 		"drizzle-orm": "catalog:",
 		"drizzle-valibot": "^0.4.2",
-		"valibot": "^1.0.0"
+		"valibot": "^1.2.0"
 	},
 	"peerDependencies": {
 		"react": "catalog:"

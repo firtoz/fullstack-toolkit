@@ -79,7 +79,7 @@
 		"drizzle-orm": "catalog:",
 		"drizzle-valibot": "^0.4.2",
 		"react": "catalog:",
-		"valibot": "^1.1.0",
+		"valibot": "^1.2.0",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

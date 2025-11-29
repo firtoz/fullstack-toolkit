@@ -15,38 +15,41 @@ export type SessionData<TSession extends BaseSession<any, any, any, any>> =
 export type SessionClientMessage<
 	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
 	TSession extends BaseSession<any, any, any, any>,
-> = TSession extends BaseSession<
-	infer _TData,
-	infer _TServerMessage,
-	infer TClientMessage,
-	infer _TEnv
->
-	? TClientMessage
-	: never;
+> =
+	TSession extends BaseSession<
+		infer _TData,
+		infer _TServerMessage,
+		infer TClientMessage,
+		infer _TEnv
+	>
+		? TClientMessage
+		: never;
 
 export type SessionServerMessage<
 	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
 	TSession extends BaseSession<any, any, any, any>,
-> = TSession extends BaseSession<
-	infer _TData,
-	infer TServerMessage,
-	infer _TClientMessage,
-	infer _TEnv
->
-	? TServerMessage
-	: never;
+> =
+	TSession extends BaseSession<
+		infer _TData,
+		infer TServerMessage,
+		infer _TClientMessage,
+		infer _TEnv
+	>
+		? TServerMessage
+		: never;
 
 export type SessionEnv<
 	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
 	TSession extends BaseSession<any, any, any, any>,
-> = TSession extends BaseSession<
-	infer _TData,
-	infer _TServerMessage,
-	infer _TClientMessage,
-	infer TEnv extends Cloudflare.Env
->
-	? TEnv
-	: never;
+> =
+	TSession extends BaseSession<
+		infer _TData,
+		infer _TServerMessage,
+		infer _TClientMessage,
+		infer TEnv extends Cloudflare.Env
+	>
+		? TEnv
+		: never;
 
 export type BaseSessionHandlers<
 	TData,

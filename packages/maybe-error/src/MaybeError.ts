@@ -107,12 +107,8 @@ export type MaybeError<T = undefined, TError = string> =
  * type UserType = AssumeSuccess<UserResult>; // User
  * ```
  */
-export type AssumeSuccess<T extends MaybeError<unknown>> = Exclude<
-	T,
-	undefined
-> extends MaybeError<infer U>
-	? U
-	: never;
+export type AssumeSuccess<T extends MaybeError<unknown>> =
+	Exclude<T, undefined> extends MaybeError<infer U> ? U : never;
 
 /**
  * Creates a successful result with an optional value.

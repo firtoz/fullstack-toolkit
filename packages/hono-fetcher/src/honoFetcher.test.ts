@@ -158,11 +158,17 @@ describe("honoFetcher", () => {
 
 		beforeAll(async () => {
 			await new Promise((resolve) => {
-				server = serve(app, (info) => {
-					port = info.port;
-					baseUrl = `http://localhost:${port}`;
-					resolve(true);
-				});
+				server = serve(
+					{
+						fetch: app.fetch,
+						port: 0,
+					},
+					(info) => {
+						port = info.port;
+						baseUrl = `http://localhost:${port}`;
+						resolve(true);
+					},
+				);
 			});
 		});
 
