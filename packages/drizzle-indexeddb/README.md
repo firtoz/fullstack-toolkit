@@ -1,10 +1,10 @@
 # @firtoz/drizzle-indexeddb
 
-TanStack DB collections backed by IndexedDB with automatic migrations powered by Drizzle ORM snapshots. Build reactive, type-safe IndexedDB applications with the power of Drizzle's schema management.
+TanStack DB collections backed by IndexedDB with automatic migrations powered by Drizzle ORM. Build reactive, type-safe IndexedDB applications with the power of Drizzle's schema management.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 
-> **Note:** This package currently builds on top of Drizzle's SQLite integration (using `drizzle-orm/sqlite-core` types and snapshots) until Drizzle adds native IndexedDB support. The migration system reads Drizzle's SQLite snapshots and translates them into IndexedDB object stores and indexes.
+> **Note:** This package currently builds on top of Drizzle's SQLite integration (using `drizzle-orm/sqlite-core` types) until Drizzle adds native IndexedDB support. The migration system uses function-based migrations generated from Drizzle's SQLite migrations to create IndexedDB object stores and indexes.
 
 ## Installation
 
@@ -19,8 +19,7 @@ npm install @firtoz/drizzle-indexeddb @firtoz/drizzle-utils drizzle-orm @tanstac
 - 🔍 **Query optimization** - Leverage IndexedDB indexes for fast queries
 - 📦 **Soft deletes** - Built-in support for `deletedAt` column
 - ⚛️ **React hooks** - Provider and hooks for easy React integration
-- 🔄 **Snapshot-based migrations** - Use Drizzle's generated snapshots to migrate IndexedDB
-- 📝 **Function-based migrations** - Write custom migration functions for complex changes
+- 📝 **Function-based migrations** - Generated migration functions from Drizzle schema changes
 
 ## Quick Start
 
@@ -40,22 +39,25 @@ export const todoTable = syncableTable("todos", {
 ### 2. Generate Migrations
 
 ```bash
-# Generate Drizzle snapshots
+# Generate Drizzle migrations
 drizzle-kit generate
+
+# Generate IndexedDB migration functions
+bun drizzle-indexeddb-generate
 ```
 
 ### 3. Migrate IndexedDB
 
 ```typescript
 // db.ts
-import { migrateIndexedDB } from "@firtoz/drizzle-indexeddb";
-import journal from "./drizzle/meta/_journal.json";
-import * as snapshots from "./drizzle/snapshots";
+import { migrateIndexedDBWithFunctions } from "@firtoz/drizzle-indexeddb";
+import migrations from "./drizzle/indexeddb-migrations";
 
-export const db = await migrateIndexedDB("my-app", {
-  journal,
-  snapshots,
-}, true); // Enable debug logging
+export const db = await migrateIndexedDBWithFunctions(
+  "my-app",
+  migrations,
+  true // Enable debug logging
+);
 ```
 
 ### 4. Use with React
@@ -181,19 +183,19 @@ collection.find({
 
 ## Migration Methods
 
-### Snapshot-Based Migration
+### Function-Based Migration
 
-Use Drizzle's snapshot files to automatically migrate your IndexedDB schema:
+Use generated migration functions to migrate your IndexedDB schema:
 
 ```typescript
-import { migrateIndexedDB } from "@firtoz/drizzle-indexeddb";
-import journal from "./drizzle/meta/_journal.json";
-import * as snapshots from "./drizzle/snapshots";
+import { migrateIndexedDBWithFunctions } from "@firtoz/drizzle-indexeddb";
+import migrations from "./drizzle/indexeddb-migrations";
 
-const db = await migrateIndexedDB("my-app-db", {
-  journal,
-  snapshots,
-}, true); // debug flag
+const db = await migrateIndexedDBWithFunctions(
+  "my-app-db",
+  migrations,
+  true // debug flag
+);
 
 console.log("Database migrated successfully!");
 ```
@@ -219,40 +221,49 @@ interface MigrationRecord {
 }
 ```
 
-### Function-Based Migration
+### Custom Migration Functions
 
-For complex migrations that require custom logic:
+For complex migrations that require custom logic, you can write migration functions directly:
 
 ```typescript
 import { migrateIndexedDBWithFunctions } from "@firtoz/drizzle-indexeddb";
 
 const migrations = [
   // Migration 0: Initial schema
-  async (db: IDBDatabase, transaction: IDBTransaction) => {
-    const store = db.createObjectStore("todos", { keyPath: "id" });
-    store.createIndex("title", "title", { unique: false });
+  {
+    tag: "0000_initial",
+    migrate: async (db: IDBDatabase, transaction: IDBTransaction) => {
+      const store = db.createObjectStore("todos", { keyPath: "id" });
+      store.createIndex("title", "title", { unique: false });
+    },
   },
   
   // Migration 1: Add completed index
-  async (db: IDBDatabase, transaction: IDBTransaction) => {
-    const store = transaction.objectStore("todos");
-    store.createIndex("completed", "completed", { unique: false });
+  {
+    tag: "0001_add_completed",
+    migrate: async (db: IDBDatabase, transaction: IDBTransaction) => {
+      const store = transaction.objectStore("todos");
+      store.createIndex("completed", "completed", { unique: false });
+    },
   },
   
   // Migration 2: Transform data
-  async (db: IDBDatabase, transaction: IDBTransaction) => {
-    const store = transaction.objectStore("todos");
-    const todos = await new Promise<any[]>((resolve, reject) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    
-    // Transform data
-    for (const todo of todos) {
-      todo.priority = todo.priority || "medium";
-      store.put(todo);
-    }
+  {
+    tag: "0002_add_priority",
+    migrate: async (db: IDBDatabase, transaction: IDBTransaction) => {
+      const store = transaction.objectStore("todos");
+      const todos = await new Promise<any[]>((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      
+      // Transform data
+      for (const todo of todos) {
+        todo.priority = todo.priority || "medium";
+        store.put(todo);
+      }
+    },
   },
 ];
 
@@ -338,6 +349,56 @@ Useful for:
 - Clearing user data on logout
 - Testing scenarios
 
+### generateIndexedDBMigrations
+
+Generate IndexedDB migration files from Drizzle snapshots programmatically:
+
+```typescript
+import { generateIndexedDBMigrations } from "@firtoz/drizzle-indexeddb";
+
+generateIndexedDBMigrations({
+  drizzleDir: "./drizzle",           // Path to Drizzle directory (default: ./drizzle)
+  outputDir: "./drizzle/indexeddb-migrations",  // Output directory (default: ./drizzle/indexeddb-migrations)
+});
+```
+
+## CLI
+
+The package includes a CLI tool to generate IndexedDB migrations from Drizzle schema snapshots.
+
+### Usage
+
+```bash
+# Generate migrations (run after drizzle-kit generate)
+bun drizzle-indexeddb-generate
+
+# With custom paths
+bun drizzle-indexeddb-generate --drizzle-dir ./db/drizzle
+bun drizzle-indexeddb-generate --output-dir ./src/migrations
+
+# Show help
+bun drizzle-indexeddb-generate --help
+```
+
+### Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--drizzle-dir <path>` | Path to Drizzle directory | `./drizzle` |
+| `--output-dir <path>` | Path to output directory | `./drizzle/indexeddb-migrations` |
+
+### npm scripts
+
+Add to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "db:generate": "bun drizzle-kit generate && bun drizzle-indexeddb-generate"
+  }
+}
+```
+
 ## Advanced Usage
 
 ### Custom Sync Configuration
@@ -359,13 +420,13 @@ const collection = createCollection(
 
 ```typescript
 try {
-  const db = await migrateIndexedDB("my-app", config, true);
+  const db = await migrateIndexedDBWithFunctions("my-app", migrations, true);
 } catch (error) {
   console.error("Migration failed:", error);
   
   // Option 1: Delete and start fresh
   await deleteIndexedDB("my-app");
-  const db = await migrateIndexedDB("my-app", config, true);
+  const db = await migrateIndexedDBWithFunctions("my-app", migrations, true);
   
   // Option 2: Handle specific errors
   if (error.message.includes("Primary key structure changed")) {
@@ -378,10 +439,10 @@ try {
 
 ```typescript
 // Enable debug mode to see performance metrics
-const db = await migrateIndexedDB("my-app", config, true);
+const db = await migrateIndexedDBWithFunctions("my-app", migrations, true);
 
 // Output shows:
-// [PERF] IndexedDB snapshot migrator start for my-app
+// [PERF] IndexedDB function migrator start for my-app
 // [PERF] Latest applied migration index: 5 (checked 5 migrations)
 // [PERF] Found 2 pending migrations to apply: ["add_priority", "add_category"]
 // [PERF] Upgrade started: v5 → v7
@@ -432,9 +493,9 @@ const todoTable = syncableTable("todos", {
 
 ### Renaming a Column
 
-Drizzle snapshots don't track renames directly, but you can:
+Drizzle migrations don't track renames directly, but you can:
 
-1. Use function-based migrations to handle data transformation
+1. Modify the generated migration function to handle data transformation
 2. Or: Add new column, copy data, delete old column (3 separate migrations)
 
 ### Deleting a Table
@@ -455,8 +516,8 @@ This happens when you change the primary key of a table. IndexedDB doesn't suppo
 
 ### Migrations Not Applying
 
-- Check that journal and snapshots are correctly imported
-- Verify the snapshot files exist in `drizzle/snapshots/`
+- Check that migrations are correctly imported from `drizzle/indexeddb-migrations/`
+- Verify the migration files exist - run `bun drizzle-indexeddb-generate` to regenerate
 - Enable debug mode to see what's happening
 - Check browser DevTools → Application → IndexedDB
 

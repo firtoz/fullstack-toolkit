@@ -3,10 +3,11 @@ import { migrate_0001 } from './0001_purple_inhumans';
 
 export type IndexedDBMigrationFunction = (
 	db: IDBDatabase,
-	transaction: IDBTransaction,
 ) => Promise<void>;
 
 export const migrations: IndexedDBMigrationFunction[] = [
 	migrate_0000,
 	migrate_0001
 ];
+
+export default migrations;

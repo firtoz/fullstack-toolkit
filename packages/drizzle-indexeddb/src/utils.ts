@@ -1,3 +1,12 @@
+export async function openIndexedDb(name: string): Promise<IDBDatabase> {
+	return new Promise<IDBDatabase>((resolve, reject) => {
+		const request = indexedDB.open(name);
+
+		request.onerror = () => reject(request.error);
+		request.onsuccess = () => resolve(request.result);
+	});
+}
+
 /**
  * Deletes the database (useful for testing)
  */

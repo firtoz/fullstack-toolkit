@@ -31,15 +31,15 @@
 		"drizzle/**/*"
 	],
 	"scripts": {
-		"db:generate": "bun drizzle-kit generate && bun post-generate.ts",
+		"db:generate": "bun drizzle-kit generate && bun drizzle-indexeddb-generate",
 		"db:reset": "bun reset-migrations.ts"
 	},
 	"devDependencies": {
-		"drizzle-kit": "^0.31.7",
-		"@firtoz/drizzle-indexeddb": "workspace:*"
+		"drizzle-kit": "^0.31.7"
 	},
 	"dependencies": {
 		"drizzle-orm": "catalog:",
+		"@firtoz/drizzle-indexeddb": "workspace:*",
 		"@firtoz/drizzle-sqlite-wasm": "workspace:*",
 		"@firtoz/drizzle-utils": "workspace:*"
 	}

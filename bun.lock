@@ -27,6 +27,9 @@
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
       "version": "0.2.0",
+      "bin": {
+        "drizzle-indexeddb-generate": "./src/bin/generate-migrations.ts",
+      },
       "dependencies": {
         "@firtoz/drizzle-utils": "workspace:*",
         "@tanstack/db": "catalog:",
@@ -190,12 +193,12 @@
     "tests/test-schema": {
       "name": "test-schema",
       "dependencies": {
+        "@firtoz/drizzle-indexeddb": "workspace:*",
         "@firtoz/drizzle-sqlite-wasm": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
         "drizzle-orm": "catalog:",
       },
       "devDependencies": {
-        "@firtoz/drizzle-indexeddb": "workspace:*",
         "drizzle-kit": "^0.31.7",
       },
     },

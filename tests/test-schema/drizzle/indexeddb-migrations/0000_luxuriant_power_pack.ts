@@ -4,7 +4,6 @@
  */
 export async function migrate_0000(
 	db: IDBDatabase,
-	_transaction: IDBTransaction,
 ): Promise<void> {
 	// Create new table: todo
 	if (!db.objectStoreNames.contains("todo")) {

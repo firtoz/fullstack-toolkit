@@ -1,11 +1,14 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
- * Post-generation script to generate IndexedDB migrations
- * This runs after `drizzle-kit generate` to create executable migration files
+ * CLI tool to generate IndexedDB migrations from Drizzle schema snapshots
+ * Run after `drizzle-kit generate` to create executable migration files
+ *
+ * Usage:
+ *   bun drizzle-indexeddb-generate
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type {
 	JournalEntry,
 	Journal,
@@ -15,10 +18,10 @@ import type {
 	IndexDefinition,
 } from "@firtoz/drizzle-utils";
 
-const META_DIR = "./drizzle/meta";
-const JOURNAL_PATH = join(META_DIR, "_journal.json");
-const OUTPUT_DIR = "./drizzle/indexeddb-migrations";
-const SNAPSHOTS_PATH = "./drizzle/snapshots.ts";
+interface GenerateOptions {
+	drizzleDir?: string;
+	outputDir?: string;
+}
 
 function generateMigrationCode(
 	entry: JournalEntry,
@@ -26,7 +29,7 @@ function generateMigrationCode(
 	prevSnapshot: Snapshot | null,
 ): string {
 	const lines: string[] = [];
-	const tableName = entry.tag.replace(/^\d+_/, "").replace(/_/g, " ");
+	const migrationName = entry.tag.replace(/^\d+_/, "").replace(/_/g, " ");
 
 	// Determine if db is used
 	const currentTables: Record<string, TableDefinition> = snapshot.tables || {};
@@ -68,7 +71,7 @@ function generateMigrationCode(
 
 	lines.push(
 		`/**`,
-		` * Migration: ${tableName}`,
+		` * Migration: ${migrationName}`,
 		` * Generated from: ${entry.tag}`,
 		` */`,
 		`export async function migrate_${entry.idx.toString().padStart(4, "0")}(`,
@@ -211,28 +214,43 @@ function generateMigrationCode(
 	return lines.join("\n");
 }
 
-try {
+export function generateIndexedDBMigrations(
+	options: GenerateOptions = {},
+): void {
+	const cwd = process.cwd();
+	const drizzleDir = resolve(cwd, options.drizzleDir || "./drizzle");
+	const metaDir = join(drizzleDir, "meta");
+	const journalPath = join(metaDir, "_journal.json");
+	const outputDir = resolve(
+		cwd,
+		options.outputDir || join(drizzleDir, "indexeddb-migrations"),
+	);
+
 	const startTime = performance.now();
-	console.log(`[post-generate] Starting migration generation...`);
+	console.log(`[drizzle-indexeddb] Starting migration generation...`);
 
 	// Read the journal
-
-	const journalContent = readFileSync(JOURNAL_PATH, "utf-8");
-	const journal: Journal = JSON.parse(journalContent);
-
-	console.log(`[post-generate] Found ${journal.entries.length} migrations`);
-
-	// Create output directory
-	if (!existsSync(OUTPUT_DIR)) {
-		mkdirSync(OUTPUT_DIR, { recursive: true });
-		console.log(`[post-generate] Created output directory: ${OUTPUT_DIR}`);
+	if (!existsSync(journalPath)) {
+		console.error(
+			`[drizzle-indexeddb] Error: Journal not found at ${journalPath}`,
+		);
+		console.error(
+			`[drizzle-indexeddb] Make sure to run 'drizzle-kit generate' first`,
+		);
+		process.exit(1);
 	}
 
-	// Generate imports for snapshots.ts
-	const snapshotImports: string[] = [
-		"import journal from './meta/_journal.json';",
-	];
-	const snapshotKeys: string[] = [];
+	const journalContent = readFileSync(journalPath, "utf-8");
+	const journal: Journal = JSON.parse(journalContent);
+
+	console.log(`[drizzle-indexeddb] Found ${journal.entries.length} migrations`);
+
+	// Create output directory
+	if (!existsSync(outputDir)) {
+		mkdirSync(outputDir, { recursive: true });
+		console.log(`[drizzle-indexeddb] Created output directory: ${outputDir}`);
+	}
+
 	const migrationImports: string[] = [];
 	const migrationNames: string[] = [];
 
@@ -240,27 +258,27 @@ try {
 	const snapshots: Snapshot[] = [];
 
 	for (const entry of journal.entries) {
-		const snapshotKey = `m${entry.idx.toString().padStart(4, "0")}`;
 		const fileName = `${entry.idx.toString().padStart(4, "0")}_snapshot.json`;
-		const snapshotPath = join(META_DIR, fileName);
+		const snapshotPath = join(metaDir, fileName);
 
 		// Load snapshot
+		if (!existsSync(snapshotPath)) {
+			console.error(
+				`[drizzle-indexeddb] Error: Snapshot not found at ${snapshotPath}`,
+			);
+			process.exit(1);
+		}
 
 		const snapshotContent = readFileSync(snapshotPath, "utf-8");
 		const snapshot: Snapshot = JSON.parse(snapshotContent);
 		snapshots.push(snapshot);
 
-		// Add to snapshots.ts imports
-		snapshotImports.push(`import ${snapshotKey} from './meta/${fileName}';`);
-		snapshotKeys.push(snapshotKey);
-
 		// Generate migration file
-
 		const prevSnapshot = entry.idx > 0 ? snapshots[entry.idx - 1] : null;
 		const migrationCode = generateMigrationCode(entry, snapshot, prevSnapshot);
 
 		const migrationFileName = `${entry.tag}.ts`;
-		const migrationPath = join(OUTPUT_DIR, migrationFileName);
+		const migrationPath = join(outputDir, migrationFileName);
 		writeFileSync(migrationPath, migrationCode, "utf-8");
 
 		// Add to index imports
@@ -279,37 +297,67 @@ export type IndexedDBMigrationFunction = (
 export const migrations: IndexedDBMigrationFunction[] = [
 \t${migrationNames.join(",\n\t")}
 ];
+
+export default migrations;
 `;
 
-	writeFileSync(join(OUTPUT_DIR, "index.ts"), indexContent, "utf-8");
-	console.log(`[post-generate] ✓ Generated ${join(OUTPUT_DIR, "index.ts")}`);
-
-	// Generate snapshots.ts
-	const snapshotsContent = `${snapshotImports.join("\n")}
-import type { IndexedDBMigrationConfig } from '@firtoz/drizzle-indexeddb';
-
-export default {
-\tjournal,
-\tsnapshots: {
-\t\t${snapshotKeys.join(",\n\t\t")}
-\t}
-} as IndexedDBMigrationConfig;
-`;
-
-	writeFileSync(SNAPSHOTS_PATH, snapshotsContent, "utf-8");
-	console.log(`[post-generate] ✓ Generated ${SNAPSHOTS_PATH}`);
+	writeFileSync(join(outputDir, "index.ts"), indexContent, "utf-8");
+	console.log(`[drizzle-indexeddb] ✓ Generated ${join(outputDir, "index.ts")}`);
 
 	const endTime = performance.now();
 	const totalTime = endTime - startTime;
 
-	console.log(`[post-generate] Migrations: ${migrationNames.join(", ")}`);
+	console.log(`[drizzle-indexeddb] Migrations: ${migrationNames.join(", ")}`);
 	console.log(
-		`[post-generate] ✓ Complete! Generated ${journal.entries.length} migrations in ${totalTime.toFixed(2)}ms`,
+		`[drizzle-indexeddb] ✓ Complete! Generated ${journal.entries.length} migrations in ${totalTime.toFixed(2)}ms`,
 	);
-	console.log(
-		`[post-generate] Average time per migration: ${(totalTime / journal.entries.length).toFixed(2)}ms`,
-	);
-} catch (error) {
-	console.error("[post-generate] Error:", error);
-	process.exit(1);
+}
+
+// CLI entry point
+function main(): void {
+	const args = process.argv.slice(2);
+	const command = args[0];
+
+	if (command === "generate" || command === undefined) {
+		// Parse options
+		const options: GenerateOptions = {};
+
+		for (let i = 1; i < args.length; i++) {
+			const arg = args[i];
+			if (arg === "--drizzle-dir" && args[i + 1]) {
+				options.drizzleDir = args[++i];
+			} else if (arg === "--output-dir" && args[i + 1]) {
+				options.outputDir = args[++i];
+			}
+		}
+
+		generateIndexedDBMigrations(options);
+	} else if (command === "--help" || command === "-h") {
+		console.log(`
+drizzle-indexeddb-generate - Generate IndexedDB migrations from Drizzle schema
+
+Usage:
+  bun drizzle-indexeddb-generate [options]
+
+Options:
+  --drizzle-dir <path>  Path to Drizzle directory (default: ./drizzle)
+  --output-dir <path>   Path to output directory (default: ./drizzle/indexeddb-migrations)
+  -h, --help            Show this help message
+
+Examples:
+  bun drizzle-indexeddb-generate
+  bun drizzle-indexeddb-generate --drizzle-dir ./db/drizzle
+  bun drizzle-indexeddb-generate --output-dir ./src/migrations
+`);
+	} else {
+		console.error(`Unknown command: ${command}`);
+		console.error(`Run 'bun drizzle-indexeddb-generate --help' for usage`);
+		process.exit(1);
+	}
+}
+
+// Only run CLI when executed directly (not when imported)
+// import.meta.main is true in Bun when the file is run directly
+if (import.meta.main) {
+	main();
 }

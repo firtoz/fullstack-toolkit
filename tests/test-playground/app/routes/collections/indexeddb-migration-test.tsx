@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { migrateIndexedDBWithFunctions } from "@firtoz/drizzle-indexeddb";
 import type { IndexedDBMigrationFunction } from "test-schema/drizzle/indexeddb-migrations";
+import { openIndexedDb } from "@firtoz/drizzle-indexeddb/utils";
 
 // Fake migrations for testing purposes (5 migrations total)
 const testMigrations: IndexedDBMigrationFunction[] = [
 	// Migration 0: Create initial todo and user tables
-	async (db: IDBDatabase, _transaction: IDBTransaction) => {
+	async (db: IDBDatabase) => {
 		if (!db.objectStoreNames.contains("todo")) {
 			const store = db.createObjectStore("todo", {
 				keyPath: "id",
@@ -34,7 +35,7 @@ const testMigrations: IndexedDBMigrationFunction[] = [
 		}
 	},
 	// Migration 1: Add tag table
-	async (db: IDBDatabase, _transaction: IDBTransaction) => {
+	async (db: IDBDatabase) => {
 		if (!db.objectStoreNames.contains("tag")) {
 			const store = db.createObjectStore("tag", {
 				keyPath: "id",
@@ -55,7 +56,7 @@ const testMigrations: IndexedDBMigrationFunction[] = [
 		}
 	},
 	// Migration 2: Add comment table
-	async (db: IDBDatabase, _transaction: IDBTransaction) => {
+	async (db: IDBDatabase) => {
 		if (!db.objectStoreNames.contains("comment")) {
 			const store = db.createObjectStore("comment", {
 				keyPath: "id",
@@ -75,7 +76,7 @@ const testMigrations: IndexedDBMigrationFunction[] = [
 		}
 	},
 	// Migration 3: Add project table and project_id index to todos
-	async (db: IDBDatabase, _transaction: IDBTransaction) => {
+	async (db: IDBDatabase) => {
 		if (!db.objectStoreNames.contains("project")) {
 			const store = db.createObjectStore("project", {
 				keyPath: "id",
@@ -94,7 +95,7 @@ const testMigrations: IndexedDBMigrationFunction[] = [
 			});
 		}
 
-		const todoStore = _transaction.objectStore("todo");
+		const todoStore = db.transaction("todo").objectStore("todo");
 		if (!todoStore.indexNames.contains("todo_project_id_index")) {
 			todoStore.createIndex("todo_project_id_index", "project_id", {
 				unique: false,
@@ -102,7 +103,7 @@ const testMigrations: IndexedDBMigrationFunction[] = [
 		}
 	},
 	// Migration 4: Add attachment table
-	async (db: IDBDatabase, _transaction: IDBTransaction) => {
+	async (db: IDBDatabase) => {
 		if (!db.objectStoreNames.contains("attachment")) {
 			const store = db.createObjectStore("attachment", {
 				keyPath: "id",
@@ -160,11 +161,7 @@ function IndexedDBMigrationContent() {
 	const checkDatabaseStatus = async () => {
 		try {
 			// Try to open the database to check its status
-			const existingDb = await new Promise<IDBDatabase | null>((resolve) => {
-				const request = indexedDB.open("test-migration-db");
-				request.onsuccess = () => resolve(request.result);
-				request.onerror = () => resolve(null); // DB doesn't exist
-			});
+			const existingDb = await openIndexedDb("test-migration-db");
 
 			if (!existingDb) {
 				setMigrationStatus({

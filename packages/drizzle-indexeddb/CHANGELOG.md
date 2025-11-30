@@ -41,18 +41,6 @@
   - Sync configuration for real-time updates
   - Works seamlessly with React hooks
 
-  ### Snapshot-Based Migration
-
-  **`migrateIndexedDB(dbName, config, debug?)`** - Automatically migrates IndexedDB databases using Drizzle snapshot files:
-
-  - Reads Drizzle journal and snapshot files
-  - Tracks applied migrations in `__drizzle_migrations` store
-  - Creates/updates object stores and indexes based on schema changes
-  - Handles table deletion, index changes, and schema evolution
-  - Incremental migrations - only applies pending changes
-  - Validates primary key structure changes (requires manual migration if keys change)
-  - Performance logging when debug mode is enabled
-
   ### Function-Based Migration
 
   **`migrateIndexedDBWithFunctions(dbName, migrations, debug?)`** - Run migrations using custom migration functions:
@@ -87,19 +75,15 @@
   ## Example
 
   ```typescript
-  import { migrateIndexedDB } from "@firtoz/drizzle-indexeddb";
-  import journal from "./drizzle/journal.json";
-  import * as snapshots from "./drizzle/snapshots";
+  import { migrateIndexedDBWithFunctions } from "@firtoz/drizzle-indexeddb";
+  import migrations from "./drizzle/indexeddb-migrations";
 
-  // Migrate database using Drizzle snapshots
-  const db = await migrateIndexedDB(
+  // Migrate database using function-based migrations
+  const db = await migrateIndexedDBWithFunctions(
     "my-app-db",
-    {
-      journal,
-      snapshots,
-    },
-    true
-  ); // debug mode
+    migrations,
+    true // debug mode
+  );
 
   // Use with TanStack DB
   import { createCollection } from "@tanstack/db";
@@ -136,9 +120,9 @@
 
   ## Migration Workflow
 
-  1. Generate Drizzle snapshots: `drizzle-kit generate`
-  2. Import journal and snapshots
-  3. Call `migrateIndexedDB()` on app startup
+  1. Generate Drizzle migrations: `drizzle-kit generate`
+  2. Generate IndexedDB migrations: `bun drizzle-indexeddb-generate`
+  3. Import migrations and call `migrateIndexedDBWithFunctions()` on app startup
   4. Database automatically updates to latest schema
 
   ## Dependencies
