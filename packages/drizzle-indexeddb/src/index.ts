@@ -1,6 +1,11 @@
 export {
 	migrateIndexedDBWithFunctions,
-	type IndexedDBMigrationFunction,
+	type Migration,
+	type MigrationOperation,
+	type CreateTableOperation,
+	type DeleteTableOperation,
+	type CreateIndexOperation,
+	type DeleteIndexOperation,
 } from "./function-migrator";
 
 export {

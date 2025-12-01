@@ -29,7 +29,7 @@ import type {
 	InferCollectionFromTable,
 } from "@firtoz/drizzle-utils";
 import {
-	type IndexedDBMigrationFunction,
+	type Migration,
 	migrateIndexedDBWithFunctions,
 } from "../function-migrator";
 import { type IDBCreator, type IDBDatabaseLike, openIndexedDb } from "../utils";
@@ -72,10 +72,10 @@ type DrizzleIndexedDBProviderProps<TSchema extends Record<string, unknown>> =
 	PropsWithChildren<{
 		dbName: string;
 		schema: TSchema;
-		migrations?: IndexedDBMigrationFunction[];
+		migrations?: Migration[];
 		migrateFunction?: (
 			dbName: string,
-			migrations: IndexedDBMigrationFunction[],
+			migrations: Migration[],
 			debug?: boolean,
 			dbCreator?: IDBCreator,
 		) => Promise<IDBDatabaseLike>;

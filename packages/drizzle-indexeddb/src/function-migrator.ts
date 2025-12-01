@@ -1,8 +1,54 @@
-// IndexedDB migrator that executes generated migration functions
+// IndexedDB migrator with declarative migration format
 
 import { type IDBCreator, type IDBDatabaseLike, openIndexedDb } from "./utils";
 
-export type IndexedDBMigrationFunction = (db: IDBDatabaseLike) => Promise<void>;
+// ============================================================================
+// Declarative Migration Types
+// ============================================================================
+
+export interface CreateTableOperation {
+	type: "createTable";
+	name: string;
+	keyPath?: string;
+	autoIncrement?: boolean;
+	indexes?: Array<{
+		name: string;
+		keyPath: string | string[];
+		unique?: boolean;
+	}>;
+}
+
+export interface DeleteTableOperation {
+	type: "deleteTable";
+	name: string;
+}
+
+export interface CreateIndexOperation {
+	type: "createIndex";
+	tableName: string;
+	indexName: string;
+	keyPath: string | string[];
+	unique?: boolean;
+}
+
+export interface DeleteIndexOperation {
+	type: "deleteIndex";
+	tableName: string;
+	indexName: string;
+}
+
+export type MigrationOperation =
+	| CreateTableOperation
+	| DeleteTableOperation
+	| CreateIndexOperation
+	| DeleteIndexOperation;
+
+/** A migration is an array of operations to perform */
+export type Migration = MigrationOperation[];
+
+// ============================================================================
+// Migration Record
+// ============================================================================
 
 interface MigrationRecord {
 	id: number;
@@ -11,23 +57,94 @@ interface MigrationRecord {
 
 const MIGRATIONS_STORE = "__drizzle_migrations";
 
+// ============================================================================
+// Migration Executor
+// ============================================================================
+
 /**
- * Runs IndexedDB migrations using generated migration functions.
+ * Executes a single migration operation on the database.
+ */
+function executeMigrationOperation(
+	db: IDBDatabaseLike,
+	op: MigrationOperation,
+): void {
+	switch (op.type) {
+		case "createTable": {
+			if (!db.hasStore(op.name)) {
+				db.createStore(op.name, {
+					keyPath: op.keyPath,
+					autoIncrement: op.autoIncrement,
+				});
+				// Create indexes if specified
+				if (op.indexes) {
+					for (const idx of op.indexes) {
+						db.createIndex(op.name, idx.name, idx.keyPath, {
+							unique: idx.unique,
+						});
+					}
+				}
+			}
+			break;
+		}
+		case "deleteTable": {
+			if (db.hasStore(op.name)) {
+				db.deleteStore(op.name);
+			}
+			break;
+		}
+		case "createIndex": {
+			if (db.hasStore(op.tableName)) {
+				db.createIndex(op.tableName, op.indexName, op.keyPath, {
+					unique: op.unique,
+				});
+			}
+			break;
+		}
+		case "deleteIndex": {
+			if (db.hasStore(op.tableName)) {
+				db.deleteIndex(op.tableName, op.indexName);
+			}
+			break;
+		}
+	}
+}
+
+/**
+ * Executes a full migration (array of operations).
+ */
+function executeMigration(db: IDBDatabaseLike, migration: Migration): void {
+	for (const op of migration) {
+		executeMigrationOperation(db, op);
+	}
+}
+
+// ============================================================================
+// Main Migrator
+// ============================================================================
+
+/**
+ * Runs IndexedDB migrations using declarative migration arrays.
  * Version = total migrations + 1.
- *
- * Works with any IDBCreator implementation, including custom proxies/mocks.
  *
  * Example usage:
  * ```typescript
- * import { migrations } from './drizzle/indexeddb-migrations';
- * import { migrateIndexedDBWithFunctions } from '@firtoz/drizzle-indexeddb';
+ * const migrations: Migration[] = [
+ *   [
+ *     { type: "createTable", name: "todo", keyPath: "id", indexes: [
+ *       { name: "todo_user_id", keyPath: "user_id" }
+ *     ]}
+ *   ],
+ *   [
+ *     { type: "createTable", name: "user", keyPath: "id" }
+ *   ]
+ * ];
  *
  * const db = await migrateIndexedDBWithFunctions('my-db', migrations);
  * ```
  */
 export async function migrateIndexedDBWithFunctions(
 	dbName: string,
-	migrations: IndexedDBMigrationFunction[],
+	migrations: Migration[],
 	debug: boolean = false,
 	dbCreator?: IDBCreator,
 ): Promise<IDBDatabaseLike> {
@@ -35,7 +152,6 @@ export async function migrateIndexedDBWithFunctions(
 		console.log(`[IndexedDB] Starting migration for ${dbName}`);
 	}
 
-	// Target version = number of migrations + 1
 	const targetVersion = migrations.length + 1;
 
 	// Open database to check current state
@@ -65,7 +181,7 @@ export async function migrateIndexedDBWithFunctions(
 
 	// Find pending migrations
 	const pendingMigrations = migrations
-		.map((fn, idx) => ({ fn, idx }))
+		.map((migration, idx) => ({ migration, idx }))
 		.filter(({ idx }) => !appliedSet.has(idx));
 
 	if (pendingMigrations.length === 0) {
@@ -100,11 +216,11 @@ export async function migrateIndexedDBWithFunctions(
 			}
 
 			// Run pending migrations
-			for (const { fn, idx } of pendingMigrations) {
+			for (const { migration, idx } of pendingMigrations) {
 				if (debug) {
 					console.log(`[IndexedDB] Running migration ${idx}`);
 				}
-				fn(upgradeDb);
+				executeMigration(upgradeDb, migration);
 			}
 		},
 	});

@@ -77,6 +77,9 @@ export interface IDBDatabaseLike {
 		options?: CreateIndexOptions,
 	): void;
 
+	/** Delete an index from a store (only valid during migrations) */
+	deleteIndex(storeName: string, indexName: string): void;
+
 	/** Get all indexes for a store (for index discovery) */
 	getStoreIndexes(storeName: string): IndexInfo[];
 
@@ -183,6 +186,12 @@ class NativeIDBDatabase implements IDBDatabaseLike {
 		const transaction = this.db.transaction(storeName, "readonly");
 		const store = transaction.objectStore(storeName);
 		store.createIndex(indexName, keyPath, options);
+	}
+
+	deleteIndex(storeName: string, indexName: string): void {
+		const transaction = this.db.transaction(storeName, "readonly");
+		const store = transaction.objectStore(storeName);
+		store.deleteIndex(indexName);
 	}
 
 	getStoreIndexes(storeName: string): IndexInfo[] {
@@ -424,6 +433,18 @@ class UpgradeModeDatabase implements IDBDatabaseLike {
 			}
 		}
 		store.createIndex(indexName, keyPath, options);
+	}
+
+	deleteIndex(storeName: string, indexName: string): void {
+		let store = this.createdStores.get(storeName);
+		if (!store) {
+			try {
+				store = this.transaction.objectStore(storeName);
+			} catch {
+				throw new Error(`Cannot delete index - store "${storeName}" not found`);
+			}
+		}
+		store.deleteIndex(indexName);
 	}
 
 	getStoreIndexes(storeName: string): IndexInfo[] {

@@ -17,110 +17,59 @@ import type {
 	ColumnDefinition,
 	IndexDefinition,
 } from "@firtoz/drizzle-utils";
+import type { Migration, MigrationOperation } from "../function-migrator";
 
 interface GenerateOptions {
 	drizzleDir?: string;
 	outputDir?: string;
 }
 
-function generateMigrationCode(
-	entry: JournalEntry,
+function generateMigration(
+	_entry: JournalEntry,
 	snapshot: Snapshot,
 	prevSnapshot: Snapshot | null,
-): string {
-	const lines: string[] = [];
-	const migrationName = entry.tag.replace(/^\d+_/, "").replace(/_/g, " ");
+): Migration {
+	const operations: MigrationOperation[] = [];
 
-	// Determine if db is used
 	const currentTables: Record<string, TableDefinition> = snapshot.tables || {};
 	const previousTables: Record<string, TableDefinition> =
 		prevSnapshot?.tables || {};
 
-	let needsDb = false;
-
-	// Check for new tables (needs db)
-	for (const tableName of Object.keys(currentTables)) {
-		if (!previousTables[tableName]) {
-			needsDb = true;
-		}
-	}
-
-	// Check for deleted tables (needs db)
-	for (const tableName of Object.keys(previousTables)) {
-		if (!currentTables[tableName]) {
-			needsDb = true;
-		}
-	}
-
-	// Check for index changes (needs db)
-	for (const [tableName, tableDef] of Object.entries(currentTables)) {
-		if (previousTables[tableName]) {
-			const newIndexes = tableDef.indexes || {};
-			const oldIndexes = previousTables[tableName].indexes || {};
-			const hasIndexChanges =
-				Object.keys(newIndexes).length !== Object.keys(oldIndexes).length ||
-				Object.keys(newIndexes).some((name) => !oldIndexes[name]);
-			if (hasIndexChanges) {
-				needsDb = true;
-				break;
-			}
-		}
-	}
-
-	const dbParam = needsDb ? "db: IDBDatabaseLike" : "_db: IDBDatabaseLike";
-
-	lines.push(
-		`import type { IDBDatabaseLike } from "@firtoz/drizzle-indexeddb";`,
-		``,
-		`/**`,
-		` * Migration: ${migrationName}`,
-		` * Generated from: ${entry.tag}`,
-		` */`,
-		`export async function migrate_${entry.idx.toString().padStart(4, "0")}(`,
-		`\t${dbParam},`,
-		`): Promise<void> {`,
-	);
-
 	// Find new tables
 	for (const [tableName, tableDef] of Object.entries(currentTables)) {
 		if (!previousTables[tableName]) {
-			lines.push(`\t// Create new table: ${tableName}`);
-			lines.push(`\tif (!db.hasStore("${tableName}")) {`);
-
 			// Find primary key
 			const pkColumn = Object.values(
 				tableDef.columns as Record<string, ColumnDefinition>,
 			).find((col) => col.primaryKey);
 
-			if (pkColumn) {
-				lines.push(
-					`\t\tdb.createStore("${tableName}", {`,
-					`\t\t\tkeyPath: "${pkColumn.name}",`,
-					`\t\t\tautoIncrement: ${pkColumn.autoincrement},`,
-					`\t\t});`,
-				);
-			} else {
-				lines.push(
-					`\t\tdb.createStore("${tableName}", {`,
-					`\t\t\tautoIncrement: true,`,
-					`\t\t});`,
-				);
+			const indexes: Array<{
+				name: string;
+				keyPath: string | string[];
+				unique?: boolean;
+			}> = [];
+
+			// Collect indexes
+			for (const [indexName, indexDef] of Object.entries(
+				tableDef.indexes || {},
+			)) {
+				indexes.push({
+					name: indexName,
+					keyPath:
+						indexDef.columns.length === 1
+							? indexDef.columns[0]
+							: indexDef.columns,
+					unique: indexDef.isUnique,
+				});
 			}
 
-			// Create indexes
-			for (const [indexName, indexDef] of Object.entries(tableDef.indexes)) {
-				const keyPath =
-					indexDef.columns.length === 1
-						? `"${indexDef.columns[0]}"`
-						: `[${indexDef.columns.map((c) => `"${c}"`).join(", ")}]`;
-
-				lines.push(
-					`\t\tdb.createIndex("${tableName}", "${indexName}", ${keyPath}, { unique: ${indexDef.isUnique} });`,
-				);
-			}
-
-			lines.push(`\t}`);
-			lines.push("");
+			operations.push({
+				type: "createTable",
+				name: tableName,
+				keyPath: pkColumn?.name,
+				autoIncrement: pkColumn?.autoincrement ?? false,
+				indexes: indexes.length > 0 ? indexes : undefined,
+			});
 		} else {
 			// Table exists, check for index changes
 			const prevTableDef: TableDefinition = previousTables[tableName];
@@ -129,30 +78,31 @@ function generateMigrationCode(
 			const oldIndexes: Record<string, IndexDefinition> =
 				prevTableDef.indexes || {};
 
-			const hasIndexChanges =
-				Object.keys(newIndexes).length !== Object.keys(oldIndexes).length ||
-				Object.keys(newIndexes).some((name) => !oldIndexes[name]);
-
-			if (hasIndexChanges) {
-				lines.push(`\t// Update indexes for table: ${tableName}`);
-				lines.push(`\tif (db.hasStore("${tableName}")) {`);
-
-				// Add new indexes (note: deleteIndex not supported in simplified API yet)
-				for (const [indexName, indexDef] of Object.entries(newIndexes)) {
-					if (!oldIndexes[indexName]) {
-						const keyPath =
+			// Add new indexes
+			for (const [indexName, indexDef] of Object.entries(newIndexes)) {
+				if (!oldIndexes[indexName]) {
+					operations.push({
+						type: "createIndex",
+						tableName,
+						indexName,
+						keyPath:
 							indexDef.columns.length === 1
-								? `"${indexDef.columns[0]}"`
-								: `[${indexDef.columns.map((c) => `"${c}"`).join(", ")}]`;
-
-						lines.push(
-							`\t\tdb.createIndex("${tableName}", "${indexName}", ${keyPath}, { unique: ${indexDef.isUnique} });`,
-						);
-					}
+								? indexDef.columns[0]
+								: indexDef.columns,
+						unique: indexDef.isUnique,
+					});
 				}
+			}
 
-				lines.push(`\t}`);
-				lines.push("");
+			// Delete removed indexes
+			for (const indexName of Object.keys(oldIndexes)) {
+				if (!newIndexes[indexName]) {
+					operations.push({
+						type: "deleteIndex",
+						tableName,
+						indexName,
+					});
+				}
 			}
 		}
 	}
@@ -160,23 +110,33 @@ function generateMigrationCode(
 	// Find deleted tables
 	for (const tableName of Object.keys(previousTables)) {
 		if (!currentTables[tableName]) {
-			lines.push(
-				`\t// Delete table: ${tableName}`,
-				`\tif (db.hasStore("${tableName}")) {`,
-				`\t\tdb.deleteStore("${tableName}");`,
-				`\t}`,
-				"",
-			);
+			operations.push({
+				type: "deleteTable",
+				name: tableName,
+			});
 		}
 	}
 
-	// If no changes detected, add a comment
-	// (10 lines = import, blank, doc comment x4, function header x2, closing brace)
-	if (lines.length === 10) {
-		lines.push(`\t// No IndexedDB schema changes needed for this migration`);
-	}
+	return operations;
+}
 
-	lines.push(`}`);
+function migrationToCode(
+	migration: Migration,
+	idx: number,
+	tag: string,
+): string {
+	const migrationName = tag.replace(/^\d+_/, "").replace(/_/g, " ");
+	const lines: string[] = [];
+
+	lines.push(
+		`import type { Migration } from "@firtoz/drizzle-indexeddb";`,
+		``,
+		`/**`,
+		` * Migration: ${migrationName}`,
+		` * Generated from: ${tag}`,
+		` */`,
+		`export const migrate_${idx.toString().padStart(4, "0")}: Migration = ${JSON.stringify(migration, null, "\t")};`,
+	);
 
 	return lines.join("\n");
 }
@@ -240,9 +200,10 @@ export function generateIndexedDBMigrations(
 		const snapshot: Snapshot = JSON.parse(snapshotContent);
 		snapshots.push(snapshot);
 
-		// Generate migration file
+		// Generate migration
 		const prevSnapshot = entry.idx > 0 ? snapshots[entry.idx - 1] : null;
-		const migrationCode = generateMigrationCode(entry, snapshot, prevSnapshot);
+		const migration = generateMigration(entry, snapshot, prevSnapshot);
+		const migrationCode = migrationToCode(migration, entry.idx, entry.tag);
 
 		const migrationFileName = `${entry.tag}.ts`;
 		const migrationPath = join(outputDir, migrationFileName);
@@ -255,15 +216,11 @@ export function generateIndexedDBMigrations(
 	}
 
 	// Generate index.ts for migrations
-	const indexContent = `import type { IDBDatabaseLike } from "@firtoz/drizzle-indexeddb";
+	const indexContent = `import type { Migration } from "@firtoz/drizzle-indexeddb";
 
 ${migrationImports.join("\n")}
 
-export type IndexedDBMigrationFunction = (
-\tdb: IDBDatabaseLike,
-) => Promise<void>;
-
-export const migrations: IndexedDBMigrationFunction[] = [
+export const migrations: Migration[] = [
 \t${migrationNames.join(",\n\t")}
 ];
 
@@ -326,7 +283,6 @@ Examples:
 }
 
 // Only run CLI when executed directly (not when imported)
-// import.meta.main is true in Bun when the file is run directly
 if (import.meta.main) {
 	main();
 }

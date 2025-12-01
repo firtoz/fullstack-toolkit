@@ -1,133 +1,147 @@
 import { useState, useEffect } from "react";
 import {
 	migrateIndexedDBWithFunctions,
-	type IDBDatabaseLike,
-	type IndexedDBMigrationFunction,
+	type Migration,
 } from "@firtoz/drizzle-indexeddb";
 import { openIndexedDb } from "@firtoz/drizzle-indexeddb/utils";
 
-// Fake migrations for testing purposes (5 migrations total)
-const testMigrations: IndexedDBMigrationFunction[] = [
+// Declarative migrations for testing purposes (5 migrations total)
+const testMigrations: Migration[] = [
 	// Migration 0: Create initial todo and user tables
-	async (db: IDBDatabaseLike) => {
-		if (!db.hasStore("todo")) {
-			db.createStore("todo", { keyPath: "id", autoIncrement: false });
-			db.createIndex("todo", "todo_user_id_index", "user_id", {
-				unique: false,
-			});
-			db.createIndex("todo", "todo_parent_id_index", "parent_id", {
-				unique: false,
-			});
-			db.createIndex("todo", "todo_completed_index", "completed", {
-				unique: false,
-			});
-			db.createIndex("todo", "todo_created_at_index", "createdAt", {
-				unique: false,
-			});
-			db.createIndex("todo", "todo_updated_at_index", "updatedAt", {
-				unique: false,
-			});
-			db.createIndex("todo", "todo_deleted_at_index", "deletedAt", {
-				unique: false,
-			});
-		}
-
-		if (!db.hasStore("user")) {
-			db.createStore("user", { keyPath: "id", autoIncrement: false });
-			db.createIndex("user", "email_index", "email", { unique: false });
-		}
-	},
-	// Migration 1: Add tag table
-	async (db: IDBDatabaseLike) => {
-		if (!db.hasStore("tag")) {
-			db.createStore("tag", { keyPath: "id", autoIncrement: false });
-			db.createIndex("tag", "tag_name_index", "name", { unique: false });
-			db.createIndex("tag", "tag_user_id_index", "user_id", { unique: false });
-			db.createIndex("tag", "tag_created_at_index", "createdAt", {
-				unique: false,
-			});
-		}
-
-		if (!db.hasStore("todo_tag")) {
-			db.createStore("todo_tag", { keyPath: "todo_id", autoIncrement: false });
-			db.createIndex("todo_tag", "todo_tag_todo_id_index", "todo_id", {
-				unique: false,
-			});
-			db.createIndex("todo_tag", "todo_tag_tag_id_index", "tag_id", {
-				unique: false,
-			});
-		}
-	},
+	[
+		{
+			type: "createTable",
+			name: "todo",
+			keyPath: "id",
+			autoIncrement: false,
+			indexes: [
+				{ name: "todo_user_id_index", keyPath: "user_id", unique: false },
+				{ name: "todo_parent_id_index", keyPath: "parent_id", unique: false },
+				{ name: "todo_completed_index", keyPath: "completed", unique: false },
+				{ name: "todo_created_at_index", keyPath: "createdAt", unique: false },
+				{ name: "todo_updated_at_index", keyPath: "updatedAt", unique: false },
+				{ name: "todo_deleted_at_index", keyPath: "deletedAt", unique: false },
+			],
+		},
+		{
+			type: "createTable",
+			name: "user",
+			keyPath: "id",
+			autoIncrement: false,
+			indexes: [{ name: "email_index", keyPath: "email", unique: false }],
+		},
+	],
+	// Migration 1: Add tag and todo_tag tables
+	[
+		{
+			type: "createTable",
+			name: "tag",
+			keyPath: "id",
+			autoIncrement: false,
+			indexes: [
+				{ name: "tag_name_index", keyPath: "name", unique: false },
+				{ name: "tag_user_id_index", keyPath: "user_id", unique: false },
+				{ name: "tag_created_at_index", keyPath: "createdAt", unique: false },
+			],
+		},
+		{
+			type: "createTable",
+			name: "todo_tag",
+			keyPath: "todo_id",
+			autoIncrement: false,
+			indexes: [
+				{ name: "todo_tag_todo_id_index", keyPath: "todo_id", unique: false },
+				{ name: "todo_tag_tag_id_index", keyPath: "tag_id", unique: false },
+			],
+		},
+	],
 	// Migration 2: Add comment table
-	async (db: IDBDatabaseLike) => {
-		if (!db.hasStore("comment")) {
-			db.createStore("comment", { keyPath: "id", autoIncrement: false });
-			db.createIndex("comment", "comment_todo_id_index", "todo_id", {
-				unique: false,
-			});
-			db.createIndex("comment", "comment_user_id_index", "user_id", {
-				unique: false,
-			});
-			db.createIndex("comment", "comment_created_at_index", "createdAt", {
-				unique: false,
-			});
-			db.createIndex("comment", "comment_updated_at_index", "updatedAt", {
-				unique: false,
-			});
-			db.createIndex("comment", "comment_deleted_at_index", "deletedAt", {
-				unique: false,
-			});
-		}
-	},
+	[
+		{
+			type: "createTable",
+			name: "comment",
+			keyPath: "id",
+			autoIncrement: false,
+			indexes: [
+				{ name: "comment_todo_id_index", keyPath: "todo_id", unique: false },
+				{ name: "comment_user_id_index", keyPath: "user_id", unique: false },
+				{
+					name: "comment_created_at_index",
+					keyPath: "createdAt",
+					unique: false,
+				},
+				{
+					name: "comment_updated_at_index",
+					keyPath: "updatedAt",
+					unique: false,
+				},
+				{
+					name: "comment_deleted_at_index",
+					keyPath: "deletedAt",
+					unique: false,
+				},
+			],
+		},
+	],
 	// Migration 3: Add project table and project_id index to todos
-	async (db: IDBDatabaseLike) => {
-		if (!db.hasStore("project")) {
-			db.createStore("project", { keyPath: "id", autoIncrement: false });
-			db.createIndex("project", "project_name_index", "name", {
-				unique: false,
-			});
-			db.createIndex("project", "project_user_id_index", "user_id", {
-				unique: false,
-			});
-			db.createIndex("project", "project_created_at_index", "createdAt", {
-				unique: false,
-			});
-			db.createIndex("project", "project_updated_at_index", "updatedAt", {
-				unique: false,
-			});
-			db.createIndex("project", "project_archived_index", "archived", {
-				unique: false,
-			});
-		}
-
-		// Add index to existing todo store
-		if (db.hasStore("todo")) {
-			db.createIndex("todo", "todo_project_id_index", "project_id", {
-				unique: false,
-			});
-		}
-	},
+	[
+		{
+			type: "createTable",
+			name: "project",
+			keyPath: "id",
+			autoIncrement: false,
+			indexes: [
+				{ name: "project_name_index", keyPath: "name", unique: false },
+				{ name: "project_user_id_index", keyPath: "user_id", unique: false },
+				{
+					name: "project_created_at_index",
+					keyPath: "createdAt",
+					unique: false,
+				},
+				{
+					name: "project_updated_at_index",
+					keyPath: "updatedAt",
+					unique: false,
+				},
+				{ name: "project_archived_index", keyPath: "archived", unique: false },
+			],
+		},
+		{
+			type: "createIndex",
+			tableName: "todo",
+			indexName: "todo_project_id_index",
+			keyPath: "project_id",
+			unique: false,
+		},
+	],
 	// Migration 4: Add attachment table
-	async (db: IDBDatabaseLike) => {
-		if (!db.hasStore("attachment")) {
-			db.createStore("attachment", { keyPath: "id", autoIncrement: false });
-			db.createIndex("attachment", "attachment_todo_id_index", "todo_id", {
-				unique: false,
-			});
-			db.createIndex("attachment", "attachment_user_id_index", "user_id", {
-				unique: false,
-			});
-			db.createIndex("attachment", "attachment_file_name_index", "file_name", {
-				unique: false,
-			});
-			db.createIndex("attachment", "attachment_file_type_index", "file_type", {
-				unique: false,
-			});
-			db.createIndex("attachment", "attachment_created_at_index", "createdAt", {
-				unique: false,
-			});
-		}
-	},
+	[
+		{
+			type: "createTable",
+			name: "attachment",
+			keyPath: "id",
+			autoIncrement: false,
+			indexes: [
+				{ name: "attachment_todo_id_index", keyPath: "todo_id", unique: false },
+				{ name: "attachment_user_id_index", keyPath: "user_id", unique: false },
+				{
+					name: "attachment_file_name_index",
+					keyPath: "file_name",
+					unique: false,
+				},
+				{
+					name: "attachment_file_type_index",
+					keyPath: "file_type",
+					unique: false,
+				},
+				{
+					name: "attachment_created_at_index",
+					keyPath: "createdAt",
+					unique: false,
+				},
+			],
+		},
+	],
 ];
 
 const migrations = testMigrations;
