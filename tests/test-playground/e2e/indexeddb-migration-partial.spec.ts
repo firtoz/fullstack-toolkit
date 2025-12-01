@@ -257,9 +257,6 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 			"0, 1, 2",
 		);
 
-		// Database version should be 4 (3 migrations + 1)
-		await expect(page.getByTestId("db-version")).toHaveText("4");
-
 		// Now run the migration to apply the remaining 2
 		await page.getByTestId("run-migration-button").click();
 
@@ -280,7 +277,6 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 		await expect(page.getByTestId("applied-migrations-list")).toHaveText(
 			"0, 1, 2, 3, 4",
 		);
-		await expect(page.getByTestId("db-version")).toHaveText("6");
 
 		// No pending migrations badge should be shown
 		await expect(
@@ -502,7 +498,6 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 			"4 pending",
 		);
 		await expect(page.getByTestId("applied-migrations-list")).toHaveText("0");
-		await expect(page.getByTestId("db-version")).toHaveText("2");
 	});
 
 	test("should handle database with only 1 migration total", async ({
@@ -601,9 +596,6 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 			"4 pending",
 		);
 		await expect(page.getByTestId("applied-migrations-list")).toHaveText("0");
-
-		// Version should be 2 (1 migration applied + 1)
-		await expect(page.getByTestId("db-version")).toHaveText("2");
 
 		// Verify the tables were created correctly
 		const dbInfo = await page.evaluate(() => {

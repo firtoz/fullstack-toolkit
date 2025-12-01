@@ -3,15 +3,9 @@
  * Tests the actual implementation of index query extraction in IndexedDB collections
  */
 
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { tryExtractIndexedQuery } from "@firtoz/drizzle-indexeddb/collections/indexeddb-collection";
 import type { IR } from "@tanstack/db";
-import { setupIndexedDBMocks } from "../test-utils/indexeddb-mock";
-
-// Setup IDBKeyRange mock before tests
-beforeAll(() => {
-	setupIndexedDBMocks();
-});
 
 describe("tryExtractIndexedQuery - Unit Tests", () => {
 	const testIndexes: Record<string, string> = {
@@ -37,10 +31,9 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 			expect(result).not.toBeNull();
 			expect(result?.fieldName).toBe("priority");
 			expect(result?.indexName).toBe("todo_priority_index");
-			expect(result?.keyRange).toBeInstanceOf(IDBKeyRange);
-			// Verify it's an "only" range
-			expect(result?.keyRange.lower).toBe(10);
-			expect(result?.keyRange.upper).toBe(10);
+			// Verify it's an "only" range (KeyRangeSpec)
+			expect(result?.keyRange.type).toBe("only");
+			expect(result?.keyRange.value).toBe(10);
 		});
 
 		it("should extract gt (greater than) query", () => {
@@ -59,7 +52,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 			expect(result).not.toBeNull();
 			expect(result?.fieldName).toBe("priority");
 			expect(result?.indexName).toBe("todo_priority_index");
-			// Verify it's a lowerBound with exclusive = true
+			// Verify it's a lowerBound with exclusive = true (KeyRangeSpec)
+			expect(result?.keyRange.type).toBe("lowerBound");
 			expect(result?.keyRange.lower).toBe(10);
 			expect(result?.keyRange.lowerOpen).toBe(true); // exclusive
 		});
@@ -79,7 +73,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 
 			expect(result).not.toBeNull();
 			expect(result?.fieldName).toBe("priority");
-			// Verify it's a lowerBound with exclusive = false
+			// Verify it's a lowerBound with exclusive = false (KeyRangeSpec)
+			expect(result?.keyRange.type).toBe("lowerBound");
 			expect(result?.keyRange.lower).toBe(10);
 			expect(result?.keyRange.lowerOpen).toBe(false); // inclusive
 		});
@@ -99,7 +94,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 
 			expect(result).not.toBeNull();
 			expect(result?.fieldName).toBe("priority");
-			// Verify it's an upperBound with exclusive = true
+			// Verify it's an upperBound with exclusive = true (KeyRangeSpec)
+			expect(result?.keyRange.type).toBe("upperBound");
 			expect(result?.keyRange.upper).toBe(10);
 			expect(result?.keyRange.upperOpen).toBe(true); // exclusive
 		});
@@ -119,7 +115,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 
 			expect(result).not.toBeNull();
 			expect(result?.fieldName).toBe("priority");
-			// Verify it's an upperBound with exclusive = false
+			// Verify it's an upperBound with exclusive = false (KeyRangeSpec)
+			expect(result?.keyRange.type).toBe("upperBound");
 			expect(result?.keyRange.upper).toBe(10);
 			expect(result?.keyRange.upperOpen).toBe(false); // inclusive
 		});
@@ -140,7 +137,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 			expect(result).not.toBeNull();
 			expect(result?.fieldName).toBe("status");
 			expect(result?.indexName).toBe("todo_status_index");
-			expect(result?.keyRange.lower).toBe("pending");
+			expect(result?.keyRange.type).toBe("only");
+			expect(result?.keyRange.value).toBe("pending");
 		});
 	});
 
@@ -392,7 +390,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 				expressionString,
 				testIndexes,
 			);
-			expect(resultString?.keyRange.lower).toBe("pending");
+			expect(resultString?.keyRange.type).toBe("only");
+			expect(resultString?.keyRange.value).toBe("pending");
 
 			// Build IR expression for numeric comparison
 			const expressionNumeric = {
@@ -408,7 +407,8 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 				expressionNumeric,
 				testIndexes,
 			);
-			expect(resultNumeric?.keyRange.lower).toBe(10);
+			expect(resultNumeric?.keyRange.type).toBe("only");
+			expect(resultNumeric?.keyRange.value).toBe(10);
 		});
 	});
 });

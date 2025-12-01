@@ -32,7 +32,7 @@ import {
 	type IndexedDBMigrationFunction,
 	migrateIndexedDBWithFunctions,
 } from "../function-migrator";
-import { openIndexedDb } from "../utils";
+import { type IDBCreator, type IDBDatabaseLike, openIndexedDb } from "../utils";
 
 interface CollectionCacheEntry {
 	// biome-ignore lint/suspicious/noExplicitAny: Cache needs to store collections of various types
@@ -56,7 +56,7 @@ type IndexedDbCollection<
 export type DrizzleIndexedDBContextValue<
 	TSchema extends Record<string, unknown>,
 > = {
-	indexedDB: IDBDatabase | null;
+	indexedDB: IDBDatabaseLike | null;
 	getCollection: <TTableName extends keyof TSchema & string>(
 		tableName: TTableName,
 	) => IndexedDbCollection<TSchema, TTableName>;
@@ -77,13 +77,15 @@ type DrizzleIndexedDBProviderProps<TSchema extends Record<string, unknown>> =
 			dbName: string,
 			migrations: IndexedDBMigrationFunction[],
 			debug?: boolean,
-		) => Promise<IDBDatabase>;
+			dbCreator?: IDBCreator,
+		) => Promise<IDBDatabaseLike>;
 		debug?: boolean;
 		syncMode?: SyncMode;
 		/**
 		 * Optional interceptor for tracking IndexedDB operations (for testing/debugging)
 		 */
 		interceptor?: IDBInterceptor;
+		dbCreator?: (dbName: string) => Promise<IDBDatabaseLike>;
 	}>;
 
 export function DrizzleIndexedDBProvider<
@@ -97,9 +99,10 @@ export function DrizzleIndexedDBProvider<
 	debug = false,
 	syncMode = "eager",
 	interceptor,
+	dbCreator,
 }: DrizzleIndexedDBProviderProps<TSchema>) {
-	const [indexedDB, setIndexedDB] = useState<IDBDatabase | null>(null);
-	const indexedDBRef = useRef<IDBDatabase | null>(null);
+	const [indexedDB, setIndexedDB] = useState<IDBDatabaseLike | null>(null);
+	const indexedDBRef = useRef<IDBDatabaseLike | null>(null);
 	const [readyPromise] = useState(() => {
 		let resolveReady: () => void;
 		const promise = new Promise<void>((resolve) => {
@@ -112,13 +115,13 @@ export function DrizzleIndexedDBProvider<
 	useEffect(() => {
 		const initDB = async () => {
 			try {
-				let db: IDBDatabase;
+				let db: IDBDatabaseLike;
 
 				if (migrations.length === 0) {
 					// Open database directly without migration logic
-					db = await openIndexedDb(dbName);
+					db = await openIndexedDb(dbName, dbCreator);
 				} else {
-					db = await migrateFunction(dbName, migrations, debug);
+					db = await migrateFunction(dbName, migrations, debug, dbCreator);
 				}
 
 				indexedDBRef.current = db;

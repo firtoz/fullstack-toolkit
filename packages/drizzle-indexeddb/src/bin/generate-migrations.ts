@@ -67,9 +67,11 @@ function generateMigrationCode(
 		}
 	}
 
-	const dbParam = needsDb ? "db: IDBDatabase" : "_db: IDBDatabase";
+	const dbParam = needsDb ? "db: IDBDatabaseLike" : "_db: IDBDatabaseLike";
 
 	lines.push(
+		`import type { IDBDatabaseLike } from "@firtoz/drizzle-indexeddb";`,
+		``,
 		`/**`,
 		` * Migration: ${migrationName}`,
 		` * Generated from: ${entry.tag}`,
@@ -83,45 +85,26 @@ function generateMigrationCode(
 	for (const [tableName, tableDef] of Object.entries(currentTables)) {
 		if (!previousTables[tableName]) {
 			lines.push(`\t// Create new table: ${tableName}`);
-			lines.push(`\tif (!db.objectStoreNames.contains("${tableName}")) {`);
+			lines.push(`\tif (!db.hasStore("${tableName}")) {`);
 
 			// Find primary key
 			const pkColumn = Object.values(
 				tableDef.columns as Record<string, ColumnDefinition>,
 			).find((col) => col.primaryKey);
 
-			const hasIndexes = Object.keys(tableDef.indexes).length > 0;
-
 			if (pkColumn) {
-				if (hasIndexes) {
-					lines.push(
-						`\t\tconst store = db.createObjectStore("${tableName}", {`,
-						`\t\t\tkeyPath: "${pkColumn.name}",`,
-						`\t\t\tautoIncrement: ${pkColumn.autoincrement},`,
-						`\t\t});`,
-					);
-				} else {
-					lines.push(
-						`\t\tdb.createObjectStore("${tableName}", {`,
-						`\t\t\tkeyPath: "${pkColumn.name}",`,
-						`\t\t\tautoIncrement: ${pkColumn.autoincrement},`,
-						`\t\t});`,
-					);
-				}
+				lines.push(
+					`\t\tdb.createStore("${tableName}", {`,
+					`\t\t\tkeyPath: "${pkColumn.name}",`,
+					`\t\t\tautoIncrement: ${pkColumn.autoincrement},`,
+					`\t\t});`,
+				);
 			} else {
-				if (hasIndexes) {
-					lines.push(
-						`\t\tconst store = db.createObjectStore("${tableName}", {`,
-						`\t\t\tautoIncrement: true,`,
-						`\t\t});`,
-					);
-				} else {
-					lines.push(
-						`\t\tdb.createObjectStore("${tableName}", {`,
-						`\t\t\tautoIncrement: true,`,
-						`\t\t});`,
-					);
-				}
+				lines.push(
+					`\t\tdb.createStore("${tableName}", {`,
+					`\t\t\tautoIncrement: true,`,
+					`\t\t});`,
+				);
 			}
 
 			// Create indexes
@@ -132,7 +115,7 @@ function generateMigrationCode(
 						: `[${indexDef.columns.map((c) => `"${c}"`).join(", ")}]`;
 
 				lines.push(
-					`\t\tstore.createIndex("${indexName}", ${keyPath}, { unique: ${indexDef.isUnique} });`,
+					`\t\tdb.createIndex("${tableName}", "${indexName}", ${keyPath}, { unique: ${indexDef.isUnique} });`,
 				);
 			}
 
@@ -152,24 +135,9 @@ function generateMigrationCode(
 
 			if (hasIndexChanges) {
 				lines.push(`\t// Update indexes for table: ${tableName}`);
-				lines.push(`\tif (db.objectStoreNames.contains("${tableName}")) {`);
-				lines.push(
-					`\t\tconst store = db.transaction("${tableName}").objectStore("${tableName}");`,
-				);
-				lines.push("");
+				lines.push(`\tif (db.hasStore("${tableName}")) {`);
 
-				// Remove old indexes
-				for (const indexName of Object.keys(oldIndexes)) {
-					if (!newIndexes[indexName]) {
-						lines.push(
-							`\t\tif (store.indexNames.contains("${indexName}")) {`,
-							`\t\t\tstore.deleteIndex("${indexName}");`,
-							`\t\t}`,
-						);
-					}
-				}
-
-				// Add new indexes
+				// Add new indexes (note: deleteIndex not supported in simplified API yet)
 				for (const [indexName, indexDef] of Object.entries(newIndexes)) {
 					if (!oldIndexes[indexName]) {
 						const keyPath =
@@ -178,9 +146,7 @@ function generateMigrationCode(
 								: `[${indexDef.columns.map((c) => `"${c}"`).join(", ")}]`;
 
 						lines.push(
-							`\t\tif (!store.indexNames.contains("${indexName}")) {`,
-							`\t\t\tstore.createIndex("${indexName}", ${keyPath}, { unique: ${indexDef.isUnique} });`,
-							`\t\t}`,
+							`\t\tdb.createIndex("${tableName}", "${indexName}", ${keyPath}, { unique: ${indexDef.isUnique} });`,
 						);
 					}
 				}
@@ -196,8 +162,8 @@ function generateMigrationCode(
 		if (!currentTables[tableName]) {
 			lines.push(
 				`\t// Delete table: ${tableName}`,
-				`\tif (db.objectStoreNames.contains("${tableName}")) {`,
-				`\t\tdb.deleteObjectStore("${tableName}");`,
+				`\tif (db.hasStore("${tableName}")) {`,
+				`\t\tdb.deleteStore("${tableName}");`,
 				`\t}`,
 				"",
 			);
@@ -205,7 +171,8 @@ function generateMigrationCode(
 	}
 
 	// If no changes detected, add a comment
-	if (lines.length === 8) {
+	// (10 lines = import, blank, doc comment x4, function header x2, closing brace)
+	if (lines.length === 10) {
 		lines.push(`\t// No IndexedDB schema changes needed for this migration`);
 	}
 
@@ -288,10 +255,12 @@ export function generateIndexedDBMigrations(
 	}
 
 	// Generate index.ts for migrations
-	const indexContent = `${migrationImports.join("\n")}
+	const indexContent = `import type { IDBDatabaseLike } from "@firtoz/drizzle-indexeddb";
+
+${migrationImports.join("\n")}
 
 export type IndexedDBMigrationFunction = (
-\tdb: IDBDatabase,
+\tdb: IDBDatabaseLike,
 ) => Promise<void>;
 
 export const migrations: IndexedDBMigrationFunction[] = [

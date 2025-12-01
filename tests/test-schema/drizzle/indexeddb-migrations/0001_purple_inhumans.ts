@@ -1,20 +1,16 @@
+import type { IDBDatabaseLike } from "@firtoz/drizzle-indexeddb";
+
 /**
  * Migration: purple inhumans
  * Generated from: 0001_purple_inhumans
  */
 export async function migrate_0001(
-	db: IDBDatabase,
+	db: IDBDatabaseLike,
 ): Promise<void> {
 	// Update indexes for table: todo
-	if (db.objectStoreNames.contains("todo")) {
-		const store = db.transaction("todo").objectStore("todo");
-
-		if (!store.indexNames.contains("todo_priority_index")) {
-			store.createIndex("todo_priority_index", "priority", { unique: false });
-		}
-		if (!store.indexNames.contains("todo_status_index")) {
-			store.createIndex("todo_status_index", "status", { unique: false });
-		}
+	if (db.hasStore("todo")) {
+		db.createIndex("todo", "todo_priority_index", "priority", { unique: false });
+		db.createIndex("todo", "todo_status_index", "status", { unique: false });
 	}
 
 }

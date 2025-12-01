@@ -3,7 +3,16 @@ export {
 	type IndexedDBMigrationFunction,
 } from "./function-migrator";
 
-export { deleteIndexedDB } from "./utils";
+export {
+	deleteIndexedDB,
+	type IDBCreator,
+	type IDBOpenOptions,
+	type IDBDatabaseLike,
+	type IndexInfo,
+	type CreateStoreOptions,
+	type CreateIndexOptions,
+	type KeyRangeSpec,
+} from "./utils";
 
 export {
 	indexedDBCollectionOptions,

@@ -359,24 +359,16 @@ const SyncModeTestContent = ({
 		setDbStatusWithLog("populating");
 		addLog("Populating database with test data...");
 
-		const transaction = indexedDB.transaction("todo", "readwrite");
-		const store = transaction.objectStore("todo");
-
 		const now = new Date();
-		for (const todo of testTodos) {
-			store.add({
-				...todo,
-				completed: false,
-				createdAt: now,
-				updatedAt: now,
-				deletedAt: null,
-			});
-		}
+		const itemsToAdd = testTodos.map((todo) => ({
+			...todo,
+			completed: false,
+			createdAt: now,
+			updatedAt: now,
+			deletedAt: null,
+		}));
 
-		await new Promise<void>((resolve, reject) => {
-			transaction.oncomplete = () => resolve();
-			transaction.onerror = () => reject(transaction.error);
-		});
+		await indexedDB.add("todo", itemsToAdd);
 
 		addLog(`Added ${testTodos.length} items to database`);
 		setDbStatusWithLog("ready");
@@ -393,14 +385,7 @@ const SyncModeTestContent = ({
 		setDbStatusWithLog("clearing");
 		addLog("Clearing database...");
 
-		const transaction = indexedDB.transaction("todo", "readwrite");
-		const store = transaction.objectStore("todo");
-		store.clear();
-
-		await new Promise<void>((resolve, reject) => {
-			transaction.oncomplete = () => resolve();
-			transaction.onerror = () => reject(transaction.error);
-		});
+		await indexedDB.clear("todo");
 
 		addLog("Database cleared");
 		setDbStatusWithLog("ready");

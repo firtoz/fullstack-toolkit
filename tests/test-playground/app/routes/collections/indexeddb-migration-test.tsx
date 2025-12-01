@@ -1,127 +1,129 @@
 import { useState, useEffect } from "react";
-import { migrateIndexedDBWithFunctions } from "@firtoz/drizzle-indexeddb";
-import type { IndexedDBMigrationFunction } from "test-schema/drizzle/indexeddb-migrations";
+import {
+	migrateIndexedDBWithFunctions,
+	type IDBDatabaseLike,
+	type IndexedDBMigrationFunction,
+} from "@firtoz/drizzle-indexeddb";
 import { openIndexedDb } from "@firtoz/drizzle-indexeddb/utils";
 
 // Fake migrations for testing purposes (5 migrations total)
 const testMigrations: IndexedDBMigrationFunction[] = [
 	// Migration 0: Create initial todo and user tables
-	async (db: IDBDatabase) => {
-		if (!db.objectStoreNames.contains("todo")) {
-			const store = db.createObjectStore("todo", {
-				keyPath: "id",
-				autoIncrement: false,
-			});
-			store.createIndex("todo_user_id_index", "user_id", { unique: false });
-			store.createIndex("todo_parent_id_index", "parent_id", { unique: false });
-			store.createIndex("todo_completed_index", "completed", { unique: false });
-			store.createIndex("todo_created_at_index", "createdAt", {
+	async (db: IDBDatabaseLike) => {
+		if (!db.hasStore("todo")) {
+			db.createStore("todo", { keyPath: "id", autoIncrement: false });
+			db.createIndex("todo", "todo_user_id_index", "user_id", {
 				unique: false,
 			});
-			store.createIndex("todo_updated_at_index", "updatedAt", {
+			db.createIndex("todo", "todo_parent_id_index", "parent_id", {
 				unique: false,
 			});
-			store.createIndex("todo_deleted_at_index", "deletedAt", {
+			db.createIndex("todo", "todo_completed_index", "completed", {
+				unique: false,
+			});
+			db.createIndex("todo", "todo_created_at_index", "createdAt", {
+				unique: false,
+			});
+			db.createIndex("todo", "todo_updated_at_index", "updatedAt", {
+				unique: false,
+			});
+			db.createIndex("todo", "todo_deleted_at_index", "deletedAt", {
 				unique: false,
 			});
 		}
 
-		if (!db.objectStoreNames.contains("user")) {
-			const store = db.createObjectStore("user", {
-				keyPath: "id",
-				autoIncrement: false,
-			});
-			store.createIndex("email_index", "email", { unique: false });
+		if (!db.hasStore("user")) {
+			db.createStore("user", { keyPath: "id", autoIncrement: false });
+			db.createIndex("user", "email_index", "email", { unique: false });
 		}
 	},
 	// Migration 1: Add tag table
-	async (db: IDBDatabase) => {
-		if (!db.objectStoreNames.contains("tag")) {
-			const store = db.createObjectStore("tag", {
-				keyPath: "id",
-				autoIncrement: false,
+	async (db: IDBDatabaseLike) => {
+		if (!db.hasStore("tag")) {
+			db.createStore("tag", { keyPath: "id", autoIncrement: false });
+			db.createIndex("tag", "tag_name_index", "name", { unique: false });
+			db.createIndex("tag", "tag_user_id_index", "user_id", { unique: false });
+			db.createIndex("tag", "tag_created_at_index", "createdAt", {
+				unique: false,
 			});
-			store.createIndex("tag_name_index", "name", { unique: false });
-			store.createIndex("tag_user_id_index", "user_id", { unique: false });
-			store.createIndex("tag_created_at_index", "createdAt", { unique: false });
 		}
 
-		if (!db.objectStoreNames.contains("todo_tag")) {
-			const store = db.createObjectStore("todo_tag", {
-				keyPath: ["todo_id", "tag_id"],
-				autoIncrement: false,
+		if (!db.hasStore("todo_tag")) {
+			db.createStore("todo_tag", { keyPath: "todo_id", autoIncrement: false });
+			db.createIndex("todo_tag", "todo_tag_todo_id_index", "todo_id", {
+				unique: false,
 			});
-			store.createIndex("todo_tag_todo_id_index", "todo_id", { unique: false });
-			store.createIndex("todo_tag_tag_id_index", "tag_id", { unique: false });
+			db.createIndex("todo_tag", "todo_tag_tag_id_index", "tag_id", {
+				unique: false,
+			});
 		}
 	},
 	// Migration 2: Add comment table
-	async (db: IDBDatabase) => {
-		if (!db.objectStoreNames.contains("comment")) {
-			const store = db.createObjectStore("comment", {
-				keyPath: "id",
-				autoIncrement: false,
-			});
-			store.createIndex("comment_todo_id_index", "todo_id", { unique: false });
-			store.createIndex("comment_user_id_index", "user_id", { unique: false });
-			store.createIndex("comment_created_at_index", "createdAt", {
+	async (db: IDBDatabaseLike) => {
+		if (!db.hasStore("comment")) {
+			db.createStore("comment", { keyPath: "id", autoIncrement: false });
+			db.createIndex("comment", "comment_todo_id_index", "todo_id", {
 				unique: false,
 			});
-			store.createIndex("comment_updated_at_index", "updatedAt", {
+			db.createIndex("comment", "comment_user_id_index", "user_id", {
 				unique: false,
 			});
-			store.createIndex("comment_deleted_at_index", "deletedAt", {
+			db.createIndex("comment", "comment_created_at_index", "createdAt", {
+				unique: false,
+			});
+			db.createIndex("comment", "comment_updated_at_index", "updatedAt", {
+				unique: false,
+			});
+			db.createIndex("comment", "comment_deleted_at_index", "deletedAt", {
 				unique: false,
 			});
 		}
 	},
 	// Migration 3: Add project table and project_id index to todos
-	async (db: IDBDatabase) => {
-		if (!db.objectStoreNames.contains("project")) {
-			const store = db.createObjectStore("project", {
-				keyPath: "id",
-				autoIncrement: false,
-			});
-			store.createIndex("project_name_index", "name", { unique: false });
-			store.createIndex("project_user_id_index", "user_id", { unique: false });
-			store.createIndex("project_created_at_index", "createdAt", {
+	async (db: IDBDatabaseLike) => {
+		if (!db.hasStore("project")) {
+			db.createStore("project", { keyPath: "id", autoIncrement: false });
+			db.createIndex("project", "project_name_index", "name", {
 				unique: false,
 			});
-			store.createIndex("project_updated_at_index", "updatedAt", {
+			db.createIndex("project", "project_user_id_index", "user_id", {
 				unique: false,
 			});
-			store.createIndex("project_archived_index", "archived", {
+			db.createIndex("project", "project_created_at_index", "createdAt", {
+				unique: false,
+			});
+			db.createIndex("project", "project_updated_at_index", "updatedAt", {
+				unique: false,
+			});
+			db.createIndex("project", "project_archived_index", "archived", {
 				unique: false,
 			});
 		}
 
-		const todoStore = db.transaction("todo").objectStore("todo");
-		if (!todoStore.indexNames.contains("todo_project_id_index")) {
-			todoStore.createIndex("todo_project_id_index", "project_id", {
+		// Add index to existing todo store
+		if (db.hasStore("todo")) {
+			db.createIndex("todo", "todo_project_id_index", "project_id", {
 				unique: false,
 			});
 		}
 	},
 	// Migration 4: Add attachment table
-	async (db: IDBDatabase) => {
-		if (!db.objectStoreNames.contains("attachment")) {
-			const store = db.createObjectStore("attachment", {
-				keyPath: "id",
-				autoIncrement: false,
-			});
-			store.createIndex("attachment_todo_id_index", "todo_id", {
+	async (db: IDBDatabaseLike) => {
+		if (!db.hasStore("attachment")) {
+			db.createStore("attachment", { keyPath: "id", autoIncrement: false });
+			db.createIndex("attachment", "attachment_todo_id_index", "todo_id", {
 				unique: false,
 			});
-			store.createIndex("attachment_user_id_index", "user_id", {
+			db.createIndex("attachment", "attachment_user_id_index", "user_id", {
 				unique: false,
 			});
-			store.createIndex("attachment_file_name_index", "file_name", {
+			db.createIndex("attachment", "attachment_file_name_index", "file_name", {
 				unique: false,
 			});
-			store.createIndex("attachment_file_type_index", "file_type", {
+			db.createIndex("attachment", "attachment_file_type_index", "file_type", {
 				unique: false,
 			});
-			store.createIndex("attachment_created_at_index", "createdAt", {
+			db.createIndex("attachment", "attachment_created_at_index", "createdAt", {
 				unique: false,
 			});
 		}
@@ -172,7 +174,8 @@ function IndexedDBMigrationContent() {
 			}
 
 			// Check if database is empty (no object stores means newly created)
-			if (existingDb.objectStoreNames.length === 0) {
+			const storeNames = existingDb.getStoreNames();
+			if (storeNames.length === 0) {
 				existingDb.close();
 				// Delete the empty database that was just created
 				await new Promise<void>((resolve, reject) => {
@@ -188,35 +191,21 @@ function IndexedDBMigrationContent() {
 			}
 
 			// Check applied migrations
-			const appliedMigrations: number[] = [];
-			if (existingDb.objectStoreNames.contains("__drizzle_migrations")) {
-				const transaction = existingDb.transaction(
+			let appliedMigrations: number[] = [];
+			if (existingDb.hasStore("__drizzle_migrations")) {
+				const records = await existingDb.getAll<{ id: number }>(
 					"__drizzle_migrations",
-					"readonly",
 				);
-				const store = transaction.objectStore("__drizzle_migrations");
-				const request = store.getAll();
-
-				await new Promise<void>((resolve, reject) => {
-					request.onsuccess = () => {
-						const records = request.result as Array<{ id: number }>;
-						appliedMigrations.push(...records.map((r) => r.id));
-						resolve();
-					};
-					request.onerror = () => reject(request.error);
-				});
+				appliedMigrations = records.map((r) => r.id);
 			}
 
 			// Gather database info
-			const objectStores = Array.from(existingDb.objectStoreNames);
+			const objectStores = storeNames;
 			const indexes: Record<string, string[]> = {};
 
-			if (objectStores.length > 0) {
-				const transaction = existingDb.transaction(objectStores, "readonly");
-				for (const storeName of objectStores) {
-					const store = transaction.objectStore(storeName);
-					indexes[storeName] = Array.from(store.indexNames);
-				}
+			for (const storeName of objectStores) {
+				const storeIndexes = existingDb.getStoreIndexes(storeName);
+				indexes[storeName] = storeIndexes.map((idx) => idx.name);
 			}
 
 			const pendingCount = migrations.length - appliedMigrations.length;
@@ -274,34 +263,19 @@ function IndexedDBMigrationContent() {
 			const endTime = Date.now();
 
 			// Check applied migrations
-			const appliedMigrations: number[] = [];
-			const migrationsTransaction = db.transaction(
-				"__drizzle_migrations",
-				"readonly",
-			);
-			const migrationsStore = migrationsTransaction.objectStore(
+			const migrationRecords = await db.getAll<{ id: number }>(
 				"__drizzle_migrations",
 			);
-			const migrationsRequest = migrationsStore.getAll();
-
-			await new Promise<void>((resolve, reject) => {
-				migrationsRequest.onsuccess = () => {
-					const records = migrationsRequest.result as Array<{ id: number }>;
-					appliedMigrations.push(...records.map((r) => r.id));
-					resolve();
-				};
-				migrationsRequest.onerror = () => reject(migrationsRequest.error);
-			});
+			const appliedMigrations = migrationRecords.map((r) => r.id);
 
 			// Gather database info
-			const objectStores = Array.from(db.objectStoreNames);
+			const objectStores = db.getStoreNames();
 			const indexes: Record<string, string[]> = {};
 
 			// Read indexes for each object store
-			const transaction = db.transaction(objectStores, "readonly");
 			for (const storeName of objectStores) {
-				const store = transaction.objectStore(storeName);
-				indexes[storeName] = Array.from(store.indexNames);
+				const storeIndexes = db.getStoreIndexes(storeName);
+				indexes[storeName] = storeIndexes.map((idx) => idx.name);
 			}
 
 			const migrationsApplied =

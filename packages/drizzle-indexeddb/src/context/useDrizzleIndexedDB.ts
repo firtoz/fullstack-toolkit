@@ -4,6 +4,7 @@ import {
 	useIndexedDBCollection,
 	type DrizzleIndexedDBContextValue,
 } from "./DrizzleIndexedDBProvider";
+import type { IDBDatabaseLike } from "../utils";
 
 export type UseDrizzleIndexedDBContextReturn<
 	TSchema extends Record<string, unknown>,
@@ -11,7 +12,7 @@ export type UseDrizzleIndexedDBContextReturn<
 	useCollection: <TTableName extends keyof TSchema & string>(
 		tableName: TTableName,
 	) => ReturnType<typeof useIndexedDBCollection<TSchema, TTableName>>;
-	indexedDB: IDBDatabase | null;
+	indexedDB: IDBDatabaseLike | null;
 };
 
 export function useDrizzleIndexedDB<

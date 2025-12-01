@@ -14,6 +14,8 @@ import {
 	createCollectionConfig,
 } from "@firtoz/drizzle-utils";
 
+import type { IDBDatabaseLike, KeyRangeSpec } from "../utils";
+
 // biome-ignore lint/suspicious/noExplicitAny: intentional
 type AnyId = IdOf<any>;
 
@@ -99,7 +101,7 @@ export interface IndexedDBCollectionConfig<TTable extends Table> {
 	/**
 	 * Ref to the IndexedDB database instance
 	 */
-	indexedDBRef: React.RefObject<IDBDatabase | null>;
+	indexedDBRef: React.RefObject<IDBDatabaseLike | null>;
 	/**
 	 * The database name (for perf markers)
 	 */
@@ -260,94 +262,63 @@ export function getExpressionValue(
 /**
  * Reads all items from an IndexedDB object store
  */
-function getAllFromStore(
-	db: IDBDatabase,
+async function getAllFromStore(
+	db: IDBDatabaseLike,
 	storeName: string,
 	interceptor?: IDBInterceptor,
 ): Promise<IndexedDBSyncItem[]> {
-	return new Promise((resolve, reject) => {
-		if (!db.objectStoreNames.contains(storeName)) {
-			resolve([]);
-			return;
-		}
+	const items = await db.getAll<IndexedDBSyncItem>(storeName);
 
-		const transaction = db.transaction(storeName, "readonly");
+	// Log operation after executing with results
+	if (interceptor?.onOperation) {
+		interceptor.onOperation({
+			type: "getAll",
+			storeName,
+			itemsReturned: items,
+			itemCount: items.length,
+			context: "Full table scan",
+			timestamp: Date.now(),
+		});
+	}
 
-		const store = transaction.objectStore(storeName);
-
-		const request = store.getAll();
-
-		request.onsuccess = () => {
-			const items = request.result as IndexedDBSyncItem[];
-
-			// Log operation after executing with results
-			if (interceptor?.onOperation) {
-				interceptor.onOperation({
-					type: "getAll",
-					storeName,
-					itemsReturned: items,
-					itemCount: items.length,
-					context: "Full table scan",
-					timestamp: Date.now(),
-				});
-			}
-
-			resolve(items);
-		};
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-	});
+	return items;
 }
 
 /**
  * Reads items from an IndexedDB index with an optional key range
  * Note: Index existence is validated at collection creation time
  */
-function getAllFromIndex(
-	db: IDBDatabase,
+async function getAllFromIndex(
+	db: IDBDatabaseLike,
 	storeName: string,
 	indexName: string,
-	keyRange?: IDBKeyRange,
+	keyRange?: KeyRangeSpec,
 	interceptor?: IDBInterceptor,
 ): Promise<IndexedDBSyncItem[]> {
-	return new Promise((resolve, reject) => {
-		const transaction = db.transaction(storeName, "readonly");
+	const items = await db.getAllByIndex<IndexedDBSyncItem>(
+		storeName,
+		indexName,
+		keyRange,
+	);
 
-		const store = transaction.objectStore(storeName);
+	// Log operation after executing with results
+	if (interceptor?.onOperation) {
+		const rangeDesc = keyRange
+			? `[${keyRange.lower ?? keyRange.value ?? ""}..${keyRange.upper ?? keyRange.value ?? ""}]`
+			: "all";
+		interceptor.onOperation({
+			type: "index-getAll",
+			storeName,
+			indexName,
+			keyRange: keyRange as unknown as IDBKeyRange | undefined,
+			itemsReturned: items,
+			itemCount: items.length,
+			context: `Index query on ${indexName}, range: ${rangeDesc}`,
+			timestamp: Date.now(),
+		});
+	}
 
-		const index = store.index(indexName);
-
-		const request = keyRange ? index.getAll(keyRange) : index.getAll();
-
-		request.onsuccess = () => {
-			const items = request.result as IndexedDBSyncItem[];
-
-			// Log operation after executing with results
-			if (interceptor?.onOperation) {
-				const rangeDesc = keyRange
-					? `[${keyRange.lower ?? ""}..${keyRange.upper ?? ""}]`
-					: "all";
-				interceptor.onOperation({
-					type: "index-getAll",
-					storeName,
-					indexName,
-					keyRange,
-					itemsReturned: items,
-					itemCount: items.length,
-					context: `Index query on ${indexName}, range: ${rangeDesc}`,
-					timestamp: Date.now(),
-				});
-			}
-
-			resolve(items);
-		};
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-	});
+	return items;
 }
 
 /**
@@ -369,7 +340,7 @@ export function tryExtractIndexedQuery(
 	expression: IR.BasicExpression,
 	indexes?: Record<string, string>,
 	debug?: boolean,
-): { fieldName: string; indexName: string; keyRange: IDBKeyRange } | null {
+): { fieldName: string; indexName: string; keyRange: KeyRangeSpec } | null {
 	if (!indexes) {
 		return null;
 	}
@@ -391,25 +362,40 @@ export function tryExtractIndexedQuery(
 			return null;
 		}
 
-		// Convert operator to IndexedDB key range
-
-		let keyRange: IDBKeyRange | null = null;
+		// Convert operator to key range spec
+		let keyRange: KeyRangeSpec | null = null;
 
 		switch (comparison.operator) {
 			case "eq":
-				keyRange = IDBKeyRange.only(comparison.value);
+				keyRange = { type: "only", value: comparison.value };
 				break;
 			case "gt":
-				keyRange = IDBKeyRange.lowerBound(comparison.value, true);
+				keyRange = {
+					type: "lowerBound",
+					lower: comparison.value,
+					lowerOpen: true,
+				};
 				break;
 			case "gte":
-				keyRange = IDBKeyRange.lowerBound(comparison.value, false);
+				keyRange = {
+					type: "lowerBound",
+					lower: comparison.value,
+					lowerOpen: false,
+				};
 				break;
 			case "lt":
-				keyRange = IDBKeyRange.upperBound(comparison.value, true);
+				keyRange = {
+					type: "upperBound",
+					upper: comparison.value,
+					upperOpen: true,
+				};
 				break;
 			case "lte":
-				keyRange = IDBKeyRange.upperBound(comparison.value, false);
+				keyRange = {
+					type: "upperBound",
+					upper: comparison.value,
+					upperOpen: false,
+				};
 				break;
 			default:
 				if (debug) {
@@ -433,104 +419,7 @@ export function tryExtractIndexedQuery(
 	}
 }
 
-/**
- * Adds an item to an IndexedDB object store using an existing transaction
- */
-function addToStoreInTransaction(
-	store: IDBObjectStore,
-	item: IndexedDBSyncItem,
-): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const request = store.add(item);
-
-		request.onsuccess = () => {
-			resolve();
-		};
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-	});
-}
-
-/**
- * Updates an item in an IndexedDB object store using an existing transaction
- */
-function updateInStoreInTransaction(
-	store: IDBObjectStore,
-	item: IndexedDBSyncItem,
-): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const request = store.put(item);
-
-		request.onsuccess = () => {
-			resolve();
-		};
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-	});
-}
-
-/**
- * Deletes an item from an IndexedDB object store using an existing transaction
- */
-function deleteFromStoreInTransaction(
-	store: IDBObjectStore,
-	id: string,
-): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const request = store.delete(id);
-
-		request.onsuccess = () => {
-			resolve();
-		};
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-	});
-}
-
-/**
- * Gets a single item from an IndexedDB object store by ID using an existing transaction
- */
-function getFromStoreInTransaction(
-	store: IDBObjectStore,
-	id: AnyId,
-): Promise<IndexedDBSyncItem | undefined> {
-	return new Promise((resolve, reject) => {
-		const request = store.get(id);
-
-		request.onsuccess = () => {
-			resolve(request.result as IndexedDBSyncItem | undefined);
-		};
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-	});
-}
-
-/**
- * Executes a transaction and returns a promise that resolves when the transaction completes
- */
-function commitTransaction(transaction: IDBTransaction): Promise<void> {
-	return new Promise((resolve, reject) => {
-		transaction.oncomplete = () => {
-			resolve();
-		};
-
-		transaction.onerror = () => {
-			reject(transaction.error);
-		};
-
-		transaction.onabort = () => {
-			reject(new Error("Transaction aborted"));
-		};
-	});
-}
+// Note: Low-level transaction helpers have been replaced by high-level IDBDatabaseLike methods
 
 /**
  * Auto-discovers indexes from the IndexedDB store
@@ -553,30 +442,17 @@ function commitTransaction(transaction: IDBTransaction): Promise<void> {
  * // This collection will auto-detect and use them for optimized queries
  */
 function discoverIndexes(
-	db: IDBDatabase,
+	db: IDBDatabaseLike,
 	storeName: string,
 ): Record<string, string> {
-	if (!db.objectStoreNames.contains(storeName)) {
-		return {};
-	}
-
-	const transaction = db.transaction(storeName, "readonly");
-
-	const store = transaction.objectStore(storeName);
-
+	const indexes = db.getStoreIndexes(storeName);
 	const indexMap: Record<string, string> = {};
 
-	// Iterate through all indexes in the store
-	const indexNames = Array.from(store.indexNames);
-
-	for (const indexName of indexNames) {
-		const index = store.index(indexName);
-		const keyPath = index.keyPath;
-
+	for (const index of indexes) {
 		// Only map single-column indexes (string keyPath)
 		// Compound indexes (array keyPath) are more complex and not currently optimized
-		if (typeof keyPath === "string") {
-			indexMap[keyPath] = indexName;
+		if (typeof index.keyPath === "string") {
+			indexMap[index.keyPath] = index.name;
 		}
 	}
 
@@ -753,31 +629,17 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
 			try {
-				// Use a single transaction for all inserts
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				const transaction = config.indexedDBRef.current!.transaction(
-					config.storeName,
-					"readwrite",
-				);
-				const store = transaction.objectStore(config.storeName);
-
-				const addPromises: Promise<void>[] = [];
+				const itemsToInsert: IndexedDBSyncItem[] = [];
 
 				for (const mutation of mutations) {
 					const itemToInsert = mutation.modified;
-
-					// Add result for reactive store
 					results.push(itemToInsert);
-
-					// Add to IndexedDB in parallel (don't await yet)
-					addPromises.push(
-						addToStoreInTransaction(store, itemToInsert as IndexedDBSyncItem),
-					);
+					itemsToInsert.push(itemToInsert as IndexedDBSyncItem);
 				}
 
-				// Wait for all IndexedDB writes to complete
-				await Promise.all(addPromises);
-				await commitTransaction(transaction);
+				// Add all items in a single batch operation
+				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
+				await config.indexedDBRef.current!.add(config.storeName, itemsToInsert);
 			} catch (error) {
 				// Clear results on error so nothing gets written to reactive store
 				results.length = 0;
@@ -789,19 +651,16 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 		handleUpdate: async (mutations) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
-			const originalValues: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
-			// Use a single transaction for all updates
+			const itemsToUpdate: IndexedDBSyncItem[] = [];
+
 			// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-			const transaction = config.indexedDBRef.current!.transaction(
-				config.storeName,
-				"readwrite",
-			);
-			const store = transaction.objectStore(config.storeName);
+			const db = config.indexedDBRef.current!;
 
 			for (const mutation of mutations) {
-				originalValues.push(mutation.original);
-
-				const existing = await getFromStoreInTransaction(store, mutation.key);
+				const existing = await db.get<IndexedDBSyncItem>(
+					config.storeName,
+					mutation.key,
+				);
 
 				if (existing) {
 					const updateTime = new Date();
@@ -811,7 +670,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 						updatedAt: updateTime,
 					} as IndexedDBSyncItem;
 
-					await updateInStoreInTransaction(store, updatedItem);
+					itemsToUpdate.push(updatedItem);
 					results.push(
 						updatedItem as unknown as InferSchemaOutput<SelectSchema<TTable>>,
 					);
@@ -821,27 +680,20 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				}
 			}
 
-			// Wait for transaction to complete
-			await commitTransaction(transaction);
+			// Update all items in a single batch operation
+			if (itemsToUpdate.length > 0) {
+				await db.put(config.storeName, itemsToUpdate);
+			}
 
 			return results;
 		},
 
 		handleDelete: async (mutations) => {
-			// Use a single transaction for all deletes
+			const keysToDelete: IDBValidKey[] = mutations.map((m) => m.key);
+
+			// Delete all items in a single batch operation
 			// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-			const transaction = config.indexedDBRef.current!.transaction(
-				config.storeName,
-				"readwrite",
-			);
-			const store = transaction.objectStore(config.storeName);
-
-			for (const mutation of mutations) {
-				await deleteFromStoreInTransaction(store, mutation.key);
-			}
-
-			// Wait for transaction to complete
-			await commitTransaction(transaction);
+			await config.indexedDBRef.current!.delete(config.storeName, keysToDelete);
 		},
 	};
 

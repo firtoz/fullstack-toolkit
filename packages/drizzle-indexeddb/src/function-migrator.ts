@@ -1,8 +1,8 @@
 // IndexedDB migrator that executes generated migration functions
 
-import { openIndexedDb } from "./utils";
+import { type IDBCreator, type IDBDatabaseLike, openIndexedDb } from "./utils";
 
-export type IndexedDBMigrationFunction = (db: IDBDatabase) => Promise<void>;
+export type IndexedDBMigrationFunction = (db: IDBDatabaseLike) => Promise<void>;
 
 interface MigrationRecord {
 	id: number;
@@ -12,126 +12,113 @@ interface MigrationRecord {
 const MIGRATIONS_STORE = "__drizzle_migrations";
 
 /**
- * Runs IndexedDB migrations using generated migration functions
+ * Runs IndexedDB migrations using generated migration functions.
+ * Version = total migrations + 1.
+ *
+ * Works with any IDBCreator implementation, including custom proxies/mocks.
  *
  * Example usage:
  * ```typescript
  * import { migrations } from './drizzle/indexeddb-migrations';
  * import { migrateIndexedDBWithFunctions } from '@firtoz/drizzle-indexeddb';
  *
- * const db = await migrateIndexedDBWithFunctions('my-db', migrations, true);
+ * const db = await migrateIndexedDBWithFunctions('my-db', migrations);
  * ```
  */
 export async function migrateIndexedDBWithFunctions(
 	dbName: string,
 	migrations: IndexedDBMigrationFunction[],
 	debug: boolean = false,
-): Promise<IDBDatabase> {
+	dbCreator?: IDBCreator,
+): Promise<IDBDatabaseLike> {
+	if (debug) {
+		console.log(`[IndexedDB] Starting migration for ${dbName}`);
+	}
+
+	// Target version = number of migrations + 1
+	const targetVersion = migrations.length + 1;
+
+	// Open database to check current state
+	let db = await openIndexedDb(dbName, dbCreator);
+	const currentVersion = db.version;
+
 	if (debug) {
 		console.log(
-			`[${new Date().toISOString()}] [PERF] IndexedDB migrator start for ${dbName}`,
+			`[IndexedDB] Current version: ${currentVersion}, Target: ${targetVersion}`,
 		);
 	}
 
-	// First, open the database to check which migrations have been applied
-	const db = await openIndexedDb(dbName);
+	// If already at target version, check if all migrations are recorded
+	if (currentVersion >= targetVersion) {
+		const applied = await getAppliedMigrations(db);
+		if (applied.length === migrations.length) {
+			if (debug) {
+				console.log("[IndexedDB] Already up to date");
+			}
+			return db;
+		}
+	}
 
+	// Get applied migrations before closing
 	const appliedMigrations = await getAppliedMigrations(db);
+	const appliedSet = new Set(appliedMigrations.map((m) => m.id));
 
-	const latestAppliedIdx =
-		appliedMigrations.length > 0
-			? Math.max(...appliedMigrations.map((m) => m.id))
-			: -1;
-
-	if (debug) {
-		console.log(
-			`[${new Date().toISOString()}] [PERF] Latest applied migration index: ${latestAppliedIdx} (checked ${appliedMigrations.length} migrations)`,
-		);
-	}
-
-	// Determine which migrations need to be applied
+	// Find pending migrations
 	const pendingMigrations = migrations
 		.map((fn, idx) => ({ fn, idx }))
-		.filter(({ idx }) => idx > latestAppliedIdx);
+		.filter(({ idx }) => !appliedSet.has(idx));
 
 	if (pendingMigrations.length === 0) {
 		if (debug) {
-			console.log(
-				`[${new Date().toISOString()}] [PERF] No pending migrations - database is up to date`,
-			);
-		}
-
-		if (debug) {
-			console.log(
-				`[${new Date().toISOString()}] [PERF] Migrator complete (no migrations needed)`,
-			);
+			console.log("[IndexedDB] No pending migrations");
 		}
 		return db;
 	}
 
 	if (debug) {
 		console.log(
-			`[${new Date().toISOString()}] [PERF] Found ${pendingMigrations.length} pending migrations to apply`,
+			`[IndexedDB] ${pendingMigrations.length} pending migrations to apply`,
 		);
 	}
 
-	try {
-		// Ensure migrations store exists
-		if (!db.objectStoreNames.contains(MIGRATIONS_STORE)) {
-			const migrationStore = db.createObjectStore(MIGRATIONS_STORE, {
-				keyPath: "id",
-				autoIncrement: false,
-			});
-			migrationStore.createIndex("appliedAt", "appliedAt", {
-				unique: false,
-			});
-			if (debug) {
-				console.log(
-					`[${new Date().toISOString()}] [PERF] Created migrations tracking store`,
-				);
-			}
-		}
+	// Close to allow version upgrade
+	db.close();
 
-		// Apply each pending migration
-		for (const { fn, idx } of pendingMigrations) {
-			if (debug) {
-				console.log(
-					`[${new Date().toISOString()}] [PERF] Applying migration ${idx}...`,
-				);
+	// Open with target version, running migrations during upgrade
+	await openIndexedDb(dbName, dbCreator, {
+		version: targetVersion,
+		onUpgrade: (upgradeDb) => {
+			// Ensure migrations store exists
+			if (!upgradeDb.hasStore(MIGRATIONS_STORE)) {
+				upgradeDb.createStore(MIGRATIONS_STORE, {
+					keyPath: "id",
+					autoIncrement: false,
+				});
+				if (debug) {
+					console.log("[IndexedDB] Created migrations store");
+				}
 			}
 
-			// Execute the migration function
-			await fn(db);
-
-			// Record the migration
-			const migrationStore = db
-				.transaction(MIGRATIONS_STORE)
-				.objectStore(MIGRATIONS_STORE);
-			migrationStore.add({
-				id: idx,
-				appliedAt: Date.now(),
-			});
-
-			if (debug) {
-				console.log(
-					`[${new Date().toISOString()}] [PERF] Migration ${idx} complete`,
-				);
+			// Run pending migrations
+			for (const { fn, idx } of pendingMigrations) {
+				if (debug) {
+					console.log(`[IndexedDB] Running migration ${idx}`);
+				}
+				fn(upgradeDb);
 			}
-		}
+		},
+	});
 
-		if (debug) {
-			console.log(
-				`[${new Date().toISOString()}] [PERF] All ${pendingMigrations.length} migrations applied successfully`,
-			);
-		}
-	} catch (error) {
-		console.error("[IndexedDBMigrator] Migration failed:", error);
-		throw error;
+	// Reopen normally and record applied migrations
+	db = await openIndexedDb(dbName, dbCreator);
+
+	for (const { idx } of pendingMigrations) {
+		await db.add(MIGRATIONS_STORE, [{ id: idx, appliedAt: Date.now() }]);
 	}
 
 	if (debug) {
 		console.log(
-			`[${new Date().toISOString()}] [PERF] Migrator complete - database ready`,
+			`[IndexedDB] Applied ${pendingMigrations.length} migrations, now at version ${targetVersion}`,
 		);
 	}
 
@@ -139,27 +126,13 @@ export async function migrateIndexedDBWithFunctions(
 }
 
 /**
- * Gets the list of applied migrations from the database
+ * Gets applied migrations from the database.
  */
 async function getAppliedMigrations(
-	db: IDBDatabase,
+	db: IDBDatabaseLike,
 ): Promise<MigrationRecord[]> {
-	if (!db.objectStoreNames.contains(MIGRATIONS_STORE)) {
+	if (!db.hasStore(MIGRATIONS_STORE)) {
 		return [];
 	}
-
-	return new Promise((resolve, reject) => {
-		const transaction = db.transaction(MIGRATIONS_STORE, "readonly");
-
-		const store = transaction.objectStore(MIGRATIONS_STORE);
-
-		const request = store.getAll();
-
-		request.onerror = () => {
-			reject(request.error);
-		};
-		request.onsuccess = () => {
-			resolve(request.result);
-		};
-	});
+	return db.getAll<MigrationRecord>(MIGRATIONS_STORE);
 }
