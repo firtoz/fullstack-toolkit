@@ -1,6 +1,7 @@
 // IndexedDB migrator with declarative migration format
 
-import { type IDBCreator, type IDBDatabaseLike, openIndexedDb } from "./utils";
+import type { IDBCreator, IDBDatabaseLike } from "./idb-types";
+import { openIndexedDb } from "./idb-operations";
 
 // ============================================================================
 // Declarative Migration Types

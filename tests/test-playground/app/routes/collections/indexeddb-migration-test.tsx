@@ -3,7 +3,7 @@ import {
 	migrateIndexedDBWithFunctions,
 	type Migration,
 } from "@firtoz/drizzle-indexeddb";
-import { openIndexedDb } from "@firtoz/drizzle-indexeddb/utils";
+import { openIndexedDb } from "@firtoz/drizzle-indexeddb";
 
 // Declarative migrations for testing purposes (5 migrations total)
 const testMigrations: Migration[] = [

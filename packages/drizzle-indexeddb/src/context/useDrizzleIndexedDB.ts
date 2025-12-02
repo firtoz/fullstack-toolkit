@@ -4,7 +4,7 @@ import {
 	useIndexedDBCollection,
 	type DrizzleIndexedDBContextValue,
 } from "./DrizzleIndexedDBProvider";
-import type { IDBDatabaseLike } from "../utils";
+import type { IDBDatabaseLike } from "../idb-types";
 
 export type UseDrizzleIndexedDBContextReturn<
 	TSchema extends Record<string, unknown>,

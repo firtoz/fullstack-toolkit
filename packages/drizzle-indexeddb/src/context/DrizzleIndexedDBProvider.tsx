@@ -19,7 +19,6 @@ import { getTableName, type Table } from "drizzle-orm";
 import {
 	indexedDBCollectionOptions,
 	type IndexedDBCollectionConfig,
-	type IDBInterceptor,
 } from "@firtoz/drizzle-indexeddb";
 import type {
 	IdOf,
@@ -32,7 +31,8 @@ import {
 	type Migration,
 	migrateIndexedDBWithFunctions,
 } from "../function-migrator";
-import { type IDBCreator, type IDBDatabaseLike, openIndexedDb } from "../utils";
+import type { IDBCreator, IDBDatabaseLike } from "../idb-types";
+import { openIndexedDb } from "../idb-operations";
 
 interface CollectionCacheEntry {
 	// biome-ignore lint/suspicious/noExplicitAny: Cache needs to store collections of various types
@@ -82,10 +82,10 @@ type DrizzleIndexedDBProviderProps<TSchema extends Record<string, unknown>> =
 		debug?: boolean;
 		syncMode?: SyncMode;
 		/**
-		 * Optional interceptor for tracking IndexedDB operations (for testing/debugging)
+		 * Optional custom database creator for testing/mocking.
+		 * Use createInstrumentedDbCreator() to track IndexedDB operations.
 		 */
-		interceptor?: IDBInterceptor;
-		dbCreator?: (dbName: string) => Promise<IDBDatabaseLike>;
+		dbCreator?: IDBCreator;
 	}>;
 
 export function DrizzleIndexedDBProvider<
@@ -98,7 +98,6 @@ export function DrizzleIndexedDBProvider<
 	migrateFunction = migrateIndexedDBWithFunctions,
 	debug = false,
 	syncMode = "eager",
-	interceptor,
 	dbCreator,
 }: DrizzleIndexedDBProviderProps<TSchema>) {
 	const [indexedDB, setIndexedDB] = useState<IDBDatabaseLike | null>(null);
@@ -184,7 +183,6 @@ export function DrizzleIndexedDBProvider<
 						readyPromise: readyPromise.promise,
 						debug,
 						syncMode,
-						interceptor,
 					} as IndexedDBCollectionConfig<Table>),
 				);
 
@@ -206,7 +204,6 @@ export function DrizzleIndexedDBProvider<
 			debug,
 			dbName,
 			syncMode,
-			interceptor,
 		],
 	);
 

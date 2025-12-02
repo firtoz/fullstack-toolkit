@@ -8,23 +8,35 @@ export {
 	type DeleteIndexOperation,
 } from "./function-migrator";
 
-export {
-	deleteIndexedDB,
-	type IDBCreator,
-	type IDBOpenOptions,
-	type IDBDatabaseLike,
-	type IndexInfo,
-	type CreateStoreOptions,
-	type CreateIndexOptions,
-	type KeyRangeSpec,
-} from "./utils";
+// IDB Types
+export type {
+	IDBCreator,
+	IDBOpenOptions,
+	IDBDatabaseLike,
+	IDBDeleter,
+	IndexInfo,
+	CreateStoreOptions,
+	CreateIndexOptions,
+	KeyRangeSpec,
+} from "./idb-types";
 
+// IDB Interceptor (for testing/debugging)
+export type { IDBInterceptor, IDBOperation } from "./idb-interceptor";
+
+// IDB Operations
+export { openIndexedDb, deleteIndexedDB } from "./idb-operations";
+
+// Native IDB Implementation
+export { defaultIDBCreator } from "./native-idb-database";
+
+// Instrumented IDB (for testing)
+export { createInstrumentedDbCreator } from "./instrumented-idb-database";
+
+// Collection
 export {
 	indexedDBCollectionOptions,
 	type IndexedDBCollectionConfig,
 	type IndexedDBSyncItem,
-	type IDBInterceptor,
-	type IDBOperation,
 } from "./collections/indexeddb-collection";
 
 // IndexedDB Provider

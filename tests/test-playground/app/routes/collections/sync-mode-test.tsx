@@ -4,7 +4,7 @@ import { useSearchParams, Link, href } from "react-router";
 import {
 	DrizzleIndexedDBProvider,
 	useDrizzleIndexedDB,
-	type IDBInterceptor,
+	createInstrumentedDbCreator,
 	type IDBOperation,
 } from "@firtoz/drizzle-indexeddb";
 import {
@@ -862,13 +862,14 @@ export default function SyncModeTest() {
 	// Track IDB operations
 	const [operations, setOperations] = useState<IDBOperation[]>([]);
 
-	// Create interceptor to track operations
-	const interceptor: IDBInterceptor = useMemo(
-		() => ({
-			onOperation: (op: IDBOperation) => {
-				setOperations((prev) => [...prev, op]);
-			},
-		}),
+	// Create instrumented db creator to track operations
+	const dbCreator = useMemo(
+		() =>
+			createInstrumentedDbCreator({
+				onOperation: (op: IDBOperation) => {
+					setOperations((prev) => [...prev, op]);
+				},
+			}),
 		[],
 	);
 
@@ -929,7 +930,7 @@ export default function SyncModeTest() {
 				migrations={migrations}
 				syncMode={syncMode}
 				debug={true}
-				interceptor={interceptor}
+				dbCreator={dbCreator}
 			>
 				<SyncModeTestContent
 					operations={operations}

@@ -14,7 +14,7 @@ import {
 	createCollectionConfig,
 } from "@firtoz/drizzle-utils";
 
-import type { IDBDatabaseLike, KeyRangeSpec } from "../utils";
+import type { IDBDatabaseLike, KeyRangeSpec } from "../idb-types";
 
 // biome-ignore lint/suspicious/noExplicitAny: intentional
 type AnyId = IdOf<any>;
@@ -29,73 +29,6 @@ export type IndexedDBSyncItem = {
 	deletedAt: Date | null;
 	[key: string]: unknown;
 };
-
-/**
- * Operation tracking for IndexedDB queries
- * Useful for testing and debugging to verify what operations are actually performed
- *
- * Uses discriminated unions for type safety - TypeScript can narrow the type based on the 'type' field
- */
-export type IDBOperation =
-	| {
-			type: "getAll";
-			storeName: string;
-			itemsReturned: unknown[];
-			itemCount: number;
-			context: string;
-			timestamp: number;
-	  }
-	| {
-			type: "index-getAll";
-			storeName: string;
-			indexName: string;
-			keyRange?: IDBKeyRange;
-			itemsReturned: unknown[];
-			itemCount: number;
-			context: string;
-			timestamp: number;
-	  }
-	| {
-			type: "write";
-			storeName: string;
-			itemsWritten: unknown[];
-			writeCount: number;
-			context: string;
-			timestamp: number;
-	  }
-	| {
-			type: "get";
-			storeName: string;
-			key: IDBValidKey;
-			itemReturned?: unknown;
-			timestamp: number;
-	  }
-	| {
-			type: "put";
-			storeName: string;
-			item: unknown;
-			timestamp: number;
-	  }
-	| {
-			type: "delete";
-			storeName: string;
-			key: IDBValidKey;
-			timestamp: number;
-	  }
-	| {
-			type: "clear";
-			storeName: string;
-			timestamp: number;
-	  };
-
-/**
- * Interceptor interface for tracking IndexedDB operations
- * Allows tests and debugging tools to observe what operations are performed
- */
-export interface IDBInterceptor {
-	/** Called when any IndexedDB operation is performed */
-	onOperation?: (operation: IDBOperation) => void;
-}
 
 export interface IndexedDBCollectionConfig<TTable extends Table> {
 	/**
@@ -126,10 +59,6 @@ export interface IndexedDBCollectionConfig<TTable extends Table> {
 	 * Enable debug logging for index discovery and query optimization
 	 */
 	debug?: boolean;
-	/**
-	 * Optional interceptor for tracking IndexedDB operations (for testing/debugging)
-	 */
-	interceptor?: IDBInterceptor;
 }
 
 /**
@@ -257,68 +186,6 @@ export function getExpressionValue(
 	}
 
 	throw new Error(`Cannot get value from expression type: ${expression.type}`);
-}
-
-/**
- * Reads all items from an IndexedDB object store
- */
-async function getAllFromStore(
-	db: IDBDatabaseLike,
-	storeName: string,
-	interceptor?: IDBInterceptor,
-): Promise<IndexedDBSyncItem[]> {
-	const items = await db.getAll<IndexedDBSyncItem>(storeName);
-
-	// Log operation after executing with results
-	if (interceptor?.onOperation) {
-		interceptor.onOperation({
-			type: "getAll",
-			storeName,
-			itemsReturned: items,
-			itemCount: items.length,
-			context: "Full table scan",
-			timestamp: Date.now(),
-		});
-	}
-
-	return items;
-}
-
-/**
- * Reads items from an IndexedDB index with an optional key range
- * Note: Index existence is validated at collection creation time
- */
-async function getAllFromIndex(
-	db: IDBDatabaseLike,
-	storeName: string,
-	indexName: string,
-	keyRange?: KeyRangeSpec,
-	interceptor?: IDBInterceptor,
-): Promise<IndexedDBSyncItem[]> {
-	const items = await db.getAllByIndex<IndexedDBSyncItem>(
-		storeName,
-		indexName,
-		keyRange,
-	);
-
-	// Log operation after executing with results
-	if (interceptor?.onOperation) {
-		const rangeDesc = keyRange
-			? `[${keyRange.lower ?? keyRange.value ?? ""}..${keyRange.upper ?? keyRange.value ?? ""}]`
-			: "all";
-		interceptor.onOperation({
-			type: "index-getAll",
-			storeName,
-			indexName,
-			keyRange: keyRange as unknown as IDBKeyRange | undefined,
-			itemsReturned: items,
-			itemCount: items.length,
-			context: `Index query on ${indexName}, range: ${rangeDesc}`,
-			timestamp: Date.now(),
-		});
-	}
-
-	return items;
 }
 
 /**
@@ -475,10 +342,14 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	const discoverIndexesOnce = async () => {
 		await config.readyPromise;
 
+		const db = config.indexedDBRef.current;
+		if(!db) {
+			throw new Error("Database not ready");
+		}
+
 		if (!indexesDiscovered) {
 			discoveredIndexes = discoverIndexes(
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				config.indexedDBRef.current!,
+				db,
 				config.storeName,
 			);
 
@@ -489,26 +360,14 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	// Create backend-specific implementation
 	const backend: SyncBackend<TTable> = {
 		initialLoad: async (write) => {
+			const db = config.indexedDBRef.current;
+			if(!db) {
+				throw new Error("Database not ready");
+			}
+
 			await discoverIndexesOnce();
 
-			const items = await getAllFromStore(
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				config.indexedDBRef.current!,
-				config.storeName,
-				config.interceptor,
-			);
-
-			// Log what's being written to the collection
-			if (config.interceptor?.onOperation) {
-				config.interceptor.onOperation({
-					type: "write",
-					storeName: config.storeName,
-					itemsWritten: items,
-					writeCount: items.length,
-					context: "Initial load (eager mode)",
-					timestamp: Date.now(),
-				});
-			}
+			const items = await db.getAll<IndexedDBSyncItem>(config.storeName);
 
 			for (const item of items) {
 				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
@@ -516,11 +375,15 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		},
 
 		loadSubset: async (options, write) => {
+			const db = config.indexedDBRef.current;
+			if(!db) {
+				throw new Error("Database not ready");
+			}
+
 			// Ensure indexes are discovered before we try to use them
 			if (!indexesDiscovered) {
 				discoveredIndexes = discoverIndexes(
-					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-					config.indexedDBRef.current!,
+					db,
 					config.storeName,
 				);
 				indexesDiscovered = true;
@@ -535,22 +398,11 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 			if (indexedQuery) {
 				// Use indexed query for better performance
-				items = await getAllFromIndex(
-					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-					config.indexedDBRef.current!,
-					config.storeName,
-					indexedQuery.indexName,
-					indexedQuery.keyRange,
-					config.interceptor,
-				);
+				
+				items = await db.getAllByIndex<IndexedDBSyncItem>(config.storeName, indexedQuery.indexName, indexedQuery.keyRange);
 			} else {
 				// Fall back to getting all items
-				items = await getAllFromStore(
-					// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-					config.indexedDBRef.current!,
-					config.storeName,
-					config.interceptor,
-				);
+				items = await db.getAll<IndexedDBSyncItem>(config.storeName);
 
 				// Apply where filter in memory
 				if (options.where) {
@@ -595,37 +447,17 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				items = items.slice(0, options.limit);
 			}
 
-			// Log what's being written to the collection
-			if (config.interceptor?.onOperation) {
-				const contextParts: string[] = ["On-demand load"];
-				if (indexedQuery) {
-					contextParts.push(`via index ${indexedQuery.indexName}`);
-				} else if (options.where) {
-					contextParts.push("via full scan + in-memory filter");
-				}
-				if (options.orderBy) {
-					contextParts.push("with sorting");
-				}
-				if (options.limit !== undefined) {
-					contextParts.push(`limit ${options.limit}`);
-				}
-
-				config.interceptor.onOperation({
-					type: "write",
-					storeName: config.storeName,
-					itemsWritten: items,
-					writeCount: items.length,
-					context: contextParts.join(", "),
-					timestamp: Date.now(),
-				});
-			}
-
 			for (const item of items) {
 				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
 			}
 		},
 
 		handleInsert: async (mutations) => {
+			const db = config.indexedDBRef.current;
+			if(!db) {
+				throw new Error("Database not ready");
+			}
+
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
 			try {
@@ -638,8 +470,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				}
 
 				// Add all items in a single batch operation
-				// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-				await config.indexedDBRef.current!.add(config.storeName, itemsToInsert);
+				await db.add(config.storeName, itemsToInsert);
 			} catch (error) {
 				// Clear results on error so nothing gets written to reactive store
 				results.length = 0;
@@ -650,11 +481,14 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		},
 
 		handleUpdate: async (mutations) => {
+			const db = config.indexedDBRef.current;
+
+			if(!db) {
+				throw new Error("Database not ready");
+			}
+
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 			const itemsToUpdate: IndexedDBSyncItem[] = [];
-
-			// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-			const db = config.indexedDBRef.current!;
 
 			for (const mutation of mutations) {
 				const existing = await db.get<IndexedDBSyncItem>(
@@ -689,11 +523,16 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		},
 
 		handleDelete: async (mutations) => {
+			const db = config.indexedDBRef.current;
+
+			if(!db) {
+				throw new Error("Database not ready");
+			}
+
 			const keysToDelete: IDBValidKey[] = mutations.map((m) => m.key);
 
 			// Delete all items in a single batch operation
-			// biome-ignore lint/style/noNonNullAssertion: DB is guaranteed to be ready after readyPromise resolves
-			await config.indexedDBRef.current!.delete(config.storeName, keysToDelete);
+			await db.delete(config.storeName, keysToDelete);
 		},
 	};
 
