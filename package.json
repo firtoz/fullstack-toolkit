@@ -20,9 +20,9 @@
 		"react-router": "^7.9.6",
 		"vitest": "3.2.4",
 		"wrangler": "^4.51.0",
-		"@tanstack/db": "^0.5.8",
+		"@tanstack/db": "^0.5.9",
 		"zod": "^4.1.13",
-		"@sqlite.org/sqlite-wasm": "^3.51.1-build1",
+		"@sqlite.org/sqlite-wasm": "^3.51.1-build2",
 		"drizzle-orm": "^0.44.7",
 		"zod-form-data": "^3.0.1"
 	},
