@@ -1,5 +1,27 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.3.0
+
+### Minor Changes
+
+- [`5e854a6`](https://github.com/firtoz/fullstack-toolkit/commit/5e854a62236a811918a47037a59df23329856614) Thanks [@firtoz](https://github.com/firtoz)! - ### Breaking Changes
+
+  - Removed `migrateIndexedDB` and `IndexedDBMigrationConfig` exports - use `migrateIndexedDBWithFunctions` instead
+  - Removed snapshot-based migration system in favor of function-based migrations
+
+  ### New Features
+
+  - Added `drizzle-indexeddb-generate` CLI tool to generate IndexedDB migration functions from Drizzle snapshots
+  - Added `generateIndexedDBMigrations` export for programmatic migration generation
+  - Added `./generate` export path
+
+  ### Migration Guide
+
+  Instead of importing snapshots directly and using `migrateIndexedDB`, you now:
+
+  1. Run `bun drizzle-indexeddb-generate` (or `npx drizzle-indexeddb-generate`) after `drizzle-kit generate`
+  2. Import the generated migrations and use `migrateIndexedDBWithFunctions`
+
 ## 0.2.0
 
 ### Minor Changes
