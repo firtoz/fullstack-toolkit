@@ -1,5 +1,17 @@
 # @firtoz/drizzle-utils
 
+## 0.3.0
+
+### Minor Changes
+
+- [`46059a2`](https://github.com/firtoz/fullstack-toolkit/commit/46059a28bd0135414b9ed022ffe162a2292adae3) Thanks [@firtoz](https://github.com/firtoz)! - Add external sync support and collection truncate utilities:
+
+  - **`ExternalSyncEvent`** / **`ExternalSyncHandler`** types for receiving sync events from external sources (e.g., proxy server)
+  - **`CollectionUtils`** interface with `truncate()` method for clearing all data from a store
+  - **`handleTruncate`** added to `SyncBackend` interface
+  - **`pushExternalSync`** exposed on `SyncFunctionResult` for pushing external sync events to collections
+  - `createSyncFunction` now returns `utils` with truncate functionality
+
 ## 0.2.0
 
 ### Minor Changes
