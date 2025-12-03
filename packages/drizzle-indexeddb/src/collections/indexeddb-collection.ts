@@ -343,15 +343,12 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		await config.readyPromise;
 
 		const db = config.indexedDBRef.current;
-		if(!db) {
+		if (!db) {
 			throw new Error("Database not ready");
 		}
 
 		if (!indexesDiscovered) {
-			discoveredIndexes = discoverIndexes(
-				db,
-				config.storeName,
-			);
+			discoveredIndexes = discoverIndexes(db, config.storeName);
 
 			indexesDiscovered = true;
 		}
@@ -361,7 +358,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	const backend: SyncBackend<TTable> = {
 		initialLoad: async (write) => {
 			const db = config.indexedDBRef.current;
-			if(!db) {
+			if (!db) {
 				throw new Error("Database not ready");
 			}
 
@@ -376,16 +373,13 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 		loadSubset: async (options, write) => {
 			const db = config.indexedDBRef.current;
-			if(!db) {
+			if (!db) {
 				throw new Error("Database not ready");
 			}
 
 			// Ensure indexes are discovered before we try to use them
 			if (!indexesDiscovered) {
-				discoveredIndexes = discoverIndexes(
-					db,
-					config.storeName,
-				);
+				discoveredIndexes = discoverIndexes(db, config.storeName);
 				indexesDiscovered = true;
 			}
 
@@ -398,8 +392,12 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 			if (indexedQuery) {
 				// Use indexed query for better performance
-				
-				items = await db.getAllByIndex<IndexedDBSyncItem>(config.storeName, indexedQuery.indexName, indexedQuery.keyRange);
+
+				items = await db.getAllByIndex<IndexedDBSyncItem>(
+					config.storeName,
+					indexedQuery.indexName,
+					indexedQuery.keyRange,
+				);
 			} else {
 				// Fall back to getting all items
 				items = await db.getAll<IndexedDBSyncItem>(config.storeName);
@@ -454,7 +452,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 		handleInsert: async (mutations) => {
 			const db = config.indexedDBRef.current;
-			if(!db) {
+			if (!db) {
 				throw new Error("Database not ready");
 			}
 
@@ -483,7 +481,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		handleUpdate: async (mutations) => {
 			const db = config.indexedDBRef.current;
 
-			if(!db) {
+			if (!db) {
 				throw new Error("Database not ready");
 			}
 
@@ -525,7 +523,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 		handleDelete: async (mutations) => {
 			const db = config.indexedDBRef.current;
 
-			if(!db) {
+			if (!db) {
 				throw new Error("Database not ready");
 			}
 
@@ -533,6 +531,17 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 			// Delete all items in a single batch operation
 			await db.delete(config.storeName, keysToDelete);
+		},
+
+		handleTruncate: async () => {
+			const db = config.indexedDBRef.current;
+
+			if (!db) {
+				throw new Error("Database not ready");
+			}
+
+			// Clear all items from the store
+			await db.clear(config.storeName);
 		},
 	};
 
@@ -563,10 +572,16 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	const schema = createInsertSchemaWithDefaults(table);
 
 	// Create collection config using shared utilities
-	return createCollectionConfig({
+	const collectionConfig = createCollectionConfig({
 		schema,
 		getKey: createGetKeyFunction<TTable>(),
 		syncResult,
 		syncMode: config.syncMode,
 	});
+
+	return {
+		...collectionConfig,
+		// Expose external sync handler for proxy sync integration
+		pushExternalSync: syncResult.pushExternalSync,
+	};
 }

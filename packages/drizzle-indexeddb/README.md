@@ -20,6 +20,7 @@ npm install @firtoz/drizzle-indexeddb @firtoz/drizzle-utils drizzle-orm @tanstac
 - 📦 **Soft deletes** - Built-in support for `deletedAt` column
 - ⚛️ **React hooks** - Provider and hooks for easy React integration
 - 📝 **Function-based migrations** - Generated migration functions from Drizzle schema changes
+- 🔄 **Multi-client sync** - IDB Proxy system for real-time sync across multiple clients (Chrome extensions, etc.)
 
 ## Quick Start
 
@@ -414,6 +415,167 @@ const collection = createCollection(
     debug: true, // Enable debug logging
   })
 );
+```
+
+### Collection Truncate
+
+Clear all data from a collection:
+
+```typescript
+// Clear all todos
+await todoCollection.utils.truncate();
+```
+
+This clears the IndexedDB store and updates the local reactive store.
+
+## IDB Proxy System
+
+For scenarios where IndexedDB needs to be accessed over a messaging layer (e.g., Chrome extensions, WebSockets), the proxy system enables multi-client sync:
+
+### Overview
+
+```
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│ Client 1│     │ Client 2│     │ Client N│
+└────┬────┘     └────┬────┘     └────┬────┘
+     │               │               │
+     └───────────────┼───────────────┘
+                     │
+              ┌──────▼──────┐
+              │   Server    │
+              │  (manages   │
+              │  IndexedDB) │
+              └─────────────┘
+```
+
+- **Server** manages database lifecycle, migrations, and broadcasts mutations
+- **Clients** connect via a transport layer and receive real-time sync updates
+- All insert/update/delete/truncate operations sync to all connected clients
+
+### Basic Setup
+
+```typescript
+import {
+  createMultiClientTransport,
+  createProxyServer,
+  createProxyDbCreator,
+  migrateIndexedDBWithFunctions,
+  DrizzleIndexedDBProvider,
+} from "@firtoz/drizzle-indexeddb";
+
+// Create transport (in-memory for testing, or custom for production)
+const { createClientTransport, serverTransport } = createMultiClientTransport();
+
+// Create server with migrations
+const server = createProxyServer({
+  transport: serverTransport,
+  dbCreator: async (dbName) => {
+    return await migrateIndexedDBWithFunctions(dbName, migrations);
+  },
+});
+
+// Create client
+const clientTransport = createClientTransport();
+const dbCreator = createProxyDbCreator(clientTransport);
+
+// Use with React provider
+function App() {
+  const handleSyncReady = useCallback((handleSync) => {
+    clientTransport.onSync(handleSync);
+  }, []);
+
+  return (
+    <DrizzleIndexedDBProvider
+      dbName="my-app.db"
+      schema={schema}
+      dbCreator={dbCreator}
+      onSyncReady={handleSyncReady}
+    >
+      <YourApp />
+    </DrizzleIndexedDBProvider>
+  );
+}
+```
+
+### Multiple Clients
+
+```typescript
+// Server setup (once)
+const { createClientTransport, serverTransport } = createMultiClientTransport();
+const server = createProxyServer({ transport: serverTransport, ... });
+
+// Each client gets its own transport
+const client1Transport = createClientTransport();
+const client2Transport = createClientTransport();
+const client3Transport = createClientTransport();
+
+// All clients share the same data and receive real-time sync
+```
+
+### Sync Operations
+
+All standard collection operations automatically sync:
+
+```typescript
+// Client 1 inserts
+await todoCollection.insert({ title: "Buy milk", completed: false });
+// → Client 2, 3, N receive the new todo instantly
+
+// Client 2 updates
+await todoCollection.update(todoId, (draft) => {
+  draft.completed = true;
+});
+// → Client 1, 3, N see the update instantly
+
+// Client 3 deletes
+await todoCollection.delete(todoId);
+// → Client 1, 2, N see the deletion instantly
+
+// Client N truncates
+await todoCollection.utils.truncate();
+// → All clients are cleared instantly
+```
+
+### Custom Transport
+
+For production use (Chrome extension, WebSocket, etc.), implement the transport interface:
+
+```typescript
+import type { IDBProxyClientTransport, IDBProxyServerTransport } from "@firtoz/drizzle-indexeddb";
+
+// Client transport (e.g., in content script)
+const clientTransport: IDBProxyClientTransport = {
+  sendRequest: async (request) => {
+    // Send to background script and wait for response
+    return await chrome.runtime.sendMessage(request);
+  },
+  onSync: (handler) => {
+    // Listen for sync broadcasts
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type?.startsWith("sync:")) handler(msg);
+    });
+  },
+};
+
+// Server transport (e.g., in background script)
+const serverTransport: IDBProxyServerTransport = {
+  onRequest: (handler) => {
+    chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+      const response = await handler(msg);
+      sendResponse(response);
+    });
+  },
+  broadcast: (message, excludeClientId) => {
+    // Broadcast to all connected tabs except sender
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        if (tab.id !== excludeClientId) {
+          chrome.tabs.sendMessage(tab.id, message);
+        }
+      }
+    });
+  },
+};
 ```
 
 ### Handling Migration Errors

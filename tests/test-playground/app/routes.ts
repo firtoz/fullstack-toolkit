@@ -20,6 +20,7 @@ export default [
 			"sqlite-sync-mode-test",
 			"routes/collections/sqlite-sync-mode-test.tsx",
 		),
+		route("proxy-test", "routes/collections/proxy-test.tsx"),
 	]),
 	...prefix("router-toolkit", [
 		route("loader-test", "routes/router-toolkit/loader-test.tsx"),

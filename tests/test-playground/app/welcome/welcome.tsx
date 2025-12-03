@@ -1,40 +1,51 @@
 import { href, Link } from "react-router";
 
+type RouteItem = {
+	path: string;
+	text: string;
+	description: string;
+};
+
+const RouteList = ({ routes }: { routes: RouteItem[] }) => (
+	<ul>
+		{routes.map(({ path, text, description }) => (
+			<li key={path}>
+				<Link to={path}>
+					<div>{text}</div>
+					<div>{description}</div>
+				</Link>
+			</li>
+		))}
+	</ul>
+);
+
 export function Welcome() {
 	return (
 		<div>
 			<nav>
-				<h2>@firtoz/router-toolkit Test Routes</h2>
-				<ul>
-					{routerToolkitRoutes.map(({ path, text, description }) => (
-						<li key={path}>
-							<Link to={path}>
-								<div>{text}</div>
-								<div>{description}</div>
-							</Link>
-						</li>
-					))}
-				</ul>
+				<h2>@firtoz/router-toolkit</h2>
+				<RouteList routes={routerToolkitRoutes} />
 			</nav>
 
 			<nav>
-				<h2>@firtoz/drizzle-sqlite-wasm Test Routes</h2>
-				<ul>
-					{collectionRoutes.map(({ path, text, description }) => (
-						<li key={path}>
-							<a href={path}>
-								<div>{text}</div>
-								<div>{description}</div>
-							</a>
-						</li>
-					))}
-				</ul>
+				<h2>@firtoz/drizzle-indexeddb</h2>
+				<RouteList routes={indexedDBRoutes} />
+			</nav>
+
+			<nav>
+				<h2>@firtoz/drizzle-sqlite-wasm</h2>
+				<RouteList routes={sqliteRoutes} />
+			</nav>
+
+			<nav>
+				<h2>Utilities</h2>
+				<RouteList routes={utilityRoutes} />
 			</nav>
 		</div>
 	);
 }
 
-const routerToolkitRoutes = [
+const routerToolkitRoutes: RouteItem[] = [
 	{
 		path: href("/router-toolkit/loader-test"),
 		text: "useDynamicFetcher (Loader)",
@@ -70,41 +81,51 @@ const routerToolkitRoutes = [
 	},
 ];
 
-const collectionRoutes = [
-	{
-		path: href("/collections/sqlite-test"),
-		text: "DrizzleSqliteProvider + useCollection",
-		description:
-			"SQLite WASM with Drizzle ORM: Real-time queries with live updates using useLiveQuery",
-	},
+const indexedDBRoutes: RouteItem[] = [
 	{
 		path: href("/collections/indexeddb-test"),
 		text: "DrizzleIndexedDBProvider + useCollection",
-		description:
-			"IndexedDB with Drizzle Collections: Real-time queries with live updates using useLiveQuery",
+		description: "Real-time queries with live updates using useLiveQuery",
 	},
 	{
 		path: href("/collections/indexeddb-migration-test"),
-		text: "IndexedDB Migration Test",
+		text: "Migration Test",
 		description:
 			"Test generated IndexedDB migrations from Drizzle schema snapshots",
 	},
 	{
 		path: `${href("/collections/sync-mode-test")}?mode=on-demand`,
-		text: "Sync Mode Integration Test (IndexedDB)",
+		text: "Sync Mode Test",
 		description:
-			"Compare eager vs on-demand sync modes with IndexedDB operation tracking",
+			"Compare eager vs on-demand sync modes with operation tracking",
+	},
+	{
+		path: href("/collections/proxy-test"),
+		text: "Proxy Test",
+		description:
+			"IndexedDB proxy system for Chrome extensions with multi-client support",
+	},
+];
+
+const sqliteRoutes: RouteItem[] = [
+	{
+		path: href("/collections/sqlite-test"),
+		text: "DrizzleSqliteProvider + useCollection",
+		description: "Real-time queries with live updates using useLiveQuery",
 	},
 	{
 		path: "/collections/sqlite-sync-mode-test?mode=on-demand",
-		text: "Sync Mode Integration Test (SQLite WASM)",
+		text: "Sync Mode Test",
 		description:
-			"Compare eager vs on-demand sync modes with SQLite operation tracking",
+			"Compare eager vs on-demand sync modes with operation tracking",
 	},
+];
+
+const utilityRoutes: RouteItem[] = [
 	{
 		path: href("/api/clear-opfs"),
 		text: "Clear OPFS Storage",
 		description:
-			"Clear all Origin Private File System (OPFS) storage and view file directory structure",
+			"Clear all Origin Private File System (OPFS) storage and view file directory",
 	},
 ];

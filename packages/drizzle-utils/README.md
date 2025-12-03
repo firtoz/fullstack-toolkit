@@ -1,6 +1,6 @@
 # @firtoz/drizzle-utils
 
-Shared utilities and types for Drizzle ORM-based packages. Provides type-safe table builders with automatic timestamp tracking, branded IDs, and common migration types.
+Shared utilities and types for Drizzle ORM-based packages. Provides type-safe table builders with automatic timestamp tracking, branded IDs, common migration types, and collection sync utilities.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 
@@ -202,6 +202,64 @@ Comprehensive types for database migrations:
 - `ForeignKeyDefinition` - Foreign key constraint
 - `ViewDefinition` - Database view definition
 - `EnumDefinition` - Enum type definition
+
+### Collection Sync Utilities
+
+Support for external sync and collection utilities:
+
+#### External Sync Events
+
+Push sync events from external sources (e.g., proxy servers) to collections:
+
+```typescript
+import type { ExternalSyncEvent, ExternalSyncHandler } from "@firtoz/drizzle-utils";
+
+// Receive sync events from a server
+const handleSync: ExternalSyncHandler<Todo> = (event) => {
+  switch (event.type) {
+    case "insert":
+      // event.items contains new items
+      break;
+    case "update":
+      // event.items contains updated items
+      break;
+    case "delete":
+      // event.items contains deleted items
+      break;
+    case "truncate":
+      // All items should be cleared
+      break;
+  }
+};
+
+// Push events to a collection's reactive store
+syncResult.pushExternalSync({ type: "insert", items: [newTodo] });
+syncResult.pushExternalSync({ type: "truncate" });
+```
+
+#### Collection Utils
+
+The `SyncFunctionResult` includes utilities for common operations:
+
+```typescript
+// Truncate (clear all data)
+await collection.utils.truncate();
+```
+
+#### SyncBackend Interface
+
+For implementing custom backends, the `SyncBackend` interface includes:
+
+```typescript
+interface SyncBackend<TTable> {
+  initialLoad: (write) => Promise<void>;
+  loadSubset: (options, write) => Promise<void>;
+  handleInsert: (mutations) => Promise<T[]>;
+  handleUpdate: (mutations) => Promise<T[]>;
+  handleDelete: (mutations) => Promise<void>;
+  handleTruncate?: () => Promise<void>; // Optional truncate support
+}
+```
 
 ## Best Practices
 

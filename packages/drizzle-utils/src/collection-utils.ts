@@ -160,6 +160,36 @@ export interface SyncBackend<TTable extends Table> {
 			original: InferSchemaOutput<SelectSchema<TTable>>;
 		}>,
 	) => Promise<void>;
+	/**
+	 * Handle truncate (clear all data from store)
+	 * Optional - if not provided, truncate util won't be available
+	 */
+	handleTruncate?: () => Promise<void>;
+}
+
+/**
+ * External sync event for pushing changes from outside (e.g., from a proxy server)
+ */
+export type ExternalSyncEvent<T> =
+	| { type: "insert"; items: T[] }
+	| { type: "update"; items: T[] }
+	| { type: "delete"; items: T[] }
+	| { type: "truncate" };
+
+/**
+ * Handler for external sync events
+ */
+export type ExternalSyncHandler<T> = (event: ExternalSyncEvent<T>) => void;
+
+/**
+ * Collection utils that include truncate functionality
+ */
+export interface CollectionUtils {
+	/**
+	 * Clear all data from the store (truncate).
+	 * This clears the backend store and updates the local reactive store.
+	 */
+	truncate: () => Promise<void>;
 }
 
 /**
@@ -185,6 +215,17 @@ export type SyncFunctionResult<TTable extends Table> = {
 		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
 		any
 	>["onDelete"];
+	/**
+	 * Push external sync events to the collection.
+	 * Use this when receiving sync messages from a proxy server or other external source.
+	 */
+	pushExternalSync: ExternalSyncHandler<
+		InferSchemaOutput<SelectSchema<TTable>>
+	>;
+	/**
+	 * Collection utilities including truncate
+	 */
+	utils: CollectionUtils;
 };
 
 /**
@@ -194,8 +235,9 @@ export function createSyncFunction<TTable extends Table>(
 	config: BaseSyncConfig<TTable>,
 	backend: SyncBackend<TTable>,
 ): SyncFunctionResult<TTable> {
+	type ItemType = InferSchemaOutput<SelectSchema<TTable>>;
 	type CollectionType = CollectionConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
+		ItemType,
 		string,
 		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
 		any
@@ -205,11 +247,25 @@ export function createSyncFunction<TTable extends Table>(
 	let updateListener: CollectionType["onUpdate"];
 	let deleteListener: CollectionType["onDelete"];
 
+	// Captured sync functions for external sync
+	let syncBegin: (() => void) | null = null;
+	let syncWrite:
+		| ((op: { type: "insert" | "update" | "delete"; value: ItemType }) => void)
+		| null = null;
+	let syncCommit: (() => void) | null = null;
+	let syncTruncate: (() => void) | null = null;
+
 	const syncFn: SyncConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
 		string
 	>["sync"] = (params) => {
-		const { begin, write, commit, markReady } = params;
+		const { begin, write, commit, markReady, truncate } = params;
+
+		// Capture sync functions for external use
+		syncBegin = begin;
+		syncWrite = write;
+		syncCommit = commit;
+		syncTruncate = truncate;
 
 		const initialSync = async () => {
 			await config.readyPromise;
@@ -315,6 +371,68 @@ export function createSyncFunction<TTable extends Table>(
 		} satisfies SyncConfigRes;
 	};
 
+	// External sync handler - allows pushing sync events from outside (e.g., proxy server)
+	const pushExternalSync: ExternalSyncHandler<ItemType> = (event) => {
+		if (!syncBegin || !syncWrite || !syncCommit || !syncTruncate) {
+			if (config.debug) {
+				console.warn(
+					"[pushExternalSync] Sync functions not initialized yet - event will be dropped",
+					event,
+				);
+			}
+			return;
+		}
+
+		switch (event.type) {
+			case "insert":
+				syncBegin();
+				for (const item of event.items) {
+					syncWrite({ type: "insert", value: item });
+				}
+				syncCommit();
+				break;
+			case "update":
+				syncBegin();
+				for (const item of event.items) {
+					syncWrite({ type: "update", value: item });
+				}
+				syncCommit();
+				break;
+			case "delete":
+				syncBegin();
+				for (const item of event.items) {
+					syncWrite({ type: "delete", value: item });
+				}
+				syncCommit();
+				break;
+			case "truncate":
+				syncBegin();
+				syncTruncate();
+				syncCommit();
+				break;
+		}
+	};
+
+	// Create utils with truncate
+	const utils: CollectionUtils = {
+		truncate: async () => {
+			if (!backend.handleTruncate) {
+				throw new Error("Truncate not supported by this backend");
+			}
+			if (!syncBegin || !syncTruncate || !syncCommit) {
+				throw new Error(
+					"Sync functions not initialized - sync function may not have been called yet",
+				);
+			}
+			// Clear the backend store
+			await backend.handleTruncate();
+			// Update local reactive store (same pattern as insert/update/delete listeners)
+			syncBegin();
+			syncTruncate();
+			syncCommit();
+		},
+	};
+
 	return {
 		sync: syncFn,
 		onInsert: async (params) => {
@@ -341,6 +459,8 @@ export function createSyncFunction<TTable extends Table>(
 			}
 			return deleteListener(params);
 		},
+		pushExternalSync,
+		utils,
 	};
 }
 
@@ -497,6 +617,8 @@ export function createCollectionConfig<
 		onUpdate: config.onUpdate ?? config.syncResult.onUpdate,
 		onDelete: config.onDelete ?? config.syncResult.onDelete,
 		syncMode: config.syncMode,
+		// Include utils with truncate
+		utils: config.syncResult.utils,
 	} as CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
 		string,
