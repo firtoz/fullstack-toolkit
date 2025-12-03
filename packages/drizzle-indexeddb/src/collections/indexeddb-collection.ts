@@ -572,16 +572,10 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	const schema = createInsertSchemaWithDefaults(table);
 
 	// Create collection config using shared utilities
-	const collectionConfig = createCollectionConfig({
+	return createCollectionConfig({
 		schema,
 		getKey: createGetKeyFunction<TTable>(),
 		syncResult,
 		syncMode: config.syncMode,
 	});
-
-	return {
-		...collectionConfig,
-		// Expose external sync handler for proxy sync integration
-		pushExternalSync: syncResult.pushExternalSync,
-	};
 }

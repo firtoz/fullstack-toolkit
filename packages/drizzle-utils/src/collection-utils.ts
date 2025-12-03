@@ -182,14 +182,19 @@ export type ExternalSyncEvent<T> =
 export type ExternalSyncHandler<T> = (event: ExternalSyncEvent<T>) => void;
 
 /**
- * Collection utils that include truncate functionality
+ * Collection utils that include truncate and external sync functionality
  */
-export interface CollectionUtils {
+export interface CollectionUtils<T = unknown> {
 	/**
 	 * Clear all data from the store (truncate).
 	 * This clears the backend store and updates the local reactive store.
 	 */
 	truncate: () => Promise<void>;
+	/**
+	 * Push external sync events to the collection.
+	 * Use this when receiving sync messages from a proxy server or other external source.
+	 */
+	pushExternalSync: ExternalSyncHandler<T>;
 }
 
 /**
@@ -216,16 +221,9 @@ export type SyncFunctionResult<TTable extends Table> = {
 		any
 	>["onDelete"];
 	/**
-	 * Push external sync events to the collection.
-	 * Use this when receiving sync messages from a proxy server or other external source.
+	 * Collection utilities including truncate and external sync
 	 */
-	pushExternalSync: ExternalSyncHandler<
-		InferSchemaOutput<SelectSchema<TTable>>
-	>;
-	/**
-	 * Collection utilities including truncate
-	 */
-	utils: CollectionUtils;
+	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 };
 
 /**
@@ -413,8 +411,8 @@ export function createSyncFunction<TTable extends Table>(
 		}
 	};
 
-	// Create utils with truncate
-	const utils: CollectionUtils = {
+	// Create utils with truncate and external sync
+	const utils: CollectionUtils<ItemType> = {
 		truncate: async () => {
 			if (!backend.handleTruncate) {
 				throw new Error("Truncate not supported by this backend");
@@ -431,6 +429,7 @@ export function createSyncFunction<TTable extends Table>(
 			syncTruncate();
 			syncCommit();
 		},
+		pushExternalSync,
 	};
 
 	return {
@@ -459,7 +458,6 @@ export function createSyncFunction<TTable extends Table>(
 			}
 			return deleteListener(params);
 		},
-		pushExternalSync,
 		utils,
 	};
 }
@@ -598,13 +596,17 @@ export function createCollectionConfig<
 		any
 	>["onDelete"];
 	syncMode?: SyncMode;
-}): CollectionConfig<
-	InferSchemaOutput<SelectSchema<TTable>>,
-	string,
-	// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-	any
+}): Omit<
+	CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
+		any
+	>,
+	"utils"
 > & {
 	schema: TSchema;
+	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 } {
 	return {
 		schema: config.schema,
@@ -617,14 +619,7 @@ export function createCollectionConfig<
 		onUpdate: config.onUpdate ?? config.syncResult.onUpdate,
 		onDelete: config.onDelete ?? config.syncResult.onDelete,
 		syncMode: config.syncMode,
-		// Include utils with truncate
+		// Include utils with truncate and pushExternalSync
 		utils: config.syncResult.utils,
-	} as CollectionConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
-	> & {
-		schema: TSchema;
 	};
 }

@@ -193,17 +193,16 @@ export function DrizzleIndexedDBProvider<
 				// Extract the actual store/table name from the table definition
 				const actualTableName = getTableName(table);
 
-				// Create collection options (includes pushExternalSync)
-				const { pushExternalSync, ...collectionConfig } =
-					indexedDBCollectionOptions({
-						indexedDBRef,
-						dbName,
-						table,
-						storeName: actualTableName,
-						readyPromise: readyPromise.promise,
-						debug,
-						syncMode,
-					} as IndexedDBCollectionConfig<Table>);
+				// Create collection options
+				const collectionConfig = indexedDBCollectionOptions({
+					indexedDBRef,
+					dbName,
+					table,
+					storeName: actualTableName,
+					readyPromise: readyPromise.promise,
+					debug,
+					syncMode,
+				} as IndexedDBCollectionConfig<Table>);
 
 				// Create new collection and cache it with ref count 0
 				// The collection will wait for readyPromise before accessing the database
@@ -212,7 +211,7 @@ export function DrizzleIndexedDBProvider<
 				collections.set(cacheKey, {
 					collection,
 					refCount: 0,
-					pushExternalSync,
+					pushExternalSync: collectionConfig.utils.pushExternalSync,
 				});
 			}
 
