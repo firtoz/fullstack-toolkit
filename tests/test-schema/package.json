@@ -35,7 +35,7 @@
 		"db:reset": "bun reset-migrations.ts"
 	},
 	"devDependencies": {
-		"drizzle-kit": "^0.31.7"
+		"drizzle-kit": "^0.31.8"
 	},
 	"dependencies": {
 		"drizzle-orm": "catalog:",
