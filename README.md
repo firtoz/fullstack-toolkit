@@ -47,6 +47,50 @@ Type-safe WebSocket session management for Cloudflare Durable Objects with Zod v
 - 📦 **Buffer Mode** - Efficient msgpack serialization for binary messaging
 - 🚀 **Hono Integration** - Seamless integration with Hono framework and `@firtoz/hono-fetcher`
 
+### [@firtoz/drizzle-indexeddb](./packages/drizzle-indexeddb) ⚠️ WIP
+
+TanStack DB collections backed by IndexedDB with automatic migrations powered by Drizzle ORM.
+
+- ⚡ **TanStack DB collections** - Reactive collections with type safety
+- 🎯 **Type-safe** - Full TypeScript support with automatic type inference
+- 🔍 **Query optimization** - Leverage IndexedDB indexes for fast queries
+- 📦 **Soft deletes** - Built-in support for `deletedAt` column
+- ⚛️ **React hooks** - Provider and hooks for easy React integration
+- 📝 **Function-based migrations** - Generated migration functions from Drizzle schema changes
+- 🔄 **Multi-client sync** - IDB Proxy system for real-time sync across multiple clients
+
+### [@firtoz/drizzle-sqlite-wasm](./packages/drizzle-sqlite-wasm) ⚠️ WIP
+
+TanStack DB collections backed by SQLite WASM running in Web Workers, with full Drizzle ORM integration.
+
+- 📦 **TanStack DB collections** - Reactive collections with type safety
+- 🔄 **Web Worker support** - Non-blocking SQLite in a dedicated worker
+- ⚡ **Drizzle ORM** - Full type-safe query builder
+- 🎯 **Type-safe** - Full TypeScript support with automatic type inference
+- ⚛️ **React hooks** - Provider and hooks for easy integration
+- 🔄 **Migrations** - Automatic schema migrations with Drizzle snapshots
+- 🔌 **Bundler agnostic** - Works with Vite, Webpack, Parcel, and more
+
+### [@firtoz/drizzle-utils](./packages/drizzle-utils) ⚠️ WIP
+
+Shared utilities and types for Drizzle ORM-based packages.
+
+- 🏗️ **Syncable Table Builder** - Tables with automatic timestamp tracking and UUID primary keys
+- 🏷️ **Branded ID Types** - Type-safe IDs with table-specific branding
+- 📋 **Column Helpers** - Individual column builders for custom table definitions
+- 🔄 **Migration Types** - Shared TypeScript types for Drizzle migrations
+- 📝 **Schema Type Helpers** - Type-safe Valibot schema inference
+
+### [@firtoz/worker-helper](./packages/worker-helper) ⚠️ WIP
+
+Type-safe Web Worker helper with Zod validation for input and output messages.
+
+- 🔒 **Type-safe** - Full TypeScript support with automatic type inference
+- ✅ **Zod Validation** - Automatic validation of both input and output messages
+- 🎯 **Custom Error Handlers** - Complete control over error handling
+- 🔄 **Async Support** - Built-in support for async message handlers
+- 🧩 **Discriminated Unions** - Works great with Zod's discriminated unions for type-safe message routing
+
 ## Installation
 
 Each package can be installed independently:
@@ -64,8 +108,14 @@ bun add @firtoz/hono-fetcher
 # For WebSocket Durable Objects
 bun add @firtoz/websocket-do
 
-# Or install multiple packages
-bun add @firtoz/router-toolkit @firtoz/maybe-error @firtoz/hono-fetcher @firtoz/websocket-do
+# For IndexedDB with Drizzle (WIP)
+bun add @firtoz/drizzle-indexeddb @firtoz/drizzle-utils drizzle-orm @tanstack/db
+
+# For SQLite WASM with Drizzle (WIP)
+bun add @firtoz/drizzle-sqlite-wasm @firtoz/drizzle-utils drizzle-orm @tanstack/db
+
+# For type-safe Web Workers (WIP)
+bun add @firtoz/worker-helper zod
 ```
 
 ## Development
@@ -117,6 +167,10 @@ feat(router-toolkit): add new hook for dynamic routing
 fix(maybe-error): resolve type inference issue
 feat(hono-fetcher): add support for custom headers
 fix(websocket-do): handle connection errors gracefully
+feat(drizzle-indexeddb): add support for composite indexes
+fix(drizzle-sqlite-wasm): fix worker initialization race condition
+feat(drizzle-utils): add new column helper for JSON fields
+fix(worker-helper): improve async error handling
 docs: update README with new examples
 ```
 
@@ -152,6 +206,12 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 - [Maybe Error on NPM](https://npmjs.com/package/@firtoz/maybe-error)
 - [Hono Fetcher on NPM](https://npmjs.com/package/@firtoz/hono-fetcher)
 - [WebSocket DO on NPM](https://npmjs.com/package/@firtoz/websocket-do)
+- [Drizzle IndexedDB on NPM](https://npmjs.com/package/@firtoz/drizzle-indexeddb)
+- [Drizzle SQLite WASM on NPM](https://npmjs.com/package/@firtoz/drizzle-sqlite-wasm)
+- [Drizzle Utils on NPM](https://npmjs.com/package/@firtoz/drizzle-utils)
+- [Worker Helper on NPM](https://npmjs.com/package/@firtoz/worker-helper)
 - [React Router Documentation](https://reactrouter.com)
 - [Hono Documentation](https://hono.dev)
-- [Cloudflare Durable Objects Documentation](https://developers.cloudflare.com/durable-objects) 
+- [Cloudflare Durable Objects Documentation](https://developers.cloudflare.com/durable-objects)
+- [Drizzle ORM Documentation](https://orm.drizzle.team)
+- [TanStack DB Documentation](https://tanstack.com/db) 
