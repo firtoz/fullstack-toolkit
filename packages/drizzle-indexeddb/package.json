@@ -42,9 +42,7 @@
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
-		"format": "biome format src --write",
-		"test": "bun test --pass-with-no-tests",
-		"test:watch": "bun test --watch"
+		"format": "biome format src --write"
 	},
 	"keywords": [
 		"typescript",

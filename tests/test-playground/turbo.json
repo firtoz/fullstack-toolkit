@@ -6,6 +6,15 @@
 			"inputs": ["app/**", "src/**", "public/**", "*.config.*", "package.json"],
 			"outputs": ["build/**"]
 		},
+		"typecheck": {
+			"inputs": ["app/**", "src/**", "tsconfig.json", "package.json"]
+		},
+		"lint": {
+			"inputs": ["app/**", "src/**", "../../biome.json"]
+		},
+		"lint:ci": {
+			"inputs": ["app/**", "src/**", "../../biome.json"]
+		},
 		"test": {
 			"dependsOn": [
 				"@firtoz/drizzle-sqlite-wasm#typecheck",
@@ -14,7 +23,7 @@
 				"@firtoz/router-toolkit#typecheck",
 				"@firtoz/worker-helper#typecheck"
 			],
-			"inputs": ["app/**", "src/**", "public/**", "*.config.*", "package.json"]
+			"inputs": ["app/**", "src/**", "e2e/**", "*.config.*", "package.json"]
 		}
 	}
 }

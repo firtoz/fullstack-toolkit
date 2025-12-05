@@ -10,29 +10,25 @@
 				".env.local",
 				".dev.vars",
 				"package.json",
-				"src/**/*.ts",
-				"src/**/*.js"
+				"src/**"
 			],
 			"outputs": ["worker-configuration.d.ts"]
 		},
 		"typecheck": {
 			"dependsOn": ["typegen"],
-			"outputs": []
+			"inputs": ["src/**", "tsconfig.json", "package.json"]
 		},
 		"lint": {
 			"dependsOn": ["typegen"],
-			"outputs": []
+			"inputs": ["src/**", "biome.json"]
 		},
 		"lint:ci": {
 			"dependsOn": ["typegen"],
-			"outputs": []
-		},
-		"format": {
-			"outputs": []
+			"inputs": ["src/**", "biome.json"]
 		},
 		"test": {
 			"dependsOn": ["typegen"],
-			"outputs": []
+			"inputs": ["src/**", "*.config.*", "tsconfig.json", "package.json"]
 		},
 		"test:watch": {
 			"dependsOn": ["typegen"],

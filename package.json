@@ -28,6 +28,7 @@
 	},
 	"scripts": {
 		"build": "turbo run build",
+		"ci": "turbo run ci",
 		"typecheck": "turbo run typecheck",
 		"dev": "turbo run dev",
 		"lint": "turbo run lint",

@@ -3,11 +3,21 @@
 	"ui": "tui",
 	"tasks": {
 		"build": {
+			"outputs": ["dist/**"],
 			"outputLogs": "new-only"
 		},
-		"typecheck": {},
-		"lint": {},
-		"lint:ci": {},
+		"ci": {
+			"dependsOn": ["typecheck", "lint:ci", "test"]
+		},
+		"typecheck": {
+			"outputLogs": "new-only"
+		},
+		"lint": {
+			"outputLogs": "new-only"
+		},
+		"lint:ci": {
+			"outputLogs": "new-only"
+		},
 		"format": {
 			"outputLogs": "new-only"
 		},
@@ -22,7 +32,7 @@
 		},
 		"test:watch": {
 			"persistent": true,
-			"outputLogs": "new-only"
+			"cache": false
 		},
 		"dev": {
 			"persistent": true,
