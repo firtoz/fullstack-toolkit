@@ -24,10 +24,16 @@
 			"types": "./src/*.ts",
 			"import": "./src/*.ts",
 			"require": "./src/*.ts"
+		},
+		"./*.tsx": {
+			"types": "./src/*.tsx",
+			"import": "./src/*.tsx",
+			"require": "./src/*.tsx"
 		}
 	},
 	"files": [
 		"src/**/*.ts",
+		"src/**/*.tsx",
 		"!src/**/*.test.ts",
 		"README.md",
 		"CHANGELOG.md"
