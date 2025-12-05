@@ -1,6 +1,7 @@
 {
 	"$schema": "./node_modules/turbo/schema.json",
 	"ui": "tui",
+	"daemon": false,
 	"tasks": {
 		"build": {
 			"outputs": ["dist/**"],
