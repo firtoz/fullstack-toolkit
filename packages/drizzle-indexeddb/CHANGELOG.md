@@ -1,5 +1,11 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.4.1
+
+### Patch Changes
+
+- [`904019f`](https://github.com/firtoz/fullstack-toolkit/commit/904019f4d04bc02521206fbe0feaeecb67e38f87) Thanks [@firtoz](https://github.com/firtoz)! - Fix tsx exporting
+
 ## 0.4.0
 
 ### Minor Changes
