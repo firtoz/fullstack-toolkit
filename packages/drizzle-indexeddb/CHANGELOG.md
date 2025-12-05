@@ -1,5 +1,11 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.4.2
+
+### Patch Changes
+
+- [`58afa0a`](https://github.com/firtoz/fullstack-toolkit/commit/58afa0a5365f55f536e50194a73f847293102e7f) Thanks [@firtoz](https://github.com/firtoz)! - Hopefully this should work
+
 ## 0.4.1
 
 ### Patch Changes
