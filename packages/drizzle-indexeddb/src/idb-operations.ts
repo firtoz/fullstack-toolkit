@@ -23,9 +23,14 @@ export async function openIndexedDb(
  */
 const defaultIDBDeleter: IDBDeleter = (name: string): Promise<void> => {
 	return new Promise((resolve, reject) => {
-		const request = indexedDB.deleteDatabase(name);
-		request.onerror = () => reject(request.error);
-		request.onsuccess = () => resolve();
+		try {
+			const request = indexedDB.deleteDatabase(name);
+			request.onerror = () => reject(request.error);
+			request.onsuccess = () => resolve();
+		} catch (error) {
+			console.error("Error deleting database", error);
+			reject(error);
+		}
 	});
 };
 

@@ -134,10 +134,9 @@ export function DrizzleIndexedDBProvider<
 	});
 
 	useEffect(() => {
+		let db: IDBDatabaseLike | null = null;
 		const initDB = async () => {
 			try {
-				let db: IDBDatabaseLike;
-
 				if (migrations.length === 0) {
 					// Open database directly without migration logic
 					db = await openIndexedDb(dbName, dbCreator);
@@ -161,11 +160,11 @@ export function DrizzleIndexedDBProvider<
 
 		// Cleanup on unmount
 		return () => {
-			if (indexedDB) {
-				indexedDB.close();
+			if (db) {
+				db.close();
 			}
 		};
-	}, [dbName, migrations, migrateFunction, debug, readyPromise]);
+	}, [dbName, migrations, migrateFunction, debug, readyPromise, dbCreator]);
 
 	// Collection cache with ref counting
 	const collections = useMemo<Map<string, CollectionCacheEntry>>(
@@ -219,15 +218,7 @@ export function DrizzleIndexedDBProvider<
 			return collections.get(cacheKey)!
 				.collection as unknown as IndexedDbCollection<TSchema, TTableName>;
 		},
-		[
-			indexedDBRef,
-			collections,
-			schema,
-			readyPromise.promise,
-			debug,
-			dbName,
-			syncMode,
-		],
+		[collections, schema, readyPromise.promise, debug, dbName, syncMode],
 	);
 
 	const incrementRefCount: DrizzleIndexedDBContextValue<TSchema>["incrementRefCount"] =

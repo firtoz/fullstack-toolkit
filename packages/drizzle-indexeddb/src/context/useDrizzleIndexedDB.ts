@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useCallback, useContext } from "react";
 import {
 	DrizzleIndexedDBContext,
 	useIndexedDBCollection,
@@ -28,10 +28,15 @@ export function useDrizzleIndexedDB<
 		);
 	}
 
+	const useCollection = useCallback(
+		<TTableName extends keyof TSchema & string>(tableName: TTableName) =>
+			// biome-ignore lint/correctness/useHookAtTopLevel: This is on purpose.
+			useIndexedDBCollection(context, tableName),
+		[context],
+	);
+
 	return {
-		useCollection: <TTableName extends keyof TSchema & string>(
-			tableName: TTableName,
-		) => useIndexedDBCollection(context, tableName),
+		useCollection,
 		indexedDB: context.indexedDB,
 	};
 }

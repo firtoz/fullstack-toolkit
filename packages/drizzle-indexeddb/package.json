@@ -69,17 +69,21 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"dependencies": {
-		"@firtoz/drizzle-utils": "workspace:*",
-		"@tanstack/db": "catalog:",
-		"drizzle-orm": "catalog:",
-		"drizzle-valibot": "^0.4.2",
-		"valibot": "^1.2.0"
-	},
 	"peerDependencies": {
-		"react": "catalog:"
+		"@firtoz/drizzle-utils": ">=0.3.0",
+		"@tanstack/db": ">=0.5.0",
+		"drizzle-orm": ">=0.44.0",
+		"drizzle-valibot": ">=0.4.0",
+		"react": ">=18.0.0",
+		"valibot": ">=1.0.0"
 	},
 	"devDependencies": {
-		"@types/react": "catalog:"
+		"@firtoz/drizzle-utils": "workspace:*",
+		"@tanstack/db": "catalog:",
+		"@types/react": "catalog:",
+		"drizzle-orm": "catalog:",
+		"drizzle-valibot": "^0.4.2",
+		"react": "catalog:",
+		"valibot": "^1.2.0"
 	}
 }

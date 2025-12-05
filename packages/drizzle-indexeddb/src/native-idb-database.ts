@@ -104,12 +104,17 @@ class NativeIDBDatabase implements IDBDatabaseLike {
 		}
 
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readonly");
-			const store = transaction.objectStore(storeName);
-			const request = store.getAll();
+			try {
+				const transaction = this.db.transaction(storeName, "readonly");
+				const store = transaction.objectStore(storeName);
+				const request = store.getAll();
 
-			request.onsuccess = () => resolve(request.result as T[]);
-			request.onerror = () => reject(request.error);
+				request.onsuccess = () => resolve(request.result as T[]);
+				request.onerror = () => reject(request.error);
+			} catch (error) {
+				console.error("Error getting all items", error);
+				reject(error);
+			}
 		});
 	}
 
@@ -119,14 +124,19 @@ class NativeIDBDatabase implements IDBDatabaseLike {
 		keyRange?: KeyRangeSpec,
 	): Promise<T[]> {
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readonly");
-			const store = transaction.objectStore(storeName);
-			const index = store.index(indexName);
-			const range = keyRange ? createKeyRange(keyRange) : undefined;
-			const request = index.getAll(range);
+			try {
+				const transaction = this.db.transaction(storeName, "readonly");
+				const store = transaction.objectStore(storeName);
+				const index = store.index(indexName);
+				const range = keyRange ? createKeyRange(keyRange) : undefined;
+				const request = index.getAll(range);
 
-			request.onsuccess = () => resolve(request.result as T[]);
-			request.onerror = () => reject(request.error);
+				request.onsuccess = () => resolve(request.result as T[]);
+				request.onerror = () => reject(request.error);
+			} catch (error) {
+				console.error("Error getting all items by index", error);
+				reject(error);
+			}
 		});
 	}
 
@@ -135,72 +145,98 @@ class NativeIDBDatabase implements IDBDatabaseLike {
 		key: IDBValidKey,
 	): Promise<T | undefined> {
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readonly");
-			const store = transaction.objectStore(storeName);
-			const request = store.get(key);
+			try {
+				const transaction = this.db.transaction(storeName, "readonly");
+				const store = transaction.objectStore(storeName);
+				const request = store.get(key);
 
-			request.onsuccess = () => resolve(request.result as T | undefined);
-			request.onerror = () => reject(request.error);
+				request.onsuccess = () => resolve(request.result as T | undefined);
+				request.onerror = () => reject(request.error);
+			} catch (error) {
+				console.error("Error getting item", error);
+				reject(error);
+			}
 		});
 	}
 
 	async add(storeName: string, items: unknown[]): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readwrite");
-			const store = transaction.objectStore(storeName);
+			try {
+				const transaction = this.db.transaction(storeName, "readwrite");
+				const store = transaction.objectStore(storeName);
 
-			for (const item of items) {
-				store.add(item);
+				for (const item of items) {
+					store.add(item);
+				}
+
+				transaction.oncomplete = () => resolve();
+				transaction.onerror = () => reject(transaction.error);
+				transaction.onabort = () => reject(new Error("Transaction aborted"));
+			} catch (error) {
+				console.error("Error adding items", error);
+				reject(error);
 			}
-
-			transaction.oncomplete = () => resolve();
-			transaction.onerror = () => reject(transaction.error);
-			transaction.onabort = () => reject(new Error("Transaction aborted"));
 		});
 	}
 
 	async put(storeName: string, items: unknown[]): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readwrite");
-			const store = transaction.objectStore(storeName);
+			try {
+				const transaction = this.db.transaction(storeName, "readwrite");
+				const store = transaction.objectStore(storeName);
 
-			for (const item of items) {
-				store.put(item);
+				for (const item of items) {
+					store.put(item);
+				}
+
+				transaction.oncomplete = () => resolve();
+				transaction.onerror = () => reject(transaction.error);
+				transaction.onabort = () => reject(new Error("Transaction aborted"));
+			} catch (error) {
+				console.error("Error putting items", error);
+				reject(error);
 			}
-
-			transaction.oncomplete = () => resolve();
-			transaction.onerror = () => reject(transaction.error);
-			transaction.onabort = () => reject(new Error("Transaction aborted"));
 		});
 	}
 
 	async delete(storeName: string, keys: IDBValidKey[]): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readwrite");
-			const store = transaction.objectStore(storeName);
+			try {
+				const transaction = this.db.transaction(storeName, "readwrite");
+				const store = transaction.objectStore(storeName);
 
-			for (const key of keys) {
-				store.delete(key);
+				for (const key of keys) {
+					store.delete(key);
+				}
+
+				transaction.oncomplete = () => resolve();
+				transaction.onerror = () => reject(transaction.error);
+				transaction.onabort = () => reject(new Error("Transaction aborted"));
+			} catch (error) {
+				console.error("Error deleting items", error);
+				reject(error);
 			}
-
-			transaction.oncomplete = () => resolve();
-			transaction.onerror = () => reject(transaction.error);
-			transaction.onabort = () => reject(new Error("Transaction aborted"));
 		});
 	}
 
 	async clear(storeName: string): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const transaction = this.db.transaction(storeName, "readwrite");
-			const store = transaction.objectStore(storeName);
-			const request = store.clear();
+			try {
+				const transaction = this.db.transaction(storeName, "readwrite");
+				const store = transaction.objectStore(storeName);
+				const request = store.clear();
 
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
+				request.onsuccess = () => resolve();
+				request.onerror = () => reject(request.error);
+			} catch (error) {
+				console.error("Error clearing store", error);
+				reject(error);
+			}
 		});
 	}
 
 	close(): void {
+		console.log("Closing database");
 		this.db.close();
 	}
 }
@@ -319,37 +355,42 @@ export const defaultIDBCreator: IDBCreator = (
 	options?: IDBOpenOptions,
 ): Promise<IDBDatabaseLike> => {
 	return new Promise((resolve, reject) => {
-		const request = options?.version
-			? indexedDB.open(name, options.version)
-			: indexedDB.open(name);
+		try {
+			const request = options?.version
+				? indexedDB.open(name, options.version)
+				: indexedDB.open(name);
 
-		request.onerror = () => reject(request.error);
+			request.onerror = () => reject(request.error);
 
-		request.onblocked = () => {
-			setTimeout(() => {
-				reject(new Error("Database upgrade blocked - close other tabs"));
-			}, 3000);
-		};
+			request.onblocked = () => {
+				setTimeout(() => {
+					reject(new Error("Database upgrade blocked - close other tabs"));
+				}, 3000);
+			};
 
-		request.onupgradeneeded = (event) => {
-			if (options?.onUpgrade) {
-				const db = request.result;
-				const transaction = (event.target as IDBOpenDBRequest).transaction;
-				if (!transaction) {
-					reject(new Error("No transaction during upgrade"));
-					return;
+			request.onupgradeneeded = (event) => {
+				if (options?.onUpgrade) {
+					const db = request.result;
+					const transaction = (event.target as IDBOpenDBRequest).transaction;
+					if (!transaction) {
+						reject(new Error("No transaction during upgrade"));
+						return;
+					}
+					// Create an upgrade-mode database wrapper
+					const upgradeDb = new UpgradeModeDatabase(db, transaction);
+					try {
+						options.onUpgrade(upgradeDb);
+					} catch (error) {
+						transaction.abort();
+						reject(error);
+					}
 				}
-				// Create an upgrade-mode database wrapper
-				const upgradeDb = new UpgradeModeDatabase(db, transaction);
-				try {
-					options.onUpgrade(upgradeDb);
-				} catch (error) {
-					transaction.abort();
-					reject(error);
-				}
-			}
-		};
+			};
 
-		request.onsuccess = () => resolve(new NativeIDBDatabase(request.result));
+			request.onsuccess = () => resolve(new NativeIDBDatabase(request.result));
+		} catch (error) {
+			console.error("Error creating database", error);
+			reject(error);
+		}
 	});
 };
