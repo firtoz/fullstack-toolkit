@@ -62,3 +62,13 @@ jobs:
           fi
           echo "Playwright installed successfully"
           TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e --filter='test-playground'
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            tests/test-playground/playwright-report/
+            tests/test-playground/test-results/
+          retention-days: 7
