@@ -41,11 +41,11 @@ jobs:
           echo "Playwright install started in background (PID: $!)"
 
       - name: Run Typecheck and Lint
-        run: TURBO_TELEMETRY_DISABLED=1 turbo run typecheck lint:ci
+        run: TURBO_TELEMETRY_DISABLED=1 bun turbo run typecheck lint:ci
 
       - name: Run Non-Playwright Tests
         run: |
-          TURBO_TELEMETRY_DISABLED=1 turbo run test --filter='!test-playground'
+          TURBO_TELEMETRY_DISABLED=1 bun turbo run test --filter='!test-playground'
           cd tests/test-playground && bun run test:unit
 
       - name: Wait for Playwright and Run E2E Tests
