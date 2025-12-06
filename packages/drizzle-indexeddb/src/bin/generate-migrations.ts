@@ -256,7 +256,8 @@ const main = defineCommand({
 		outputDir: {
 			type: "string",
 			alias: "o",
-			description: "Path to output directory (default: <drizzle-dir>/indexeddb-migrations)",
+			description:
+				"Path to output directory (default: <drizzle-dir>/indexeddb-migrations)",
 		},
 	},
 	run({ args }) {
