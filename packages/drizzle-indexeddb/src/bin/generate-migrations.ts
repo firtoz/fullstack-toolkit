@@ -9,6 +9,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { defineCommand, runMain } from "citty";
 import type {
 	JournalEntry,
 	Journal,
@@ -240,49 +241,33 @@ export default migrations;
 }
 
 // CLI entry point
-function main(): void {
-	const args = process.argv.slice(2);
-	const command = args[0];
-
-	if (command === "generate" || command === undefined) {
-		// Parse options
-		const options: GenerateOptions = {};
-
-		for (let i = 1; i < args.length; i++) {
-			const arg = args[i];
-			if (arg === "--drizzle-dir" && args[i + 1]) {
-				options.drizzleDir = args[++i];
-			} else if (arg === "--output-dir" && args[i + 1]) {
-				options.outputDir = args[++i];
-			}
-		}
-
-		generateIndexedDBMigrations(options);
-	} else if (command === "--help" || command === "-h") {
-		console.log(`
-drizzle-indexeddb-generate - Generate IndexedDB migrations from Drizzle schema
-
-Usage:
-  bun drizzle-indexeddb-generate [options]
-
-Options:
-  --drizzle-dir <path>  Path to Drizzle directory (default: ./drizzle)
-  --output-dir <path>   Path to output directory (default: ./drizzle/indexeddb-migrations)
-  -h, --help            Show this help message
-
-Examples:
-  bun drizzle-indexeddb-generate
-  bun drizzle-indexeddb-generate --drizzle-dir ./db/drizzle
-  bun drizzle-indexeddb-generate --output-dir ./src/migrations
-`);
-	} else {
-		console.error(`Unknown command: ${command}`);
-		console.error(`Run 'bun drizzle-indexeddb-generate --help' for usage`);
-		process.exit(1);
-	}
-}
+const main = defineCommand({
+	meta: {
+		name: "drizzle-indexeddb-generate",
+		description: "Generate IndexedDB migrations from Drizzle schema",
+	},
+	args: {
+		drizzleDir: {
+			type: "string",
+			alias: "d",
+			default: "./drizzle",
+			description: "Path to Drizzle directory",
+		},
+		outputDir: {
+			type: "string",
+			alias: "o",
+			description: "Path to output directory (default: <drizzle-dir>/indexeddb-migrations)",
+		},
+	},
+	run({ args }) {
+		generateIndexedDBMigrations({
+			drizzleDir: args.drizzleDir,
+			outputDir: args.outputDir,
+		});
+	},
+});
 
 // Only run CLI when executed directly (not when imported)
 if (import.meta.main) {
-	main();
+	runMain(main);
 }

@@ -385,8 +385,8 @@ bun drizzle-indexeddb-generate --help
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--drizzle-dir <path>` | Path to Drizzle directory | `./drizzle` |
-| `--output-dir <path>` | Path to output directory | `./drizzle/indexeddb-migrations` |
+| `--drizzle-dir <path>`, `-d` | Path to Drizzle directory | `./drizzle` |
+| `--output-dir <path>`, `-o` | Path to output directory | `<drizzle-dir>/indexeddb-migrations` |
 
 ### npm scripts
 
@@ -395,10 +395,12 @@ Add to your `package.json`:
 ```json
 {
   "scripts": {
-    "db:generate": "bun drizzle-kit generate && bun drizzle-indexeddb-generate"
+    "db:generate": "bun --bun drizzle-kit generate && bun drizzle-indexeddb-generate"
   }
 }
 ```
+
+> **Note:** The `--bun` flag forces bun's runtime instead of Node, which is needed because this package exports raw TypeScript. See [Troubleshooting](#err_unsupported_node_modules_type_stripping-error) if you encounter type stripping errors.
 
 ## Advanced Usage
 
@@ -665,6 +667,38 @@ Drizzle migrations don't track renames directly, but you can:
 Remove from schema and regenerate - the migrator will delete the object store.
 
 ## Troubleshooting
+
+### "ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING" Error
+
+If you see this error when running `drizzle-kit generate`:
+
+```
+Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is currently unsupported for files under node_modules
+```
+
+This happens because this package exports raw TypeScript files, and Node's built-in type stripping doesn't work inside `node_modules`.
+
+**Solution:** Use `bun --bun` to force bun's runtime instead of Node:
+
+```bash
+bun --bun drizzle-kit generate
+```
+
+Or in your `package.json`:
+
+```json
+{
+  "scripts": {
+    "db:generate": "bun --bun drizzle-kit generate && bun drizzle-indexeddb-generate"
+  }
+}
+```
+
+**Alternative:** If you're not using bun, use `tsx`:
+
+```bash
+npx tsx node_modules/drizzle-kit/bin.cjs generate --config ./drizzle.config.ts
+```
 
 ### "Primary key structure changed" Error
 
