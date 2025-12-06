@@ -61,4 +61,4 @@ jobs:
             exit 1
           fi
           echo "Playwright installed successfully"
-          cd tests/test-playground && bun run test:e2e
+          TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e --filter='test-playground'
