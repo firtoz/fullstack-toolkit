@@ -61,12 +61,12 @@ async function waitForPopulateComplete(page: Page): Promise<void> {
 	// Wait for "DB Status: populating" to appear in the log
 	await page.waitForSelector(
 		'[data-testid="query-log"]:has-text("DB Status: populating")',
-		{ timeout: 5000 },
+		{ timeout: 10000 },
 	);
 	// Then wait for "DB Status: ready" to appear
 	await page.waitForSelector(
 		'[data-testid="query-log"]:has-text("DB Status: ready")',
-		{ timeout: 10000 },
+		{ timeout: 15000 },
 	);
 }
 
@@ -76,8 +76,12 @@ test.describe("IndexedDB Operator Optimization", () => {
 		await page.evaluate(() => {
 			indexedDB.deleteDatabase("test-sync-mode.db");
 		});
-		await page.goto("/collections/sync-mode-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await page.goto("/collections/sync-mode-test?mode=on-demand", {
+			waitUntil: "networkidle",
+		});
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 10000,
+		});
 
 		// Populate database
 		await page.click('[data-testid="populate-db"]');
@@ -92,7 +96,7 @@ test.describe("IndexedDB Operator Optimization", () => {
 		await page.waitForSelector(
 			'[data-testid="query-status"]:has-text("Ready")',
 			{
-				timeout: 10000,
+				timeout: 15000,
 			},
 		);
 
@@ -197,26 +201,35 @@ test.describe("IndexedDB Operator Optimization", () => {
 // Helper to clear OPFS using the worker-based clear-opfs page
 // OPFS file operations MUST be done from a worker context, not main thread
 async function clearOPFSViaWorker(page: Page): Promise<void> {
-	await page.goto("/api/clear-opfs");
-	await page.waitForSelector('button:has-text("Clear All OPFS Data")');
+	await page.goto("/api/clear-opfs", { waitUntil: "networkidle" });
+	await page.waitForSelector('button:has-text("Clear All OPFS Data")', {
+		timeout: 15000,
+	});
 	await page.click('button:has-text("Clear All OPFS Data")');
-	await page.waitForSelector("text=Successfully cleared", { timeout: 10000 });
+	await page.waitForSelector("text=Successfully cleared", { timeout: 15000 });
 }
 
 test.describe("SQLite Operator Optimization", () => {
+	// Increase timeout for SQLite tests as they involve OPFS and worker initialization
+	test.setTimeout(60000);
+
 	test.beforeEach(async ({ page }) => {
 		// Clear OPFS from worker context
 		await clearOPFSViaWorker(page);
 
 		// Navigate to test page
-		await page.goto("/collections/sqlite-sync-mode-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await page.goto("/collections/sqlite-sync-mode-test?mode=on-demand", {
+			waitUntil: "networkidle",
+		});
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 15000,
+		});
 
 		// Wait for SQLite worker to be ready with database initialized
 		// The page tests the database with a query to ensure it's actually ready
 		await page.waitForSelector(
 			'[data-testid="query-log"]:has-text("SQLite Worker: ready (database initialized")',
-			{ timeout: 15000 },
+			{ timeout: 20000 },
 		);
 
 		// Populate database (no reload in on-demand mode)

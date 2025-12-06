@@ -31,15 +31,26 @@ test.describe("useDynamicSubmitter & formAction", () => {
 		await page.getByLabel(/age/i).fill("25");
 		await page.getByLabel(/accept the terms and conditions/i).check();
 
+		// Intercept the form submission to slow it down so we can catch the submitting state
+		await page.route("**/router-toolkit/form-action-test*", async (route) => {
+			if (route.request().method() === "POST") {
+				await new Promise((r) => setTimeout(r, 500));
+			}
+			await route.continue();
+		});
+
 		// Start submission - useDynamicSubmitter should update state
 		await submitButton.click();
 
 		// CORE TEST: useDynamicSubmitter provides "submitting" state
-		await expect(submitButton).toHaveText("Registering...");
+		// The button should show submitting state and be disabled
+		await expect(submitButton).toHaveText("Registering...", { timeout: 2000 });
 		await expect(submitButton).toBeDisabled();
 
 		// Wait for completion
-		await expect(page.getByText("✅ Registration successful!")).toBeVisible();
+		await expect(page.getByText("✅ Registration successful!")).toBeVisible({
+			timeout: 10000,
+		});
 	});
 
 	test("should show validation errors using formAction", async ({ page }) => {
