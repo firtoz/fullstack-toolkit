@@ -1,5 +1,11 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.4.3
+
+### Patch Changes
+
+- [`ed6dfce`](https://github.com/firtoz/fullstack-toolkit/commit/ed6dfce75be95d5349381ab43c6c22b25b164414) Thanks [@firtoz](https://github.com/firtoz)! - Enable drizzle and output dir configuration in drizzle-indexeddb-generate
+
 ## 0.4.2
 
 ### Patch Changes
