@@ -251,8 +251,8 @@ export function createStandaloneCollection<TTable extends Table>(
 			if (debug) {
 				console.log(`[StandaloneCollection] Database "${dbName}" initialized`);
 			}
-			// biome-ignore lint/style/noNonNullAssertion: resolveReady is set in promise constructor
-			resolveReady!();
+
+			resolveReady();
 		} catch (error) {
 			console.error(
 				`[StandaloneCollection] Failed to initialize database "${dbName}":`,
@@ -294,16 +294,15 @@ export function createStandaloneCollection<TTable extends Table>(
 	const ready = Promise.all([readyPromise, collectionReady]).then(() => {});
 
 	// Helper to wait for transaction to persist
-	const waitForPersist = (
-		// biome-ignore lint/suspicious/noExplicitAny: Transaction types are complex, runtime is correct
-		transaction: any,
-		// biome-ignore lint/suspicious/noExplicitAny: Transaction types are complex, runtime is correct
-		callback?: (transaction: any) => void,
+	const waitForPersist = async (
+		transaction: MutationTransaction<TTable>,
+		callback?: (transaction: MutationTransaction<TTable>) => void,
 	): Promise<MutationTransaction<TTable>> => {
 		if (callback) {
 			callback(transaction);
 		}
-		return transaction.isPersisted.promise.then(() => transaction);
+		await transaction.isPersisted.promise;
+		return transaction;
 	};
 
 	return {
@@ -325,9 +324,12 @@ export function createStandaloneCollection<TTable extends Table>(
 			data: InsertInput<TTable> | InsertInput<TTable>[],
 			callback?: (transaction: MutationTransaction<TTable>) => void,
 		): Promise<MutationTransaction<TTable>> {
-			const items = Array.isArray(data) ? data : [data];
-			// @ts-expect-error - Type inference is complex here but runtime is correct
-			const transaction = collection.insert(...items);
+			const items = (Array.isArray(data) ? data : [data]) as InferSchemaOutput<
+				SelectSchema<TTable>
+			>;
+			const transaction = collection.insert(
+				items,
+			) as MutationTransaction<TTable>;
 			return waitForPersist(transaction, callback);
 		},
 
@@ -338,8 +340,8 @@ export function createStandaloneCollection<TTable extends Table>(
 		): Promise<MutationTransaction<TTable>> {
 			const transaction = collection.update(
 				key,
-				updater as (draft: any) => void,
-			);
+				updater,
+			) as MutationTransaction<TTable>;
 			return waitForPersist(transaction, callback);
 		},
 
