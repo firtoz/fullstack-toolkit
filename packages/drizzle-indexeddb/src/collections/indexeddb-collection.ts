@@ -36,10 +36,6 @@ export interface IndexedDBCollectionConfig<TTable extends Table> {
 	 */
 	indexedDBRef: React.RefObject<IDBDatabaseLike | null>;
 	/**
-	 * The database name (for perf markers)
-	 */
-	dbName: string;
-	/**
 	 * The Drizzle table definition (used for schema and type inference only)
 	 */
 	table: TTable;

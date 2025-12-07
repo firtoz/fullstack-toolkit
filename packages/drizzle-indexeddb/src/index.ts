@@ -45,6 +45,7 @@ export {
 	DrizzleIndexedDBContext,
 	useIndexedDBCollection,
 	type DrizzleIndexedDBContextValue,
+	type IndexedDbCollection,
 } from "./context/DrizzleIndexedDBProvider";
 
 export {
