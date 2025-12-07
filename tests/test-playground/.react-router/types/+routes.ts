@@ -35,6 +35,9 @@ type Pages = {
   "/collections/proxy-test": {
     params: {};
   };
+  "/collections/standalone-test": {
+    params: {};
+  };
   "/router-toolkit/loader-test": {
     params: {};
   };
@@ -58,7 +61,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/proxy-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/proxy-test" | "/collections/standalone-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -91,6 +94,10 @@ type RouteFiles = {
   "routes/collections/proxy-test.tsx": {
     id: "routes/collections/proxy-test";
     page: "/collections/proxy-test";
+  };
+  "routes/collections/standalone-test.tsx": {
+    id: "routes/collections/standalone-test";
+    page: "/collections/standalone-test";
   };
   "routes/router-toolkit/loader-test.tsx": {
     id: "routes/router-toolkit/loader-test";
@@ -128,6 +135,7 @@ type RouteModules = {
   "routes/collections/sync-mode-test": typeof import("./app/routes/collections/sync-mode-test.tsx");
   "routes/collections/sqlite-sync-mode-test": typeof import("./app/routes/collections/sqlite-sync-mode-test.tsx");
   "routes/collections/proxy-test": typeof import("./app/routes/collections/proxy-test.tsx");
+  "routes/collections/standalone-test": typeof import("./app/routes/collections/standalone-test.tsx");
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");
   "routes/router-toolkit/action-test": typeof import("./app/routes/router-toolkit/action-test.tsx");
   "routes/router-toolkit/form-action-test": typeof import("./app/routes/router-toolkit/form-action-test.tsx");

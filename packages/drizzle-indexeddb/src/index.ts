@@ -39,6 +39,13 @@ export {
 	type IndexedDBSyncItem,
 } from "./collections/indexeddb-collection";
 
+// Standalone Collection (for use outside React)
+export {
+	createStandaloneCollection,
+	type StandaloneCollection,
+	type StandaloneCollectionConfig,
+} from "./standalone-collection";
+
 // IndexedDB Provider
 export {
 	DrizzleIndexedDBProvider,
