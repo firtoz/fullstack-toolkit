@@ -1,5 +1,28 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.5.0
+
+### Minor Changes
+
+- [`9e532bb`](https://github.com/firtoz/fullstack-toolkit/commit/9e532bbd83bc671c62fd1333ae25fd9829112464) Thanks [@firtoz](https://github.com/firtoz)! - Add `createStandaloneCollection` utility for using IndexedDB collections outside of React context.
+
+  Features:
+
+  - Simple API for standalone usage without React providers
+  - Async mutation methods (`insert`, `update`, `delete`, `truncate`) that return Promises
+  - Sync accessors (`getAll`, `get`, `isReady`)
+  - Full access to collection utils (`truncate`, `pushExternalSync`)
+  - Automatic database initialization with migration support
+
+  Also:
+
+  - Update `IndexedDbCollection` type to use `CollectionUtils` instead of generic `UtilsRecord` for proper typing of `truncate` and `pushExternalSync`
+  - Export `IndexedDbCollection` type from package
+
+### Patch Changes
+
+- [`c772c2c`](https://github.com/firtoz/fullstack-toolkit/commit/c772c2cf74af560dc04080933591ccd3014f85a1) Thanks [@firtoz](https://github.com/firtoz)! - Improve types returned and simplify internal logic
+
 ## 0.4.3
 
 ### Patch Changes
