@@ -81,7 +81,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@standard-schema/spec": "^1.0.0",
+		"@standard-schema/spec": "^1.1.0",
 		"@types/react": "catalog:"
 	}
 }

@@ -70,7 +70,7 @@
 		"zod-form-data": "catalog:"
 	},
 	"devDependencies": {
-		"@testing-library/react": "^16.3.0",
+		"@testing-library/react": "^16.3.1",
 		"@types/jsdom": "^27.0.0",
 		"@types/react": "catalog:",
 		"bun-types": "catalog:",
