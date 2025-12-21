@@ -1,5 +1,14 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.5.1
+
+### Patch Changes
+
+- [`8abab0a`](https://github.com/firtoz/fullstack-toolkit/commit/8abab0ae7a99320a4254cb128c0fd823726e58e0) Thanks [@firtoz](https://github.com/firtoz)! - Add cursor-based and offset-based pagination support to `loadSubset` operations, enabling efficient navigation through large datasets with consistent behavior across collection backends.
+
+- Updated dependencies [[`8abab0a`](https://github.com/firtoz/fullstack-toolkit/commit/8abab0ae7a99320a4254cb128c0fd823726e58e0)]:
+  - @firtoz/drizzle-utils@0.3.1
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @firtoz/drizzle-utils
 
+## 0.3.1
+
+### Patch Changes
+
+- [`8abab0a`](https://github.com/firtoz/fullstack-toolkit/commit/8abab0ae7a99320a4254cb128c0fd823726e58e0) Thanks [@firtoz](https://github.com/firtoz)! - Update peer dependencies to require `@tanstack/db >= 0.5.12` and `drizzle-orm >= 0.45.1` for compatibility with latest pagination features.
+
 ## 0.3.0
 
 ### Minor Changes

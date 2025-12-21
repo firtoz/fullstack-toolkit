@@ -1,5 +1,21 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 0.2.2
+
+### Patch Changes
+
+- [`8abab0a`](https://github.com/firtoz/fullstack-toolkit/commit/8abab0ae7a99320a4254cb128c0fd823726e58e0) Thanks [@firtoz](https://github.com/firtoz)! - Fix critical bug where debug mode prevented database operations from executing. Debug handlers now properly wrap and call the actual backend handlers instead of replacing them.
+
+  Add cursor-based and offset-based pagination support to `loadSubset` operations, enabling efficient navigation through large datasets.
+
+  Add `SQLInterceptor` support to log all SQL queries, including direct Drizzle queries, with the new `createInstrumentedDrizzle` function. This provides comprehensive query visibility for debugging and monitoring.
+
+  Add explicit return type `SqliteCollectionConfig<TTable>` to `sqliteCollectionOptions` function, improving type safety and eliminating the `any` cast at the return statement.
+
+- Updated dependencies [[`8abab0a`](https://github.com/firtoz/fullstack-toolkit/commit/8abab0ae7a99320a4254cb128c0fd823726e58e0), [`8abab0a`](https://github.com/firtoz/fullstack-toolkit/commit/8abab0ae7a99320a4254cb128c0fd823726e58e0)]:
+  - @firtoz/maybe-error@1.5.2
+  - @firtoz/drizzle-utils@0.3.1
+
 ## 0.2.1
 
 ### Patch Changes
