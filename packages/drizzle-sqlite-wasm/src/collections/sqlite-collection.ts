@@ -1,4 +1,8 @@
-import type { InferSchemaOutput, SyncMode } from "@tanstack/db";
+import type {
+	InferSchemaOutput,
+	SyncMode,
+	CollectionConfig,
+} from "@tanstack/db";
 import type { IR } from "@tanstack/db";
 import {
 	eq,
@@ -31,6 +35,7 @@ import type {
 	TableWithRequiredFields,
 	BaseSyncConfig,
 	SyncBackend,
+	CollectionUtils,
 } from "@firtoz/drizzle-utils";
 import {
 	createSyncFunction,
@@ -38,6 +43,7 @@ import {
 	createGetKeyFunction,
 	createCollectionConfig,
 } from "@firtoz/drizzle-utils";
+import type * as v from "valibot";
 
 export type AnyDrizzleDatabase = BaseSQLiteDatabase<
 	"async",
@@ -102,6 +108,16 @@ export type SQLOperation =
 			tableName: string;
 			sql?: string;
 			timestamp: number;
+	  }
+	| {
+			/** Raw SQL query executed directly via Drizzle (not through collection) */
+			type: "raw-query";
+			sql: string;
+			params?: unknown[];
+			method: string;
+			rowCount: number;
+			context: string;
+			timestamp: number;
 	  };
 
 /**
@@ -143,6 +159,25 @@ export interface DrizzleCollectionConfig<
 export type ValidTableNames<TSchema extends Record<string, unknown>> = {
 	[K in keyof TSchema]: TSchema[K] extends TableWithRequiredFields ? K : never;
 }[keyof TSchema];
+
+/**
+ * Return type for sqliteCollectionOptions - configuration object for creating SQLite collections
+ *
+ * Note: The third type parameter of CollectionConfig uses `any` to maintain compatibility with
+ * TanStack DB's type system, which expects different schema types in different contexts.
+ */
+export type SqliteCollectionConfig<TTable extends Table> = Omit<
+	CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		string,
+		// biome-ignore lint/suspicious/noExplicitAny: Required for TanStack DB type compatibility
+		any
+	>,
+	"utils"
+> & {
+	schema: v.GenericSchema<unknown>;
+	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
+};
 
 /**
  * Converts TanStack DB IR BasicExpression to Drizzle SQL expression
@@ -262,7 +297,9 @@ export function sqliteCollectionOptions<
 	const TDrizzle extends AnyDrizzleDatabase,
 	const TTableName extends string & ValidTableNames<DrizzleSchema<TDrizzle>>,
 	TTable extends DrizzleSchema<TDrizzle>[TTableName] & TableWithRequiredFields,
->(config: DrizzleCollectionConfig<TDrizzle, TTableName>) {
+>(
+	config: DrizzleCollectionConfig<TDrizzle, TTableName>,
+): SqliteCollectionConfig<TTable> {
 	const tableName = config.tableName as string &
 		ValidTableNames<DrizzleSchema<TDrizzle>>;
 
@@ -321,19 +358,40 @@ export function sqliteCollectionOptions<
 		},
 
 		loadSubset: async (options, write) => {
-			// Build the query with optional where, orderBy, and limit
+			// Build the query with optional where, orderBy, limit, and offset
 			// Use $dynamic() to enable dynamic query building
 			let query = config.drizzle.select().from(table).$dynamic();
 
-			// Convert TanStack DB IR expressions to Drizzle expressions
+			// Combine where with cursor expressions if present
+			// The cursor.whereFrom gives us rows after the cursor position
 			let hasWhere = false;
-			if (options.where) {
-				const drizzleWhere = convertBasicExpressionToDrizzle(
-					options.where,
-					table,
-				);
-				query = query.where(drizzleWhere);
-				hasWhere = true;
+			if (options.where || options.cursor?.whereFrom) {
+				let drizzleWhere: SQL | undefined;
+
+				if (options.where && options.cursor?.whereFrom) {
+					// Combine main where with cursor expression using AND
+					const mainWhere = convertBasicExpressionToDrizzle(
+						options.where,
+						table,
+					);
+					const cursorWhere = convertBasicExpressionToDrizzle(
+						options.cursor.whereFrom,
+						table,
+					);
+					drizzleWhere = and(mainWhere, cursorWhere);
+				} else if (options.where) {
+					drizzleWhere = convertBasicExpressionToDrizzle(options.where, table);
+				} else if (options.cursor?.whereFrom) {
+					drizzleWhere = convertBasicExpressionToDrizzle(
+						options.cursor.whereFrom,
+						table,
+					);
+				}
+
+				if (drizzleWhere) {
+					query = query.where(drizzleWhere);
+					hasWhere = true;
+				}
 			}
 
 			if (options.orderBy) {
@@ -343,6 +401,11 @@ export function sqliteCollectionOptions<
 
 			if (options.limit !== undefined) {
 				query = query.limit(options.limit);
+			}
+
+			// Apply offset for offset-based pagination
+			if (options.offset !== undefined && options.offset > 0) {
+				query = query.offset(options.offset);
 			}
 
 			const items = (await query) as unknown as InferSchemaOutput<
@@ -357,6 +420,12 @@ export function sqliteCollectionOptions<
 				}
 				if (options.limit !== undefined) {
 					contextParts.push(`limit ${options.limit}`);
+				}
+				if (options.offset !== undefined && options.offset > 0) {
+					contextParts.push(`offset ${options.offset}`);
+				}
+				if (options.cursor) {
+					contextParts.push("with cursor pagination");
 				}
 
 				if (hasWhere) {
@@ -392,6 +461,9 @@ export function sqliteCollectionOptions<
 				}
 				if (options.limit !== undefined) {
 					contextParts.push(`limit ${options.limit}`);
+				}
+				if (options.offset !== undefined && options.offset > 0) {
+					contextParts.push(`offset ${options.offset}`);
 				}
 
 				config.interceptor.onOperation({
@@ -544,21 +616,29 @@ export function sqliteCollectionOptions<
 		onInsert: config.debug
 			? async (params) => {
 					console.log("onInsert", params);
+					// Call the actual handler from syncResult (always defined in createSyncFunction)
+					// biome-ignore lint/style/noNonNullAssertion: onInsert is always defined in SyncFunctionResult
+					await syncResult.onInsert!(params);
 				}
 			: undefined,
 		onUpdate: config.debug
 			? async (params) => {
 					console.log("onUpdate", params);
+					// Call the actual handler from syncResult (always defined in createSyncFunction)
+					// biome-ignore lint/style/noNonNullAssertion: onUpdate is always defined in SyncFunctionResult
+					await syncResult.onUpdate!(params);
 				}
 			: undefined,
 		onDelete: config.debug
 			? async (params) => {
 					console.log("onDelete", params);
+					// Call the actual handler from syncResult (always defined in createSyncFunction)
+					// biome-ignore lint/style/noNonNullAssertion: onDelete is always defined in SyncFunctionResult
+					await syncResult.onDelete!(params);
 				}
 			: undefined,
 		syncMode: config.syncMode,
 	});
 
-	// biome-ignore lint/suspicious/noExplicitAny: Collection schema type needs to be flexible
-	return collectionConfig as any;
+	return collectionConfig;
 }

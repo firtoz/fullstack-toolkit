@@ -100,6 +100,12 @@ const indexedDBRoutes: RouteItem[] = [
 			"Compare eager vs on-demand sync modes with operation tracking",
 	},
 	{
+		path: href("/collections/pagination-test"),
+		text: "Pagination Test",
+		description:
+			"Test limit/offset pagination with load more and page navigation",
+	},
+	{
 		path: href("/collections/proxy-test"),
 		text: "Proxy Test",
 		description:
@@ -118,6 +124,12 @@ const sqliteRoutes: RouteItem[] = [
 		text: "Sync Mode Test",
 		description:
 			"Compare eager vs on-demand sync modes with operation tracking",
+	},
+	{
+		path: href("/collections/sqlite-pagination-test"),
+		text: "Pagination Test",
+		description:
+			"Test native SQL LIMIT/OFFSET pagination with load more and page navigation",
 	},
 ];
 

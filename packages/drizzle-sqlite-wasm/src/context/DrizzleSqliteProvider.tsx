@@ -93,6 +93,7 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 		schema,
 		migrations,
 		debug,
+		interceptor, // Pass interceptor to log ALL Drizzle queries
 	);
 
 	// Collection cache with ref counting
@@ -122,6 +123,7 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 								? () => sqliteClient.checkpoint()
 								: undefined,
 						interceptor,
+						debug,
 					}),
 				) as Collection<Record<string, unknown>, string, UtilsRecord>;
 				collections.set(cacheKey, {
@@ -143,6 +145,7 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 			enableCheckpoint,
 			syncMode,
 			interceptor,
+			debug,
 		],
 	);
 

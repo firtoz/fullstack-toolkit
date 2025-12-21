@@ -22,6 +22,11 @@ export default [
 		),
 		route("proxy-test", "routes/collections/proxy-test.tsx"),
 		route("standalone-test", "routes/collections/standalone-test.tsx"),
+		route("pagination-test", "routes/collections/pagination-test.tsx"),
+		route(
+			"sqlite-pagination-test",
+			"routes/collections/sqlite-pagination-test.tsx",
+		),
 	]),
 	...prefix("router-toolkit", [
 		route("loader-test", "routes/router-toolkit/loader-test.tsx"),

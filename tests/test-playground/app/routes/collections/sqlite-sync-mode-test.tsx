@@ -789,8 +789,8 @@ const SqliteSyncModeTestContent = ({
 										data-operation-type={op.type}
 									>
 										<div style={{ marginBottom: "5px" }}>
-											<strong style={{ fontSize: "14px" }}>{op.type}</strong> on{" "}
-											{op.tableName}
+											<strong style={{ fontSize: "14px" }}>{op.type}</strong>
+											{"tableName" in op && <> on {op.tableName}</>}
 										</div>
 										{"context" in op && (
 											<div

@@ -381,14 +381,30 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 			let items: IndexedDBSyncItem[];
 
+			// Combine where with cursor expressions if present
+			// The cursor.whereFrom gives us rows after the cursor position
+			let combinedWhere = options.where;
+			if (options.cursor?.whereFrom) {
+				if (combinedWhere) {
+					// Combine main where with cursor expression using AND
+					combinedWhere = {
+						type: "func",
+						name: "and",
+						args: [combinedWhere, options.cursor.whereFrom],
+					} as IR.Func;
+				} else {
+					combinedWhere = options.cursor.whereFrom;
+				}
+			}
+
 			// Try to use an index for efficient querying
-			const indexedQuery = options.where
-				? tryExtractIndexedQuery(options.where, discoveredIndexes, config.debug)
+			const indexedQuery = combinedWhere
+				? tryExtractIndexedQuery(combinedWhere, discoveredIndexes, config.debug)
 				: null;
 
 			if (indexedQuery) {
 				// Use indexed query for better performance
-
+				// Index returns exact results for single-field queries, no additional filtering needed
 				items = await db.getAllByIndex<IndexedDBSyncItem>(
 					config.storeName,
 					indexedQuery.indexName,
@@ -398,9 +414,9 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				// Fall back to getting all items
 				items = await db.getAll<IndexedDBSyncItem>(config.storeName);
 
-				// Apply where filter in memory
-				if (options.where) {
-					const whereExpression = options.where;
+				// Apply combined where filter in memory
+				if (combinedWhere) {
+					const whereExpression = combinedWhere;
 					items = items.filter((item) =>
 						evaluateExpression(
 							whereExpression,
@@ -434,6 +450,11 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 					}
 					return 0;
 				});
+			}
+
+			// Apply offset (skip first N items for pagination)
+			if (options.offset !== undefined && options.offset > 0) {
+				items = items.slice(options.offset);
 			}
 
 			// Apply limit

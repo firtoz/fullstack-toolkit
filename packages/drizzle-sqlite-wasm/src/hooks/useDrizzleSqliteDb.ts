@@ -3,12 +3,16 @@ import {
 	customSqliteMigrate,
 	type DurableSqliteMigrationConfig,
 } from "@firtoz/drizzle-sqlite-wasm/sqlite-wasm-migrator";
-import { drizzleSqliteWasmWorker } from "@firtoz/drizzle-sqlite-wasm/drizzle-sqlite-wasm-worker";
+import {
+	drizzleSqliteWasmWorker,
+	createInstrumentedDrizzle,
+} from "@firtoz/drizzle-sqlite-wasm/drizzle-sqlite-wasm-worker";
 import type { ISqliteWorkerClient } from "../worker/manager";
 import {
 	initializeSqliteWorker,
 	isSqliteWorkerInitialized,
 } from "../worker/global-manager";
+import type { SQLInterceptor } from "../collections/sqlite-collection";
 
 export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	WorkerConstructor: new () => Worker,
@@ -16,6 +20,8 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	schema: TSchema,
 	migrations: DurableSqliteMigrationConfig,
 	debug?: boolean,
+	/** Optional interceptor to log ALL SQL queries (including direct Drizzle queries) */
+	interceptor?: SQLInterceptor,
 ) => {
 	const resolveRef = useRef<null | (() => void)>(null);
 	const rejectRef = useRef<null | ((error: unknown) => void)>(null);
@@ -72,45 +78,66 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 		};
 	}, [dbName, WorkerConstructor]);
 
+	// Store interceptor in a ref to avoid recreating drizzle on interceptor changes
+	const interceptorRef = useRef(interceptor);
+	interceptorRef.current = interceptor;
+
 	// Create drizzle instance with a callback-based approach that waits for the client
+	// Use instrumented version if interceptor is provided to log ALL queries
 	const drizzle = useMemo(() => {
 		if (debug) {
 			console.log(`[DEBUG] ${dbName} - creating drizzle proxy wrapper`);
 		}
-		return drizzleSqliteWasmWorker<TSchema>(
-			{
-				performRemoteCallback: (data, resolve, reject) => {
-					const client = sqliteClientRef.current;
-					if (!client) {
-						console.error(
-							`[DEBUG] ${dbName} - performRemoteCallback called but no sqliteClient yet`,
-						);
-						reject(
-							new Error(
-								`Database ${dbName} not ready yet - still initializing`,
-							),
-						);
-						return;
-					}
-					client.performRemoteCallback(data, resolve, reject);
-				},
-				onStarted: (callback) => {
-					const client = sqliteClientRef.current;
-					if (!client) {
-						console.warn(
-							`[DEBUG] ${dbName} - onStarted called but no sqliteClient yet`,
-						);
-						return;
-					}
-					client.onStarted(callback);
-				},
-				terminate: () => {
-					sqliteClientRef.current?.terminate();
-				},
+
+		const client: ISqliteWorkerClient = {
+			performRemoteCallback: (data, resolve, reject) => {
+				const actualClient = sqliteClientRef.current;
+				if (!actualClient) {
+					console.error(
+						`[DEBUG] ${dbName} - performRemoteCallback called but no sqliteClient yet`,
+					);
+					reject(
+						new Error(`Database ${dbName} not ready yet - still initializing`),
+					);
+					return;
+				}
+				actualClient.performRemoteCallback(data, resolve, reject);
 			},
-			{ schema },
-		);
-	}, [schema, dbName]); // Using ref for sqliteClient to avoid recreating drizzle
+			onStarted: (callback) => {
+				const actualClient = sqliteClientRef.current;
+				if (!actualClient) {
+					console.warn(
+						`[DEBUG] ${dbName} - onStarted called but no sqliteClient yet`,
+					);
+					return;
+				}
+				actualClient.onStarted(callback);
+			},
+			terminate: () => {
+				sqliteClientRef.current?.terminate();
+			},
+			checkpoint: () => {
+				return sqliteClientRef.current?.checkpoint() ?? Promise.resolve();
+			},
+		};
+
+		// Use instrumented version if interceptor is provided
+		// Use a wrapper that accesses the ref so interceptor changes don't recreate drizzle
+		const interceptorWrapper: SQLInterceptor = {
+			onOperation: (op) => interceptorRef.current?.onOperation?.(op),
+		};
+
+		// Always use instrumented if initial interceptor was provided
+		if (interceptor) {
+			return createInstrumentedDrizzle<TSchema>(
+				client,
+				{ schema },
+				interceptorWrapper,
+			);
+		}
+
+		return drizzleSqliteWasmWorker<TSchema>(client, { schema });
+	}, [schema, dbName, !!interceptor]); // Only recreate if interceptor presence changes, not on every render
 
 	useEffect(() => {
 		if (!sqliteClient) {

@@ -38,6 +38,12 @@ type Pages = {
   "/collections/standalone-test": {
     params: {};
   };
+  "/collections/pagination-test": {
+    params: {};
+  };
+  "/collections/sqlite-pagination-test": {
+    params: {};
+  };
   "/router-toolkit/loader-test": {
     params: {};
   };
@@ -61,7 +67,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/proxy-test" | "/collections/standalone-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/proxy-test" | "/collections/standalone-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -98,6 +104,14 @@ type RouteFiles = {
   "routes/collections/standalone-test.tsx": {
     id: "routes/collections/standalone-test";
     page: "/collections/standalone-test";
+  };
+  "routes/collections/pagination-test.tsx": {
+    id: "routes/collections/pagination-test";
+    page: "/collections/pagination-test";
+  };
+  "routes/collections/sqlite-pagination-test.tsx": {
+    id: "routes/collections/sqlite-pagination-test";
+    page: "/collections/sqlite-pagination-test";
   };
   "routes/router-toolkit/loader-test.tsx": {
     id: "routes/router-toolkit/loader-test";
@@ -136,6 +150,8 @@ type RouteModules = {
   "routes/collections/sqlite-sync-mode-test": typeof import("./app/routes/collections/sqlite-sync-mode-test.tsx");
   "routes/collections/proxy-test": typeof import("./app/routes/collections/proxy-test.tsx");
   "routes/collections/standalone-test": typeof import("./app/routes/collections/standalone-test.tsx");
+  "routes/collections/pagination-test": typeof import("./app/routes/collections/pagination-test.tsx");
+  "routes/collections/sqlite-pagination-test": typeof import("./app/routes/collections/sqlite-pagination-test.tsx");
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");
   "routes/router-toolkit/action-test": typeof import("./app/routes/router-toolkit/action-test.tsx");
   "routes/router-toolkit/form-action-test": typeof import("./app/routes/router-toolkit/form-action-test.tsx");
