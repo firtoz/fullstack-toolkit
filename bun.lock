@@ -26,7 +26,7 @@
     },
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "bin": {
         "drizzle-indexeddb-generate": "./src/bin/generate-migrations.ts",
       },
@@ -43,7 +43,7 @@
         "valibot": "^1.2.0",
       },
       "peerDependencies": {
-        "@firtoz/drizzle-utils": ">=0.3.0",
+        "@firtoz/drizzle-utils": ">=0.3.1",
         "@tanstack/db": ">=0.5.15",
         "drizzle-orm": ">=0.45.1",
         "drizzle-valibot": ">=0.4.0",
@@ -53,7 +53,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "dependencies": {
         "@firtoz/drizzle-utils": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -73,7 +73,7 @@
     },
     "packages/drizzle-utils": {
       "name": "@firtoz/drizzle-utils",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "devDependencies": {
         "@tanstack/db": "catalog:",
         "drizzle-orm": "catalog:",
@@ -103,7 +103,7 @@
     },
     "packages/maybe-error": {
       "name": "@firtoz/maybe-error",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "devDependencies": {
         "bun-types": "catalog:",
       },
