@@ -35,7 +35,10 @@ async function getItemsShown(page: Page): Promise<number> {
 }
 
 // Helper to get displayed todo priorities
-async function getDisplayedPriorities(page: Page, testIdPrefix: string): Promise<number[]> {
+async function getDisplayedPriorities(
+	page: Page,
+	testIdPrefix: string,
+): Promise<number[]> {
 	const items = await page.locator(`[data-testid^="${testIdPrefix}"]`).all();
 	const priorities: number[] = [];
 	for (const item of items) {
@@ -75,7 +78,9 @@ test.describe("Pagination - Cursor/Load More", () => {
 		expect(priorities).toEqual([1, 2, 3, 4, 5]);
 	});
 
-	test("should load more items when clicking load more button", async ({ page }) => {
+	test("should load more items when clicking load more button", async ({
+		page,
+	}) => {
 		await page.goto("/collections/pagination-test?mode=on-demand");
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
 
@@ -86,21 +91,27 @@ test.describe("Pagination - Cursor/Load More", () => {
 		await waitForQueryReady(page);
 
 		// Initially 5 items
-		expect(await getItemsShown(page)).toBe(5);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 5",
+		);
 
 		// Click load more
 		await page.click('[data-testid="load-more-button"]');
 		await waitForQueryReady(page);
 
-		// Should now show 10 items
-		expect(await getItemsShown(page)).toBe(10);
+		// Should now show 10 items - use expect with auto-retry instead of manual check
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 10",
+		);
 
 		// Verify correct priorities
 		const priorities = await getDisplayedPriorities(page, "todo-item-");
 		expect(priorities).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 	});
 
-	test("should continue loading more until all items are loaded", async ({ page }) => {
+	test("should continue loading more until all items are loaded", async ({
+		page,
+	}) => {
 		await page.goto("/collections/pagination-test?mode=on-demand");
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
 
@@ -170,12 +181,16 @@ test.describe("Pagination - Cursor/Load More", () => {
 		await page.click('[data-testid="test-cursor-pagination"]');
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(3);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 3",
+		);
 
 		await page.click('[data-testid="load-more-button"]');
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(6);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 6",
+		);
 	});
 
 	test("should reset pagination when settings change", async ({ page }) => {
@@ -194,13 +209,17 @@ test.describe("Pagination - Cursor/Load More", () => {
 		await page.click('[data-testid="load-more-button"]');
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(15);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 15",
+		);
 
 		// Change page size - should reset
 		await page.selectOption('[data-testid="page-size-select"]', "3");
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(3);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 3",
+		);
 	});
 });
 
@@ -221,9 +240,15 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 		await waitForQueryReady(page);
 
 		// Check page info
-		await expect(page.getByTestId("total-items")).toContainText("Total items: 20");
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 0");
-		await expect(page.getByTestId("items-on-page")).toContainText("Items on page: 5");
+		await expect(page.getByTestId("total-items")).toContainText(
+			"Total items: 20",
+		);
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 0",
+		);
+		await expect(page.getByTestId("items-on-page")).toContainText(
+			"Items on page: 5",
+		);
 
 		// Check priorities (first 5 in ascending order)
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -244,8 +269,12 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 		await page.click('[data-testid="next-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 5");
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 2 of 4");
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 5",
+		);
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 2 of 4",
+		);
 
 		// Check priorities (items 6-10)
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -268,8 +297,12 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 			await page.waitForTimeout(300);
 		}
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 4 of 4");
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 15");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 4 of 4",
+		);
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 15",
+		);
 
 		// Check priorities (items 16-20)
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -294,14 +327,20 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 		await page.click('[data-testid="next-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 3 of 4");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 3 of 4",
+		);
 
 		// Go back to page 2
 		await page.click('[data-testid="prev-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 2 of 4");
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 5");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 2 of 4",
+		);
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 5",
+		);
 
 		// Check priorities
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -321,14 +360,20 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 		await page.click('[data-testid="test-offset-pagination"]');
 		await waitForQueryReady(page);
 
-		await expect(page.getByTestId("items-on-page")).toContainText("Items on page: 10");
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 1 of 2");
+		await expect(page.getByTestId("items-on-page")).toContainText(
+			"Items on page: 10",
+		);
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 1 of 2",
+		);
 
 		// Go to page 2
 		await page.click('[data-testid="next-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 10");
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 10",
+		);
 
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
 		expect(priorities).toEqual([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
@@ -355,7 +400,9 @@ test.describe("Pagination - Operations Tracking", () => {
 		await clearIndexedDB(page, "test-pagination.db");
 	});
 
-	test("should track loadSubset operations for paginated queries", async ({ page }) => {
+	test("should track loadSubset operations for paginated queries", async ({
+		page,
+	}) => {
 		await page.goto("/collections/pagination-test?mode=on-demand");
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
 
@@ -369,7 +416,9 @@ test.describe("Pagination - Operations Tracking", () => {
 		await waitForQueryReady(page);
 
 		// Check that operations were logged
-		const operationCount = await page.getByTestId("operation-count").textContent();
+		const operationCount = await page
+			.getByTestId("operation-count")
+			.textContent();
 		expect(operationCount).not.toBe("Total operations: 0");
 
 		// Should have at least one getAll or index-getAll operation
@@ -377,7 +426,9 @@ test.describe("Pagination - Operations Tracking", () => {
 		expect(operations).toMatch(/getAll|index-getAll/);
 	});
 
-	test("should trigger additional loadSubset when loading more", async ({ page }) => {
+	test("should trigger additional loadSubset when loading more", async ({
+		page,
+	}) => {
 		await page.goto("/collections/pagination-test?mode=on-demand");
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
 
@@ -395,9 +446,11 @@ test.describe("Pagination - Operations Tracking", () => {
 		await waitForQueryReady(page);
 
 		// Check that new operations were logged
-		const operationCount = await page.getByTestId("operation-count").textContent();
+		const operationCount = await page
+			.getByTestId("operation-count")
+			.textContent();
 		const count = parseInt(operationCount?.match(/\d+/)?.[0] ?? "0", 10);
-		
+
 		// Should have at least one operation from the load more action
 		expect(count).toBeGreaterThanOrEqual(0); // May be 0 if data was already in memory
 	});
@@ -435,7 +488,9 @@ test.describe("Pagination - Edge Cases", () => {
 		await page.click('[data-testid="load-more-button"]');
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(10);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 10",
+		);
 
 		// Clear test first
 		await page.click('[data-testid="clear-test"]');
@@ -465,25 +520,31 @@ test.describe("Pagination - Edge Cases", () => {
 		await waitForQueryReady(page);
 
 		// Initial state should have 5 items
-		expect(await getItemsShown(page)).toBe(5);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 5",
+		);
 
 		await page.click('[data-testid="load-more-button"]');
-		await page.waitForTimeout(500);
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(10);
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 10",
+		);
 
 		// Switch to offset pagination
 		await page.click('[data-testid="test-offset-pagination"]');
 		await waitForQueryReady(page);
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 1 of 4");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 1 of 4",
+		);
 
 		// Switch back to cursor pagination - should reset
 		await page.click('[data-testid="test-cursor-pagination"]');
 		await waitForQueryReady(page);
 
-		expect(await getItemsShown(page)).toBe(5); // Reset to initial page size
+		await expect(page.getByTestId("items-shown")).toContainText(
+			"Items shown: 5",
+		); // Reset to initial page size
 	});
 });
-

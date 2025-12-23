@@ -28,7 +28,7 @@
 		"@react-router/serve": "^7.11.0",
 		"@sqlite.org/sqlite-wasm": "catalog:",
 		"@tanstack/db": "catalog:",
-		"@tanstack/react-db": "^0.1.59",
+		"@tanstack/react-db": "^0.1.60",
 		"drizzle-orm": "catalog:",
 		"isbot": "^5.1.32",
 		"react": "catalog:",

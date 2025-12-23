@@ -69,7 +69,7 @@
 	},
 	"peerDependencies": {
 		"@firtoz/drizzle-utils": ">=0.3.1",
-		"@tanstack/db": ">=0.5.15",
+		"@tanstack/db": ">=0.5.16",
 		"drizzle-orm": ">=0.45.1",
 		"drizzle-valibot": ">=0.4.0",
 		"react": ">=19.2.3",
