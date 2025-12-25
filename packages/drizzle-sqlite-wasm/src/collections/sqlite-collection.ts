@@ -481,17 +481,13 @@ export function sqliteCollectionOptions<
 			}
 		},
 
-		handleInsert: async (mutations) => {
+		handleInsert: async (items) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
 			// Queue the transaction to serialize SQLite operations
 			await queueTransaction(async () => {
 				await config.drizzle.transaction(async (tx) => {
-					for (const mutation of mutations) {
-						// TanStack DB applies schema transform (including ID default) before calling this listener
-						// So mutation.modified already has the ID from insertSchemaWithIdDefault
-						const itemToInsert = mutation.modified;
-
+					for (const itemToInsert of items) {
 						if (config.debug) {
 							console.log(
 								`[${new Date().toISOString()}] insertListener inserting`,

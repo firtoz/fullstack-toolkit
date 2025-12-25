@@ -467,32 +467,16 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 			}
 		},
 
-		handleInsert: async (mutations) => {
+		handleInsert: async (itemsToInsert) => {
 			const db = config.indexedDBRef.current;
 			if (!db) {
 				throw new Error("Database not ready");
 			}
 
-			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
+			// Add all items in a single batch operation
+			await db.add(config.storeName, itemsToInsert);
 
-			try {
-				const itemsToInsert: IndexedDBSyncItem[] = [];
-
-				for (const mutation of mutations) {
-					const itemToInsert = mutation.modified;
-					results.push(itemToInsert);
-					itemsToInsert.push(itemToInsert as IndexedDBSyncItem);
-				}
-
-				// Add all items in a single batch operation
-				await db.add(config.storeName, itemsToInsert);
-			} catch (error) {
-				// Clear results on error so nothing gets written to reactive store
-				results.length = 0;
-				throw error;
-			}
-
-			return results;
+			return itemsToInsert;
 		},
 
 		handleUpdate: async (mutations) => {

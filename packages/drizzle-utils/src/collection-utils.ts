@@ -136,9 +136,7 @@ export interface SyncBackend<TTable extends Table> {
 	 * Handle insert mutations
 	 */
 	handleInsert: (
-		mutations: Array<{
-			modified: InferSchemaOutput<SelectSchema<TTable>>;
-		}>,
+		items: Array<InferSchemaOutput<SelectSchema<TTable>>>,
 	) => Promise<Array<InferSchemaOutput<SelectSchema<TTable>>>>;
 	/**
 	 * Handle update mutations
@@ -269,13 +267,21 @@ export function createSyncFunction<TTable extends Table>(
 			await config.readyPromise;
 
 			try {
-				begin();
+				const allItems: InferSchemaOutput<SelectSchema<TTable>>[] = [];
+
 				await backend.initialLoad((item) => {
+					allItems.push(item);
+				});
+
+				begin();
+
+				for (const item of allItems) {
 					write({
 						type: "insert",
 						value: item,
 					});
-				});
+				}
+
 				commit();
 			} finally {
 				markReady();
@@ -290,9 +296,7 @@ export function createSyncFunction<TTable extends Table>(
 
 		insertListener = async (params) => {
 			const results = await backend.handleInsert(
-				params.transaction.mutations.map((m) => ({
-					modified: m.modified,
-				})),
+				params.transaction.mutations.map((m) => m.modified),
 			);
 
 			begin();
@@ -334,20 +338,22 @@ export function createSyncFunction<TTable extends Table>(
 		const loadSubset = async (options: LoadSubsetOptions) => {
 			await config.readyPromise;
 
+			const allItems: InferSchemaOutput<SelectSchema<TTable>>[] = [];
+
+			await backend.loadSubset(options, (item) => {
+				allItems.push(item);
+			});
+
 			begin();
 
-			try {
-				await backend.loadSubset(options, (item) => {
-					write({
-						type: "insert",
-						value: item,
-					});
+			for (const item of allItems) {
+				write({
+					type: "insert",
+					value: item,
 				});
-				commit();
-			} catch (error) {
-				commit();
-				throw error;
 			}
+
+			commit();
 		};
 
 		// Create deduplicated loadSubset wrapper to avoid redundant queries
