@@ -1,5 +1,15 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.6.0
+
+### Minor Changes
+
+- [`a08a986`](https://github.com/firtoz/fullstack-toolkit/commit/a08a986cc5161b20c9c875328e49565c15417ffc) Thanks [@firtoz](https://github.com/firtoz)! - Slight refactor
+
+  - Renamed `createProxyDbCreator` to `createProxyIDbCreator` for consistency across the codebase.
+  - Updated server sync message type from `sync:clear` to `sync:truncate` to better reflect its functionality.
+  - Adjusted related documentation and test cases to align with these changes.
+
 ## 0.5.1
 
 ### Patch Changes
