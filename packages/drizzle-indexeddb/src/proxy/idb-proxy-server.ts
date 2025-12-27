@@ -224,7 +224,7 @@ export class IDBProxyServer {
 				// Broadcast to other clients
 				this.options.transport.broadcast(
 					{
-						type: "sync:clear",
+						type: "sync:truncate",
 						dbName: request.dbName,
 						storeName: request.storeName,
 					},

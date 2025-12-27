@@ -460,7 +460,7 @@ For scenarios where IndexedDB needs to be accessed over a messaging layer (e.g.,
 import {
   createMultiClientTransport,
   createProxyServer,
-  createProxyDbCreator,
+  createProxyIDbCreator,
   migrateIndexedDBWithFunctions,
   DrizzleIndexedDBProvider,
 } from "@firtoz/drizzle-indexeddb";
@@ -478,7 +478,7 @@ const server = createProxyServer({
 
 // Create client
 const clientTransport = createClientTransport();
-const dbCreator = createProxyDbCreator(clientTransport);
+const dbCreator = createProxyIDbCreator(clientTransport);
 
 // Use with React provider
 function App() {

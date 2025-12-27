@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { waitForDBReady, waitForQueryReady, waitForWorkerReady } from "./utils";
 
 /**
  * E2E tests for SQLite limit/offset pagination
@@ -21,7 +22,7 @@ async function clearOPFS(page: Page) {
 	try {
 		await page.evaluate(async () => {
 			const root = await navigator.storage.getDirectory();
-			// @ts-ignore
+			// @ts-expect-error
 			for await (const [name] of root.entries()) {
 				await root.removeEntry(name, { recursive: true });
 			}
@@ -29,20 +30,6 @@ async function clearOPFS(page: Page) {
 	} catch {
 		// OPFS may not be available in all contexts
 	}
-}
-
-// Helper to wait for SQLite worker to be ready
-async function waitForWorkerReady(page: Page) {
-	await page.waitForSelector('[data-testid="worker-status"]:has-text("ready")', {
-		timeout: 30000,
-	});
-}
-
-// Helper to wait for query to be ready
-async function waitForQueryReady(page: Page) {
-	await page.waitForSelector('[data-testid="query-status"]:has-text("Ready")', {
-		timeout: 15000,
-	});
 }
 
 // Helper to get the number of items shown
@@ -53,7 +40,10 @@ async function getItemsShown(page: Page): Promise<number> {
 }
 
 // Helper to get displayed todo priorities
-async function getDisplayedPriorities(page: Page, testIdPrefix: string): Promise<number[]> {
+async function getDisplayedPriorities(
+	page: Page,
+	testIdPrefix: string,
+): Promise<number[]> {
 	const items = await page.locator(`[data-testid^="${testIdPrefix}"]`).all();
 	const priorities: number[] = [];
 	for (const item of items) {
@@ -118,15 +108,19 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 		// Check that operations show "limit" in context
 		const hasLimit = await operationsShowLimit(page);
 		expect(hasLimit).toBe(true);
+		``;
 	});
 
-	test("should load more items when clicking load more button", async ({ page }) => {
+	test("should load more items when clicking load more button", async ({
+		page,
+	}) => {
 		await page.goto("/collections/sqlite-pagination-test?mode=on-demand");
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
 		await waitForWorkerReady(page);
 
+		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
-		await page.waitForSelector('[data-testid="db-status"]:has-text("ready")');
+		await waitForDBReady(page);
 
 		await page.click('[data-testid="test-cursor-pagination"]');
 		await waitForQueryReady(page);
@@ -136,6 +130,7 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 
 		// Click load more
 		await page.click('[data-testid="load-more-button"]');
+		await page.waitForTimeout(200);
 		await waitForQueryReady(page);
 
 		// Should now show 10 items
@@ -146,7 +141,9 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 		expect(priorities).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 	});
 
-	test("should continue loading more until all items are loaded", async ({ page }) => {
+	test("should continue loading more until all items are loaded", async ({
+		page,
+	}) => {
 		await page.goto("/collections/sqlite-pagination-test?mode=on-demand");
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
 		await waitForWorkerReady(page);
@@ -246,9 +243,15 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 		await waitForQueryReady(page);
 
 		// Check page info
-		await expect(page.getByTestId("total-items")).toContainText("Total items: 20");
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 0");
-		await expect(page.getByTestId("items-on-page")).toContainText("Items on page: 5");
+		await expect(page.getByTestId("total-items")).toContainText(
+			"Total items: 20",
+		);
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 0",
+		);
+		await expect(page.getByTestId("items-on-page")).toContainText(
+			"Items on page: 5",
+		);
 
 		// Check priorities (first 5 in ascending order)
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -270,8 +273,12 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 		await page.click('[data-testid="next-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 5");
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 2 of 4");
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 5",
+		);
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 2 of 4",
+		);
 
 		// Check priorities (items 6-10)
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -295,8 +302,12 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 			await page.waitForTimeout(300);
 		}
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 4 of 4");
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 15");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 4 of 4",
+		);
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 15",
+		);
 
 		// Check priorities (items 16-20)
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -322,14 +333,20 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 		await page.click('[data-testid="next-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 3 of 4");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 3 of 4",
+		);
 
 		// Go back to page 2
 		await page.click('[data-testid="prev-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 2 of 4");
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 5");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 2 of 4",
+		);
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 5",
+		);
 
 		// Check priorities
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
@@ -350,14 +367,20 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 		await page.click('[data-testid="test-offset-pagination"]');
 		await waitForQueryReady(page);
 
-		await expect(page.getByTestId("items-on-page")).toContainText("Items on page: 10");
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 1 of 2");
+		await expect(page.getByTestId("items-on-page")).toContainText(
+			"Items on page: 10",
+		);
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 1 of 2",
+		);
 
 		// Go to page 2
 		await page.click('[data-testid="next-page-button"]');
 		await page.waitForTimeout(300);
 
-		await expect(page.getByTestId("current-offset")).toContainText("Current offset: 10");
+		await expect(page.getByTestId("current-offset")).toContainText(
+			"Current offset: 10",
+		);
 
 		const priorities = await getDisplayedPriorities(page, "offset-todo-item-");
 		expect(priorities).toEqual([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
@@ -385,7 +408,9 @@ test.describe("SQLite Pagination - Operations Tracking", () => {
 		await waitForQueryReady(page);
 
 		// Verify operations were logged and show limit
-		const operationCount = await page.getByTestId("operation-count").textContent();
+		const operationCount = await page
+			.getByTestId("operation-count")
+			.textContent();
 		expect(operationCount).not.toBe("Total operations: 0");
 
 		const operations = await page.getByTestId("sql-operations").textContent();
@@ -491,7 +516,9 @@ test.describe("SQLite Pagination - Edge Cases", () => {
 		await page.click('[data-testid="test-offset-pagination"]');
 		await waitForQueryReady(page);
 
-		await expect(page.getByTestId("page-indicator")).toContainText("Page 1 of 4");
+		await expect(page.getByTestId("page-indicator")).toContainText(
+			"Page 1 of 4",
+		);
 
 		// Switch back to cursor pagination - should reset
 		await page.click('[data-testid="test-cursor-pagination"]');
@@ -499,8 +526,9 @@ test.describe("SQLite Pagination - Edge Cases", () => {
 		await waitForQueryReady(page);
 
 		// Wait for query to re-run and get items
-		await page.waitForSelector('[data-testid="items-shown"]:not(:has-text("Items shown: 0"))');
+		await page.waitForSelector(
+			'[data-testid="items-shown"]:not(:has-text("Items shown: 0"))',
+		);
 		expect(await getItemsShown(page)).toBe(5); // Reset to initial page size
 	});
 });
-

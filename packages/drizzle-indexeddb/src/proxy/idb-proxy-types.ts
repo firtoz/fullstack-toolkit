@@ -59,7 +59,7 @@ export type IDBProxySyncMessage = {
 	| { type: "sync:add"; items: unknown[] }
 	| { type: "sync:put"; items: unknown[] }
 	| { type: "sync:delete"; keys: IDBValidKey[] }
-	| { type: "sync:clear" }
+	| { type: "sync:truncate" }
 );
 
 /**

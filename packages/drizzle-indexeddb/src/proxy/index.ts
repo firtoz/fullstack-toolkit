@@ -19,7 +19,7 @@ export {
 // Proxy client
 export {
 	IDBProxyClient,
-	createProxyDbCreator,
+	createProxyIDbCreator,
 	type SyncHandler,
 } from "./idb-proxy-client";
 

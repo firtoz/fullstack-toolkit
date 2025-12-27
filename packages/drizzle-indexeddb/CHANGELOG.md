@@ -61,12 +61,12 @@
   - **`IDBProxyServer`** - Server that manages database lifecycle, migrations, and broadcasts mutations to connected clients
   - **`IDBProxyClient`** - Client implementing `IDBDatabaseLike`, routing operations through a transport layer
   - **`createMultiClientTransport()`** - In-memory transport for testing N clients connected to one server
-  - **`createProxyDbCreator()`** - Factory to create `dbCreator` for `DrizzleIndexedDBProvider`
+  - **`createProxyIDbCreator()`** - Factory to create `dbCreator` for `DrizzleIndexedDBProvider`
   - **`createCollectionSyncHandler()`** - Adapter connecting proxy sync messages to collection's external sync
 
   **Real-time Multi-Client Sync**:
 
-  - Server broadcasts `sync:add`, `sync:put`, `sync:delete`, `sync:clear` messages to all clients (excluding initiator)
+  - Server broadcasts `sync:add`, `sync:put`, `sync:delete`, `sync:truncate` messages to all clients (excluding initiator)
   - All mutations automatically sync across connected clients
 
   **Provider Enhancements**:

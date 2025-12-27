@@ -76,7 +76,7 @@ export {
 	createMultiClientTransport,
 	// Client
 	IDBProxyClient,
-	createProxyDbCreator,
+	createProxyIDbCreator,
 	type SyncHandler,
 	// Server
 	IDBProxyServer,

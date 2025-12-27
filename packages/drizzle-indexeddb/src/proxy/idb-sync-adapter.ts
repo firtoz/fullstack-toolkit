@@ -65,7 +65,7 @@ export function createCollectionSyncHandler<T = unknown>(
 				});
 				break;
 
-			case "sync:clear":
+			case "sync:truncate":
 				pushExternalSync({
 					type: "truncate",
 				});

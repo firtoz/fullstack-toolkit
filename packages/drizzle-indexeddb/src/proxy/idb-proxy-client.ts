@@ -1,7 +1,6 @@
 import type {
 	IDBDatabaseLike,
 	IDBCreator,
-	IDBOpenOptions,
 	IndexInfo,
 	CreateStoreOptions,
 	CreateIndexOptions,
@@ -294,13 +293,13 @@ export class IDBProxyClient implements IDBDatabaseLike {
  * @param onSync Optional handler called when any sync message is received
  *
  * @example
- * const dbCreator = createProxyDbCreator(transport, (msg) => {
+ * const dbCreator = createProxyIDbCreator(transport, (msg) => {
  *   console.log('Sync:', msg.type, msg.storeName);
  * });
  *
  * <DrizzleIndexedDBProvider dbCreator={dbCreator} ... />
  */
-export function createProxyDbCreator(
+export function createProxyIDbCreator(
 	transport: IDBProxyClientTransport,
 	onSync?: SyncHandler,
 ): IDBCreator {
@@ -308,10 +307,7 @@ export function createProxyDbCreator(
 	const clientCache = new Map<string, IDBProxyClient>();
 	const connectingCache = new Map<string, Promise<IDBProxyClient>>();
 
-	return async (
-		name: string,
-		_options?: IDBOpenOptions,
-	): Promise<IDBDatabaseLike> => {
+	return async (name: string): Promise<IDBDatabaseLike> => {
 		// Return cached client if already connected
 		const cached = clientCache.get(name);
 		if (cached) {

@@ -280,7 +280,7 @@ export function DrizzleIndexedDBProvider<
 										items: message.keys.map((key) => ({ id: key })),
 									});
 									break;
-								case "sync:clear":
+								case "sync:truncate":
 									pushExternalSync({
 										type: "truncate",
 									});

@@ -11,7 +11,7 @@ import {
 	DrizzleIndexedDBProvider,
 	useDrizzleIndexedDB,
 	createMultiClientTransport,
-	createProxyDbCreator,
+	createProxyIDbCreator,
 	createProxyServer,
 	migrateIndexedDBWithFunctions,
 	deleteIndexedDB,
@@ -383,7 +383,10 @@ const ClientWrapper = ({
 	transport: IDBProxyClientTransport;
 	onDelete?: (id: string) => void;
 }) => {
-	const dbCreator = useMemo(() => createProxyDbCreator(transport), [transport]);
+	const dbCreator = useMemo(
+		() => createProxyIDbCreator(transport),
+		[transport],
+	);
 
 	// Wire up sync messages to the provider
 	const handleSyncReady = useCallback(
