@@ -122,16 +122,13 @@ export interface SyncBackend<TTable extends Table> {
 	/**
 	 * Initial data load - should call write() for each item
 	 */
-	initialLoad: (
-		write: (value: InferSchemaOutput<SelectSchema<TTable>>) => void,
-	) => Promise<void>;
+	initialLoad: () => Promise<Array<InferSchemaOutput<SelectSchema<TTable>>>>;
 	/**
 	 * Load a subset of data based on query options
 	 */
 	loadSubset: (
 		options: LoadSubsetOptions,
-		write: (value: InferSchemaOutput<SelectSchema<TTable>>) => void,
-	) => Promise<void>;
+	) => Promise<Array<InferSchemaOutput<SelectSchema<TTable>>>>;
 	/**
 	 * Handle insert mutations
 	 */
@@ -267,15 +264,11 @@ export function createSyncFunction<TTable extends Table>(
 			await config.readyPromise;
 
 			try {
-				const allItems: InferSchemaOutput<SelectSchema<TTable>>[] = [];
-
-				await backend.initialLoad((item) => {
-					allItems.push(item);
-				});
+				const items = await backend.initialLoad();
 
 				begin();
 
-				for (const item of allItems) {
+				for (const item of items) {
 					write({
 						type: "insert",
 						value: item,
@@ -338,15 +331,11 @@ export function createSyncFunction<TTable extends Table>(
 		const loadSubset = async (options: LoadSubsetOptions) => {
 			await config.readyPromise;
 
-			const allItems: InferSchemaOutput<SelectSchema<TTable>>[] = [];
-
-			await backend.loadSubset(options, (item) => {
-				allItems.push(item);
-			});
+			const items = await backend.loadSubset(options);
 
 			begin();
 
-			for (const item of allItems) {
+			for (const item of items) {
 				write({
 					type: "insert",
 					value: item,

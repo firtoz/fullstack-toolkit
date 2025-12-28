@@ -323,7 +323,7 @@ export function sqliteCollectionOptions<
 
 	// Create backend-specific implementation
 	const backend: SyncBackend<TTable> = {
-		initialLoad: async (write) => {
+		initialLoad: async () => {
 			const items = (await config.drizzle
 				.select()
 				.from(table)) as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
@@ -352,12 +352,10 @@ export function sqliteCollectionOptions<
 				});
 			}
 
-			for (const item of items) {
-				write(item);
-			}
+			return items as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
 		},
 
-		loadSubset: async (options, write) => {
+		loadSubset: async (options) => {
 			// Build the query with optional where, orderBy, limit, and offset
 			// Use $dynamic() to enable dynamic query building
 			let query = config.drizzle.select().from(table).$dynamic();
@@ -476,9 +474,7 @@ export function sqliteCollectionOptions<
 				});
 			}
 
-			for (const item of items) {
-				write(item);
-			}
+			return items as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
 		},
 
 		handleInsert: async (items) => {

@@ -352,7 +352,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 	// Create backend-specific implementation
 	const backend: SyncBackend<TTable> = {
-		initialLoad: async (write) => {
+		initialLoad: async () => {
 			const db = config.indexedDBRef.current;
 			if (!db) {
 				throw new Error("Database not ready");
@@ -362,12 +362,9 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 
 			const items = await db.getAll<IndexedDBSyncItem>(config.storeName);
 
-			for (const item of items) {
-				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
-			}
+			return items as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
 		},
-
-		loadSubset: async (options, write) => {
+		loadSubset: async (options) => {
 			const db = config.indexedDBRef.current;
 			if (!db) {
 				throw new Error("Database not ready");
@@ -462,9 +459,7 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 				items = items.slice(0, options.limit);
 			}
 
-			for (const item of items) {
-				write(item as unknown as InferSchemaOutput<SelectSchema<TTable>>);
-			}
+			return items as unknown as InferSchemaOutput<SelectSchema<TTable>>[];
 		},
 
 		handleInsert: async (itemsToInsert) => {
@@ -549,13 +544,15 @@ export function indexedDBCollectionOptions<const TTable extends Table>(
 	// For non-eager sync modes, still discover indexes before marking ready
 	const wrappedBackend: SyncBackend<TTable> = {
 		...backend,
-		initialLoad: async (write) => {
+		initialLoad: async () => {
 			if (config.syncMode === "eager" || !config.syncMode) {
-				await backend.initialLoad(write);
-			} else {
-				// For non-eager sync modes, still discover indexes but don't load data
-				await discoverIndexesOnce();
+				return await backend.initialLoad();
 			}
+
+			// For non-eager sync modes, still discover indexes but don't load data
+			await discoverIndexesOnce();
+
+			return [];
 		},
 	};
 
