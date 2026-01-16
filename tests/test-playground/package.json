@@ -24,11 +24,11 @@
 		"@firtoz/maybe-error": "workspace:*",
 		"@firtoz/router-toolkit": "workspace:*",
 		"@firtoz/worker-helper": "workspace:*",
-		"@react-router/node": "^7.11.0",
-		"@react-router/serve": "^7.11.0",
+		"@react-router/node": "^7.12.0",
+		"@react-router/serve": "^7.12.0",
 		"@sqlite.org/sqlite-wasm": "catalog:",
 		"@tanstack/db": "catalog:",
-		"@tanstack/react-db": "^0.1.60",
+		"@tanstack/react-db": "^0.1.64",
 		"drizzle-orm": "catalog:",
 		"isbot": "^5.1.32",
 		"react": "catalog:",
@@ -40,16 +40,16 @@
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.57.0",
-		"@react-router/dev": "^7.11.0",
+		"@react-router/dev": "^7.12.0",
 		"@types/node": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-basic-ssl": "^2.1.0",
+		"@vitejs/plugin-basic-ssl": "^2.1.3",
 		"bun-types": "catalog:",
 		"playwright": "^1.57.0",
 		"typescript": "catalog:",
-		"vite": "^7.3.0",
+		"vite": "^7.3.1",
 		"vite-plugin-devtools-json": "^1.0.0",
-		"vite-tsconfig-paths": "^6.0.3"
+		"vite-tsconfig-paths": "^6.0.4"
 	}
 }

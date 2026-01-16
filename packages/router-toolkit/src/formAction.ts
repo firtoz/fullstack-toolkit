@@ -4,25 +4,175 @@
  * This module provides a wrapper for React Router actions that handles form data validation
  * using Zod schemas and provides structured error handling with MaybeError.
  *
+ * ## Overview
+ *
+ * `formAction` is designed to work seamlessly with `useDynamicSubmitter` and `useDynamicFetcher`
+ * to provide end-to-end type safety for your React Router forms.
+ *
  * @example
+ * ### Basic Route Setup (`app/routes/auth.login.tsx`)
+ *
  * ```typescript
  * import { z } from "zod";
- * import { formAction } from "@firtoz/router-toolkit";
- * import { success } from "@firtoz/maybe-error";
+ * import { formAction, type RoutePath } from "@firtoz/router-toolkit";
+ * import { success, fail } from "@firtoz/maybe-error";
  *
- * const schema = z.object({
- *   email: z.email(),
- *   password: z.string().min(8),
+ * // 1. Export the route path for type inference
+ * export const route: RoutePath<"/auth/login"> = "/auth/login";
+ *
+ * // 2. Define your form schema with Zod
+ * export const formSchema = z.object({
+ *   email: z.string().email("Please enter a valid email"),
+ *   password: z.string().min(8, "Password must be at least 8 characters"),
+ *   rememberMe: z.boolean().optional().default(false),
  * });
  *
+ * // 3. Create the action with formAction
  * export const action = formAction({
- *   schema,
- *   handler: async (args, data) => {
- *     // data is fully typed based on the schema
- *     const user = await authenticateUser(data.email, data.password);
- *     return success(user);
+ *   schema: formSchema,
+ *   handler: async ({ request }, data) => {
+ *     // data is fully typed: { email: string, password: string, rememberMe: boolean }
+ *     try {
+ *       const user = await authenticateUser(data.email, data.password);
+ *       if (data.rememberMe) {
+ *         await createPersistentSession(user.id);
+ *       }
+ *       return success({ user });
+ *     } catch (error) {
+ *       return fail("Invalid email or password");
+ *     }
  *   },
  * });
+ * ```
+ *
+ * @example
+ * ### Using with useDynamicSubmitter
+ *
+ * The route above can be used with `useDynamicSubmitter` for type-safe form submissions:
+ *
+ * ```tsx
+ * import { useDynamicSubmitter } from "@firtoz/router-toolkit";
+ *
+ * function LoginForm() {
+ *   const submitter = useDynamicSubmitter<typeof import("./auth.login")>("/auth/login");
+ *
+ *   // Option 1: Submit as JSON (recommended for programmatic use)
+ *   const handleLoginJson = async () => {
+ *     await submitter.submitJson(
+ *       { email: "user@example.com", password: "secret123", rememberMe: true },
+ *       { method: "POST" }
+ *     );
+ *   };
+ *
+ *   // Option 2: Use the Form component
+ *   return (
+ *     <submitter.Form method="POST">
+ *       <input name="email" type="email" placeholder="Email" />
+ *       <input name="password" type="password" placeholder="Password" />
+ *       <label>
+ *         <input name="rememberMe" type="checkbox" /> Remember me
+ *       </label>
+ *       <button disabled={submitter.state !== "idle"}>
+ *         {submitter.state === "submitting" ? "Logging in..." : "Login"}
+ *       </button>
+ *
+ *       {submitter.data && !submitter.data.success && (
+ *         <div className="error">
+ *           {submitter.data.error.type === "validation"
+ *             ? "Please check your inputs"
+ *             : submitter.data.error.type === "handler"
+ *               ? submitter.data.error.error // "Invalid email or password"
+ *               : "An unexpected error occurred"}
+ *         </div>
+ *       )}
+ *     </submitter.Form>
+ *   );
+ * }
+ * ```
+ *
+ * @example
+ * ### Combined loader + action route (`app/routes/admin.posts.$id.tsx`)
+ *
+ * You can combine `formAction` with a loader for full CRUD operations:
+ *
+ * ```typescript
+ * import { z } from "zod";
+ * import { formAction, type RoutePath } from "@firtoz/router-toolkit";
+ * import { success, fail } from "@firtoz/maybe-error";
+ * import type { LoaderFunctionArgs } from "react-router";
+ *
+ * export const route: RoutePath<"/admin/posts/:id"> = "/admin/posts/:id";
+ *
+ * // Loader for fetching data (used with useDynamicFetcher)
+ * export const loader = async ({ params }: LoaderFunctionArgs) => {
+ *   const post = await db.posts.findUnique({ where: { id: params.id } });
+ *   return { post };
+ * };
+ *
+ * // Form schema for updates
+ * export const formSchema = z.object({
+ *   title: z.string().min(1, "Title is required"),
+ *   content: z.string().min(10, "Content must be at least 10 characters"),
+ *   published: z.boolean().optional().default(false),
+ * });
+ *
+ * // Action for handling form submissions (used with useDynamicSubmitter)
+ * export const action = formAction({
+ *   schema: formSchema,
+ *   handler: async ({ params }, data) => {
+ *     const updated = await db.posts.update({
+ *       where: { id: params.id },
+ *       data,
+ *     });
+ *     return success({ post: updated });
+ *   },
+ * });
+ * ```
+ *
+ * @example
+ * ### Full CRUD component using both hooks
+ *
+ * ```tsx
+ * import { useDynamicFetcher, useDynamicSubmitter } from "@firtoz/router-toolkit";
+ * import { useEffect } from "react";
+ *
+ * function PostEditor({ postId }: { postId: string }) {
+ *   // Fetch post data
+ *   const fetcher = useDynamicFetcher<typeof import("./admin.posts.$id")>(
+ *     "/admin/posts/:id",
+ *     { id: postId }
+ *   );
+ *
+ *   // Submit updates
+ *   const submitter = useDynamicSubmitter<typeof import("./admin.posts.$id")>(
+ *     "/admin/posts/:id",
+ *     { id: postId }
+ *   );
+ *
+ *   useEffect(() => {
+ *     fetcher.load();
+ *   }, [fetcher.load]);
+ *
+ *   if (fetcher.state === "loading" && !fetcher.data) {
+ *     return <div>Loading...</div>;
+ *   }
+ *
+ *   const post = fetcher.data?.post;
+ *
+ *   return (
+ *     <submitter.Form method="PUT">
+ *       <input name="title" defaultValue={post?.title} />
+ *       <textarea name="content" defaultValue={post?.content} />
+ *       <label>
+ *         <input name="published" type="checkbox" defaultChecked={post?.published} />
+ *         Published
+ *       </label>
+ *       <button disabled={submitter.state !== "idle"}>
+ *         {submitter.state === "submitting" ? "Saving..." : "Save"}
+ *       </button>
+ *     </submitter.Form>
+ *   );
+ * }
  * ```
  */
 

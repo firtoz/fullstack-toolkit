@@ -221,4 +221,170 @@ describe("useDynamicSubmitter", () => {
 
 		expect(mockSubmit).toHaveBeenCalledTimes(4);
 	});
+
+	describe("submitJson", () => {
+		it("should call submit with correct action and application/json encType", async () => {
+			const { result } = renderHook(() =>
+				useDynamicSubmitter("/api/submit" as TestRoutePath),
+			);
+			const jsonData = {
+				email: "user@example.com",
+				password: "secret123",
+				rememberMe: true,
+			};
+
+			await result.current.submitJson(jsonData, { method: "POST" });
+
+			expect(mockSubmit).toHaveBeenCalledWith(jsonData, {
+				method: "POST",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+			expect(mockSubmit).toHaveBeenCalledTimes(1);
+		});
+
+		it("should handle plain objects without SubmitTarget", async () => {
+			const { result } = renderHook(() =>
+				useDynamicSubmitter("/api/submit" as TestRoutePath),
+			);
+
+			// Plain object - no casting to SubmitTarget needed
+			const plainObject = {
+				title: "My Post",
+				content: "Post content here",
+				published: false,
+			};
+
+			await result.current.submitJson(plainObject, { method: "POST" });
+
+			expect(mockSubmit).toHaveBeenCalledWith(plainObject, {
+				method: "POST",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+		});
+
+		it("should handle multiple submitJson calls with different data", async () => {
+			const { result } = renderHook(() =>
+				useDynamicSubmitter("/api/submit" as TestRoutePath),
+			);
+
+			const data1 = { name: "test1", value: 1 };
+			const data2 = { name: "test2", value: 2 };
+
+			await result.current.submitJson(data1, { method: "POST" });
+			await result.current.submitJson(data2, { method: "PUT" });
+
+			expect(mockSubmit).toHaveBeenCalledTimes(2);
+			expect(mockSubmit).toHaveBeenNthCalledWith(1, data1, {
+				method: "POST",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+			expect(mockSubmit).toHaveBeenNthCalledWith(2, data2, {
+				method: "PUT",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+		});
+
+		it("should preserve custom options in submitJson", async () => {
+			const { result } = renderHook(() =>
+				useDynamicSubmitter("/api/submit" as TestRoutePath),
+			);
+			const jsonData = { name: "test" };
+
+			await result.current.submitJson(jsonData, {
+				method: "POST",
+				fetcherKey: "custom-key",
+			} as Parameters<typeof result.current.submitJson>[1]);
+
+			expect(mockSubmit).toHaveBeenCalledWith(jsonData, {
+				method: "POST",
+				fetcherKey: "custom-key",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+		});
+
+		it("should handle different HTTP methods with submitJson", async () => {
+			const { result } = renderHook(() =>
+				useDynamicSubmitter("/api/submit" as TestRoutePath),
+			);
+			const jsonData = { name: "test" };
+
+			// Test POST
+			await result.current.submitJson(jsonData, { method: "POST" });
+			expect(mockSubmit).toHaveBeenLastCalledWith(
+				jsonData,
+				expect.objectContaining({
+					method: "POST",
+					encType: "application/json",
+				}),
+			);
+
+			// Test PUT
+			await result.current.submitJson(jsonData, { method: "PUT" });
+			expect(mockSubmit).toHaveBeenLastCalledWith(
+				jsonData,
+				expect.objectContaining({ method: "PUT", encType: "application/json" }),
+			);
+
+			// Test PATCH
+			await result.current.submitJson(jsonData, { method: "PATCH" });
+			expect(mockSubmit).toHaveBeenLastCalledWith(
+				jsonData,
+				expect.objectContaining({
+					method: "PATCH",
+					encType: "application/json",
+				}),
+			);
+
+			// Test DELETE
+			await result.current.submitJson(jsonData, { method: "DELETE" });
+			expect(mockSubmit).toHaveBeenLastCalledWith(
+				jsonData,
+				expect.objectContaining({
+					method: "DELETE",
+					encType: "application/json",
+				}),
+			);
+
+			expect(mockSubmit).toHaveBeenCalledTimes(4);
+		});
+
+		it("should use different encType than submit", async () => {
+			const { result } = renderHook(() =>
+				useDynamicSubmitter("/api/submit" as TestRoutePath),
+			);
+			const data = { name: "test" };
+
+			// submit uses multipart/form-data
+			await result.current.submit(data as SubmitTarget, { method: "POST" });
+			expect(mockSubmit).toHaveBeenLastCalledWith(
+				data,
+				expect.objectContaining({ encType: "multipart/form-data" }),
+			);
+
+			// submitJson uses application/json
+			await result.current.submitJson(data, { method: "POST" });
+			expect(mockSubmit).toHaveBeenLastCalledWith(
+				data,
+				expect.objectContaining({ encType: "application/json" }),
+			);
+		});
+	});
+
+	it("should return submitJson in fetcher properties", () => {
+		const { result } = renderHook(() =>
+			useDynamicSubmitter("/api/submit" as TestRoutePath),
+		);
+
+		expect(result.current).toHaveProperty("submit");
+		expect(result.current).toHaveProperty("submitJson");
+		expect(result.current).toHaveProperty("Form");
+		expect(result.current).toHaveProperty("state");
+		expect(result.current).toHaveProperty("data");
+		expect(typeof result.current.submitJson).toBe("function");
+	});
 });
