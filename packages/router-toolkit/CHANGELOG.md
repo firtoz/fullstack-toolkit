@@ -1,5 +1,37 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.2.0
+
+### Minor Changes
+
+- [`861e168`](https://github.com/firtoz/fullstack-toolkit/commit/861e1680605d60e87c8a5e24bf22cf6850d5ad37) Thanks [@firtoz](https://github.com/firtoz)! - ### Changed
+
+  - **`submitJson` options are now optional** - Defaults to `{ method: "POST" }` when not provided. You can now simply call `submitter.submitJson(data)` without specifying options.
+
+    ```tsx
+    // Before: options required
+    await submitter.submitJson(data, { method: "POST" });
+
+    // After: options optional, defaults to POST
+    await submitter.submitJson(data);
+
+    // Or specify a different method
+    await submitter.submitJson(data, { method: "PUT" });
+    ```
+
+  - **`Form` method is now optional** - Defaults to `"POST"` when not specified.
+
+    ```tsx
+    // Before: method required
+    <submitter.Form method="POST">...</submitter.Form>
+
+    // After: method optional, defaults to POST
+    <submitter.Form>...</submitter.Form>
+
+    // Or specify a different method
+    <submitter.Form method="PUT">...</submitter.Form>
+    ```
+
 ## 5.1.0
 
 ### Minor Changes
