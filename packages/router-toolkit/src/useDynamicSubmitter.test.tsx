@@ -38,9 +38,6 @@ mock.module("react-router", () => ({
 
 // Import after mocking
 
-// Type for test route paths
-type TestRoutePath = "/test/path" | "/api/submit";
-
 import type { SubmitTarget } from "react-router";
 import type { $ZodAnyParams } from "zod/v4/core";
 import { useDynamicSubmitter } from "./useDynamicSubmitter";
