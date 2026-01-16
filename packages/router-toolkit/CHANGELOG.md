@@ -1,5 +1,37 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.1.0
+
+### Minor Changes
+
+- [`b84d9ee`](https://github.com/firtoz/fullstack-toolkit/commit/b84d9ee3cdb60e3e0bb78eb7415dbf4886f8a302) Thanks [@firtoz](https://github.com/firtoz)! - ### Added
+
+  - **`submitJson` function** in `useDynamicSubmitter` - Submit form data as a plain JSON object without needing `FormData` or `SubmitTarget`. Accepts only the inferred schema type for cleaner programmatic submissions.
+
+    ```tsx
+    const submitter =
+      useDynamicSubmitter<typeof import("./auth.login")>("/auth/login");
+
+    await submitter.submitJson(
+      { email: "user@example.com", password: "secret123", rememberMe: true },
+      { method: "POST" }
+    );
+    ```
+
+  ### Improved
+
+  - **Comprehensive TSDoc documentation** for all main exports:
+    - `formAction` - Now includes examples for route setup, using with `useDynamicSubmitter`, and combining with `useDynamicFetcher` for full CRUD operations
+    - `useDynamicSubmitter` - Full documentation with route setup examples, all three submission methods (`submitJson`, `submit`, `Form`), and response handling patterns
+    - `useDynamicFetcher` - Complete documentation covering basic usage, query parameters, and combining with `useDynamicSubmitter`
+
+### Patch Changes
+
+- [`b84d9ee`](https://github.com/firtoz/fullstack-toolkit/commit/b84d9ee3cdb60e3e0bb78eb7415dbf4886f8a302) Thanks [@firtoz](https://github.com/firtoz)! - Updated peer dependencies:
+
+  - `react-router`: ^7.11.0 → ^7.12.0
+  - `zod`: ^4.2.1 → ^4.3.5
+
 ## 5.0.1
 
 ### Patch Changes
