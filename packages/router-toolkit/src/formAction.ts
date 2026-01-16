@@ -56,17 +56,18 @@
  * function LoginForm() {
  *   const submitter = useDynamicSubmitter<typeof import("./auth.login")>("/auth/login");
  *
- *   // Option 1: Submit as JSON (recommended for programmatic use)
+ *   // Option 1: Submit as JSON (defaults to POST)
  *   const handleLoginJson = async () => {
- *     await submitter.submitJson(
- *       { email: "user@example.com", password: "secret123", rememberMe: true },
- *       { method: "POST" }
- *     );
+ *     await submitter.submitJson({
+ *       email: "user@example.com",
+ *       password: "secret123",
+ *       rememberMe: true,
+ *     });
  *   };
  *
- *   // Option 2: Use the Form component
+ *   // Option 2: Use the Form component (defaults to POST)
  *   return (
- *     <submitter.Form method="POST">
+ *     <submitter.Form>
  *       <input name="email" type="email" placeholder="Email" />
  *       <input name="password" type="password" placeholder="Password" />
  *       <label>

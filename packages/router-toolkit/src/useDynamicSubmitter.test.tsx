@@ -66,7 +66,7 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should call useFetcher with the correct key based on the generated URL", () => {
-		renderHook(() => useDynamicSubmitter("/test/path" as TestRoutePath));
+		renderHook(() => useDynamicSubmitter("/test/path"));
 
 		expect(mockUseFetcher).toHaveBeenCalledWith({
 			key: "submitter-/test/path",
@@ -74,21 +74,17 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should generate correct URL using href function", () => {
-		renderHook(() =>
-			useDynamicSubmitter("/test/path" as TestRoutePath, { id: "123" }),
-		);
+		renderHook(() => useDynamicSubmitter("/test/path", { id: "123" }));
 
 		expect(mockHref).toHaveBeenCalledWith("/test/path", { id: "123" });
 	});
 
 	it("should call submit with correct action and encType", async () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 		const formData = {
 			name: "test",
 			email: "test@example.com",
-		} as SubmitTarget;
+		} as const;
 		await result.current.submit(formData, { method: "POST" });
 
 		expect(mockSubmit).toHaveBeenCalledWith(formData, {
@@ -100,9 +96,7 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should handle multiple submit calls with different data", async () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 		const formData1 = { name: "test1" } as SubmitTarget;
 		const formData2 = { name: "test2" } as SubmitTarget;
 
@@ -123,14 +117,12 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should preserve custom options in submit", async () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 		const formData = { name: "test" } as SubmitTarget;
 		await result.current.submit(formData, {
 			method: "POST",
 			fetcherKey: "custom-key",
-		} as Parameters<typeof result.current.submit>[1]);
+		});
 
 		expect(mockSubmit).toHaveBeenCalledWith(formData, {
 			method: "POST",
@@ -141,9 +133,7 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should return Form component with action set", () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 
 		expect(result.current.Form).toBeDefined();
 		expect(typeof result.current.Form).toBe("function");
@@ -155,10 +145,35 @@ describe("useDynamicSubmitter", () => {
 		expect(formElement).toBeDefined();
 	});
 
+	it("should default Form method to POST when not specified", () => {
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
+
+		const FormComponent = result.current.Form;
+		// Call without method - should default to POST
+		const formElement = FormComponent({ children: null });
+
+		expect(formElement).toBeDefined();
+		// Check the element's props for the default method
+		expect(formElement.props).toMatchObject({
+			action: "/api/submit",
+			method: "POST",
+		});
+	});
+
+	it("should allow overriding Form method", () => {
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
+
+		const FormComponent = result.current.Form;
+		const formElement = FormComponent({ method: "PUT", children: null });
+
+		expect(formElement.props).toMatchObject({
+			action: "/api/submit",
+			method: "PUT",
+		});
+	});
+
 	it("should return fetcher properties", () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 
 		expect(result.current).toHaveProperty("submit");
 		expect(result.current).toHaveProperty("Form");
@@ -174,7 +189,7 @@ describe("useDynamicSubmitter", () => {
 		const args = [{ id: "123" }] as [$ZodAnyParams];
 
 		const { result } = renderHook(() =>
-			useDynamicSubmitter("/test/path" as TestRoutePath, ...args),
+			useDynamicSubmitter("/test/path", ...args),
 		);
 
 		// Verify href was called with correct arguments
@@ -186,9 +201,7 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should handle different HTTP methods", async () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 		const formData = { name: "test" } as SubmitTarget;
 
 		// Test POST
@@ -224,9 +237,7 @@ describe("useDynamicSubmitter", () => {
 
 	describe("submitJson", () => {
 		it("should call submit with correct action and application/json encType", async () => {
-			const { result } = renderHook(() =>
-				useDynamicSubmitter("/api/submit" as TestRoutePath),
-			);
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 			const jsonData = {
 				email: "user@example.com",
 				password: "secret123",
@@ -243,10 +254,42 @@ describe("useDynamicSubmitter", () => {
 			expect(mockSubmit).toHaveBeenCalledTimes(1);
 		});
 
+		it("should default to POST method when no options provided", async () => {
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
+			const jsonData = {
+				email: "user@example.com",
+				password: "secret123",
+			};
+
+			// Call without options - should default to POST
+			await result.current.submitJson(jsonData);
+
+			expect(mockSubmit).toHaveBeenCalledWith(jsonData, {
+				method: "POST",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+		});
+
+		it("should default to POST method when options provided without method", async () => {
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
+			const jsonData = { name: "test" };
+
+			// Call with options but no method - should default to POST
+			await result.current.submitJson(jsonData, {
+				fetcherKey: "custom-key",
+			});
+
+			expect(mockSubmit).toHaveBeenCalledWith(jsonData, {
+				method: "POST",
+				fetcherKey: "custom-key",
+				action: "/api/submit",
+				encType: "application/json",
+			});
+		});
+
 		it("should handle plain objects without SubmitTarget", async () => {
-			const { result } = renderHook(() =>
-				useDynamicSubmitter("/api/submit" as TestRoutePath),
-			);
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 
 			// Plain object - no casting to SubmitTarget needed
 			const plainObject = {
@@ -265,9 +308,7 @@ describe("useDynamicSubmitter", () => {
 		});
 
 		it("should handle multiple submitJson calls with different data", async () => {
-			const { result } = renderHook(() =>
-				useDynamicSubmitter("/api/submit" as TestRoutePath),
-			);
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 
 			const data1 = { name: "test1", value: 1 };
 			const data2 = { name: "test2", value: 2 };
@@ -289,15 +330,13 @@ describe("useDynamicSubmitter", () => {
 		});
 
 		it("should preserve custom options in submitJson", async () => {
-			const { result } = renderHook(() =>
-				useDynamicSubmitter("/api/submit" as TestRoutePath),
-			);
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 			const jsonData = { name: "test" };
 
 			await result.current.submitJson(jsonData, {
 				method: "POST",
 				fetcherKey: "custom-key",
-			} as Parameters<typeof result.current.submitJson>[1]);
+			});
 
 			expect(mockSubmit).toHaveBeenCalledWith(jsonData, {
 				method: "POST",
@@ -308,9 +347,7 @@ describe("useDynamicSubmitter", () => {
 		});
 
 		it("should handle different HTTP methods with submitJson", async () => {
-			const { result } = renderHook(() =>
-				useDynamicSubmitter("/api/submit" as TestRoutePath),
-			);
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 			const jsonData = { name: "test" };
 
 			// Test POST
@@ -354,13 +391,11 @@ describe("useDynamicSubmitter", () => {
 		});
 
 		it("should use different encType than submit", async () => {
-			const { result } = renderHook(() =>
-				useDynamicSubmitter("/api/submit" as TestRoutePath),
-			);
+			const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 			const data = { name: "test" };
 
 			// submit uses multipart/form-data
-			await result.current.submit(data as SubmitTarget, { method: "POST" });
+			await result.current.submit(data, { method: "POST" });
 			expect(mockSubmit).toHaveBeenLastCalledWith(
 				data,
 				expect.objectContaining({ encType: "multipart/form-data" }),
@@ -376,9 +411,7 @@ describe("useDynamicSubmitter", () => {
 	});
 
 	it("should return submitJson in fetcher properties", () => {
-		const { result } = renderHook(() =>
-			useDynamicSubmitter("/api/submit" as TestRoutePath),
-		);
+		const { result } = renderHook(() => useDynamicSubmitter("/api/submit"));
 
 		expect(result.current).toHaveProperty("submit");
 		expect(result.current).toHaveProperty("submitJson");

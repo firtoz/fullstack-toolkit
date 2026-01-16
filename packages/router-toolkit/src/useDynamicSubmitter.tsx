@@ -55,11 +55,13 @@
  *   // submitter.state is "idle" | "loading" | "submitting"
  *
  *   // Option 1: Submit as JSON (recommended for programmatic submissions)
+ *   // Defaults to POST if no options provided
  *   const handleSubmitJson = async () => {
- *     await submitter.submitJson(
- *       { title: "My Post", content: "Post content here", published: true },
- *       { method: "POST" }
- *     );
+ *     await submitter.submitJson({
+ *       title: "My Post",
+ *       content: "Post content here",
+ *       published: true,
+ *     });
  *   };
  *
  *   // Option 2: Submit with FormData or SubmitTarget
@@ -67,9 +69,9 @@
  *     await submitter.submit(formData, { method: "POST" });
  *   };
  *
- *   // Option 3: Use the Form component
+ *   // Option 3: Use the Form component (defaults to POST)
  *   return (
- *     <submitter.Form method="POST">
+ *     <submitter.Form>
  *       <input name="title" />
  *       <textarea name="content" />
  *       <button type="submit">Save</button>
@@ -98,7 +100,7 @@
  *   }, [submitter.data]);
  *
  *   return (
- *     <submitter.Form method="POST">
+ *     <submitter.Form>
  *       <input name="email" type="email" />
  *       <input name="password" type="password" />
  *       <button disabled={submitter.state !== "idle"}>
@@ -161,38 +163,60 @@ type SubmitFunc<TModule extends RouteModule> = (
 ) => Promise<void>;
 
 /**
+ * Options for submitJson function.
+ * Method defaults to "POST" if not specified.
+ */
+type SubmitJsonOptions = Omit<
+	SubmitOptions,
+	"action" | "method" | "encType"
+> & {
+	method?: Exclude<SubmitOptions["method"], "GET">;
+};
+
+/**
  * Function type for submitting form data as JSON.
  *
  * Accepts only the inferred form schema type (plain object).
  * Automatically serializes the data as JSON. This is the recommended
  * approach for programmatic form submissions.
  *
+ * Options are optional and default to `{ method: "POST" }`.
+ *
  * @example
  * ```typescript
- * // Submit a plain object - fully type-safe
- * await submitter.submitJson(
- *   { email: "user@example.com", password: "secret123", rememberMe: true },
- *   { method: "POST" }
- * );
+ * // Submit a plain object - fully type-safe (defaults to POST)
+ * await submitter.submitJson({
+ *   email: "user@example.com",
+ *   password: "secret123",
+ *   rememberMe: true,
+ * });
+ *
+ * // Or specify a different method
+ * await submitter.submitJson(data, { method: "PUT" });
  * ```
  */
 type SubmitJsonFunc<TModule extends RouteModule> = (
 	data: z.infer<TModule["formSchema"]>,
-	options: Omit<SubmitOptions, "action" | "method" | "encType"> & {
-		method: Exclude<SubmitOptions["method"], "GET">;
-	},
+	options?: SubmitJsonOptions,
 ) => Promise<void>;
 
 /**
  * Form component type with pre-bound action URL.
  *
  * Renders a form element that automatically submits to the correct route.
+ * Method defaults to "POST" if not specified.
  *
  * @example
  * ```typescript
- * <submitter.Form method="POST">
+ * // Defaults to POST
+ * <submitter.Form>
  *   <input name="title" />
  *   <button type="submit">Submit</button>
+ * </submitter.Form>
+ *
+ * // Or specify a different method
+ * <submitter.Form method="PUT">
+ *   ...
  * </submitter.Form>
  * ```
  */
@@ -201,7 +225,7 @@ type SubmitForm = (
 		FetcherFormProps & React.RefAttributes<HTMLFormElement>,
 		"action" | "method"
 	> & {
-		method: Exclude<SubmitOptions["method"], "GET">;
+		method?: Exclude<SubmitOptions["method"], "GET">;
 	},
 ) => React.ReactElement;
 
@@ -245,12 +269,12 @@ type SubmitForm = (
  *   { userId: "123" }
  * );
  *
- * // Submit using submitJson (type-safe, no FormData needed)
+ * // Submit using submitJson (type-safe, no FormData needed, defaults to POST)
  * await submitter.submitJson({
  *   displayName: "John Doe",
  *   email: "john@example.com",
  *   notifications: true,
- * }, { method: "POST" });
+ * });
  *
  * // Check the response
  * if (submitter.data?.success) {
@@ -269,9 +293,9 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 > & {
 	/** Submit with FormData or SubmitTarget (schema type & SubmitTarget) */
 	submit: SubmitFunc<TInfo>;
-	/** Submit a plain object as JSON (schema type only, recommended for programmatic use) */
+	/** Submit a plain object as JSON (schema type only, defaults to POST) */
 	submitJson: SubmitJsonFunc<TInfo>;
-	/** Pre-bound Form component with action URL already set */
+	/** Pre-bound Form component with action URL already set (defaults to POST) */
 	Form: SubmitForm;
 } => {
 	const url = useMemo(() => {
@@ -295,9 +319,10 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 	);
 
 	const submitJson: SubmitJsonFunc<TInfo> = useCallback(
-		(data, options) => {
+		(data, options = {}) => {
 			return fetcher.submit(data as SubmitTarget, {
 				...options,
+				method: options.method ?? "POST",
 				action: url,
 				encType: "application/json",
 			});
@@ -308,8 +333,8 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 	const OriginalForm = fetcher.Form;
 
 	const Form: SubmitForm = useCallback(
-		(props) => {
-			return <OriginalForm action={url} {...props} />;
+		({ method = "POST", ...props }) => {
+			return <OriginalForm action={url} method={method} {...props} />;
 		},
 		[url, OriginalForm],
 	);
