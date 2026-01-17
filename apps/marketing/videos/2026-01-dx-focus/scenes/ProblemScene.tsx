@@ -1,0 +1,145 @@
+import { AbsoluteFill, interpolate, useCurrentFrame, spring } from "remotion";
+import type { ResolvedMarker } from "../../../shared/lib/video-types";
+import { FPS } from "../timing";
+
+interface Props {
+	durationInFrames: number;
+	markers: Record<string, ResolvedMarker>;
+}
+
+/**
+ * Problem Scene - "Fetchers. Submission state. Form actions. A lot to wire up."
+ */
+export const ProblemScene: React.FC<Props> = ({ durationInFrames, markers }) => {
+	const frame = useCurrentFrame();
+
+	// Get marker frames (all relative to scene start)
+	const fetchersAppear = markers.fetchersAppear;
+	const submissionAppear = markers.submissionAppear;
+	const formAppear = markers.formAppear;
+	const wireUpAppear = markers.wireUpAppear;
+
+	// Items with their timing
+	const items = [
+		{ text: "Fetchers", icon: "📥", startFrame: fetchersAppear.startFrame },
+		{
+			text: "Submission state",
+			icon: "🔄",
+			startFrame: submissionAppear.startFrame,
+		},
+		{ text: "Form actions", icon: "📤", startFrame: formAppear.startFrame },
+	];
+
+	// "A lot to wire up" - new element, subtle delay
+	const wireUpOpacity = interpolate(
+		frame,
+		[wireUpAppear.startFrame + 1, wireUpAppear.startFrame + 8],
+		[0, 1],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	const wireUpScale = spring({
+		frame: Math.max(0, frame - (wireUpAppear.startFrame + 1)),
+		fps: FPS,
+		config: { damping: 12, stiffness: 100 },
+	});
+
+	// Fade out - only last 3 frames
+	const fadeOut = interpolate(
+		frame,
+		[durationInFrames - 3, durationInFrames],
+		[1, 0],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	return (
+		<AbsoluteFill
+			style={{
+				justifyContent: "center",
+				alignItems: "center",
+				opacity: fadeOut,
+			}}
+		>
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: 32,
+					alignItems: "center",
+				}}
+			>
+				{/* Items appear as they're mentioned - subtle delay */}
+				<div style={{ display: "flex", gap: 40 }}>
+					{items.map((item, i) => {
+						// New element: 1 frame delay, 8 frame fade-in
+						const itemOpacity = interpolate(
+							frame,
+							[item.startFrame + 1, item.startFrame + 9],
+							[0, 1],
+							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+						);
+
+						const itemY = interpolate(
+							frame,
+							[item.startFrame + 1, item.startFrame + 9],
+							[15, 0],
+							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+						);
+
+						return (
+							<div
+								key={i}
+								style={{
+									opacity: itemOpacity,
+									transform: `translateY(${itemY}px)`,
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									gap: 12,
+									background: "rgba(255, 255, 255, 0.05)",
+									border: "1px solid rgba(255, 255, 255, 0.1)",
+									borderRadius: 16,
+									padding: "24px 36px",
+									minWidth: 180,
+								}}
+							>
+								<span style={{ fontSize: 40 }}>{item.icon}</span>
+								<span
+									style={{
+										fontSize: 22,
+										color: "rgba(255, 255, 255, 0.9)",
+										fontFamily: "'Inter', sans-serif",
+										fontWeight: 500,
+										textAlign: "center",
+									}}
+								>
+									{item.text}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+
+				{/* "A lot to wire up" */}
+				<div
+					style={{
+						marginTop: 32,
+						opacity: wireUpOpacity,
+						transform: `scale(${Math.min(wireUpScale, 1)})`,
+					}}
+				>
+					<span
+						style={{
+							fontSize: 44,
+							fontWeight: 600,
+							color: "#fbbf24",
+							fontFamily: "'Inter', sans-serif",
+						}}
+					>
+						A lot to wire up... 🔌
+					</span>
+				</div>
+			</div>
+		</AbsoluteFill>
+	);
+};

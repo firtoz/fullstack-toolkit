@@ -1,0 +1,10 @@
+{
+	"name": "@router-toolkit/marketing",
+	"private": true,
+	"scripts": {
+		"process-video": "bun run shared/scripts/process-video.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	}
+}

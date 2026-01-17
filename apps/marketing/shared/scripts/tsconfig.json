@@ -1,0 +1,16 @@
+{
+	"extends": "../../../tsconfig.json",
+	"compilerOptions": {
+		"types": ["bun-types"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ESNext",
+		"lib": ["ESNext"],
+		"strict": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true
+	},
+	"include": ["./**/*"],
+	"exclude": ["node_modules"]
+}

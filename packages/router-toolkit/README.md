@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./logo.png" alt="router-toolkit logo" width="120" height="120">
+</p>
+
 # @firtoz/router-toolkit
 
 [![npm version](https://img.shields.io/npm/v/%40firtoz%2Frouter-toolkit.svg)](https://www.npmjs.com/package/@firtoz/router-toolkit)

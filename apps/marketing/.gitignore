@@ -1,0 +1,10 @@
+# Video processing artifacts (generated, not committed)
+videos/**/attempts/
+videos/**/transcriptions/
+videos/**/cache-manifest.json
+remotion-video/public/**/audio/
+
+# Environment variables
+.env
+.env.local
+.env.*.local

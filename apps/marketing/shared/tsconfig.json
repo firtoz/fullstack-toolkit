@@ -1,0 +1,12 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"typeRoots": [
+			"../../node_modules/@types",
+			"../remotion-video/node_modules/@types",
+			"../remotion-video/node_modules"
+		]
+	},
+	"include": ["./**/*"]
+}
