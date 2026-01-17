@@ -1,5 +1,5 @@
+import { join } from "node:path";
 import { Config } from "@remotion/cli/config";
-import { join } from "path";
 
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);

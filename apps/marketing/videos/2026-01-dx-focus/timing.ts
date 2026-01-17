@@ -1,12 +1,12 @@
 /**
  * Auto-generated timing data
- * Generated: 2026-01-17T23:15:19.521Z
+ * Generated: 2026-01-17T23:22:46.832Z
  *
  * DO NOT EDIT MANUALLY - regenerate with:
  *   bun run process-video.ts <video-id>
  */
 
-import type { ResolvedMarker, SceneTimingInfo } from "../../shared/lib/video-types";
+import type { SceneTimingInfo } from "../../shared/lib/video-types";
 
 export const FPS = 30;
 

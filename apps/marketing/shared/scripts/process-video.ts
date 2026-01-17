@@ -16,7 +16,6 @@
  */
 
 import { createHash } from "node:crypto";
-import { ElevenLabsClient } from "elevenlabs";
 import {
 	existsSync,
 	mkdirSync,
@@ -28,8 +27,8 @@ import {
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { ElevenLabsClient } from "elevenlabs";
 import { getAudioDurationInSeconds } from "get-audio-duration";
-import { validateMarkers, resolveMarkers } from "./marker-resolver";
 import type {
 	AudioGenerationOptions,
 	Marker,
@@ -39,6 +38,7 @@ import type {
 	TranscriptionResult,
 	VideoConfig,
 } from "../lib/video-types";
+import { resolveMarkers, validateMarkers } from "./marker-resolver";
 
 // Voice IDs from ElevenLabs - curated for tech/marketing content
 const VOICES: Record<string, string> = {
@@ -496,7 +496,7 @@ function generateTimingFile(
  *   bun run process-video.ts <video-id>
  */
 
-import type { ResolvedMarker, SceneTimingInfo } from "../../shared/lib/video-types";
+import type { SceneTimingInfo } from "../../shared/lib/video-types";
 
 export const FPS = ${fps};
 
@@ -758,7 +758,7 @@ async function main() {
 			totalDuration + config.sceneGap * (results.length - 1);
 		const skippedCount = scenes.length - scenesToProcess.length;
 
-		console.log("\n" + "─".repeat(60));
+		console.log(`\n${"─".repeat(60)}`);
 		console.log("✅ Processing complete!");
 		console.log(`   📊 Scenes: ${results.length} total`);
 		if (skippedCount > 0) {

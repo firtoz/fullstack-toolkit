@@ -1,4 +1,4 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, spring } from "remotion";
+import { AbsoluteFill, interpolate, spring, useCurrentFrame } from "remotion";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
 import { FPS } from "../timing";
 
@@ -10,7 +10,10 @@ interface Props {
 /**
  * Problem Scene - "Fetchers. Submission state. Form actions. A lot to wire up."
  */
-export const ProblemScene: React.FC<Props> = ({ durationInFrames, markers }) => {
+export const ProblemScene: React.FC<Props> = ({
+	durationInFrames,
+	markers,
+}) => {
 	const frame = useCurrentFrame();
 
 	// Get marker frames (all relative to scene start)
@@ -70,7 +73,7 @@ export const ProblemScene: React.FC<Props> = ({ durationInFrames, markers }) => 
 			>
 				{/* Items appear as they're mentioned - subtle delay */}
 				<div style={{ display: "flex", gap: 40 }}>
-					{items.map((item, i) => {
+					{items.map((item) => {
 						// New element: 1 frame delay, 8 frame fade-in
 						const itemOpacity = interpolate(
 							frame,
@@ -88,7 +91,7 @@ export const ProblemScene: React.FC<Props> = ({ durationInFrames, markers }) => 
 
 						return (
 							<div
-								key={i}
+								key={item.text}
 								style={{
 									opacity: itemOpacity,
 									transform: `translateY(${itemY}px)`,

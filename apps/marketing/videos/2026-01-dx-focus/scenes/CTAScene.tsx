@@ -1,6 +1,6 @@
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
-import { codeSnippets } from "../script";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
+import { codeSnippets } from "../script";
 
 interface Props {
 	durationInFrames: number;

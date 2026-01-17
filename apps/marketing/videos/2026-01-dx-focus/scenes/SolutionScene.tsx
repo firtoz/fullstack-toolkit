@@ -1,10 +1,10 @@
 import {
 	AbsoluteFill,
-	interpolate,
-	useCurrentFrame,
-	spring,
 	Img,
+	interpolate,
+	spring,
 	staticFile,
+	useCurrentFrame,
 } from "remotion";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
 import { FPS } from "../timing";
@@ -17,7 +17,10 @@ interface Props {
 /**
  * Solution Scene - "router-toolkit. Dynamic fetchers and submitters that just work."
  */
-export const SolutionScene: React.FC<Props> = ({ durationInFrames, markers }) => {
+export const SolutionScene: React.FC<Props> = ({
+	durationInFrames,
+	markers,
+}) => {
 	const frame = useCurrentFrame();
 
 	// Get marker frames (all relative to scene start)

@@ -5,7 +5,11 @@
 		"process-video": "bun run shared/scripts/process-video.ts",
 		"dev": "remotion studio remotion-video/src/index.ts",
 		"build": "remotion bundle remotion-video/src/index.ts",
-		"render": "remotion render remotion-video/src/index.ts"
+		"render": "remotion render remotion-video/src/index.ts",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check --write .",
+		"lint:ci": "biome ci .",
+		"format": "biome format --write ."
 	},
 	"dependencies": {
 		"@remotion/cli": "^4.0.0",

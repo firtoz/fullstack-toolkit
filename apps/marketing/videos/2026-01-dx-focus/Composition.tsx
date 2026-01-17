@@ -4,17 +4,17 @@
  * Voice: Liam (energetic)
  */
 
-import { AbsoluteFill, Sequence, staticFile, prefetch } from "remotion";
 import { Audio } from "@remotion/media";
-import { sceneTimings, FPS } from "./timing";
-import { config, VIDEO_ID } from "./script";
+import { useEffect, useMemo } from "react";
+import { AbsoluteFill, prefetch, Sequence, staticFile } from "remotion";
 import type { ResolvedMarker } from "../../shared/lib/video-types";
+import { CTAScene } from "./scenes/CTAScene";
+import { FeaturesScene } from "./scenes/FeaturesScene";
 import { HookScene } from "./scenes/HookScene";
 import { ProblemScene } from "./scenes/ProblemScene";
 import { SolutionScene } from "./scenes/SolutionScene";
-import { FeaturesScene } from "./scenes/FeaturesScene";
-import { CTAScene } from "./scenes/CTAScene";
-import { useEffect, useMemo } from "react";
+import { config, VIDEO_ID } from "./script";
+import { FPS, sceneTimings } from "./timing";
 
 interface SceneProps {
 	durationInFrames: number;
