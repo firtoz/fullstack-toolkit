@@ -4,7 +4,8 @@
  * Voice: Liam (energetic)
  */
 
-import { AbsoluteFill, Audio, Sequence, staticFile } from "remotion";
+import { AbsoluteFill, Sequence, staticFile, prefetch } from "remotion";
+import { Audio } from "@remotion/media";
 import { sceneTimings, FPS } from "./timing";
 import { config, VIDEO_ID } from "./script";
 import type { ResolvedMarker } from "../../shared/lib/video-types";
@@ -13,6 +14,7 @@ import { ProblemScene } from "./scenes/ProblemScene";
 import { SolutionScene } from "./scenes/SolutionScene";
 import { FeaturesScene } from "./scenes/FeaturesScene";
 import { CTAScene } from "./scenes/CTAScene";
+import { useEffect, useMemo } from "react";
 
 interface SceneProps {
 	durationInFrames: number;
@@ -40,10 +42,47 @@ function calculateTotalFrames(gapFrames: number): number {
 }
 
 export const DxFocusVideo: React.FC = () => {
-	const gapFrames = Math.round(config.sceneGap * FPS);
+	const gapFrames = useMemo(() => Math.round(config.sceneGap * FPS), []);
 
-	// Accumulator for timeline position - advances through the map
-	let timelinePosition = 0;
+	useEffect(() => {
+		sceneTimings.forEach((timing) => {
+			prefetch(staticFile(`${VIDEO_ID}/audio/${timing.audioFile}`));
+		});
+	}, []);
+
+	// Calculate timeline positions - driven by audio duration + gaps
+	const scenePositions = useMemo(
+		() =>
+			sceneTimings.map((timing, index) => {
+				// Each scene starts after previous scenes + gaps
+				const startFrame =
+					index === 0
+						? 0
+						: sceneTimings
+								.slice(0, index)
+								.reduce((sum, s) => sum + s.durationFrames, 0) +
+							gapFrames * index;
+
+				// timing.markers
+
+				let durationFrames = timing.durationFrames;
+
+				const markers = Object.values(timing.markers);
+				if (markers.length > 0) {
+					for (const marker of markers) {
+						durationFrames = Math.max(durationFrames, marker.endFrame);
+					}
+				}
+
+				return {
+					timing,
+					startFrame,
+					// Sequence duration is the audio duration
+					durationFrames,
+				};
+			}),
+		[gapFrames],
+	);
 
 	return (
 		<AbsoluteFill
@@ -60,33 +99,28 @@ export const DxFocusVideo: React.FC = () => {
 				}}
 			/>
 
-			{/* Render each scene with per-scene audio */}
-			{sceneTimings.map((timing, index) => {
+			{/* Scenes: audio-driven sequences with visuals positioned inside */}
+			{scenePositions.map(({ timing, startFrame, durationFrames }) => {
 				const SceneComponent = sceneComponents[timing.id];
 				if (!SceneComponent) return null;
-
-				// Capture where THIS scene starts on the timeline
-				const startFrame = timelinePosition;
-
-				// Advance accumulator for NEXT iteration
-				timelinePosition += timing.durationFrames;
-				if (index < sceneTimings.length - 1) {
-					timelinePosition += gapFrames; // Add gap after each scene (except last)
-				}
 
 				return (
 					<Sequence
 						key={timing.id}
 						from={startFrame}
-						durationInFrames={timing.durationFrames}
+						durationInFrames={durationFrames}
 						name={timing.id}
+						premountFor={gapFrames * 2}
 					>
-						{/* Per-scene audio */}
-						<Audio src={staticFile(`${VIDEO_ID}/audio/${timing.audioFile}`)} />
+						{/* Audio defines the sequence timeline */}
+						<Audio
+							src={staticFile(`${VIDEO_ID}/audio/${timing.audioFile}`)}
+							name={timing.audioFile}
+						/>
 
-						{/* Scene visuals - markers are scene-local (start at 0) */}
+						{/* Visuals position themselves relative to audio via markers */}
 						<SceneComponent
-							durationInFrames={timing.durationFrames}
+							durationInFrames={durationFrames}
 							markers={timing.markers}
 						/>
 					</Sequence>

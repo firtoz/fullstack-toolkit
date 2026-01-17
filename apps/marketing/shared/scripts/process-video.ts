@@ -22,14 +22,17 @@ import {
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { getAudioDurationInSeconds } from "get-audio-duration";
 import { validateMarkers, resolveMarkers } from "./marker-resolver";
 import type {
 	AudioGenerationOptions,
+	Marker,
 	ProcessedScene,
 	Scene,
 	SceneTimingInfo,
@@ -138,37 +141,50 @@ async function transcribeAudio(
 }
 
 /**
- * Get audio duration from transcription (last word end time)
+ * Compute hash of audio inputs (narration + voice settings)
+ * Step 1: If this changes, regenerate audio, transcription, and markers
  */
-function getAudioDuration(transcription: TranscriptionResult): number {
-	const words = transcription.words;
-	if (words.length === 0) return 0;
-
-	let maxEnd = 0;
-	for (const word of words) {
-		if (word.end > maxEnd) {
-			maxEnd = word.end;
-		}
-	}
-	return maxEnd;
+function computeAudioHash(
+	narration: string,
+	options: AudioGenerationOptions,
+): string {
+	const input = JSON.stringify({ narration, options });
+	return createHash("sha256").update(input).digest("hex").substring(0, 16);
 }
 
 /**
- * Compute a hash of scene input (narration + markers) for cache invalidation
+ * Compute hash of audio file (for transcription caching)
+ * Step 2: If audio changes, regenerate transcription and markers
  */
-function computeSceneHash(scene: Scene): string {
-	const input = JSON.stringify({
-		narration: scene.narration,
-		markers: scene.markers,
-	});
+function computeTranscriptionHash(audioPath: string): string {
+	if (!existsSync(audioPath)) return "";
+	const stats = statSync(audioPath);
+	return `${stats.size}-${stats.mtimeMs}`;
+}
+
+/**
+ * Compute hash of markers
+ * Step 3: If markers change, regenerate timing file only
+ */
+function computeMarkersHash(markers: Marker[]): string {
+	const input = JSON.stringify(markers);
 	return createHash("sha256").update(input).digest("hex").substring(0, 16);
 }
 
 /**
  * Cache manifest structure - stored in videoDir/cache-manifest.json
+ * Tracks each processing step independently for granular cache invalidation
  */
 interface CacheManifest {
-	scenes: Record<string, { inputHash: string; generatedAt: string }>;
+	scenes: Record<
+		string,
+		{
+			audioHash?: string; // Hash of narration + voice settings
+			transcriptionHash?: string; // Hash/timestamp of audio file
+			markersHash?: string; // Hash of markers
+			generatedAt: string;
+		}
+	>;
 }
 
 /**
@@ -195,64 +211,104 @@ function saveCacheManifest(videoDir: string, manifest: CacheManifest): void {
 }
 
 /**
- * Check if a scene is already processed and valid
- * Returns the processed scene data if valid, null otherwise
+ * Check scene cache status and return what needs to be regenerated
+ * Returns an object indicating which steps need processing
  */
-function checkExistingScene(
+interface CacheStatus {
+	needsAudio: boolean;
+	needsTranscription: boolean;
+	needsMarkers: boolean;
+	existingData?: ProcessedScene;
+}
+
+async function checkSceneCache(
 	scene: Scene,
 	videoDir: string,
+	videoId: string,
 	fps: number,
+	options: AudioGenerationOptions,
 	cacheManifest: CacheManifest,
-): ProcessedScene | null {
-	const audioPath = join(videoDir, "audio", `${scene.id}.mp3`);
+): Promise<CacheStatus> {
+	const audioPath = join(REMOTION_PUBLIC, videoId, "audio", `${scene.id}.mp3`);
 	const transcriptionPath = join(
 		videoDir,
 		"transcriptions",
 		`${scene.id}.json`,
 	);
 
-	// Check if files exist
-	if (!existsSync(audioPath) || !existsSync(transcriptionPath)) {
-		return null;
-	}
-
-	// Check if input hash matches (script hasn't changed)
-	const currentHash = computeSceneHash(scene);
 	const cachedInfo = cacheManifest.scenes[scene.id];
-	if (!cachedInfo || cachedInfo.inputHash !== currentHash) {
-		return null; // Script changed, need to regenerate
+	const currentAudioHash = computeAudioHash(scene.narration, options);
+	const currentMarkersHash = computeMarkersHash(scene.markers);
+
+	// Step 1: Check audio cache
+	const audioExists = existsSync(audioPath);
+	const audioChanged = !cachedInfo || cachedInfo.audioHash !== currentAudioHash;
+
+	if (!audioExists || audioChanged) {
+		return { needsAudio: true, needsTranscription: true, needsMarkers: true };
 	}
 
+	// Step 2: Check transcription cache
+	const transcriptionExists = existsSync(transcriptionPath);
+	const currentTranscriptionHash = computeTranscriptionHash(audioPath);
+	const transcriptionChanged =
+		!cachedInfo || cachedInfo.transcriptionHash !== currentTranscriptionHash;
+
+	if (!transcriptionExists || transcriptionChanged) {
+		return {
+			needsAudio: false,
+			needsTranscription: true,
+			needsMarkers: true,
+		};
+	}
+
+	// Step 3: Check markers cache
+	const markersChanged =
+		!cachedInfo || cachedInfo.markersHash !== currentMarkersHash;
+
+	if (markersChanged) {
+		return {
+			needsAudio: false,
+			needsTranscription: false,
+			needsMarkers: true,
+		};
+	}
+
+	// Everything is cached - load and return existing data
 	try {
-		// Load and parse transcription
 		const transcriptionData = readFileSync(transcriptionPath, "utf-8");
 		const transcription: TranscriptionResult = JSON.parse(transcriptionData);
 
-		// Validate markers against transcription
-		const validation = validateMarkers(scene.markers, transcription.words);
-		if (!validation.valid) {
-			return null;
-		}
-
-		// Resolve markers and get duration
-		const resolvedMarkers = resolveMarkers(
+		const resolvedMarkers = await resolveMarkers(
 			scene.markers,
 			transcription.words,
+			audioPath,
 			fps,
 		);
-		const audioDuration = getAudioDuration(transcription);
+
+		const audioDuration = await getAudioDurationInSeconds(audioPath);
 		const durationFrames = Math.round(audioDuration * fps);
 
 		return {
-			id: scene.id,
-			audioFile: `${scene.id}.mp3`,
-			audioDuration,
-			durationFrames,
-			transcription: transcription.words,
-			markers: resolvedMarkers,
+			needsAudio: false,
+			needsTranscription: false,
+			needsMarkers: false,
+			existingData: {
+				id: scene.id,
+				audioFile: `${scene.id}.mp3`,
+				audioDuration,
+				durationFrames,
+				transcription: transcription.words,
+				markers: resolvedMarkers,
+			},
 		};
 	} catch {
-		return null;
+		// If we can't load existing data, regenerate markers
+		return {
+			needsAudio: false,
+			needsTranscription: false,
+			needsMarkers: true,
+		};
 	}
 }
 
@@ -285,85 +341,121 @@ async function saveAttempt(
 }
 
 /**
- * Process a single scene - generate audio, transcribe, validate, resolve markers
+ * Process a scene with granular caching - only regenerate what's needed
  */
 async function processScene(
 	client: ElevenLabsClient,
 	scene: Scene,
 	videoDir: string,
+	videoId: string,
 	fps: number,
 	options: AudioGenerationOptions,
+	cacheStatus: CacheStatus,
 	attempt = 1,
 ): Promise<ProcessedScene> {
-	console.log(
-		`\n🎬 Processing scene: ${scene.id} (attempt ${attempt}/${MAX_RETRIES})`,
-	);
-	console.log(`   📝 Narration: "${scene.narration.substring(0, 60)}..."`);
-
-	// 1. Generate audio
-	console.log("   🎙️ Generating audio...");
-	const audioBuffer = await generateAudio(client, scene.narration, options);
-
-	// 2. Save audio
-	const audioDir = join(videoDir, "audio");
-	mkdirSync(audioDir, { recursive: true });
-	const audioPath = join(audioDir, `${scene.id}.mp3`);
-	writeFileSync(audioPath, audioBuffer);
-	console.log(`   💾 Saved: ${audioPath}`);
-
-	// 3. Transcribe
-	console.log("   📝 Transcribing...");
-	const transcription = await transcribeAudio(client, audioPath);
-	console.log(
-		`   🔤 Words detected: ${transcription.words.filter((w) => w.type === "word").length}`,
+	const audioPath = join(REMOTION_PUBLIC, videoId, "audio", `${scene.id}.mp3`);
+	const transcriptionPath = join(
+		videoDir,
+		"transcriptions",
+		`${scene.id}.json`,
 	);
 
-	// 4. Save transcription
-	const transcriptionsDir = join(videoDir, "transcriptions");
-	mkdirSync(transcriptionsDir, { recursive: true });
-	writeFileSync(
-		join(transcriptionsDir, `${scene.id}.json`),
-		JSON.stringify(transcription, null, 2),
-	);
+	console.log(`\n🎬 Processing scene: ${scene.id}`);
 
-	// 5. Validate markers
-	const validation = validateMarkers(scene.markers, transcription.words);
+	let audioBuffer: Buffer | undefined;
+	let transcription: TranscriptionResult;
 
-	if (!validation.valid) {
-		console.log(`   ⚠️ Validation failed:`);
-		for (const error of validation.errors) {
-			console.log(`      - ${error}`);
-		}
+	// Step 1: Generate audio if needed
+	if (cacheStatus.needsAudio) {
+		console.log(`   🎙️ Generating audio (attempt ${attempt}/${MAX_RETRIES})...`);
+		audioBuffer = await generateAudio(client, scene.narration, options);
 
-		// Save failed attempt
-		await saveAttempt(
-			videoDir,
-			scene.id,
-			attempt,
-			audioBuffer,
-			transcription,
-			validation.errors,
-		);
-
-		if (attempt < MAX_RETRIES) {
-			console.log(`   🔄 Retrying...`);
-			return processScene(client, scene, videoDir, fps, options, attempt + 1);
-		}
-
-		throw new Error(
-			`Scene "${scene.id}" failed after ${MAX_RETRIES} attempts:\n${validation.errors.join("\n")}`,
-		);
+		const audioDir = join(REMOTION_PUBLIC, videoId, "audio");
+		mkdirSync(audioDir, { recursive: true });
+		writeFileSync(audioPath, audioBuffer);
+		console.log(`   💾 Saved audio: ${audioPath}`);
+	} else {
+		console.log(`   ✓ Using cached audio`);
 	}
 
-	console.log(`   ✅ Validation passed`);
+	// Step 2: Transcribe if needed
+	if (cacheStatus.needsTranscription) {
+		console.log("   📝 Transcribing audio...");
+		transcription = await transcribeAudio(client, audioPath);
+		console.log(
+			`   🔤 Words detected: ${transcription.words.filter((w) => w.type === "word").length}`,
+		);
 
-	// 6. Resolve markers
-	const resolvedMarkers = resolveMarkers(
+		const transcriptionsDir = join(videoDir, "transcriptions");
+		mkdirSync(transcriptionsDir, { recursive: true });
+		writeFileSync(transcriptionPath, JSON.stringify(transcription, null, 2));
+		console.log(`   💾 Saved transcription`);
+	} else {
+		console.log(`   ✓ Using cached transcription`);
+		const transcriptionData = readFileSync(transcriptionPath, "utf-8");
+		transcription = JSON.parse(transcriptionData);
+	}
+
+	// Step 3: Validate and resolve markers if needed
+	if (cacheStatus.needsMarkers) {
+		console.log("   🎯 Validating markers...");
+		const validation = await validateMarkers(
+			scene.markers,
+			transcription.words,
+			audioPath,
+		);
+
+		if (!validation.valid) {
+			console.log(`   ⚠️ Validation failed:`);
+			for (const error of validation.errors) {
+				console.log(`      - ${error}`);
+			}
+
+			// Only save attempt if we generated new audio
+			if (audioBuffer) {
+				await saveAttempt(
+					videoDir,
+					scene.id,
+					attempt,
+					audioBuffer,
+					transcription,
+					validation.errors,
+				);
+			}
+
+			if (attempt < MAX_RETRIES && cacheStatus.needsAudio) {
+				console.log(`   🔄 Retrying audio generation...`);
+				return processScene(
+					client,
+					scene,
+					videoDir,
+					videoId,
+					fps,
+					options,
+					{ needsAudio: true, needsTranscription: true, needsMarkers: true },
+					attempt + 1,
+				);
+			}
+
+			throw new Error(
+				`Scene "${scene.id}" failed validation:\n${validation.errors.join("\n")}`,
+			);
+		}
+
+		console.log(`   ✅ Markers validated`);
+	} else {
+		console.log(`   ✓ Using cached markers`);
+	}
+
+	// Resolve markers and get duration
+	const resolvedMarkers = await resolveMarkers(
 		scene.markers,
 		transcription.words,
+		audioPath,
 		fps,
 	);
-	const audioDuration = getAudioDuration(transcription);
+
+	const audioDuration = await getAudioDurationInSeconds(audioPath);
 	const durationFrames = Math.round(audioDuration * fps);
 
 	console.log(
@@ -414,26 +506,6 @@ export const sceneTimings: SceneTimingInfo[] = ${JSON.stringify(sceneTimings, nu
 	const timingPath = join(videoDir, "timing.ts");
 	writeFileSync(timingPath, timingCode);
 	console.log(`\n✅ Generated timing file: ${timingPath}`);
-}
-
-/**
- * Copy audio files to remotion public folder
- */
-function copyAudioToPublic(videoId: string, videoDir: string): void {
-	const publicAudioDir = join(REMOTION_PUBLIC, videoId, "audio");
-	mkdirSync(publicAudioDir, { recursive: true });
-
-	const sourceAudioDir = join(videoDir, "audio");
-	const audioFiles = readdirSync(sourceAudioDir).filter((f) =>
-		f.endsWith(".mp3"),
-	);
-
-	for (const file of audioFiles) {
-		const src = join(sourceAudioDir, file);
-		const dest = join(publicAudioDir, file);
-		writeFileSync(dest, readFileSync(src));
-		console.log(`   📋 Copied: ${dest}`);
-	}
 }
 
 function showUsage(): void {
@@ -565,78 +637,120 @@ async function main() {
 	const cacheManifest = loadCacheManifest(videoDir);
 
 	try {
-		// Check which scenes need processing
-		const existingScenes: Map<string, ProcessedScene> = new Map();
-		const scenesToProcess: Scene[] = [];
-
-		if (!forceRegen) {
-			console.log("\n🔍 Checking existing scenes...");
-			for (const scene of scenes) {
-				const currentHash = computeSceneHash(scene);
-				const cachedHash = cacheManifest.scenes[scene.id]?.inputHash;
-				const hashChanged = cachedHash && cachedHash !== currentHash;
-
-				const existing = checkExistingScene(
+		// Check cache status for all scenes
+		console.log("\n🔍 Checking cache status...");
+		const sceneStatuses = await Promise.all(
+			scenes.map(async (scene) => ({
+				scene,
+				status: await checkSceneCache(
 					scene,
 					videoDir,
+					videoId,
 					config.fps,
+					options,
 					cacheManifest,
-				);
-				if (existing) {
-					existingScenes.set(scene.id, existing);
-					console.log(`   ✅ ${scene.id}: valid (skipping)`);
-				} else {
-					scenesToProcess.push(scene);
-					if (hashChanged) {
-						console.log(`   🔄 ${scene.id}: script changed, regenerating`);
-					} else {
-						console.log(`   🔄 ${scene.id}: needs processing`);
-					}
-				}
+				),
+			})),
+		);
+
+		// Display cache status
+		for (const { scene, status } of sceneStatuses) {
+			if (forceRegen) {
+				console.log(`   🔄 ${scene.id}: force regeneration`);
+			} else if (
+				!status.needsAudio &&
+				!status.needsTranscription &&
+				!status.needsMarkers
+			) {
+				console.log(`   ✅ ${scene.id}: fully cached`);
+			} else {
+				const steps = [];
+				if (status.needsAudio) steps.push("audio");
+				if (status.needsTranscription) steps.push("transcription");
+				if (status.needsMarkers) steps.push("markers");
+				console.log(`   🔄 ${scene.id}: regenerating ${steps.join(", ")}`);
 			}
-		} else {
-			scenesToProcess.push(...scenes);
 		}
 
-		// Process scenes that need it
+		// Process scenes (in parallel where possible)
+		const scenesToProcess = forceRegen
+			? scenes.map((scene) => ({
+					scene,
+					status: {
+						needsAudio: true,
+						needsTranscription: true,
+						needsMarkers: true,
+					} as CacheStatus,
+				}))
+			: sceneStatuses.filter(
+					({ status }) =>
+						status.needsAudio ||
+						status.needsTranscription ||
+						status.needsMarkers,
+				);
+
 		let results: ProcessedScene[];
+
 		if (scenesToProcess.length === 0) {
-			console.log("\n✨ All scenes already processed and valid!");
-			// biome-ignore lint/style/noNonNullAssertion: all scenes were validated above
-			results = scenes.map((scene) => existingScenes.get(scene.id)!);
+			console.log("\n✨ All scenes fully cached!");
+			// biome-ignore lint/style/noNonNullAssertion: all scenes have existingData when nothing needs processing
+			results = sceneStatuses.map(({ status }) => status.existingData!);
 		} else {
-			console.log(
-				`\n📦 Processing ${scenesToProcess.length} scene(s) in parallel...`,
-			);
+			console.log(`\n📦 Processing ${scenesToProcess.length} scene(s)...`);
 			const processedResults = await Promise.all(
-				scenesToProcess.map((scene) =>
-					processScene(client, scene, videoDir, config.fps, options),
+				scenesToProcess.map(({ scene, status }) =>
+					processScene(
+						client,
+						scene,
+						videoDir,
+						videoId,
+						config.fps,
+						options,
+						status,
+					),
 				),
 			);
 
-			// Update cache manifest for newly processed scenes
-			for (const scene of scenesToProcess) {
-				cacheManifest.scenes[scene.id] = {
-					inputHash: computeSceneHash(scene),
-					generatedAt: new Date().toISOString(),
-				};
+			// Update cache manifest with new hashes
+			for (const { scene, status } of scenesToProcess) {
+				const entry = cacheManifest.scenes[scene.id] || { generatedAt: "" };
+
+				if (status.needsAudio) {
+					entry.audioHash = computeAudioHash(scene.narration, options);
+				}
+
+				const audioPath = join(
+					REMOTION_PUBLIC,
+					videoId,
+					"audio",
+					`${scene.id}.mp3`,
+				);
+				if (status.needsTranscription && existsSync(audioPath)) {
+					entry.transcriptionHash = computeTranscriptionHash(audioPath);
+				}
+
+				if (status.needsMarkers) {
+					entry.markersHash = computeMarkersHash(scene.markers);
+				}
+
+				entry.generatedAt = new Date().toISOString();
+				cacheManifest.scenes[scene.id] = entry;
 			}
 			saveCacheManifest(videoDir, cacheManifest);
 
 			// Merge existing and newly processed scenes (maintain order)
 			results = scenes.map((scene) => {
 				const processed = processedResults.find((r) => r.id === scene.id);
-				// biome-ignore lint/style/noNonNullAssertion: scene is either just processed or in existingScenes
-				return processed ?? existingScenes.get(scene.id)!;
+				if (processed) return processed;
+
+				const cached = sceneStatuses.find((s) => s.scene.id === scene.id);
+				// biome-ignore lint/style/noNonNullAssertion: cached scene must exist and have existingData if not processed
+				return cached!.status.existingData!;
 			});
 		}
 
 		// Generate timing file
 		generateTimingFile(results, config.fps, videoDir);
-
-		// Copy audio to remotion public folder
-		console.log("\n📋 Copying audio files to remotion public folder...");
-		copyAudioToPublic(videoId, videoDir);
 
 		// Summary
 		const totalDuration = results.reduce((sum, r) => sum + r.audioDuration, 0);

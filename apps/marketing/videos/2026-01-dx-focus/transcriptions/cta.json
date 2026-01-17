@@ -1,0 +1,99 @@
+{
+  "language_code": "eng",
+  "language_probability": 1,
+  "text": "Fully type-safe. One install, build even faster.",
+  "words": [
+    {
+      "text": "Fully",
+      "start": 0.079,
+      "end": 0.299,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.299,
+      "end": 0.379,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "type-safe.",
+      "start": 0.379,
+      "end": 1.579,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.579,
+      "end": 1.599,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "One",
+      "start": 1.599,
+      "end": 1.699,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.699,
+      "end": 1.759,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "install,",
+      "start": 1.759,
+      "end": 2.519,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.519,
+      "end": 2.559,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "build",
+      "start": 2.559,
+      "end": 2.779,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.779,
+      "end": 2.799,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "even",
+      "start": 2.799,
+      "end": 2.939,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.939,
+      "end": 3.019,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "faster.",
+      "start": 3.019,
+      "end": 3.779,
+      "type": "word",
+      "logprob": 0
+    }
+  ],
+  "transcription_id": "tCjQ5xsf4Q54sWz56mWh"
+}

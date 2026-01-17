@@ -130,8 +130,8 @@ export const scenes: Scene[] = [
 			{
 				// "All connected" diagram - starts at "all", ends at "connected"
 				id: "connectedDiagram",
-				start: { type: "wordStart", word: "all" },
-				end: { type: "wordEnd", word: "connected" },
+				start: { type: "wordStart", word: "all", offset: -0.1 },
+				end: { type: "wordEnd", word: "connected", offset: 0.7 },
 			},
 		],
 	},

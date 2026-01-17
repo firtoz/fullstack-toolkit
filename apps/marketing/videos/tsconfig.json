@@ -1,4 +1,0 @@
-{
-  "extends": "../remotion-video/tsconfig.json",
-  "include": ["./**/*"]
-}

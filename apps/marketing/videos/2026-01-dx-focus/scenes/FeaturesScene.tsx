@@ -104,9 +104,29 @@ export const FeaturesScene: React.FC<Props> = ({
 	// Connection animation progress - animates during "all connected"
 	const connectionProgress = interpolate(
 		frame,
-		[connectedDiagram.startFrame, connectedDiagram.endFrame],
+		[
+			connectedDiagram.startFrame,
+			connectedDiagram.startFrame +
+				(connectedDiagram.endFrame - connectedDiagram.startFrame) * 0.8,
+		],
 		[0, 1],
 		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	// Fade out after last connection appears - ease-in (starts slow, ends fast)
+	const diagramFadeOut = interpolate(
+		frame,
+		[
+			connectedDiagram.startFrame +
+				(connectedDiagram.endFrame - connectedDiagram.startFrame) * 0.85,
+			connectedDiagram.endFrame,
+		],
+		[1, 0],
+		{
+			extrapolateLeft: "clamp",
+			extrapolateRight: "clamp",
+			easing: (t) => t * t * t, // Cubic ease-in: starts slow, ends fast
+		},
 	);
 
 	return (
@@ -162,19 +182,30 @@ export const FeaturesScene: React.FC<Props> = ({
 				</div>
 
 				{/* Right: Code examples */}
-				<div style={{ width: "60%", position: "relative" }}>
+				<div style={{ width: "60%", height: "100%", position: "relative" }}>
 					{/* Code 1: useDynamicFetcher */}
 					<div
 						style={{
 							position: "absolute",
+							top: 0,
+							bottom: 0,
 							width: "100%",
 							opacity: code1Opacity,
 						}}
 					>
-						<CodeBlock
-							language="typescript"
-							fontSize={16}
-							code={`// Type-safe data fetching
+						<div
+							style={{
+								height: "100%",
+								width: "100%",
+								display: "flex",
+								flexDirection: "column",
+								justifyContent: "center",
+							}}
+						>
+							<CodeBlock
+								language="typescript"
+								fontSize={16}
+								code={`// Type-safe data fetching
 const fetcher = useDynamicFetcher<
   typeof import("./api.users")
 >("/api/users/:id", { id: userId });
@@ -185,15 +216,20 @@ fetcher.data?.user.email
 
 // Auto-complete works everywhere
 fetcher.load({ page: "1" });`}
-						/>
+							/>
+						</div>
 					</div>
 
 					{/* Code 2: useDynamicSubmitter */}
 					<div
 						style={{
 							position: "absolute",
+							height: "100%",
 							width: "100%",
 							opacity: code2Opacity,
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "center",
 						}}
 					>
 						<CodeBlock
@@ -219,8 +255,12 @@ await submitter.submitJson({
 					<div
 						style={{
 							position: "absolute",
+							height: "100%",
 							width: "100%",
 							opacity: code3Opacity,
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "center",
 						}}
 					>
 						<CodeBlock
@@ -255,7 +295,7 @@ export const action = formAction({
 					display: "flex",
 					justifyContent: "center",
 					alignItems: "center",
-					opacity: diagramOpacity,
+					opacity: diagramOpacity * diagramFadeOut,
 				}}
 			>
 				<ConnectionDiagram progress={connectionProgress} />
@@ -266,7 +306,7 @@ export const action = formAction({
 				style={{
 					position: "absolute",
 					bottom: 80,
-					opacity: diagramOpacity,
+					opacity: diagramOpacity * diagramFadeOut,
 					transform: `scale(${0.9 + diagramOpacity * 0.1})`,
 				}}
 			>
@@ -387,7 +427,7 @@ const ConnectionDiagram: React.FC<{ progress: number }> = ({ progress }) => {
 				</div>
 			</div>
 
-			{/* Connected pages */}
+			{/* Connected pages - all appear together */}
 			<ConnectedPage
 				x={100}
 				y={80}
@@ -396,7 +436,7 @@ const ConnectionDiagram: React.FC<{ progress: number }> = ({ progress }) => {
 				sublabel="useDynamicFetcher"
 				color="#3b82f6"
 				progress={progress}
-				delay={0}
+				delay={0.15}
 			/>
 			<ConnectedPage
 				x={600}
@@ -406,7 +446,7 @@ const ConnectionDiagram: React.FC<{ progress: number }> = ({ progress }) => {
 				sublabel="useDynamicSubmitter"
 				color="#8b5cf6"
 				progress={progress}
-				delay={0.25}
+				delay={0.15}
 			/>
 			<ConnectedPage
 				x={100}
@@ -416,7 +456,7 @@ const ConnectionDiagram: React.FC<{ progress: number }> = ({ progress }) => {
 				sublabel="useDynamicFetcher"
 				color="#3b82f6"
 				progress={progress}
-				delay={0.5}
+				delay={0.15}
 			/>
 			<ConnectedPage
 				x={600}
@@ -426,7 +466,7 @@ const ConnectionDiagram: React.FC<{ progress: number }> = ({ progress }) => {
 				sublabel="useDynamicSubmitter"
 				color="#8b5cf6"
 				progress={progress}
-				delay={0.75}
+				delay={0.15}
 			/>
 
 			{/* Connection lines - FROM outside TO center */}
@@ -442,53 +482,66 @@ const ConnectionDiagram: React.FC<{ progress: number }> = ({ progress }) => {
 				aria-label="Connection lines"
 			>
 				<title>Connection lines between route and pages</title>
-				{/* Line FROM top left TO center */}
-				<line
-					x1="200"
-					y1="150"
-					x2={200 + 250 * Math.max(0, Math.min((progress - 0) * 4, 1))}
-					y2={150 + 150 * Math.max(0, Math.min((progress - 0) * 4, 1))}
-					stroke="#22c55e"
-					strokeWidth="3"
-					strokeDasharray="8,4"
-					opacity={Math.max(0, Math.min(progress * 4, 1))}
-				/>
+				{/* All lines connect simultaneously - start after nodes appear */}
+				{(() => {
+					const lineDelay = 0.3;
+					const lineProgress = Math.max(
+						0,
+						Math.min((progress - lineDelay) * 2, 1),
+					);
 
-				{/* Line FROM top right TO center */}
-				<line
-					x1="600"
-					y1="150"
-					x2={600 - 150 * Math.max(0, Math.min((progress - 0.25) * 4, 1))}
-					y2={150 + 150 * Math.max(0, Math.min((progress - 0.25) * 4, 1))}
-					stroke="#22c55e"
-					strokeWidth="3"
-					strokeDasharray="8,4"
-					opacity={Math.max(0, Math.min((progress - 0.25) * 4, 1))}
-				/>
+					return (
+						<>
+							{/* Line FROM top left TO center */}
+							<line
+								x1="200"
+								y1="150"
+								x2={200 + 250 * lineProgress}
+								y2={150 + 150 * lineProgress}
+								stroke="#22c55e"
+								strokeWidth="3"
+								strokeDasharray="8,4"
+								opacity={lineProgress}
+							/>
 
-				{/* Line FROM bottom left TO center */}
-				<line
-					x1="200"
-					y1="450"
-					x2={200 + 250 * Math.max(0, Math.min((progress - 0.5) * 4, 1))}
-					y2={450 - 150 * Math.max(0, Math.min((progress - 0.5) * 4, 1))}
-					stroke="#22c55e"
-					strokeWidth="3"
-					strokeDasharray="8,4"
-					opacity={Math.max(0, Math.min((progress - 0.5) * 4, 1))}
-				/>
+							{/* Line FROM top right TO center */}
+							<line
+								x1="600"
+								y1="150"
+								x2={600 - 150 * lineProgress}
+								y2={150 + 150 * lineProgress}
+								stroke="#22c55e"
+								strokeWidth="3"
+								strokeDasharray="8,4"
+								opacity={lineProgress}
+							/>
 
-				{/* Line FROM bottom right TO center */}
-				<line
-					x1="600"
-					y1="450"
-					x2={600 - 150 * Math.max(0, Math.min((progress - 0.75) * 4, 1))}
-					y2={450 - 150 * Math.max(0, Math.min((progress - 0.75) * 4, 1))}
-					stroke="#22c55e"
-					strokeWidth="3"
-					strokeDasharray="8,4"
-					opacity={Math.max(0, Math.min((progress - 0.75) * 4, 1))}
-				/>
+							{/* Line FROM bottom left TO center */}
+							<line
+								x1="200"
+								y1="450"
+								x2={200 + 250 * lineProgress}
+								y2={450 - 150 * lineProgress}
+								stroke="#22c55e"
+								strokeWidth="3"
+								strokeDasharray="8,4"
+								opacity={lineProgress}
+							/>
+
+							{/* Line FROM bottom right TO center */}
+							<line
+								x1="600"
+								y1="450"
+								x2={600 - 150 * lineProgress}
+								y2={450 - 150 * lineProgress}
+								stroke="#22c55e"
+								strokeWidth="3"
+								strokeDasharray="8,4"
+								opacity={lineProgress}
+							/>
+						</>
+					);
+				})()}
 			</svg>
 		</div>
 	);

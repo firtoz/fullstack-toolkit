@@ -1,0 +1,10 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"target": "ES2022",
+		"jsx": "react-jsx",
+		"declaration": true,
+		"declarationMap": true
+	},
+	"include": ["remotion-video/**/*", "videos/**/*", "shared/**/*"]
+}

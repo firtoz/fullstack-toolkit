@@ -1,6 +1,6 @@
 import { Config } from "@remotion/cli/config";
-import { join } from "path";
+import { join } from "node:path";
 
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
-Config.setPublicDir(join(__dirname, "public"));
+Config.setPublicDir(join(process.cwd(), "remotion-video", "public"));

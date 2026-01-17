@@ -9,6 +9,7 @@ interface CodeBlockProps {
 	code: string;
 	language?: string;
 	fontSize?: number;
+	fillContainer?: boolean;
 }
 
 // Create highlighter synchronously for Remotion
@@ -25,6 +26,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 	code,
 	language = "typescript",
 	fontSize = 16,
+	fillContainer = false,
 }) => {
 	const html = useMemo(() => {
 		return highlighter.codeToHtml(code, {
@@ -36,7 +38,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 	return (
 		<div
 			style={{
-				position: "relative",
+				position: fillContainer ? "absolute" : "relative",
+				...(fillContainer && {
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+				}),
 				background:
 					"linear-gradient(135deg, rgba(15, 15, 25, 0.95) 0%, rgba(20, 20, 35, 0.95) 100%)",
 				border: "1px solid rgba(100, 100, 255, 0.2)",

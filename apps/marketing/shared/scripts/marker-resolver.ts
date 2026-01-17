@@ -4,6 +4,7 @@
  * Handles punctuation-lenient word matching and occurrence tracking.
  */
 
+import { getAudioDurationInSeconds } from "get-audio-duration";
 import type {
 	Marker,
 	ResolvedMarker,
@@ -44,18 +45,15 @@ function buildWordIndex(
 }
 
 /**
- * Get audio duration from transcript words
+ * Get audio duration from the actual audio file
  */
-function getAudioDuration(transcriptWords: TranscriptWord[]): number {
-	if (transcriptWords.length === 0) return 0;
-
-	let maxEnd = 0;
-	for (const word of transcriptWords) {
-		if (word.end > maxEnd) {
-			maxEnd = word.end;
-		}
+async function getAudioDuration(audioPath: string): Promise<number> {
+	try {
+		return await getAudioDurationInSeconds(audioPath);
+	} catch (error) {
+		console.error(`Failed to read audio duration from ${audioPath}:`, error);
+		return 0;
 	}
-	return maxEnd;
 }
 
 /**
@@ -105,13 +103,14 @@ function resolveTimingRef(
  * Validate that all markers can be resolved from the transcription.
  * Returns validation result with any errors.
  */
-export function validateMarkers(
+export async function validateMarkers(
 	markers: Marker[],
 	transcriptWords: TranscriptWord[],
-): ValidationResult {
+	audioPath: string,
+): Promise<ValidationResult> {
 	const errors: string[] = [];
 	const wordIndex = buildWordIndex(transcriptWords);
-	const audioDuration = getAudioDuration(transcriptWords);
+	const audioDuration = await getAudioDuration(audioPath);
 
 	for (const marker of markers) {
 		// Validate start ref
@@ -152,13 +151,14 @@ export function validateMarkers(
  * Resolve all markers to timestamps and frames.
  * Assumes validation has already passed - all refs will resolve successfully.
  */
-export function resolveMarkers(
+export async function resolveMarkers(
 	markers: Marker[],
 	transcriptWords: TranscriptWord[],
+	audioPath: string,
 	fps: number,
-): Record<string, ResolvedMarker> {
+): Promise<Record<string, ResolvedMarker>> {
 	const wordIndex = buildWordIndex(transcriptWords);
-	const audioDuration = getAudioDuration(transcriptWords);
+	const audioDuration = await getAudioDuration(audioPath);
 	const resolved: Record<string, ResolvedMarker> = {};
 
 	for (const marker of markers) {
