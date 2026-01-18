@@ -16,6 +16,7 @@ export const config: VideoConfig = {
 	width: 1920,
 	height: 1080,
 	sceneGap: 0.2, // Fast paced
+	sharedAudioId: "2026-01-meta-workflow", // Share audio with TikTok version
 };
 
 export const scenes: Scene[] = [
@@ -82,7 +83,7 @@ export const scenes: Scene[] = [
 			},
 			{
 				id: "writesScript",
-				start: { type: "wordStart", word: "writes" },
+				start: { type: "wordEnd", word: "feature" },
 				end: { type: "wordEnd", word: "script" },
 			},
 		],
@@ -96,7 +97,7 @@ export const scenes: Scene[] = [
 		markers: [
 			{
 				id: "flashier",
-				start: { type: "wordStart", word: "flashier" },
+				start: { type: "wordStart", word: "want" },
 				end: { type: "wordEnd", word: "flashier" },
 			},
 			{
@@ -124,24 +125,39 @@ export const scenes: Scene[] = [
 	{
 		id: "execution",
 		narration:
-			"Then run one command. The engine handles audio, timing, and sync. Automatically.",
+			"The engine takes over. Audio generation, timing, sync. All automatic.",
 		visual:
-			"Terminal running 'bun run process-video'. Progress bars. Final video rendering.",
+			"Terminal with progress bars showing automatic execution. Final video rendering.",
 		markers: [
 			{
-				id: "oneCommand",
-				start: { type: "wordStart", word: "run" },
-				end: { type: "wordEnd", word: "command" },
+				id: "engineTakesOver",
+				start: { type: "wordStart", word: "engine" },
+				end: { type: "wordEnd", word: "over" },
 			},
 			{
-				id: "engineHandles",
-				start: { type: "wordStart", word: "engine" },
+				id: "audioWord",
+				start: { type: "wordStart", word: "Audio" },
+				end: { type: "wordEnd", word: "Audio" },
+			},
+			{
+				id: "timingWord",
+				start: { type: "wordStart", word: "timing" },
+				end: { type: "wordEnd", word: "timing" },
+			},
+			{
+				id: "syncWord",
+				start: { type: "wordStart", word: "sync" },
 				end: { type: "wordEnd", word: "sync" },
 			},
 			{
-				id: "automatically",
-				start: { type: "wordStart", word: "automatically" },
-				end: { type: "wordEnd", word: "automatically" },
+				id: "allWord",
+				start: { type: "wordStart", word: "all" },
+				end: { type: "wordEnd", word: "all" },
+			},
+			{
+				id: "allAutomatic",
+				start: { type: "wordStart", word: "all" },
+				end: { type: "wordEnd", word: "automatic" },
 			},
 		],
 	},
@@ -154,7 +170,7 @@ export const scenes: Scene[] = [
 		markers: [
 			{
 				id: "fromWord",
-				start: { type: "wordStart", word: "from" },
+				start: { type: "wordStart", word: "from", offset: -0.5 },
 				end: { type: "wordEnd", word: "from" },
 			},
 			{
@@ -190,11 +206,31 @@ export const scenes: Scene[] = [
 export const codeSnippets = {
 	processCommand: `bun run process-video 2026-01-meta-workflow liam energetic`,
 	promptExample: `"Make a video about our new feature. Make it flashy!"`,
+	// Meta: The actual script for this video!
 	scriptSnippet: `export const scenes: Scene[] = [
   {
     id: "hook",
-    narration: "What if...",
-    visual: "..."
+    narration: "What if you could direct a video just by talking to an AI?",
+    visual: "A chat interface with 'Make a video about...' being typed.",
+    markers: [...]
+  },
+  {
+    id: "prompt",
+    narration: "You ask Gemini or Opus. Make a video about our new feature. It writes the script.",
+    visual: "Typing animation synced to narration, then transform to polished result.",
+    markers: [...]
+  },
+  {
+    id: "refine",
+    narration: "Want it flashier? Just ask. Make it sexy. Make it cool. It updates instantly.",
+    visual: "Chat bubbles appear, visual transforms step by step.",
+    markers: [...]
+  },
+  {
+    id: "execution",
+    narration: "The engine takes over. Audio generation, timing, sync. All automatic.",
+    visual: "Terminal with progress bars showing automatic execution.",
+    markers: [...]
   }
 ];`,
 	githubUrl: `github.com/firtoz/fullstack-toolkit`,

@@ -1,169 +1,169 @@
 {
-  "language_code": "eng",
-  "language_probability": 1,
-  "text": "Then run one command. The engine handles audio timing and sync automatically.",
-  "words": [
-    {
-      "text": "Then",
-      "start": 0.079,
-      "end": 0.379,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.379,
-      "end": 0.399,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "run",
-      "start": 0.399,
-      "end": 0.599,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.599,
-      "end": 0.62,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "one",
-      "start": 0.62,
-      "end": 0.779,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.779,
-      "end": 0.8,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "command.",
-      "start": 0.8,
-      "end": 1.199,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 1.199,
-      "end": 2.059,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "The",
-      "start": 2.059,
-      "end": 2.119,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.119,
-      "end": 2.159,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "engine",
-      "start": 2.159,
-      "end": 2.419,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.419,
-      "end": 2.459,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "handles",
-      "start": 2.46,
-      "end": 2.779,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.779,
-      "end": 2.839,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "audio",
-      "start": 2.839,
-      "end": 3.139,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.139,
-      "end": 3.299,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "timing",
-      "start": 3.299,
-      "end": 3.68,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.68,
-      "end": 3.699,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "and",
-      "start": 3.699,
-      "end": 3.799,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.799,
-      "end": 3.92,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "sync",
-      "start": 3.92,
-      "end": 4.46,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.46,
-      "end": 4.519,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "automatically.",
-      "start": 4.519,
-      "end": 5.4,
-      "type": "word",
-      "logprob": 0
-    }
-  ],
-  "transcription_id": "AxFPrHa9fCtuvaNR3PMP"
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "The engine takes over - audio generation, timing, sync - all automatic.",
+	"words": [
+		{
+			"text": "The",
+			"start": 0.079,
+			"end": 0.179,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.179,
+			"end": 0.219,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "engine",
+			"start": 0.219,
+			"end": 0.439,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.439,
+			"end": 0.5,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "takes",
+			"start": 0.5,
+			"end": 0.759,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.759,
+			"end": 0.819,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "over",
+			"start": 0.819,
+			"end": 1.1,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.1,
+			"end": 1.099,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "-",
+			"start": 1.099,
+			"end": 1.459,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.459,
+			"end": 1.519,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "audio",
+			"start": 1.519,
+			"end": 1.759,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.759,
+			"end": 1.82,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "generation,",
+			"start": 1.82,
+			"end": 2.44,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.44,
+			"end": 2.479,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "timing,",
+			"start": 2.48,
+			"end": 3.079,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.079,
+			"end": 3.099,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "sync",
+			"start": 3.099,
+			"end": 3.359,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.359,
+			"end": 4.179,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "-",
+			"start": 4.179,
+			"end": 4.199,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.199,
+			"end": 4.259,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "all",
+			"start": 4.259,
+			"end": 4.44,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.44,
+			"end": 4.5,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "automatic.",
+			"start": 4.5,
+			"end": 5.36,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "gXg4Y3rLe5IZiB8TPRoY"
 }

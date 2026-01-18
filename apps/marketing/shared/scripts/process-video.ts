@@ -228,10 +228,22 @@ async function checkSceneCache(
 	fps: number,
 	options: AudioGenerationOptions,
 	cacheManifest: CacheManifest,
+	sharedAudioId?: string,
 ): Promise<CacheStatus> {
-	const audioPath = join(REMOTION_PUBLIC, videoId, "audio", `${scene.id}.mp3`);
+	// Use shared audio ID if specified (for multi-aspect-ratio videos)
+	const audioStorageId = sharedAudioId || videoId;
+	const transcriptionStorageDir = sharedAudioId
+		? join(VIDEOS_DIR, sharedAudioId)
+		: videoDir;
+
+	const audioPath = join(
+		REMOTION_PUBLIC,
+		audioStorageId,
+		"audio",
+		`${scene.id}.mp3`,
+	);
 	const transcriptionPath = join(
-		videoDir,
+		transcriptionStorageDir,
 		"transcriptions",
 		`${scene.id}.json`,
 	);
@@ -351,11 +363,23 @@ async function processScene(
 	fps: number,
 	options: AudioGenerationOptions,
 	cacheStatus: CacheStatus,
+	sharedAudioId?: string,
 	attempt = 1,
 ): Promise<ProcessedScene> {
-	const audioPath = join(REMOTION_PUBLIC, videoId, "audio", `${scene.id}.mp3`);
+	// Use shared audio ID if specified (for multi-aspect-ratio videos)
+	const audioStorageId = sharedAudioId || videoId;
+	const transcriptionStorageDir = sharedAudioId
+		? join(VIDEOS_DIR, sharedAudioId)
+		: videoDir;
+
+	const audioPath = join(
+		REMOTION_PUBLIC,
+		audioStorageId,
+		"audio",
+		`${scene.id}.mp3`,
+	);
 	const transcriptionPath = join(
-		videoDir,
+		transcriptionStorageDir,
 		"transcriptions",
 		`${scene.id}.json`,
 	);
@@ -433,6 +457,7 @@ async function processScene(
 					fps,
 					options,
 					{ needsAudio: true, needsTranscription: true, needsMarkers: true },
+					sharedAudioId,
 					attempt + 1,
 				);
 			}
@@ -622,19 +647,27 @@ async function main() {
 		speed: speedArg,
 	};
 
+	const sharedAudioId = config.sharedAudioId;
+	const cacheStorageDir = sharedAudioId
+		? join(VIDEOS_DIR, sharedAudioId)
+		: videoDir;
+
 	console.log(`\n🎬 Processing video: ${videoId}`);
 	console.log(`📊 Scenes: ${scenes.length}`);
 	console.log(`🎙️ Voice: ${voiceArg} (${presetArg}, ${speedArg}x speed)`);
 	console.log(`🎥 Config: ${config.width}x${config.height} @ ${config.fps}fps`);
 	console.log(`⏸️ Scene gap: ${config.sceneGap}s`);
+	if (sharedAudioId) {
+		console.log(`🔗 Shared audio: ${sharedAudioId}`);
+	}
 	if (forceRegen) {
 		console.log(`🔄 Force regeneration enabled`);
 	}
 
 	const client = new ElevenLabsClient({ apiKey });
 
-	// Load cache manifest (tracks input hashes for smart invalidation)
-	const cacheManifest = loadCacheManifest(videoDir);
+	// Load cache manifest from shared location if using shared audio
+	const cacheManifest = loadCacheManifest(cacheStorageDir);
 
 	try {
 		// Check cache status for all scenes
@@ -649,6 +682,7 @@ async function main() {
 					config.fps,
 					options,
 					cacheManifest,
+					sharedAudioId,
 				),
 			})),
 		);
@@ -707,11 +741,12 @@ async function main() {
 						config.fps,
 						options,
 						status,
+						sharedAudioId,
 					),
 				),
 			);
 
-			// Update cache manifest with new hashes
+			// Update cache manifest with new hashes (save to shared location if using shared audio)
 			for (const { scene, status } of scenesToProcess) {
 				const entry = cacheManifest.scenes[scene.id] || { generatedAt: "" };
 
@@ -719,9 +754,10 @@ async function main() {
 					entry.audioHash = computeAudioHash(scene.narration, options);
 				}
 
+				const audioStorageId = sharedAudioId || videoId;
 				const audioPath = join(
 					REMOTION_PUBLIC,
-					videoId,
+					audioStorageId,
 					"audio",
 					`${scene.id}.mp3`,
 				);
@@ -736,7 +772,7 @@ async function main() {
 				entry.generatedAt = new Date().toISOString();
 				cacheManifest.scenes[scene.id] = entry;
 			}
-			saveCacheManifest(videoDir, cacheManifest);
+			saveCacheManifest(cacheStorageDir, cacheManifest);
 
 			// Merge existing and newly processed scenes (maintain order)
 			results = scenes.map((scene) => {

@@ -93,6 +93,14 @@ export interface VideoConfig {
 	height: number;
 	/** Seconds between scenes - configurable at composition time */
 	sceneGap: number;
+	/**
+	 * Optional: Shared resource ID for audio/transcriptions
+	 * Multiple videos with the same sharedAudioId will use the same audio files and transcriptions
+	 * Useful for creating different aspect ratio versions (e.g., TikTok 9:16 and YouTube 16:9)
+	 * Both videos must have identical scenes with identical narration
+	 * Example: "2026-01-meta-workflow" for both "2026-01-meta-workflow" and "2026-01-meta-workflow-tiktok"
+	 */
+	sharedAudioId?: string;
 }
 
 /**

@@ -1,0 +1,5 @@
+{
+	"prompt": "modern code editor with TypeScript showing the actual script code: 'export const scenes: Scene[] = [{ id: \"hook\", narration: \"What if you could direct a video just by talking to an AI?\", visual: \"A chat interface...\", markers: [...] }, { id: \"prompt\", narration: \"You ask Gemini or Opus. Make a video about our new feature. It writes the script.\", visual: \"Typing animation...\" }, { id: \"refine\", narration: \"Want it flashier? Just ask. Make it sexy. Make it cool. It updates instantly.\" }];' with syntax highlighting, professional dark theme code editor, subtle blue and purple accents, clean modern aesthetic showing real video generation script",
+	"aspect_ratio": "9:16",
+	"resolution": "1K"
+}

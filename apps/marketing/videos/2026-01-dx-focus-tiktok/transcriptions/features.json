@@ -1,0 +1,155 @@
+{
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "Use dynamic fetcher. Use dynamic submitter. Type-safe form actions. All connected!",
+	"words": [
+		{
+			"text": "Use",
+			"start": 0.14,
+			"end": 0.239,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.239,
+			"end": 0.319,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "dynamic",
+			"start": 0.319,
+			"end": 0.739,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.739,
+			"end": 0.799,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "fetcher.",
+			"start": 0.799,
+			"end": 1.919,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.919,
+			"end": 2.079,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "Use",
+			"start": 2.079,
+			"end": 2.219,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.219,
+			"end": 2.279,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "dynamic",
+			"start": 2.279,
+			"end": 2.719,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.719,
+			"end": 2.779,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "submitter.",
+			"start": 2.779,
+			"end": 3.24,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.24,
+			"end": 4.5,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "Type-safe",
+			"start": 4.5,
+			"end": 5.24,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 5.24,
+			"end": 5.259,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "form",
+			"start": 5.259,
+			"end": 5.5,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 5.5,
+			"end": 5.559,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "actions.",
+			"start": 5.559,
+			"end": 6.3,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 6.3,
+			"end": 6.339,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "All",
+			"start": 6.339,
+			"end": 6.5,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 6.5,
+			"end": 6.519,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "connected!",
+			"start": 6.519,
+			"end": 7.3,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "F6PtNEhKmuos0gh93ed7"
+}

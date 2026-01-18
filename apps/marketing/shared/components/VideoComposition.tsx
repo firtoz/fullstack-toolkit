@@ -36,14 +36,67 @@ export interface VideoCompositionProps {
 }
 
 /**
- * Calculate total frames including gaps between scenes
+ * Calculate scene offset and adjusted markers to handle negative marker frames.
+ * If markers start before frame 0 (e.g., startFrame: -10), we need to:
+ * 1. Offset all markers forward by that amount
+ * 2. Extend the scene duration to accommodate the pre-roll
+ * 3. Delay the audio by that offset (handled in scene render)
+ */
+function calculateSceneAdjustments(timing: SceneTimingInfo): {
+	offsetFrames: number;
+	adjustedMarkers: Record<string, ResolvedMarker>;
+	durationFrames: number;
+} {
+	const markers = Object.values(timing.markers);
+
+	// Find the minimum startFrame (could be negative)
+	let minStartFrame = 0;
+	let maxEndFrame = timing.durationFrames;
+
+	for (const marker of markers) {
+		minStartFrame = Math.min(minStartFrame, marker.startFrame);
+		maxEndFrame = Math.max(maxEndFrame, marker.endFrame);
+	}
+
+	// If we have negative frames, we need to offset everything
+	const offsetFrames = -minStartFrame; // e.g., if min is -10, offset is 10
+
+	// Adjust all markers by the offset
+	const adjustedMarkers: Record<string, ResolvedMarker> = {};
+	for (const [key, marker] of Object.entries(timing.markers)) {
+		adjustedMarkers[key] = {
+			...marker,
+			startFrame: marker.startFrame + offsetFrames,
+			endFrame: marker.endFrame + offsetFrames,
+		};
+	}
+
+	// Total duration includes offset (pre-roll) + max end frame
+	const durationFrames = maxEndFrame + offsetFrames;
+
+	return {
+		offsetFrames,
+		adjustedMarkers,
+		durationFrames,
+	};
+}
+
+/**
+ * Calculate the actual duration for a scene, accounting for marker extensions and negative frames
+ */
+function calculateSceneDuration(timing: SceneTimingInfo): number {
+	return calculateSceneAdjustments(timing).durationFrames;
+}
+
+/**
+ * Calculate total frames including gaps between scenes and marker extensions
  */
 function calculateTotalFrames(
 	sceneTimings: SceneTimingInfo[],
 	gapFrames: number,
 ): number {
 	const totalSceneDuration = sceneTimings.reduce(
-		(sum, s) => sum + s.durationFrames,
+		(sum, s) => sum + calculateSceneDuration(s),
 		0,
 	);
 	const totalGaps = gapFrames * (sceneTimings.length - 1);
@@ -72,40 +125,38 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
 		[config.sceneGap, config.fps],
 	);
 
+	// Use shared audio ID if specified, otherwise use videoId
+	const audioVideoId = config.sharedAudioId || videoId;
+
 	// Prefetch all audio files
 	useEffect(() => {
 		sceneTimings.forEach((timing) => {
-			prefetch(staticFile(`${videoId}/audio/${timing.audioFile}`));
+			prefetch(staticFile(`${audioVideoId}/audio/${timing.audioFile}`));
 		});
-	}, [videoId, sceneTimings]);
+	}, [audioVideoId, sceneTimings]);
 
-	// Calculate timeline positions - driven by audio duration + gaps
+	// Calculate timeline positions - driven by audio duration + gaps + marker extensions + offsets
 	const scenePositions = useMemo(
 		() =>
 			sceneTimings.map((timing, index) => {
-				// Each scene starts after previous scenes + gaps
+				// Get adjustments (handles negative frames and marker extensions)
+				const adjustments = calculateSceneAdjustments(timing);
+
+				// Each scene starts after previous scenes (with their extended durations) + gaps
 				const startFrame =
 					index === 0
 						? 0
 						: sceneTimings
 								.slice(0, index)
-								.reduce((sum, s) => sum + s.durationFrames, 0) +
+								.reduce((sum, s) => sum + calculateSceneDuration(s), 0) +
 							gapFrames * index;
-
-				// Calculate duration - use maximum of audio duration or longest marker
-				let durationFrames = timing.durationFrames;
-
-				const markers = Object.values(timing.markers);
-				if (markers.length > 0) {
-					for (const marker of markers) {
-						durationFrames = Math.max(durationFrames, marker.endFrame);
-					}
-				}
 
 				return {
 					timing,
 					startFrame,
-					durationFrames,
+					durationFrames: adjustments.durationFrames,
+					audioOffsetFrames: adjustments.offsetFrames,
+					adjustedMarkers: adjustments.adjustedMarkers,
 				};
 			}),
 		[sceneTimings, gapFrames],
@@ -126,35 +177,54 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
 			/>
 
 			{/* Scenes: audio-driven sequences with visuals positioned inside */}
-			{scenePositions.map(({ timing, startFrame, durationFrames }) => {
-				const SceneComponent = sceneComponents[timing.id];
-				if (!SceneComponent) {
-					console.warn(`Scene component not found for: ${timing.id}`);
-					return null;
-				}
+			{scenePositions.map(
+				({
+					timing,
+					startFrame,
+					durationFrames,
+					audioOffsetFrames,
+					adjustedMarkers,
+				}) => {
+					const SceneComponent = sceneComponents[timing.id];
+					if (!SceneComponent) {
+						console.warn(`Scene component not found for: ${timing.id}`);
+						return null;
+					}
 
-				return (
-					<Sequence
-						key={timing.id}
-						from={startFrame}
-						durationInFrames={durationFrames}
-						name={timing.id}
-						premountFor={gapFrames * 2}
-					>
-						{/* Audio defines the sequence timeline */}
-						<Audio
-							src={staticFile(`${videoId}/audio/${timing.audioFile}`)}
-							name={timing.audioFile}
-						/>
-
-						{/* Visuals position themselves relative to audio via markers */}
-						<SceneComponent
+					return (
+						<Sequence
+							key={timing.id}
+							from={startFrame}
 							durationInFrames={durationFrames}
-							markers={timing.markers}
-						/>
-					</Sequence>
-				);
-			})}
+							name={timing.id}
+							premountFor={15}
+						>
+							{/* Audio may be offset if markers start before frame 0 */}
+							{audioOffsetFrames > 0 ? (
+								<Sequence from={audioOffsetFrames}>
+									<Audio
+										src={staticFile(
+											`${audioVideoId}/audio/${timing.audioFile}`,
+										)}
+										name={timing.audioFile}
+									/>
+								</Sequence>
+							) : (
+								<Audio
+									src={staticFile(`${audioVideoId}/audio/${timing.audioFile}`)}
+									name={timing.audioFile}
+								/>
+							)}
+
+							{/* Visuals position themselves relative to adjusted markers */}
+							<SceneComponent
+								durationInFrames={durationFrames}
+								markers={adjustedMarkers}
+							/>
+						</Sequence>
+					);
+				},
+			)}
 		</AbsoluteFill>
 	);
 };

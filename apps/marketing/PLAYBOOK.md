@@ -740,6 +740,36 @@ Common issues:
 - Force regenerate: `bun process-video YYYY-MM-topic --force`
 - Delete cache: `rm marketing/videos/YYYY-MM-topic/cache-manifest.json`
 
+### Images cropped or wrong aspect ratio
+
+If images are cropped or not in the correct format for video (16:9), regenerate them:
+
+```bash
+# 1. Regenerate with correct aspect ratio using -1 suffix
+cd marketing
+bun run gen-image "your prompt here" remotion-video/public/YYYY-MM-topic/images/scene-bg-1.png "16:9"
+
+# 2. Review the new image, if approved replace the old one:
+cd remotion-video/public/YYYY-MM-topic/images/
+rm scene-bg.png scene-bg.prompt.json
+mv scene-bg-1.png scene-bg.png
+mv scene-bg-1.prompt.json scene-bg.prompt.json
+
+# 3. Repeat for all images that need regeneration
+```
+
+**Why this workflow:**
+- The `-1` suffix prevents overwriting existing images
+- Compare old vs new before committing
+- `.prompt.json` files track generation parameters for reproducibility
+- Easy iteration: try `-2`, `-3`, etc. until satisfied
+
+**Image generation tips:**
+- Always specify `"16:9"` aspect ratio for video backgrounds
+- Use `"1:1"` for logos or square images
+- Resolution defaults to `1K` (good for most cases), use `2K` or `4K` for higher quality
+- Check the `.prompt.json` file to see exactly what parameters were used
+
 ---
 
 ## Advanced: Tweaking Scene Gap

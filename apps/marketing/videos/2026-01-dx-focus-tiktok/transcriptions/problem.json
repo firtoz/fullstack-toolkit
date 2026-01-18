@@ -1,0 +1,141 @@
+{
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "Fetchers, submission state, form actions. A lot to wire up.",
+	"words": [
+		{
+			"text": "Fetchers,",
+			"start": 0.079,
+			"end": 0.62,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.62,
+			"end": 0.939,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "submission",
+			"start": 0.939,
+			"end": 1.419,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.419,
+			"end": 1.5,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "state,",
+			"start": 1.5,
+			"end": 1.879,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.879,
+			"end": 2.14,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "form",
+			"start": 2.14,
+			"end": 2.419,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.419,
+			"end": 2.479,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "actions.",
+			"start": 2.479,
+			"end": 2.979,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.979,
+			"end": 3.259,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "A",
+			"start": 3.259,
+			"end": 3.299,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.299,
+			"end": 3.359,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "lot",
+			"start": 3.359,
+			"end": 3.499,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.499,
+			"end": 3.519,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "to",
+			"start": 3.519,
+			"end": 3.599,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.599,
+			"end": 3.659,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "wire",
+			"start": 3.659,
+			"end": 3.899,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.899,
+			"end": 3.939,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "up.",
+			"start": 3.939,
+			"end": 4.34,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "FD3OMWRvbfVpm0ZXZKXR"
+}

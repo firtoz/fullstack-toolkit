@@ -11,22 +11,39 @@ import { codeSnippets } from "../script";
 export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 	const frame = useCurrentFrame();
 
-	const oneCommand = markers.oneCommand;
-	const engineHandles = markers.engineHandles;
-	const automatically = markers.automatically;
+	const engineTakesOver = markers.engineTakesOver;
+	const audioWord = markers.audioWord;
+	const timingWord = markers.timingWord;
+	const syncWord = markers.syncWord;
+	const allWord = markers.allWord;
+	const allAutomatic = markers.allAutomatic;
 
 	// Terminal appearance
 	const terminalOpacity = interpolate(
 		frame,
-		[oneCommand.startFrame, oneCommand.startFrame + 10],
+		[engineTakesOver.startFrame, engineTakesOver.startFrame + 10],
 		[0, 1],
 		{ extrapolateLeft: "clamp" },
 	);
 
-	// Progress bars animation
-	const progress = interpolate(
+	// Individual progress bars - each starts with its word, all finish at "all" word end
+	const audioProgress = interpolate(
 		frame,
-		[engineHandles.startFrame, automatically.startFrame],
+		[audioWord.startFrame, allWord.endFrame],
+		[0, 100],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	const timingProgress = interpolate(
+		frame,
+		[timingWord.startFrame, allWord.endFrame],
+		[0, 100],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	const syncProgress = interpolate(
+		frame,
+		[syncWord.startFrame, allWord.endFrame],
 		[0, 100],
 		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
@@ -70,7 +87,7 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 						overflow: "hidden",
 						opacity: terminalOpacity,
 						boxShadow: "0 0 80px rgba(99, 102, 241, 0.2)",
-						transform: `translateY(${interpolate(frame, [oneCommand.startFrame, oneCommand.startFrame + 10], [20, 0], { extrapolateLeft: "clamp" })}px)`,
+						transform: `translateY(${interpolate(frame, [engineTakesOver.startFrame, engineTakesOver.startFrame + 10], [20, 0], { extrapolateLeft: "clamp" })}px)`,
 					}}
 				>
 					{/* Terminal Header */}
@@ -139,27 +156,31 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 							</span>
 						</div>
 
-						{frame > engineHandles.startFrame && (
+						{frame > audioWord.startFrame && (
 							<div
 								style={{ display: "flex", flexDirection: "column", gap: 20 }}
 							>
 								<ProgressBar
 									label="🎙️ Generating AI Voice"
-									progress={Math.min(100, progress * 1.5)}
+									progress={audioProgress}
 									color="#f472b6"
 								/>
-								<ProgressBar
-									label="⏱️ Syncing Word Timing"
-									progress={Math.min(100, Math.max(0, progress * 1.5 - 20))}
-									color="#c084fc"
-								/>
-								<ProgressBar
-									label="🎨 Building React Scenes"
-									progress={Math.min(100, Math.max(0, progress * 1.5 - 40))}
-									color="#60a5fa"
-								/>
+								{frame > timingWord.startFrame && (
+									<ProgressBar
+										label="⏱️ Syncing Word Timing"
+										progress={timingProgress}
+										color="#c084fc"
+									/>
+								)}
+								{frame > syncWord.startFrame && (
+									<ProgressBar
+										label="🎨 Building React Scenes"
+										progress={syncProgress}
+										color="#60a5fa"
+									/>
+								)}
 
-								{frame > automatically.startFrame && (
+								{frame > allAutomatic.startFrame && (
 									<div
 										style={{
 											color: "#4ade80",
@@ -193,7 +214,7 @@ const ProgressBar = ({
 	progress: number;
 	color: string;
 }) => (
-	<div style={{ opacity: progress > 0 ? 1 : 0.3, transition: "opacity 0.2s" }}>
+	<div style={{ opacity: progress > 0 ? 1 : 0.3 }}>
 		<div
 			style={{
 				marginBottom: 10,
@@ -224,7 +245,6 @@ const ProgressBar = ({
 					backgroundColor: color,
 					borderRadius: 5,
 					boxShadow: `0 0 10px ${color}`,
-					transition: "width 0.1s linear",
 				}}
 			/>
 		</div>

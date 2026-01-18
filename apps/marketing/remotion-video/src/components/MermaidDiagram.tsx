@@ -62,6 +62,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 
 	useEffect(() => {
 		let mounted = true;
+		let resolved = false;
 		const handle = delayRender();
 
 		const renderDiagram = async () => {
@@ -85,6 +86,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 					// Extract SVG from result
 					const svg = typeof result === "string" ? result : result.svg;
 					setSvgContent(svg);
+					resolved = true;
 					continueRender(handle);
 				}
 			} catch (error) {
@@ -96,6 +98,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 							Error rendering diagram: ${error instanceof Error ? error.message : "Unknown error"}
 						</text>
 					</svg>`);
+					resolved = true;
 					continueRender(handle);
 				}
 			}
@@ -105,7 +108,10 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 
 		return () => {
 			mounted = false;
-			continueRender(handle);
+			// Only call continueRender in cleanup if we haven't already resolved
+			if (!resolved) {
+				continueRender(handle);
+			}
 		};
 	}, [chart, diagramId]);
 

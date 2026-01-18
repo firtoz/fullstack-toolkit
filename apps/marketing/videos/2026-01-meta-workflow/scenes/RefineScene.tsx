@@ -50,54 +50,65 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 	);
 
 	// Progressive transformation based on each step
-	// Step 1: After "sexy" - 33% transformed
-	// Step 2: After "cool" - 66% transformed
-	// Step 3: "updates instantly" - 100% transformed
-	const step1Progress = interpolate(
+	// We have 5 states: before -> flashier -> sexy -> cool -> after
+	// Each transition happens when the respective word is spoken
+
+	// Transition 1: "before" fades out when "just ask" is spoken
+	const beforeOpacity = interpolate(
 		frame,
-		[makeSexy.startFrame, makeSexy.startFrame + 8],
-		[0, 0.33],
+		[justAsk.startFrame, justAsk.startFrame + 8],
+		[1, 0],
 		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
-	const step2Progress = interpolate(
-		frame,
-		[makeCool.startFrame, makeCool.startFrame + 8],
-		[0, 0.33],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const step3Progress = interpolate(
-		frame,
-		[updatesInstantly.startFrame, updatesInstantly.startFrame + 10],
-		[0, 0.34],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const transformProgress = Math.min(
-		1,
-		step1Progress + step2Progress + step3Progress,
-	);
-
-	// Scale punch on final transform
-	const punchScale = interpolate(
+	// Transition 2: "flashier" fades in when "just ask" starts, fades out when "sexy" is spoken
+	const flashierOpacity = interpolate(
 		frame,
 		[
-			updatesInstantly.startFrame,
-			updatesInstantly.startFrame + 6,
-			updatesInstantly.startFrame + 12,
+			justAsk.startFrame,
+			justAsk.startFrame + 8,
+			makeSexy.startFrame,
+			makeSexy.startFrame + 8,
 		],
-		[1, 1.08, 1],
+		[0, 1, 1, 0],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	// Transition 3: "sexy" fades in when word is spoken, fades out when "cool" is spoken
+	const sexyOpacity = interpolate(
+		frame,
+		[
+			makeSexy.startFrame,
+			makeSexy.startFrame + 8,
+			makeCool.startFrame,
+			makeCool.startFrame + 8,
+		],
+		[0, 1, 1, 0],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	// Transition 4: "cool" fades in when word is spoken and stays visible
+	const coolOpacity = interpolate(
+		frame,
+		[makeCool.startFrame, makeCool.startFrame + 8],
+		[0, 1],
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+	);
+
+	// Calculate overall progress for effects (0 to 1)
+	const overallProgress = interpolate(
+		frame,
+		[justAsk.startFrame, makeCool.startFrame + 8],
+		[0, 1],
 		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	return (
 		<AbsoluteFill style={{ backgroundColor: "#000" }}>
-			{/* The BEFORE State - plain/boring */}
+			{/* State 1: BEFORE - plain/boring */}
 			<AbsoluteFill
 				style={{
-					opacity: 1 - transformProgress,
-					transform: `scale(${punchScale})`,
+					opacity: beforeOpacity,
 				}}
 			>
 				<Img
@@ -117,15 +128,46 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 				/>
 			</AbsoluteFill>
 
-			{/* The AFTER State - flashy/cool */}
+			{/* State 2: FLASHIER - energetic/vibrant */}
 			<AbsoluteFill
 				style={{
-					opacity: transformProgress,
-					transform: `scale(${punchScale})`,
+					opacity: flashierOpacity,
 				}}
 			>
 				<Img
-					src={staticFile("2026-01-meta-workflow/images/refine-after.png")}
+					src={staticFile("2026-01-meta-workflow/images/refine-flashier.png")}
+					style={{
+						width: "100%",
+						height: "100%",
+						objectFit: "cover",
+					}}
+				/>
+			</AbsoluteFill>
+
+			{/* State 3: SEXY - provocative/flashy */}
+			<AbsoluteFill
+				style={{
+					opacity: sexyOpacity,
+				}}
+			>
+				<Img
+					src={staticFile("2026-01-meta-workflow/images/refine-sexy.png")}
+					style={{
+						width: "100%",
+						height: "100%",
+						objectFit: "cover",
+					}}
+				/>
+			</AbsoluteFill>
+
+			{/* State 4: COOL - sleek/minimalist (final state) */}
+			<AbsoluteFill
+				style={{
+					opacity: coolOpacity,
+				}}
+			>
+				<Img
+					src={staticFile("2026-01-meta-workflow/images/refine-cool.png")}
 					style={{
 						width: "100%",
 						height: "100%",
@@ -170,37 +212,37 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 			</AbsoluteFill>
 
 			{/* Step-by-step glow effects */}
-			{transformProgress > 0 && transformProgress < 1 && (
+			{overallProgress > 0 && overallProgress < 1 && (
 				<AbsoluteFill
 					style={{
 						background: `linear-gradient(45deg, 
-							rgba(236, 72, 153, ${transformProgress * 0.3}), 
-							rgba(139, 92, 246, ${transformProgress * 0.3}),
-							rgba(6, 182, 212, ${transformProgress * 0.3})
+							rgba(236, 72, 153, ${overallProgress * 0.3}), 
+							rgba(139, 92, 246, ${overallProgress * 0.3}),
+							rgba(6, 182, 212, ${overallProgress * 0.3})
 						)`,
 						mixBlendMode: "overlay",
 					}}
 				/>
 			)}
 
-			{/* "INSTANTLY UPDATED" badge after full transform */}
-			{transformProgress >= 1 && (
+			{/* "INSTANTLY UPDATED" badge */}
+			{frame >= updatesInstantly.startFrame && (
 				<div
 					style={{
 						position: "absolute",
 						bottom: 60,
 						right: 60,
-						backgroundColor: "rgba(0,0,0,0.8)",
-						padding: "16px 32px",
-						borderRadius: 12,
-						border: "2px solid #22c55e",
-						boxShadow: "0 0 30px rgba(34, 197, 94, 0.5)",
+						background:
+							"linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)",
+						padding: "20px 40px",
+						borderRadius: 16,
+						border: "2px solid rgba(100,116,139,0.2)",
+						boxShadow:
+							"0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+						backdropFilter: "blur(10px)",
 						opacity: interpolate(
 							frame,
-							[
-								updatesInstantly.startFrame + 8,
-								updatesInstantly.startFrame + 14,
-							],
+							[updatesInstantly.startFrame, updatesInstantly.startFrame + 8],
 							[0, 1],
 							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 						),
@@ -208,12 +250,13 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 				>
 					<div
 						style={{
-							fontSize: 32,
-							color: "#22c55e",
-							fontWeight: "bold",
+							fontSize: 28,
+							color: "#1e293b",
+							fontWeight: "600",
+							letterSpacing: "-0.5px",
 						}}
 					>
-						INSTANTLY UPDATED
+						✓ Instantly Updated
 					</div>
 				</div>
 			)}

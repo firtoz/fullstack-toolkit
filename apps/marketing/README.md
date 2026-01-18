@@ -168,23 +168,32 @@ bun run process-video 2026-01-dx-focus --force
 Generate AI images using fal.ai's nano-banana-pro model.
 
 ```bash
-bun run gen-image <prompt> <output-path>
+bun run gen-image <prompt> <output-path> [aspect-ratio] [resolution]
 ```
 
 **Arguments:**
 - `prompt` - Text description of the image to generate (required, use quotes)
 - `output-path` - Path where the image will be saved (required, directories created automatically)
+- `aspect-ratio` - Image aspect ratio: 16:9 (default), 1:1, 4:3, 21:9, etc. (optional)
+- `resolution` - Image resolution: 1K (default), 2K, 4K (optional)
+
+**Output:**
+- Generates the image at the specified path
+- Saves a `.prompt.json` file next to the image with all generation parameters for reproducibility
 
 **Examples:**
 ```bash
-# Generate a simple image
+# Generate with defaults (16:9, 1K)
 bun run gen-image "a flying turtle" images/turtle.png
 
-# Generate to nested path (auto-creates directories)
-bun run gen-image "a red sports car on a mountain road" scenes/intro/car.png
+# Generate with custom aspect ratio and resolution
+bun run gen-image "clean AI chat interface" images/chat.png "16:9" "2K"
 
-# Complex prompt
-bun run gen-image "a cozy coffee shop interior with warm lighting, photorealistic" assets/coffee-shop.png
+# Generate square image
+bun run gen-image "logo design" images/logo.png "1:1"
+
+# Complex prompt for video background
+bun run gen-image "professional developer workspace with VS Code showing TypeScript code" backgrounds/code.png "16:9"
 ```
 
 ### Edit Image
@@ -192,25 +201,53 @@ bun run gen-image "a cozy coffee shop interior with warm lighting, photorealisti
 Edit existing images with AI-powered transformations using fal.ai's nano-banana-pro/edit model.
 
 ```bash
-bun run edit-image <input-path> <prompt> <output-path>
+bun run edit-image <input-path> <prompt> <output-path> [aspect-ratio]
 ```
 
 **Arguments:**
 - `input-path` - Path to the image to edit (required)
 - `prompt` - Description of the changes to make (required, use quotes)
 - `output-path` - Path where the edited image will be saved (required)
+- `aspect-ratio` - Image aspect ratio: 16:9 (default), 1:1, 4:3, 21:9, etc. (optional)
+
+**Output:**
+- Generates the edited image at the specified path
+- Saves a `.prompt.json` file next to the image with all parameters
 
 **Examples:**
 ```bash
-# Simple color change
+# Simple edit with default aspect ratio
 bun run edit-image input.png "make it blue" output.png
 
-# Add elements
-bun run edit-image scene.png "add a sunset in the background" scene-sunset.png
+# Edit with custom aspect ratio
+bun run edit-image scene.png "add a sunset in the background" scene-sunset.png "21:9"
 
 # Transform style
 bun run edit-image photo.png "make it look like a watercolor painting" photo-watercolor.png
 ```
+
+### Regenerating Images with Correct Aspect Ratio
+
+If you need to regenerate images with proper aspect ratio (common workflow):
+
+```bash
+# 1. Generate new version with -1 suffix and correct aspect ratio
+bun run gen-image "your prompt here" path/image-1.png "16:9"
+
+# 2. Review the new image, if approved:
+cd path/to/images/
+rm image.png image.prompt.json
+mv image-1.png image.png
+mv image-1.prompt.json image.prompt.json
+
+# 3. Repeat for all images that need regeneration
+```
+
+**Why this workflow:**
+- The `-1` suffix prevents overwriting your existing images
+- You can compare old vs new before committing
+- The `.prompt.json` files track exactly what parameters were used
+- Easy to iterate: try `-2`, `-3`, etc. until you get it right
 
 ### Development
 

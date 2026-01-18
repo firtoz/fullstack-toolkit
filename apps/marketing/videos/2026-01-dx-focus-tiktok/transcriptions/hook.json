@@ -1,0 +1,169 @@
+{
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "React Router is great, but what if it could be even easier?",
+	"words": [
+		{
+			"text": "React",
+			"start": 0.079,
+			"end": 0.439,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.439,
+			"end": 0.5,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "Router",
+			"start": 0.5,
+			"end": 0.759,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.759,
+			"end": 0.78,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "is",
+			"start": 0.78,
+			"end": 0.939,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.939,
+			"end": 0.979,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "great,",
+			"start": 0.979,
+			"end": 1.779,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.779,
+			"end": 1.799,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "but",
+			"start": 1.799,
+			"end": 1.899,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.899,
+			"end": 1.96,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "what",
+			"start": 1.96,
+			"end": 2.059,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.059,
+			"end": 2.079,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "if",
+			"start": 2.079,
+			"end": 2.179,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.179,
+			"end": 2.199,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "it",
+			"start": 2.2,
+			"end": 2.319,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.319,
+			"end": 2.339,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "could",
+			"start": 2.339,
+			"end": 2.499,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.499,
+			"end": 2.519,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "be",
+			"start": 2.519,
+			"end": 2.699,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.699,
+			"end": 2.779,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "even",
+			"start": 2.779,
+			"end": 2.939,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.939,
+			"end": 3.059,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "easier?",
+			"start": 3.059,
+			"end": 3.779,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "Lm1c3SfrNpuHvtTHZ0Vt"
+}

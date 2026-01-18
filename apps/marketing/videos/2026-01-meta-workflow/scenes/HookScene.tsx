@@ -48,7 +48,7 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 						width: "100%",
 						height: "100%",
 						objectFit: "cover",
-						opacity: 0.3,
+						opacity: 0.6,
 					}}
 				/>
 				<div
@@ -56,7 +56,7 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 						position: "absolute",
 						inset: 0,
 						background:
-							"radial-gradient(circle at center, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",
+							"radial-gradient(circle at center, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0.6) 100%)",
 					}}
 				/>
 			</AbsoluteFill>
@@ -101,7 +101,6 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 							boxShadow: isDirectHighlighted
 								? "0 0 30px rgba(59, 130, 246, 0.6)"
 								: "none",
-							transition: "box-shadow 0.3s",
 						}}
 					>
 						{typedText}
@@ -138,7 +137,6 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 							textShadow: isAIHighlighted
 								? "0 0 20px rgba(168, 85, 247, 0.8)"
 								: "none",
-							transition: "all 0.2s",
 						}}
 					>
 						talking to an AI

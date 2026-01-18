@@ -1,6 +1,7 @@
+import { fal } from "@fal-ai/client";
+import type { NanoBananaEditInput } from "@fal-ai/client/endpoints";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { fal } from "@fal-ai/client";
 
 // Configure fal with API key from environment
 fal.config({
@@ -11,10 +12,18 @@ async function editImage(
 	inputPath: string,
 	prompt: string,
 	outputPath: string,
+	aspectRatio = "16:9",
 ) {
 	console.log(`Editing image: ${inputPath}`);
 	console.log(`Prompt: "${prompt}"`);
+	console.log(`Aspect ratio: ${aspectRatio}`);
 	console.log(`Output path: ${outputPath}`);
+
+	const inputParams = {
+		prompt,
+		input_image_path: inputPath,
+		aspect_ratio: aspectRatio,
+	};
 
 	try {
 		// Read the input image file
@@ -41,6 +50,7 @@ async function editImage(
 			input: {
 				prompt,
 				image_urls: [imageUrl],
+				aspect_ratio: aspectRatio as NanoBananaEditInput["aspect_ratio"],
 			},
 			logs: true,
 			onQueueUpdate: (update) => {
@@ -72,6 +82,15 @@ async function editImage(
 			// Save the edited image
 			await writeFile(outputPath, Buffer.from(editedImageBuffer));
 			console.log(`Edited image saved to: ${outputPath}`);
+
+			// Save input parameters as .prompt.json
+			const promptJsonPath = outputPath.replace(/\.[^.]+$/, ".prompt.json");
+			await writeFile(
+				promptJsonPath,
+				JSON.stringify(inputParams, null, 2),
+				"utf-8",
+			);
+			console.log(`Prompt parameters saved to: ${promptJsonPath}`);
 		} else {
 			throw new Error("No images generated");
 		}
@@ -86,14 +105,20 @@ const args = process.argv.slice(2);
 
 if (args.length < 3) {
 	console.error(
-		"Usage: bun run edit-image <input-image-path> <prompt> <output-path>",
+		"Usage: bun run edit-image <input-image-path> <prompt> <output-path> [aspect-ratio]",
 	);
 	console.error(
 		'Example: bun run edit-image input.png "make it blue" output.png',
 	);
+	console.error(
+		'Example: bun run edit-image input.png "make it blue" output.png "1:1"',
+	);
+	console.error(
+		"Available aspect ratios: 16:9 (default), 1:1, 4:3, 21:9, etc.",
+	);
 	process.exit(1);
 }
 
-const [inputPath, prompt, outputPath] = args;
+const [inputPath, prompt, outputPath, aspectRatio] = args;
 
-editImage(inputPath, prompt, outputPath);
+editImage(inputPath, prompt, outputPath, aspectRatio);
