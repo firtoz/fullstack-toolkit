@@ -1,0 +1,183 @@
+{
+  "language_code": "eng",
+  "language_probability": 1,
+  "text": "What if you could direct a video just by talking to an AI?",
+  "words": [
+    {
+      "text": "What",
+      "start": 0.099,
+      "end": 0.219,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.219,
+      "end": 0.239,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "if",
+      "start": 0.239,
+      "end": 0.359,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.359,
+      "end": 0.379,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "you",
+      "start": 0.379,
+      "end": 0.519,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.519,
+      "end": 0.56,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "could",
+      "start": 0.56,
+      "end": 0.719,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.719,
+      "end": 0.719,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "direct",
+      "start": 0.719,
+      "end": 1.079,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.079,
+      "end": 1.219,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "a",
+      "start": 1.219,
+      "end": 1.219,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.219,
+      "end": 1.239,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "video",
+      "start": 1.24,
+      "end": 1.619,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.619,
+      "end": 1.659,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "just",
+      "start": 1.659,
+      "end": 1.839,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.839,
+      "end": 1.839,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "by",
+      "start": 1.839,
+      "end": 2.019,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.019,
+      "end": 2.039,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "talking",
+      "start": 2.039,
+      "end": 2.339,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.339,
+      "end": 2.339,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "to",
+      "start": 2.339,
+      "end": 2.419,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.419,
+      "end": 2.439,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "an",
+      "start": 2.44,
+      "end": 2.519,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.519,
+      "end": 2.619,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "AI?",
+      "start": 2.619,
+      "end": 3.219,
+      "type": "word",
+      "logprob": 0
+    }
+  ],
+  "transcription_id": "R9LRRV7XGgIqRQ1Lp1zX"
+}

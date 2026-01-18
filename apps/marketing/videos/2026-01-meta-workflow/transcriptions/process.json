@@ -1,0 +1,183 @@
+{
+  "language_code": "eng",
+  "language_probability": 1,
+  "text": "One command: bun run process video. AI voices, perfect timing, frame accurate sync.",
+  "words": [
+    {
+      "text": "One",
+      "start": 0.079,
+      "end": 0.179,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.179,
+      "end": 0.259,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "command:",
+      "start": 0.259,
+      "end": 1.419,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.419,
+      "end": 1.439,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "bun",
+      "start": 1.439,
+      "end": 1.699,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 1.699,
+      "end": 1.779,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "run",
+      "start": 1.779,
+      "end": 2.019,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.019,
+      "end": 2.059,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "process",
+      "start": 2.059,
+      "end": 2.499,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.499,
+      "end": 2.579,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "video.",
+      "start": 2.579,
+      "end": 3.699,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 3.699,
+      "end": 3.759,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "AI",
+      "start": 3.759,
+      "end": 3.999,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 3.999,
+      "end": 4.099,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "voices,",
+      "start": 4.099,
+      "end": 5.159,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 5.159,
+      "end": 5.199,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "perfect",
+      "start": 5.199,
+      "end": 5.519,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 5.519,
+      "end": 5.559,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "timing,",
+      "start": 5.559,
+      "end": 6.68,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 6.68,
+      "end": 6.719,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "frame",
+      "start": 6.719,
+      "end": 7,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 7,
+      "end": 7.139,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "accurate",
+      "start": 7.139,
+      "end": 7.539,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 7.539,
+      "end": 7.639,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "sync.",
+      "start": 7.639,
+      "end": 8.239,
+      "type": "word",
+      "logprob": 0
+    }
+  ],
+  "transcription_id": "CeckYMXfnLiX47TX6c0H"
+}

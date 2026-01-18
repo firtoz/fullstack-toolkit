@@ -1,0 +1,141 @@
+{
+  "language_code": "eng",
+  "language_probability": 1,
+  "text": "You write the script, type-safe, declarative. You define the flow.",
+  "words": [
+    {
+      "text": "You",
+      "start": 0.099,
+      "end": 0.239,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.239,
+      "end": 0.239,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "write",
+      "start": 0.239,
+      "end": 0.439,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.439,
+      "end": 0.459,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "the",
+      "start": 0.459,
+      "end": 0.519,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.519,
+      "end": 0.579,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "script,",
+      "start": 0.579,
+      "end": 0.979,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 0.979,
+      "end": 1.359,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "type-safe,",
+      "start": 1.36,
+      "end": 2.039,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 2.039,
+      "end": 2.599,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "declarative.",
+      "start": 2.599,
+      "end": 3.199,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 3.199,
+      "end": 3.579,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "You",
+      "start": 3.579,
+      "end": 3.659,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 3.659,
+      "end": 3.719,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "define",
+      "start": 3.72,
+      "end": 4.199,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 4.199,
+      "end": 4.219,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "the",
+      "start": 4.219,
+      "end": 4.279,
+      "type": "word",
+      "logprob": 0
+    },
+    {
+      "text": " ",
+      "start": 4.279,
+      "end": 4.379,
+      "type": "spacing",
+      "logprob": 0
+    },
+    {
+      "text": "flow.",
+      "start": 4.38,
+      "end": 4.98,
+      "type": "word",
+      "logprob": 0
+    }
+  ],
+  "transcription_id": "2CR8MEZogkRLPRyXgHNq"
+}

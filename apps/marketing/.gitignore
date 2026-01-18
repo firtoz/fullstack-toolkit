@@ -6,3 +6,5 @@ videos/**/cache-manifest.json
 .env
 .env.local
 .env.*.local
+
+out/

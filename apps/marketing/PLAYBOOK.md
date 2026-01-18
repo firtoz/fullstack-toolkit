@@ -2,6 +2,32 @@
 
 This guide describes how to create marketing videos for router-toolkit using Remotion and ElevenLabs.
 
+## Quick Start (AI Workflow)
+
+**For Claude Opus 4.5 / Sonnet 4.5:**
+
+1. **Start Plan Mode** in Cursor with Opus 4.5
+2. **Provide prompt**: "Make a video explaining [TOPIC] using the marketing package playbook as a guide"
+3. **AI generates** `script.ts` in `videos/YYYY-MM-topic/`
+4. **Run command**:
+   ```bash
+   cd apps/marketing
+   bun run process-video YYYY-MM-topic liam energetic
+   ```
+5. **AI reviews** `timing.ts` output and builds scene components
+6. **AI creates** `Composition.tsx` using shared `VideoComposition` component
+7. **Preview**: `cd remotion-video && bun run dev`
+8. **Render**: `bunx remotion render src/index.ts YYYY-MM-topic out/video.mp4`
+
+**Key Command:**
+```bash
+bun run process-video <video-id> <voice> <preset> [speed] [--force]
+```
+
+Example: `bun run process-video 2026-01-dx-focus liam energetic 1.2`
+
+---
+
 ## Overview
 
 The video production process follows these steps:
@@ -509,75 +535,90 @@ const item2Opacity = interpolate(
 );
 ```
 
-### Main Composition
+### Shared Components
 
-Create `marketing/videos/YYYY-MM-topic/Composition.tsx`:
+**MermaidDiagram** - For rendering flowcharts and diagrams:
 
 ```tsx
-import { AbsoluteFill, Audio, Sequence, staticFile } from "remotion";
-import { sceneTimings, FPS } from "./timing";
-import { config, VIDEO_ID } from "./script";
-import type { ResolvedMarker } from "../../shared/lib/video-types";
+import { MermaidDiagram } from "../../../remotion-video/src/components/MermaidDiagram";
+
+// In your scene component
+<MermaidDiagram
+  chart={`
+    graph TD
+      A[Start] --> B[Process]
+      B --> C[End]
+  `}
+  scale={0.8}
+/>
+```
+
+**CodeBlock** - For syntax-highlighted code:
+
+```tsx
+import { CodeBlock } from "../../../remotion-video/src/components/CodeBlock";
+
+<CodeBlock
+  code={codeSnippets.example}
+  language="typescript"
+  fontSize={18}
+/>
+```
+
+### Main Composition
+
+Create `marketing/videos/YYYY-MM-topic/Composition.tsx` using the shared `VideoComposition`:
+
+```tsx
+import type React from "react";
+import {
+  VideoComposition,
+  createCompositionConfig,
+  type SceneProps,
+} from "../../shared/components/VideoComposition";
 import { HookScene } from "./scenes/HookScene";
 import { ProblemScene } from "./scenes/ProblemScene";
 // ... import other scenes
+import { config, VIDEO_ID } from "./script";
+import { sceneTimings } from "./timing";
 
-interface SceneProps {
-  durationInFrames: number;
-  markers: Record<string, ResolvedMarker>;
-}
-
-const sceneComponents: { [key: string]: React.FC<SceneProps> } = {
+// Map scene IDs to their components
+const sceneComponents: Record<string, React.FC<SceneProps>> = {
   hook: HookScene,
   problem: ProblemScene,
   // ... register all scenes
 };
 
-export const DxFocusVideo: React.FC = () => {
-  const gapFrames = Math.round(config.sceneGap * FPS);
-  let timelinePosition = 0; // Accumulator
-
+/**
+ * Video composition - uses shared VideoComposition component
+ */
+export const MyVideo: React.FC = () => {
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0a0a0f" }}>
-      {sceneTimings.map((timing, index) => {
-        const SceneComponent = sceneComponents[timing.id];
-        const startFrame = timelinePosition;
-
-        // Advance timeline for next iteration
-        timelinePosition += timing.durationFrames;
-        if (index < sceneTimings.length - 1) {
-          timelinePosition += gapFrames;
-        }
-
-        return (
-          <Sequence
-            key={timing.id}
-            from={startFrame}
-            durationInFrames={timing.durationFrames}
-            name={timing.id}
-          >
-            <Audio src={staticFile(`${VIDEO_ID}/audio/${timing.audioFile}`)} />
-            <SceneComponent
-              durationInFrames={timing.durationFrames}
-              markers={timing.markers}
-            />
-          </Sequence>
-        );
-      })}
-    </AbsoluteFill>
+    <VideoComposition
+      videoId={VIDEO_ID}
+      config={config}
+      sceneTimings={sceneTimings}
+      sceneComponents={sceneComponents}
+      backgroundColor="#0a0a0f"
+      backgroundGradient="radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.1) 0%, transparent 50%)"
+    />
   );
 };
 
 // Export composition config
-export const dxFocusComposition = {
-  id: VIDEO_ID,
-  component: DxFocusVideo,
-  durationInFrames: calculateTotalFrames(gapFrames),
-  fps: FPS,
-  width: config.width,
-  height: config.height,
-};
+export const myVideoComposition = createCompositionConfig(
+  VIDEO_ID,
+  config,
+  sceneTimings,
+  MyVideo,
+);
 ```
+
+**Benefits of shared VideoComposition:**
+- Consistent scene sequencing logic across all videos
+- Automatic audio prefetching
+- Configurable gaps and styling
+- Less boilerplate code
 
 ### Register in Root.tsx
 

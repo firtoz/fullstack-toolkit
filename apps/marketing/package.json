@@ -3,6 +3,8 @@
 	"private": true,
 	"scripts": {
 		"process-video": "bun run shared/scripts/process-video.ts",
+		"gen-image": "bun run shared/scripts/generate-image.ts",
+		"edit-image": "bun run shared/scripts/edit-image.ts",
 		"dev": "remotion studio remotion-video/src/index.ts",
 		"build": "remotion bundle remotion-video/src/index.ts",
 		"render": "remotion render remotion-video/src/index.ts",
@@ -12,10 +14,12 @@
 		"format": "biome format --write ."
 	},
 	"dependencies": {
+		"@fal-ai/client": "^1.8.3",
 		"@remotion/cli": "^4.0.0",
 		"@remotion/media": "^4.0.407",
 		"@remotion/player": "^4.0.0",
 		"get-audio-duration": "^4.0.1",
+		"mermaid": "^11.12.2",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"remotion": "^4.0.0",
