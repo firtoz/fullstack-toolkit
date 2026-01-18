@@ -1,183 +1,183 @@
 {
-  "language_code": "eng",
-  "language_probability": 1,
-  "text": "From prompt to video, this is your new creative partner. Check the playbook.",
-  "words": [
-    {
-      "text": "From",
-      "start": 0.099,
-      "end": 0.279,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.279,
-      "end": 0.379,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "prompt",
-      "start": 0.379,
-      "end": 0.719,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.719,
-      "end": 0.879,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "to",
-      "start": 0.879,
-      "end": 0.959,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.959,
-      "end": 1.018,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "video,",
-      "start": 1.018,
-      "end": 2.24,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.24,
-      "end": 2.279,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "this",
-      "start": 2.279,
-      "end": 2.419,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.419,
-      "end": 2.439,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "is",
-      "start": 2.44,
-      "end": 2.559,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.559,
-      "end": 2.579,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "your",
-      "start": 2.579,
-      "end": 2.699,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.699,
-      "end": 2.719,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "new",
-      "start": 2.72,
-      "end": 2.859,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.859,
-      "end": 2.899,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "creative",
-      "start": 2.899,
-      "end": 3.279,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.279,
-      "end": 3.279,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "partner.",
-      "start": 3.279,
-      "end": 3.699,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.699,
-      "end": 4.078,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "Check",
-      "start": 4.078,
-      "end": 4.259,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.259,
-      "end": 4.279,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "the",
-      "start": 4.279,
-      "end": 4.339,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.339,
-      "end": 4.399,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "playbook.",
-      "start": 4.4,
-      "end": 5.079,
-      "type": "word",
-      "logprob": 0
-    }
-  ],
-  "transcription_id": "PVE9DdFRh4tQFI81cJ8i"
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "From prompt to video, this is your new creative partner. Check the playbook.",
+	"words": [
+		{
+			"text": "From",
+			"start": 0.099,
+			"end": 0.279,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.279,
+			"end": 0.379,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "prompt",
+			"start": 0.379,
+			"end": 0.719,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.719,
+			"end": 0.879,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "to",
+			"start": 0.879,
+			"end": 0.959,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.959,
+			"end": 1.018,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "video,",
+			"start": 1.018,
+			"end": 2.24,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.24,
+			"end": 2.279,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "this",
+			"start": 2.279,
+			"end": 2.419,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.419,
+			"end": 2.439,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "is",
+			"start": 2.44,
+			"end": 2.559,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.559,
+			"end": 2.579,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "your",
+			"start": 2.579,
+			"end": 2.699,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.699,
+			"end": 2.719,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "new",
+			"start": 2.72,
+			"end": 2.859,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.859,
+			"end": 2.899,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "creative",
+			"start": 2.899,
+			"end": 3.279,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.279,
+			"end": 3.279,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "partner.",
+			"start": 3.279,
+			"end": 3.699,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.699,
+			"end": 4.078,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "Check",
+			"start": 4.078,
+			"end": 4.259,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.259,
+			"end": 4.279,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "the",
+			"start": 4.279,
+			"end": 4.339,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.339,
+			"end": 4.399,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "playbook.",
+			"start": 4.4,
+			"end": 5.079,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "PVE9DdFRh4tQFI81cJ8i"
 }

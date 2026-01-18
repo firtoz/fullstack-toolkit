@@ -1,155 +1,155 @@
 {
-  "language_code": "eng",
-  "language_probability": 1,
-  "text": "Use dynamic fetcher. Use dynamic submitter. Type-safe form actions. All connected.",
-  "words": [
-    {
-      "text": "Use",
-      "start": 0.079,
-      "end": 0.279,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.279,
-      "end": 0.319,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "dynamic",
-      "start": 0.319,
-      "end": 0.74,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.74,
-      "end": 0.799,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "fetcher.",
-      "start": 0.799,
-      "end": 1.219,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 1.219,
-      "end": 2.139,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "Use",
-      "start": 2.139,
-      "end": 2.279,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.279,
-      "end": 2.339,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "dynamic",
-      "start": 2.339,
-      "end": 2.799,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.799,
-      "end": 2.859,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "submitter.",
-      "start": 2.859,
-      "end": 3.319,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.319,
-      "end": 4.038,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "Type-safe",
-      "start": 4.038,
-      "end": 4.619,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.619,
-      "end": 4.679,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "form",
-      "start": 4.679,
-      "end": 4.919,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.919,
-      "end": 5,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "actions.",
-      "start": 5,
-      "end": 5.519,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 5.519,
-      "end": 5.92,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "All",
-      "start": 5.92,
-      "end": 6.039,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 6.039,
-      "end": 6.119,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "connected.",
-      "start": 6.119,
-      "end": 6.84,
-      "type": "word",
-      "logprob": 0
-    }
-  ],
-  "transcription_id": "v7EWZS9S676Dy3GwQiTN"
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "Use dynamic fetcher. Use dynamic submitter. Type-safe form actions. All connected.",
+	"words": [
+		{
+			"text": "Use",
+			"start": 0.079,
+			"end": 0.279,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.279,
+			"end": 0.319,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "dynamic",
+			"start": 0.319,
+			"end": 0.74,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.74,
+			"end": 0.799,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "fetcher.",
+			"start": 0.799,
+			"end": 1.219,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.219,
+			"end": 2.139,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "Use",
+			"start": 2.139,
+			"end": 2.279,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.279,
+			"end": 2.339,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "dynamic",
+			"start": 2.339,
+			"end": 2.799,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.799,
+			"end": 2.859,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "submitter.",
+			"start": 2.859,
+			"end": 3.319,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.319,
+			"end": 4.038,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "Type-safe",
+			"start": 4.038,
+			"end": 4.619,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.619,
+			"end": 4.679,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "form",
+			"start": 4.679,
+			"end": 4.919,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.919,
+			"end": 5,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "actions.",
+			"start": 5,
+			"end": 5.519,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 5.519,
+			"end": 5.92,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "All",
+			"start": 5.92,
+			"end": 6.039,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 6.039,
+			"end": 6.119,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "connected.",
+			"start": 6.119,
+			"end": 6.84,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "v7EWZS9S676Dy3GwQiTN"
 }

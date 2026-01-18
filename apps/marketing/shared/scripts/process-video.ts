@@ -533,6 +533,34 @@ export const sceneTimings: SceneTimingInfo[] = ${JSON.stringify(sceneTimings, nu
 	console.log(`\n✅ Generated timing file: ${timingPath}`);
 }
 
+/**
+ * Run linter on generated files to fix formatting
+ */
+async function lintGeneratedFiles(videoDir: string): Promise<void> {
+	const { spawnSync } = await import("node:child_process");
+
+	console.log("\n🔧 Running linter on generated files...");
+
+	// Run biome check --write on the video directory
+	const result = spawnSync("bunx", ["biome", "check", "--write", videoDir], {
+		cwd: join(__dirname, "..", ".."),
+		stdio: "pipe",
+		encoding: "utf-8",
+	});
+
+	if (result.error) {
+		console.warn(`   ⚠️ Warning: Failed to run linter: ${result.error.message}`);
+		return;
+	}
+
+	if (result.status !== 0 && result.stderr) {
+		console.warn(`   ⚠️ Warning: Linter exited with errors:\n${result.stderr}`);
+		return;
+	}
+
+	console.log("   ✅ Linter formatting applied");
+}
+
 function showUsage(): void {
 	console.error("Usage:");
 	console.error(
@@ -787,6 +815,9 @@ async function main() {
 
 		// Generate timing file
 		generateTimingFile(results, config.fps, videoDir);
+
+		// Run linter on generated files
+		await lintGeneratedFiles(videoDir);
 
 		// Summary
 		const totalDuration = results.reduce((sum, r) => sum + r.audioDuration, 0);

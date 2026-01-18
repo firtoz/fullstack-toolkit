@@ -1,183 +1,183 @@
 {
-  "language_code": "eng",
-  "language_probability": 1,
-  "text": "React components become scenes. CSS is your visual effects, it is just code.",
-  "words": [
-    {
-      "text": "React",
-      "start": 0.099,
-      "end": 0.439,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 0.439,
-      "end": 0.519,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "components",
-      "start": 0.519,
-      "end": 1.039,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 1.039,
-      "end": 1.1,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "become",
-      "start": 1.1,
-      "end": 1.399,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 1.399,
-      "end": 1.519,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "scenes.",
-      "start": 1.519,
-      "end": 1.959,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 1.959,
-      "end": 2.48,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "CSS",
-      "start": 2.48,
-      "end": 2.98,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 2.98,
-      "end": 3,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "is",
-      "start": 3,
-      "end": 3.099,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.099,
-      "end": 3.119,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "your",
-      "start": 3.119,
-      "end": 3.259,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.259,
-      "end": 3.279,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "visual",
-      "start": 3.279,
-      "end": 3.639,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 3.639,
-      "end": 3.679,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "effects,",
-      "start": 3.679,
-      "end": 4.659,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.659,
-      "end": 4.679,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "it",
-      "start": 4.679,
-      "end": 4.759,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.759,
-      "end": 4.779,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "is",
-      "start": 4.779,
-      "end": 4.879,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 4.879,
-      "end": 4.999,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "just",
-      "start": 5,
-      "end": 5.219,
-      "type": "word",
-      "logprob": 0
-    },
-    {
-      "text": " ",
-      "start": 5.219,
-      "end": 5.319,
-      "type": "spacing",
-      "logprob": 0
-    },
-    {
-      "text": "code.",
-      "start": 5.319,
-      "end": 5.92,
-      "type": "word",
-      "logprob": 0
-    }
-  ],
-  "transcription_id": "geE5zLDdOMHRaCENc8jt"
+	"language_code": "eng",
+	"language_probability": 1,
+	"text": "React components become scenes. CSS is your visual effects, it is just code.",
+	"words": [
+		{
+			"text": "React",
+			"start": 0.099,
+			"end": 0.439,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 0.439,
+			"end": 0.519,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "components",
+			"start": 0.519,
+			"end": 1.039,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.039,
+			"end": 1.1,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "become",
+			"start": 1.1,
+			"end": 1.399,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.399,
+			"end": 1.519,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "scenes.",
+			"start": 1.519,
+			"end": 1.959,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 1.959,
+			"end": 2.48,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "CSS",
+			"start": 2.48,
+			"end": 2.98,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 2.98,
+			"end": 3,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "is",
+			"start": 3,
+			"end": 3.099,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.099,
+			"end": 3.119,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "your",
+			"start": 3.119,
+			"end": 3.259,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.259,
+			"end": 3.279,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "visual",
+			"start": 3.279,
+			"end": 3.639,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 3.639,
+			"end": 3.679,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "effects,",
+			"start": 3.679,
+			"end": 4.659,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.659,
+			"end": 4.679,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "it",
+			"start": 4.679,
+			"end": 4.759,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.759,
+			"end": 4.779,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "is",
+			"start": 4.779,
+			"end": 4.879,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 4.879,
+			"end": 4.999,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "just",
+			"start": 5,
+			"end": 5.219,
+			"type": "word",
+			"logprob": 0
+		},
+		{
+			"text": " ",
+			"start": 5.219,
+			"end": 5.319,
+			"type": "spacing",
+			"logprob": 0
+		},
+		{
+			"text": "code.",
+			"start": 5.319,
+			"end": 5.92,
+			"type": "word",
+			"logprob": 0
+		}
+	],
+	"transcription_id": "geE5zLDdOMHRaCENc8jt"
 }
