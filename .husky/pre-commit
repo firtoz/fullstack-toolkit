@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Exit immediately if any command fails
+set -e
+
 # Skip hooks in CI environment
 if [ -n "$CI" ]; then
   echo "Skipping pre-commit hooks in CI environment"
