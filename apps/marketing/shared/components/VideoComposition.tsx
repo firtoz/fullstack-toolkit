@@ -95,6 +95,11 @@ function calculateTotalFrames(
 	sceneTimings: SceneTimingInfo[],
 	gapFrames: number,
 ): number {
+	// Handle empty scenes array
+	if (sceneTimings.length === 0) {
+		return 0;
+	}
+
 	const totalSceneDuration = sceneTimings.reduce(
 		(sum, s) => sum + calculateSceneDuration(s),
 		0,

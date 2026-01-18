@@ -633,6 +633,10 @@ async function main() {
 		console.error("❌ Error: script.ts must export a scenes array");
 		process.exit(1);
 	}
+	if (scriptModule.scenes.length === 0) {
+		console.error("❌ Error: script.ts must contain at least one scene");
+		process.exit(1);
+	}
 	if (!scriptModule.config) {
 		console.error("❌ Error: script.ts must export a config object");
 		process.exit(1);
@@ -664,7 +668,7 @@ async function main() {
 		process.exit(1);
 	}
 
-	if (speedArg < 0.5 || speedArg > 2.0) {
+	if (Number.isNaN(speedArg) || speedArg < 0.5 || speedArg > 2.0) {
 		console.error(`❌ Speed must be between 0.5 and 2.0, got: ${speedArg}`);
 		process.exit(1);
 	}

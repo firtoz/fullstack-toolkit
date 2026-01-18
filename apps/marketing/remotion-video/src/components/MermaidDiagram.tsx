@@ -66,12 +66,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 		const handle = delayRender();
 
 		const renderDiagram = async () => {
-			console.log("chart", chart);
-			const startTime = performance.now();
 			try {
 				const result = await mermaid.render(diagramId, chart).then(
 					(result) => {
-						console.log("result", result);
 						return result;
 					},
 					(error) => {
@@ -79,9 +76,6 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({
 						throw error;
 					},
 				);
-				console.log("result", result);
-				const endTime = performance.now();
-				console.log(`Mermaid diagram rendered in ${endTime - startTime}ms`);
 				if (mounted) {
 					// Extract SVG from result
 					const svg = typeof result === "string" ? result : result.svg;
