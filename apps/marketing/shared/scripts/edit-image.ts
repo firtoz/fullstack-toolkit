@@ -1,6 +1,6 @@
-import { fal } from "@fal-ai/client";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fal } from "@fal-ai/client";
 
 // Configure fal with API key from environment
 fal.config({

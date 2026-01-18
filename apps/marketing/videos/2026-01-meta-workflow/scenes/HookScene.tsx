@@ -1,4 +1,10 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, staticFile, Img } from "remotion";
+import {
+	AbsoluteFill,
+	Img,
+	interpolate,
+	staticFile,
+	useCurrentFrame,
+} from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
 
 export const HookScene: React.FC<SceneProps> = ({ markers }) => {
@@ -28,7 +34,7 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 
 	// Highlight "AI"
 	const isAIHighlighted = frame >= talkingToAI.startFrame;
-	
+
 	// Direct video emphasis
 	const isDirectHighlighted = frame >= directVideo.startFrame;
 
@@ -49,7 +55,8 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 					style={{
 						position: "absolute",
 						inset: 0,
-						background: "radial-gradient(circle at center, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",
+						background:
+							"radial-gradient(circle at center, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)",
 					}}
 				/>
 			</AbsoluteFill>
@@ -91,7 +98,9 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 							maxWidth: "80%",
 							display: "flex",
 							alignItems: "center",
-							boxShadow: isDirectHighlighted ? "0 0 30px rgba(59, 130, 246, 0.6)" : "none",
+							boxShadow: isDirectHighlighted
+								? "0 0 30px rgba(59, 130, 246, 0.6)"
+								: "none",
 							transition: "box-shadow 0.3s",
 						}}
 					>
@@ -126,7 +135,9 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 						style={{
 							color: isAIHighlighted ? "#a855f7" : "#e2e8f0", // Purple for AI
 							fontWeight: isAIHighlighted ? "bold" : "normal",
-							textShadow: isAIHighlighted ? "0 0 20px rgba(168, 85, 247, 0.8)" : "none",
+							textShadow: isAIHighlighted
+								? "0 0 20px rgba(168, 85, 247, 0.8)"
+								: "none",
 							transition: "all 0.2s",
 						}}
 					>

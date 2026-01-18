@@ -1,9 +1,9 @@
 import {
 	AbsoluteFill,
-	interpolate,
-	useCurrentFrame,
-	staticFile,
 	Img,
+	interpolate,
+	staticFile,
+	useCurrentFrame,
 } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
 import { codeSnippets } from "../script";
@@ -20,7 +20,7 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[oneCommand.startFrame, oneCommand.startFrame + 10],
 		[0, 1],
-		{ extrapolateLeft: "clamp" }
+		{ extrapolateLeft: "clamp" },
 	);
 
 	// Progress bars animation
@@ -28,7 +28,7 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[engineHandles.startFrame, automatically.startFrame],
 		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	return (
@@ -48,7 +48,8 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 					style={{
 						position: "absolute",
 						inset: 0,
-						background: "radial-gradient(circle at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.8) 100%)",
+						background:
+							"radial-gradient(circle at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.8) 100%)",
 					}}
 				/>
 			</AbsoluteFill>
@@ -84,10 +85,38 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 							borderBottom: "1px solid #334155",
 						}}
 					>
-						<div style={{ width: 14, height: 14, borderRadius: "50%", background: "#ef4444" }} />
-						<div style={{ width: 14, height: 14, borderRadius: "50%", background: "#eab308" }} />
-						<div style={{ width: 14, height: 14, borderRadius: "50%", background: "#22c55e" }} />
-						<div style={{ marginLeft: 16, color: "#64748b", fontSize: 14, fontFamily: "monospace" }}>
+						<div
+							style={{
+								width: 14,
+								height: 14,
+								borderRadius: "50%",
+								background: "#ef4444",
+							}}
+						/>
+						<div
+							style={{
+								width: 14,
+								height: 14,
+								borderRadius: "50%",
+								background: "#eab308",
+							}}
+						/>
+						<div
+							style={{
+								width: 14,
+								height: 14,
+								borderRadius: "50%",
+								background: "#22c55e",
+							}}
+						/>
+						<div
+							style={{
+								marginLeft: 16,
+								color: "#64748b",
+								fontSize: 14,
+								fontFamily: "monospace",
+							}}
+						>
 							Terminal — bun run process-video
 						</div>
 					</div>
@@ -105,27 +134,31 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 						<div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
 							<span style={{ color: "#22c55e" }}>❯</span>
 							<span style={{ color: "#94a3b8" }}>~/project</span>
-							<span style={{ color: "#f8fafc" }}>{codeSnippets.processCommand}</span>
+							<span style={{ color: "#f8fafc" }}>
+								{codeSnippets.processCommand}
+							</span>
 						</div>
 
 						{frame > engineHandles.startFrame && (
-							<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-								<ProgressBar 
-									label="🎙️ Generating AI Voice" 
-									progress={Math.min(100, progress * 1.5)} 
-									color="#f472b6" 
+							<div
+								style={{ display: "flex", flexDirection: "column", gap: 20 }}
+							>
+								<ProgressBar
+									label="🎙️ Generating AI Voice"
+									progress={Math.min(100, progress * 1.5)}
+									color="#f472b6"
 								/>
-								<ProgressBar 
-									label="⏱️ Syncing Word Timing" 
-									progress={Math.min(100, Math.max(0, progress * 1.5 - 20))} 
-									color="#c084fc" 
+								<ProgressBar
+									label="⏱️ Syncing Word Timing"
+									progress={Math.min(100, Math.max(0, progress * 1.5 - 20))}
+									color="#c084fc"
 								/>
-								<ProgressBar 
-									label="🎨 Building React Scenes" 
-									progress={Math.min(100, Math.max(0, progress * 1.5 - 40))} 
-									color="#60a5fa" 
+								<ProgressBar
+									label="🎨 Building React Scenes"
+									progress={Math.min(100, Math.max(0, progress * 1.5 - 40))}
+									color="#60a5fa"
 								/>
-								
+
 								{frame > automatically.startFrame && (
 									<div
 										style={{
@@ -151,9 +184,25 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 	);
 };
 
-const ProgressBar = ({ label, progress, color }: { label: string; progress: number; color: string }) => (
+const ProgressBar = ({
+	label,
+	progress,
+	color,
+}: {
+	label: string;
+	progress: number;
+	color: string;
+}) => (
 	<div style={{ opacity: progress > 0 ? 1 : 0.3, transition: "opacity 0.2s" }}>
-		<div style={{ marginBottom: 10, fontSize: 18, color: "#94a3b8", display: "flex", justifyContent: "space-between" }}>
+		<div
+			style={{
+				marginBottom: 10,
+				fontSize: 18,
+				color: "#94a3b8",
+				display: "flex",
+				justifyContent: "space-between",
+			}}
+		>
 			<span>{label}</span>
 			<span style={{ color: progress >= 100 ? "#4ade80" : "#64748b" }}>
 				{progress >= 100 ? "Done" : `${Math.round(progress)}%`}

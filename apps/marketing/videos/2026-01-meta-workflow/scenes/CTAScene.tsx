@@ -1,9 +1,9 @@
 import {
 	AbsoluteFill,
-	interpolate,
-	useCurrentFrame,
-	staticFile,
 	Img,
+	interpolate,
+	staticFile,
+	useCurrentFrame,
 } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
 

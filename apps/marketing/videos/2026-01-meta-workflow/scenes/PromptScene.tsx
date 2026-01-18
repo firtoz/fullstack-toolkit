@@ -1,9 +1,9 @@
 import {
 	AbsoluteFill,
-	interpolate,
-	useCurrentFrame,
-	staticFile,
 	Img,
+	interpolate,
+	staticFile,
+	useCurrentFrame,
 } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
 
@@ -46,23 +46,21 @@ export const PromptScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[writesScript.startFrame, writesScript.startFrame + 15],
 		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	// Initial fade in
-	const initialOpacity = interpolate(
-		frame,
-		[0, 10],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-	);
+	const initialOpacity = interpolate(frame, [0, 10], [0, 1], {
+		extrapolateLeft: "clamp",
+		extrapolateRight: "clamp",
+	});
 
 	// Zoom effect on transform
 	const scale = interpolate(
 		frame,
 		[writesScript.startFrame, writesScript.startFrame + 20],
 		[1, 1.05],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	// AI badge appears when "ask Gemini or Opus" is said
@@ -70,7 +68,7 @@ export const PromptScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[askAI.startFrame, askAI.startFrame + 8],
 		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	return (
@@ -207,7 +205,7 @@ export const PromptScene: React.FC<SceneProps> = ({ markers }) => {
 							transformProgress,
 							[0, 0.1, 0.3],
 							[0, 0.8, 0],
-							{ extrapolateRight: "clamp" }
+							{ extrapolateRight: "clamp" },
 						),
 					}}
 				/>

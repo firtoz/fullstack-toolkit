@@ -1,9 +1,9 @@
 import {
 	AbsoluteFill,
-	interpolate,
-	useCurrentFrame,
-	staticFile,
 	Img,
+	interpolate,
+	staticFile,
+	useCurrentFrame,
 } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
 
@@ -22,7 +22,7 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[flashier.startFrame, flashier.startFrame + 6],
 		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	// "Just ask" pulse effect
@@ -30,7 +30,7 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[justAsk.startFrame, justAsk.startFrame + 10, justAsk.startFrame + 20],
 		[1, 1.1, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	// "Sexy" bubble and effect
@@ -38,7 +38,7 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[makeSexy.startFrame, makeSexy.startFrame + 6],
 		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	// "Cool" bubble and effect
@@ -46,7 +46,7 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[makeCool.startFrame, makeCool.startFrame + 6],
 		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	// Progressive transformation based on each step
@@ -57,24 +57,27 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 		frame,
 		[makeSexy.startFrame, makeSexy.startFrame + 8],
 		[0, 0.33],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	const step2Progress = interpolate(
 		frame,
 		[makeCool.startFrame, makeCool.startFrame + 8],
 		[0, 0.33],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	const step3Progress = interpolate(
 		frame,
 		[updatesInstantly.startFrame, updatesInstantly.startFrame + 10],
 		[0, 0.34],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
-	const transformProgress = Math.min(1, step1Progress + step2Progress + step3Progress);
+	const transformProgress = Math.min(
+		1,
+		step1Progress + step2Progress + step3Progress,
+	);
 
 	// Scale punch on final transform
 	const punchScale = interpolate(
@@ -85,7 +88,7 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 			updatesInstantly.startFrame + 12,
 		],
 		[1, 1.08, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 	);
 
 	return (
@@ -194,9 +197,12 @@ export const RefineScene: React.FC<SceneProps> = ({ markers }) => {
 						boxShadow: "0 0 30px rgba(34, 197, 94, 0.5)",
 						opacity: interpolate(
 							frame,
-							[updatesInstantly.startFrame + 8, updatesInstantly.startFrame + 14],
+							[
+								updatesInstantly.startFrame + 8,
+								updatesInstantly.startFrame + 14,
+							],
 							[0, 1],
-							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
 						),
 					}}
 				>

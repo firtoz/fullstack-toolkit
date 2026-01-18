@@ -1,6 +1,6 @@
-import { fal } from "@fal-ai/client";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fal } from "@fal-ai/client";
 
 // Configure fal with API key from environment
 fal.config({
@@ -26,7 +26,7 @@ async function generateImage(prompt: string, outputPath: string) {
 
 		console.log("Image generated successfully!");
 		console.log("Request ID:", result.requestId);
-		
+
 		if (result.data?.images && result.data.images.length > 0) {
 			const imageUrl = result.data.images[0].url;
 			console.log("Downloading image from:", imageUrl);
@@ -60,7 +60,9 @@ const args = process.argv.slice(2);
 
 if (args.length < 2) {
 	console.error("Usage: bun run gen-image <prompt> <output-path>");
-	console.error('Example: bun run gen-image "a flying turtle" output/turtle.png');
+	console.error(
+		'Example: bun run gen-image "a flying turtle" output/turtle.png',
+	);
 	process.exit(1);
 }
 
