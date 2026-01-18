@@ -12,6 +12,12 @@ import { metaWorkflowComposition } from "../../videos/2026-01-meta-workflow/Comp
 // Video: 2026-01-meta-workflow-tiktok
 import { metaWorkflowTikTokComposition } from "../../videos/2026-01-meta-workflow-tiktok/Composition";
 
+// Video: 2026-01-ui-comparison
+import { uiComparisonComposition } from "../../videos/2026-01-ui-comparison/Composition";
+
+// Video: 2026-01-ui-comparison-tiktok
+import { uiComparisonTikTokComposition } from "../../videos/2026-01-ui-comparison-tiktok/Composition";
+
 export const RemotionRoot: React.FC = () => {
 	return (
 		<>
@@ -53,6 +59,26 @@ export const RemotionRoot: React.FC = () => {
 				fps={metaWorkflowTikTokComposition.fps}
 				width={metaWorkflowTikTokComposition.width}
 				height={metaWorkflowTikTokComposition.height}
+			/>
+
+			{/* 2026-01-ui-comparison: Temperature control UI comparison */}
+			<Composition
+				id={uiComparisonComposition.id}
+				component={uiComparisonComposition.component}
+				durationInFrames={uiComparisonComposition.durationInFrames}
+				fps={uiComparisonComposition.fps}
+				width={uiComparisonComposition.width}
+				height={uiComparisonComposition.height}
+			/>
+
+			{/* 2026-01-ui-comparison-tiktok: UI comparison (TikTok vertical 9:16) */}
+			<Composition
+				id={uiComparisonTikTokComposition.id}
+				component={uiComparisonTikTokComposition.component}
+				durationInFrames={uiComparisonTikTokComposition.durationInFrames}
+				fps={uiComparisonTikTokComposition.fps}
+				width={uiComparisonTikTokComposition.width}
+				height={uiComparisonTikTokComposition.height}
 			/>
 		</>
 	);
