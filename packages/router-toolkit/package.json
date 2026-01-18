@@ -74,6 +74,9 @@
 		"@types/jsdom": "^27.0.0",
 		"@types/react": "catalog:",
 		"bun-types": "catalog:",
-		"jsdom": "^27.4.0"
+		"jsdom": "^27.4.0",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"react-router": "catalog:"
 	}
 }
