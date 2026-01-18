@@ -394,7 +394,7 @@ async function processScene(
 		console.log(`   🎙️ Generating audio (attempt ${attempt}/${MAX_RETRIES})...`);
 		audioBuffer = await generateAudio(client, scene.narration, options);
 
-		const audioDir = join(REMOTION_PUBLIC, videoId, "audio");
+		const audioDir = join(REMOTION_PUBLIC, audioStorageId, "audio");
 		mkdirSync(audioDir, { recursive: true });
 		writeFileSync(audioPath, audioBuffer);
 		console.log(`   💾 Saved audio: ${audioPath}`);
@@ -410,7 +410,7 @@ async function processScene(
 			`   🔤 Words detected: ${transcription.words.filter((w) => w.type === "word").length}`,
 		);
 
-		const transcriptionsDir = join(videoDir, "transcriptions");
+		const transcriptionsDir = join(transcriptionStorageDir, "transcriptions");
 		mkdirSync(transcriptionsDir, { recursive: true });
 		writeFileSync(transcriptionPath, JSON.stringify(transcription, null, 2));
 		console.log(`   💾 Saved transcription`);
