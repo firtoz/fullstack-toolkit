@@ -1,4 +1,5 @@
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { useFadeIn, useScale } from "../../../shared/hooks/useMarkerAnimation";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
 import { codeSnippets } from "../script";
 
@@ -18,28 +19,18 @@ export const CTAScene: React.FC<Props> = ({ markers }) => {
 	const buildFasterAppear = markers.buildFasterAppear;
 
 	// "Fully type-safe" text
-	const typeSafeTextOpacity = interpolate(
-		frame,
-		[fullySafeAppear.startFrame, fullySafeAppear.startFrame + 8],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const typeSafeTextOpacity = useFadeIn(fullySafeAppear, 8);
+	const typeSafeTextScale = useScale(fullySafeAppear, {
+		duration: 8,
+		from: 0.9,
+		to: 1,
+	});
 
 	// Terminal with install command
-	const terminalOpacity = interpolate(
-		frame,
-		[installAppear.startFrame, installAppear.startFrame + 10],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const terminalOpacity = useFadeIn(installAppear, 10);
 
 	// Build faster appears
-	const buildFasterOpacity = interpolate(
-		frame,
-		[buildFasterAppear.startFrame, buildFasterAppear.startFrame + 8],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const buildFasterOpacity = useFadeIn(buildFasterAppear, 8);
 
 	// Cursor blink
 	const cursorVisible = Math.floor(frame / 15) % 2 === 0;
@@ -57,7 +48,7 @@ export const CTAScene: React.FC<Props> = ({ markers }) => {
 					position: "absolute",
 					top: 120,
 					opacity: typeSafeTextOpacity,
-					transform: `scale(${0.9 + typeSafeTextOpacity * 0.1})`,
+					transform: `scale(${typeSafeTextScale})`,
 				}}
 			>
 				<span

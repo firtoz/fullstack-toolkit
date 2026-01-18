@@ -1,4 +1,5 @@
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { useMarkerAnimation } from "../../../shared/hooks/useMarkerAnimation";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
 
 interface Props {
@@ -30,15 +31,10 @@ export const HookScene: React.FC<Props> = ({ durationInFrames, markers }) => {
 	});
 
 	// Second part appears when "what" is spoken
-	const part2Opacity = interpolate(
-		frame,
-		[secondLineAppear.startFrame + 1, secondLineAppear.startFrame + 9],
-		[0, 1],
-		{
-			extrapolateLeft: "clamp",
-			extrapolateRight: "clamp",
-		},
-	);
+	const part2Opacity = useMarkerAnimation(secondLineAppear, {
+		delay: 1,
+		duration: 8,
+	});
 
 	// Fade out - minimal, only 3 frames
 	const fadeOut = interpolate(

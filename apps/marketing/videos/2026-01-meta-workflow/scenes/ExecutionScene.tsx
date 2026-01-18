@@ -1,11 +1,10 @@
-import {
-	AbsoluteFill,
-	Img,
-	interpolate,
-	staticFile,
-	useCurrentFrame,
-} from "remotion";
+import { AbsoluteFill, Img, staticFile, useCurrentFrame } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
+import {
+	useFadeIn,
+	useMarkerToMarker,
+	useSlideIn,
+} from "../../../shared/hooks/useMarkerAnimation";
 import { codeSnippets } from "../script";
 
 export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
@@ -19,34 +18,22 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 	const allAutomatic = markers.allAutomatic;
 
 	// Terminal appearance
-	const terminalOpacity = interpolate(
-		frame,
-		[engineTakesOver.startFrame, engineTakesOver.startFrame + 10],
-		[0, 1],
-		{ extrapolateLeft: "clamp" },
-	);
+	const terminalOpacity = useFadeIn(engineTakesOver, 10);
+	const terminalY = useSlideIn(engineTakesOver, { duration: 10, distance: 20 });
 
 	// Individual progress bars - each starts with its word, all finish at "all" word end
-	const audioProgress = interpolate(
-		frame,
-		[audioWord.startFrame, allWord.endFrame],
-		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const timingProgress = interpolate(
-		frame,
-		[timingWord.startFrame, allWord.endFrame],
-		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const syncProgress = interpolate(
-		frame,
-		[syncWord.startFrame, allWord.endFrame],
-		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const audioProgress = useMarkerToMarker(audioWord, allWord, {
+		from: 0,
+		to: 100,
+	});
+	const timingProgress = useMarkerToMarker(timingWord, allWord, {
+		from: 0,
+		to: 100,
+	});
+	const syncProgress = useMarkerToMarker(syncWord, allWord, {
+		from: 0,
+		to: 100,
+	});
 
 	return (
 		<AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -87,7 +74,7 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 						overflow: "hidden",
 						opacity: terminalOpacity,
 						boxShadow: "0 0 80px rgba(99, 102, 241, 0.2)",
-						transform: `translateY(${interpolate(frame, [engineTakesOver.startFrame, engineTakesOver.startFrame + 10], [20, 0], { extrapolateLeft: "clamp" })}px)`,
+						transform: `translateY(${terminalY}px)`,
 					}}
 				>
 					{/* Terminal Header */}

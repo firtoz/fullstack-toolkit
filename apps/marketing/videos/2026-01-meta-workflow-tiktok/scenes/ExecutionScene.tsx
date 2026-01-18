@@ -1,15 +1,13 @@
-import {
-	AbsoluteFill,
-	Img,
-	interpolate,
-	staticFile,
-	useCurrentFrame,
-} from "remotion";
+import { AbsoluteFill, Img, staticFile } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
+import {
+	useFadeIn,
+	useMarkerAnimation,
+	useMarkerToMarker,
+	useSlideIn,
+} from "../../../shared/hooks/useMarkerAnimation";
 
 export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
-	const frame = useCurrentFrame();
-
 	const engineTakesOver = markers.engineTakesOver;
 	const audioWord = markers.audioWord;
 	const timingWord = markers.timingWord;
@@ -18,34 +16,22 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 	const allAutomatic = markers.allAutomatic;
 
 	// Terminal appearance
-	const terminalOpacity = interpolate(
-		frame,
-		[engineTakesOver.startFrame, engineTakesOver.startFrame + 10],
-		[0, 1],
-		{ extrapolateLeft: "clamp" },
-	);
+	const terminalOpacity = useFadeIn(engineTakesOver, 10);
+	const terminalY = useSlideIn(engineTakesOver, { duration: 10, distance: 20 });
 
 	// Individual progress bars - each starts with its word, all finish at "all" word end
-	const audioProgress = interpolate(
-		frame,
-		[audioWord.startFrame, allWord.endFrame],
-		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const timingProgress = interpolate(
-		frame,
-		[timingWord.startFrame, allWord.endFrame],
-		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const syncProgress = interpolate(
-		frame,
-		[syncWord.startFrame, allWord.endFrame],
-		[0, 100],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const audioProgress = useMarkerToMarker(audioWord, allWord, {
+		from: 0,
+		to: 100,
+	});
+	const timingProgress = useMarkerToMarker(timingWord, allWord, {
+		from: 0,
+		to: 100,
+	});
+	const syncProgress = useMarkerToMarker(syncWord, allWord, {
+		from: 0,
+		to: 100,
+	});
 
 	return (
 		<AbsoluteFill style={{ backgroundColor: "#000" }}>
@@ -85,7 +71,7 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 						width: "100%",
 						maxWidth: 900,
 						opacity: terminalOpacity,
-						transform: `translateY(${interpolate(frame, [engineTakesOver.startFrame, engineTakesOver.startFrame + 10], [20, 0], { extrapolateLeft: "clamp" })}px)`,
+						transform: `translateY(${terminalY}px)`,
 					}}
 				>
 					{/* Title */}
@@ -131,12 +117,10 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 							border: "1px solid rgba(99, 102, 241, 0.2)",
 							boxShadow: "0 0 60px rgba(99, 102, 241, 0.15)",
 							backdropFilter: "blur(10px)",
-							opacity: interpolate(
-								frame,
-								[audioWord.startFrame - 5, audioWord.startFrame + 5],
-								[0, 1],
-								{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-							),
+							opacity: useMarkerAnimation(audioWord, {
+								delay: -5,
+								duration: 10,
+							}),
 						}}
 					>
 						<ProgressBar
@@ -168,18 +152,11 @@ export const ExecutionScene: React.FC<SceneProps> = ({ markers }) => {
 								alignItems: "center",
 								justifyContent: "center",
 								gap: 12,
-								opacity: interpolate(
-									frame,
-									[allAutomatic.startFrame, allAutomatic.startFrame + 8],
-									[0, 1],
-									{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-								),
-								transform: `translateY(${interpolate(
-									frame,
-									[allAutomatic.startFrame, allAutomatic.startFrame + 8],
-									[10, 0],
-									{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-								)}px)`,
+								opacity: useFadeIn(allAutomatic, 8),
+								transform: `translateY(${useSlideIn(allAutomatic, {
+									duration: 8,
+									distance: 10,
+								})}px)`,
 							}}
 						>
 							<span style={{ fontSize: 32 }}>✅</span>
@@ -203,18 +180,16 @@ const ProgressBar = ({
 	color: string;
 	startFrame: number;
 }) => {
-	const frame = useCurrentFrame();
-
-	// Fade in animation over 8 frames
-	const fadeOpacity = interpolate(frame, [startFrame, startFrame + 8], [0, 1], {
-		extrapolateLeft: "clamp",
-		extrapolateRight: "clamp",
-	});
-
-	const slideY = interpolate(frame, [startFrame, startFrame + 8], [10, 0], {
-		extrapolateLeft: "clamp",
-		extrapolateRight: "clamp",
-	});
+	// Create a marker object for the hooks
+	const marker = {
+		id: `progress-${label}`,
+		startFrame,
+		endFrame: startFrame + 8,
+		startTime: 0,
+		endTime: 0,
+	};
+	const fadeOpacity = useFadeIn(marker, 8);
+	const slideY = useSlideIn(marker, { duration: 8, distance: 10 });
 
 	return (
 		<div

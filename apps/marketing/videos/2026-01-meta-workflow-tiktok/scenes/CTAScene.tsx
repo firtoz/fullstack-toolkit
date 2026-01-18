@@ -6,6 +6,12 @@ import {
 	useCurrentFrame,
 } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
+import {
+	useFadeIn,
+	useMarkerAnimation,
+	useMarkerToMarker,
+	useScale,
+} from "../../../shared/hooks/useMarkerAnimation";
 
 export const CTAScene: React.FC<SceneProps> = ({ markers }) => {
 	const frame = useCurrentFrame();
@@ -18,65 +24,32 @@ export const CTAScene: React.FC<SceneProps> = ({ markers }) => {
 	const checkPlaybook = markers.checkPlaybook;
 
 	// "From prompt" - show prompt image, visible from start (top half)
-	const promptOpacity = interpolate(
-		frame,
-		[fromWord.startFrame, fromWord.startFrame + 6],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const promptOpacity = useFadeIn(fromWord, 6);
 
 	// "to video" - video image fades in (bottom half)
-	const videoOpacity = interpolate(
-		frame,
-		[toWord.startFrame + 2, toWord.startFrame + 10],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const videoOpacity = useMarkerAnimation(toWord, { delay: 2, duration: 8 });
 
 	// Labels timing
-	const promptLabelOpacity = interpolate(
-		frame,
-		[promptWord.startFrame, promptWord.endFrame],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const videoLabelOpacity = interpolate(
-		frame,
-		[videoWord.startFrame, videoWord.startFrame + 6],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const promptLabelOpacity = useMarkerToMarker(promptWord, promptWord);
+	const videoLabelOpacity = useFadeIn(videoWord, 6);
 
 	// "creative partner" - card zooms in
-	const cardScale = interpolate(
-		frame,
-		[creativePartner.startFrame, creativePartner.startFrame + 12],
-		[0.5, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const cardOpacity = interpolate(
-		frame,
-		[creativePartner.startFrame, creativePartner.startFrame + 8],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const cardScale = useScale(creativePartner, {
+		duration: 12,
+		from: 0.5,
+		to: 1,
+	});
+	const cardOpacity = useFadeIn(creativePartner, 8);
 
 	// Title animation - staggered
-	const titleOpacity = interpolate(
-		frame,
-		[creativePartner.startFrame + 4, creativePartner.startFrame + 12],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
-
-	const toolkitOpacity = interpolate(
-		frame,
-		[creativePartner.startFrame + 8, creativePartner.startFrame + 16],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const titleOpacity = useMarkerAnimation(creativePartner, {
+		delay: 4,
+		duration: 8,
+	});
+	const toolkitOpacity = useMarkerAnimation(creativePartner, {
+		delay: 8,
+		duration: 8,
+	});
 
 	// "Check the playbook" - GitHub URL highlights/pulses
 	const githubGlow = interpolate(

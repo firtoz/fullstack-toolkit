@@ -6,6 +6,10 @@ import {
 	useCurrentFrame,
 } from "remotion";
 import type { SceneProps } from "../../../shared/components/VideoComposition";
+import {
+	useMarkerAnimation,
+	useScale,
+} from "../../../shared/hooks/useMarkerAnimation";
 
 export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 	const frame = useCurrentFrame();
@@ -13,15 +17,13 @@ export const HookScene: React.FC<SceneProps> = ({ markers }) => {
 	const directVideo = markers.directVideo;
 	const talkingToAI = markers.talkingToAI;
 
-	// Chat bubble animation
-	const bubbleOpacity = interpolate(frame, [0, 10], [0, 1], {
-		extrapolateLeft: "clamp",
-		extrapolateRight: "clamp",
-	});
-
-	const bubbleScale = interpolate(frame, [0, 15], [0.8, 1], {
-		extrapolateLeft: "clamp",
-		extrapolateRight: "clamp",
+	// Chat bubble animation - create marker at frame 0
+	const sceneStart = { ...markers.directVideo, startFrame: 0, endFrame: 15 };
+	const bubbleOpacity = useMarkerAnimation(sceneStart, { duration: 10 });
+	const bubbleScale = useScale(sceneStart, {
+		duration: 15,
+		from: 0.8,
+		to: 1,
 	});
 
 	// Typing effect simulation (characters appearing)

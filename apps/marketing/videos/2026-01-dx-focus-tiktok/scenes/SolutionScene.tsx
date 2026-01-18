@@ -6,6 +6,7 @@ import {
 	staticFile,
 	useCurrentFrame,
 } from "remotion";
+import { useMarkerAnimation } from "../../../shared/hooks/useMarkerAnimation";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
 import { FPS } from "../timing";
 
@@ -37,20 +38,10 @@ export const SolutionScene: React.FC<Props> = ({
 	});
 
 	// Name appears - new element, subtle delay
-	const nameOpacity = interpolate(
-		frame,
-		[Math.max(0, toolkitReveal.startFrame), toolkitReveal.startFrame + 8],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const nameOpacity = useMarkerAnimation(toolkitReveal, { duration: 8 });
 
 	// Tagline appears - new element, subtle delay
-	const taglineOpacity = interpolate(
-		frame,
-		[taglineAppear.startFrame + 1, taglineAppear.startFrame + 9],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const taglineOpacity = useMarkerAnimation(taglineAppear, { delay: 1 });
 
 	// "just work" highlight - INSTANT (color change on existing text)
 	const isJustWorkHighlighted = frame >= justWorkHighlight.startFrame;

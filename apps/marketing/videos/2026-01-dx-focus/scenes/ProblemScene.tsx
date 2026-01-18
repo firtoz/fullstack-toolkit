@@ -1,4 +1,8 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame } from "remotion";
+import {
+	useMarkerAnimation,
+	useSlideIn,
+} from "../../../shared/hooks/useMarkerAnimation";
 import type { ResolvedMarker } from "../../../shared/lib/video-types";
 import { FPS } from "../timing";
 
@@ -22,24 +26,38 @@ export const ProblemScene: React.FC<Props> = ({
 	const formAppear = markers.formAppear;
 	const wireUpAppear = markers.wireUpAppear;
 
-	// Items with their timing
+	// Items animations - must be called at top level
+	const item1Opacity = useMarkerAnimation(fetchersAppear, { delay: 1 });
+	const item1Y = useSlideIn(fetchersAppear, { delay: 1, distance: 15 });
+	const item2Opacity = useMarkerAnimation(submissionAppear, { delay: 1 });
+	const item2Y = useSlideIn(submissionAppear, { delay: 1, distance: 15 });
+	const item3Opacity = useMarkerAnimation(formAppear, { delay: 1 });
+	const item3Y = useSlideIn(formAppear, { delay: 1, distance: 15 });
+
+	// Items with their timing and animations
 	const items = [
-		{ text: "Fetchers", icon: "📥", startFrame: fetchersAppear.startFrame },
+		{
+			text: "Fetchers",
+			icon: "📥",
+			opacity: item1Opacity,
+			translateY: item1Y,
+		},
 		{
 			text: "Submission state",
 			icon: "🔄",
-			startFrame: submissionAppear.startFrame,
+			opacity: item2Opacity,
+			translateY: item2Y,
 		},
-		{ text: "Form actions", icon: "📤", startFrame: formAppear.startFrame },
+		{
+			text: "Form actions",
+			icon: "📤",
+			opacity: item3Opacity,
+			translateY: item3Y,
+		},
 	];
 
 	// "A lot to wire up" - new element, subtle delay
-	const wireUpOpacity = interpolate(
-		frame,
-		[wireUpAppear.startFrame + 1, wireUpAppear.startFrame + 8],
-		[0, 1],
-		{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-	);
+	const wireUpOpacity = useMarkerAnimation(wireUpAppear, { delay: 1 });
 
 	const wireUpScale = spring({
 		frame: Math.max(0, frame - (wireUpAppear.startFrame + 1)),
@@ -73,54 +91,37 @@ export const ProblemScene: React.FC<Props> = ({
 			>
 				{/* Items appear as they're mentioned - subtle delay */}
 				<div style={{ display: "flex", gap: 40 }}>
-					{items.map((item) => {
-						// New element: 1 frame delay, 8 frame fade-in
-						const itemOpacity = interpolate(
-							frame,
-							[item.startFrame + 1, item.startFrame + 9],
-							[0, 1],
-							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-						);
-
-						const itemY = interpolate(
-							frame,
-							[item.startFrame + 1, item.startFrame + 9],
-							[15, 0],
-							{ extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-						);
-
-						return (
-							<div
-								key={item.text}
+					{items.map((item) => (
+						<div
+							key={item.text}
+							style={{
+								opacity: item.opacity,
+								transform: `translateY(${item.translateY}px)`,
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								gap: 12,
+								background: "rgba(255, 255, 255, 0.05)",
+								border: "1px solid rgba(255, 255, 255, 0.1)",
+								borderRadius: 16,
+								padding: "24px 36px",
+								minWidth: 180,
+							}}
+						>
+							<span style={{ fontSize: 40 }}>{item.icon}</span>
+							<span
 								style={{
-									opacity: itemOpacity,
-									transform: `translateY(${itemY}px)`,
-									display: "flex",
-									flexDirection: "column",
-									alignItems: "center",
-									gap: 12,
-									background: "rgba(255, 255, 255, 0.05)",
-									border: "1px solid rgba(255, 255, 255, 0.1)",
-									borderRadius: 16,
-									padding: "24px 36px",
-									minWidth: 180,
+									fontSize: 22,
+									color: "rgba(255, 255, 255, 0.9)",
+									fontFamily: "'Inter', sans-serif",
+									fontWeight: 500,
+									textAlign: "center",
 								}}
 							>
-								<span style={{ fontSize: 40 }}>{item.icon}</span>
-								<span
-									style={{
-										fontSize: 22,
-										color: "rgba(255, 255, 255, 0.9)",
-										fontFamily: "'Inter', sans-serif",
-										fontWeight: 500,
-										textAlign: "center",
-									}}
-								>
-									{item.text}
-								</span>
-							</div>
-						);
-					})}
+								{item.text}
+							</span>
+						</div>
+					))}
 				</div>
 
 				{/* "A lot to wire up" */}
