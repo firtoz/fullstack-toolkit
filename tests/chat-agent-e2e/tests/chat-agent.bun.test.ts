@@ -14,8 +14,26 @@ import { BASE_URL } from "./common";
 
 const AGENT_ID = "test-agent-bun";
 
+// Check if environment variables are configured
+const shouldSkip = !(
+	process.env.OPENROUTER_API_KEY &&
+	process.env.CLOUDFLARE_ACCOUNT_ID &&
+	process.env.AI_GATEWAY_NAME &&
+	process.env.AI_GATEWAY_TOKEN
+);
+
+if (shouldSkip) {
+	console.warn(
+		"\n⚠️  Skipping ChatAgent E2E tests: Required API credentials not configured.",
+	);
+	console.warn(
+		"   Create a .env.local file with OPENROUTER_API_KEY, CLOUDFLARE_ACCOUNT_ID, AI_GATEWAY_NAME, and AI_GATEWAY_TOKEN.\n",
+	);
+}
+
 describe("ChatAgent WebSocket E2E (Bun)", () => {
-	test("should connect via WebSocket and send/receive messages", async () => {
+	test.skipIf(shouldSkip)("should connect via WebSocket and send/receive messages", async () => {
+
 		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
 		const messages: ServerMessage[] = [];
 
@@ -76,7 +94,8 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 		);
 	});
 
-	test("should retrieve chat history", async () => {
+	test.skipIf(shouldSkip)("should retrieve chat history", async () => {
+
 		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
 
 		const result = await new Promise<{
@@ -124,7 +143,8 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 		}
 	});
 
-	test("should handle tool calls with test tool", async () => {
+	test.skipIf(shouldSkip)("should handle tool calls with test tool", async () => {
+
 		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}-tools`;
 
 		const result = await new Promise<{
@@ -185,7 +205,8 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 		}
 	});
 
-	test("should handle different agent IDs separately", async () => {
+	test.skipIf(shouldSkip)("should handle different agent IDs separately", async () => {
+
 		const agent1Url = `${BASE_URL}/chat-agent/agent-1-separate-bun`;
 		const agent2Url = `${BASE_URL}/chat-agent/agent-2-separate-bun`;
 

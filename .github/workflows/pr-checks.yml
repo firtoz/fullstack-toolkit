@@ -47,6 +47,11 @@ jobs:
         run: |
           TURBO_TELEMETRY_DISABLED=1 bun turbo run test --filter='!test-playground'
           cd tests/test-playground && bun run test:unit
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AI_GATEWAY_NAME: ${{ secrets.AI_GATEWAY_NAME }}
+          AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
 
       - name: Wait for Playwright and Run E2E Tests
         run: |

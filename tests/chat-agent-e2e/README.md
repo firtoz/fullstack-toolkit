@@ -101,8 +101,14 @@ Result: { key: 'foo', value: 'test-value-foo', timestamp: 1234567890 }
 
 ## CI/CD
 
-The `playwright.config.ts` is configured to work in CI:
-- Uses `process.env.CI` to detect CI environment
-- Disables server reuse in CI
-- Adds retries for flaky tests
-- Runs tests sequentially in CI for stability
+In CI environments, the tests will:
+- **Skip gracefully** if environment variables are not configured
+- Automatically run when the required secrets are set as GitHub secrets:
+  - `OPENROUTER_API_KEY`
+  - `CLOUDFLARE_ACCOUNT_ID`
+  - `AI_GATEWAY_NAME`
+  - `AI_GATEWAY_TOKEN`
+
+The workflow passes these as environment variables to the test runner, and wrangler automatically picks them up.
+
+For forked repositories without these secrets, the tests will skip with a warning message instead of failing.
