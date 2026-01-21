@@ -5,6 +5,15 @@ on:
     branches:
       - main
   workflow_call:
+    secrets:
+      OPENROUTER_API_KEY:
+        required: false
+      CLOUDFLARE_ACCOUNT_ID:
+        required: false
+      AI_GATEWAY_NAME:
+        required: false
+      AI_GATEWAY_TOKEN:
+        required: false
 
 jobs:
   checks:
