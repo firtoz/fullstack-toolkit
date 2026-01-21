@@ -23,7 +23,13 @@
 			"outputLogs": "new-only"
 		},
 		"test": {
-			"outputLogs": "new-only"
+			"outputLogs": "new-only",
+			"env": [
+				"OPENROUTER_API_KEY",
+				"CLOUDFLARE_ACCOUNT_ID",
+				"AI_GATEWAY_NAME",
+				"AI_GATEWAY_TOKEN"
+			]
 		},
 		"test:ci": {
 			"outputLogs": "new-only"
