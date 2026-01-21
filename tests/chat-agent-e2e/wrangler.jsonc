@@ -1,0 +1,41 @@
+{
+	// JSON Schema enables IDE autocomplete and validation for wrangler config
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+
+	"name": "chat-agent-e2e-test",
+	"main": "src/worker.ts",
+	"compatibility_date": "2025-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+
+	// Durable Object configuration for chat-agent tests
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "TEST_CHAT_AGENT",
+				"class_name": "TestChatAgent"
+			}
+		]
+	},
+
+	/**
+	 * Rules to import SQL migration files as text
+	 * Required for Drizzle ORM migrations in Durable Objects
+	 * @see https://orm.drizzle.team/docs/connect-cloudflare-do
+	 */
+	"rules": [
+		{
+			"type": "Text",
+			"globs": ["**/*.sql"],
+			"fallthrough": true
+		}
+	],
+
+	// Migrations track DO schema changes over time
+	// Using new_sqlite_classes to enable SQL for this Durable Object
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["TestChatAgent"]
+		}
+	]
+}

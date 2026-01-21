@@ -1,7 +1,7 @@
 {
-	"name": "@firtoz/worker-helper",
-	"version": "1.0.0",
-	"description": "Type-safe Web Worker helper with Zod validation and Cloudflare Workers utilities (cf-typegen)",
+	"name": "@firtoz/chat-agent",
+	"version": "0.0.1",
+	"description": "ChatAgent for Cloudflare Durable Objects with OpenRouter - a simplified alternative to @cloudflare/ai-chat",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -11,37 +11,34 @@
 			"import": "./src/index.ts",
 			"require": "./src/index.ts"
 		},
-		"./*": {
-			"types": "./src/*.ts",
-			"import": "./src/*.ts",
-			"require": "./src/*.ts"
+		"./db/schema": {
+			"types": "./src/db/schema.ts",
+			"import": "./src/db/schema.ts",
+			"require": "./src/db/schema.ts"
 		}
 	},
 	"files": [
 		"src/**/*.ts",
-		"README.md",
-		"CHANGELOG.md"
+		"!src/**/*.test.ts",
+		"README.md"
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
-		"format": "biome format src --write",
-		"test": "bun test",
-		"test:watch": "bun test --watch",
-		"cf-typegen": "bun ./src/cf-typegen.ts"
+		"db:generate": "drizzle-kit generate",
+		"format": "biome format src --write"
 	},
 	"keywords": [
 		"typescript",
-		"web-worker",
-		"worker",
-		"cloudflare-workers",
+		"durable-objects",
 		"cloudflare",
-		"zod",
-		"validation",
-		"type-safe",
-		"wrangler",
-		"typegen"
+		"cloudflare-workers",
+		"chat",
+		"ai",
+		"openrouter",
+		"drizzle-orm",
+		"agents"
 	],
 	"author": "Firtina Ozbalikchi <firtoz@github.com>",
 	"license": "MIT",
@@ -49,10 +46,19 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/firtoz/fullstack-toolkit.git",
-		"directory": "packages/worker-helper"
+		"directory": "packages/chat-agent"
 	},
 	"bugs": {
 		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"@openrouter/sdk": "catalog:",
+		"agents": "catalog:",
+		"drizzle-orm": "catalog:"
+	},
+	"optionalDependencies": {
+		"zod": "catalog:"
 	},
 	"engines": {
 		"node": ">=18.0.0"
@@ -60,12 +66,9 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"dependencies": {
-		"zod": "catalog:"
-	},
 	"devDependencies": {
-		"@types/node": "catalog:",
-		"@firtoz/maybe-error": "workspace:",
-		"bun-types": "catalog:"
+		"bun-types": "catalog:",
+		"drizzle-kit": "^0.31.8",
+		"typescript": "catalog:"
 	}
 }

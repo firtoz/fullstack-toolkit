@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"types": [
+			"@cloudflare/workers-types/2024-09-23",
+			"@types/bun"
+		],
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"lib": ["ES2022"],
+		"target": "ES2022",
+		"strict": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"noEmit": true
+	},
+	"include": ["src/**/*", "tests/**/*", "*.ts"]
+}

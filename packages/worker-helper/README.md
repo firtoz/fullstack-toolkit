@@ -6,11 +6,18 @@ Type-safe Web Worker helper with Zod validation for input and output messages. T
 
 ## Features
 
+### Web Workers
+
 - 🔒 **Type-safe**: Full TypeScript support with automatic type inference
 - ✅ **Zod Validation**: Automatic validation of both input and output messages
 - 🎯 **Custom Error Handlers**: Mandatory error handlers give you complete control over error handling
 - 🔄 **Async Support**: Built-in support for async message handlers
 - 🧩 **Discriminated Unions**: Works great with Zod's discriminated unions for type-safe message routing
+
+### Cloudflare Workers
+
+- 🔧 **cf-typegen**: Automatic `.env.local` creation from `wrangler.jsonc` vars
+- 📝 **Type Generation**: Wrapper around `wrangler types` with env preparation
 
 ## Installation
 
@@ -18,7 +25,60 @@ Type-safe Web Worker helper with Zod validation for input and output messages. T
 bun add @firtoz/worker-helper zod
 ```
 
-## Usage
+## cf-typegen (Cloudflare Workers Utility)
+
+Automatic TypeScript type generation and `.env.local` management for Cloudflare Workers projects.
+
+### Setup
+
+Add the script to your Cloudflare Workers package:
+
+```json
+{
+  "scripts": {
+    "cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)"
+  }
+}
+```
+
+### What It Does
+
+1. **Reads `.env.local.example`** to find required env vars
+2. **Creates/updates `.env.local`** with any missing vars (as empty strings)
+3. **Runs `wrangler types`** to generate TypeScript definitions
+
+### Example
+
+```bash
+cd your-worker-package
+bun run cf-typegen
+```
+
+**Output:**
+```
+Running CF typegen for: /path/to/your-worker
+✓ Added missing env vars: OPENROUTER_API_KEY, DATABASE_URL
+Running wrangler types...
+✓ Wrangler types generated
+✓ CF typegen completed successfully
+```
+
+**Generated `.env.local`:**
+```env
+OPENROUTER_API_KEY=
+DATABASE_URL=
+```
+
+### Why This Matters
+
+- Ensures `wrangler types` always succeeds (needs `.env.local` or `.dev.vars`)
+- Keeps `.env.local` in sync with `.env.local.example`
+- Avoids accidentally binding empty vars at runtime via `wrangler.jsonc` `vars`
+- Developers can fill in actual values without committing them to git
+- CI/CD can generate types without needing actual secrets
+- `.env.local.example` serves as documentation for required env vars
+
+## Web Worker Usage
 
 ### 1. Define Your Schemas
 

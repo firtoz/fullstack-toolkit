@@ -5,13 +5,14 @@
 	"$schema": "../../node_modules/wrangler/config-schema.json",
 
 	"name": "websocket-do-test",
-	"main": "src/test-fixtures/worker.ts",
+	"main": "src/websocket/test-fixtures/worker.ts",
 	"compatibility_date": "2025-10-01",
 	// Current compatibility date for October 2025 - includes all latest features
 	// Enables ctx.exports API and Node.js process v2 implementation (after 2025-09-15)
 	// Reference: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
 
-	// Durable Object configuration
+	// Durable Object configuration for WebSocket tests (no chat-agent dependencies)
+	// For chat-agent tests, see wrangler.chat-agent.jsonc
 	// Reference: https://developers.cloudflare.com/durable-objects/
 	"durable_objects": {
 		"bindings": [

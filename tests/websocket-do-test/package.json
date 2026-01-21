@@ -2,13 +2,14 @@
 	"name": "websocket-do-test",
 	"version": "1.2.4",
 	"private": true,
-	"description": "Integration tests for @firtoz/websocket-do package",
+	"description": "Integration tests for @firtoz/websocket-do package using vitest-pool-workers",
 	"type": "module",
 	"scripts": {
 		"test": "vitest run",
 		"test:watch": "vitest watch",
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
-		"typegen": "wrangler types",
+		"typegen": "bun run cf-typegen",
+		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
 		"format": "biome format src --write"

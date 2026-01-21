@@ -13,6 +13,9 @@ import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
 export default defineWorkersConfig({
 	test: {
+		// Only include websocket tests (chat-agent tests use vitest.chat-agent.config.ts)
+		include: ["src/websocket/**/*.test.ts"],
+
 		// Timeouts for async operations like WebSocket connections and message broadcasting
 		testTimeout: 30000,
 		hookTimeout: 30000,
