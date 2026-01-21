@@ -1,4 +1,4 @@
-import type { Database } from "@sqlite.org/sqlite-wasm";
+import type { Database } from "../types";
 import type { DrizzleConfig } from "drizzle-orm";
 import { drizzle as drizzleSqliteProxy } from "drizzle-orm/sqlite-proxy";
 import { handleRemoteCallback } from "./handle-callback";

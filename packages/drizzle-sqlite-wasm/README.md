@@ -111,6 +111,79 @@ import SqliteWorker from "@firtoz/drizzle-sqlite-wasm/worker/sqlite.worker?worke
 const { drizzle } = useDrizzleSqliteDb(SqliteWorker, "mydb", schema, migrations);
 ```
 
+#### Required Vite Configuration for OPFS Support
+
+To enable OPFS (Origin Private File System) persistence with SQLite WASM, you need to configure Vite properly. Add the following to your `vite.config.ts`:
+
+```typescript
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [
+    // Required: Set COOP/COEP headers for SharedArrayBuffer support
+    {
+      name: "configure-response-headers",
+      configureServer: (server) => {
+        server.middlewares.use((_req, res, next) => {
+          res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+          res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+          next();
+        });
+      },
+    },
+    // Required: Fix for sqlite-wasm OPFS proxy worker module format
+    {
+      name: "sqlite-wasm-opfs-fix",
+      enforce: "pre",
+      transform(code, id) {
+        // Transform worker creation calls to use module type
+        if (
+          id.includes("@sqlite.org/sqlite-wasm") &&
+          code.includes("new Worker")
+        ) {
+          // This fixes the "Unexpected token 'export'" error in OPFS proxy worker
+          let transformed = code;
+          const workerRegex =
+            /new\s+Worker\s*\(\s*(new\s+URL\s*\([^)]+,[^)]+\))\s*\)/g;
+          transformed = transformed.replace(
+            workerRegex,
+            "new Worker($1, { type: 'module' })",
+          );
+
+          if (transformed !== code) {
+            return {
+              code: transformed,
+              map: null,
+            };
+          }
+        }
+      },
+    },
+  ],
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+  },
+  optimizeDeps: {
+    exclude: ["@sqlite.org/sqlite-wasm"],
+  },
+  worker: {
+    format: "es",
+  },
+});
+```
+
+**Why is this needed?**
+
+1. **COOP/COEP Headers**: Required for `SharedArrayBuffer` support, which OPFS needs for synchronous file operations
+2. **Worker Module Fix**: sqlite-wasm 3.51.x creates workers without specifying `{ type: 'module' }`, causing syntax errors when the OPFS proxy worker (which uses ES module syntax) is loaded
+3. **Worker Format**: Ensures all workers are treated as ES modules
+4. **Exclude from Optimization**: Prevents Vite from pre-bundling sqlite-wasm, which can break worker creation
+
+For a complete example, see [`tests/test-playground/vite.config.ts`](../../tests/test-playground/vite.config.ts) in the repository.
+
 ### Webpack 5+
 
 Use `new URL()` with `import.meta.url`:

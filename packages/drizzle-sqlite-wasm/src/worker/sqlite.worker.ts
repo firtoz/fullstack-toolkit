@@ -1,9 +1,3 @@
-import type {
-	// type BindingSpec,
-	Database,
-	Sqlite3Static,
-} from "@sqlite.org/sqlite-wasm";
-
 import { WorkerHelper } from "@firtoz/worker-helper";
 import {
 	SqliteWorkerClientMessageSchema,
@@ -18,6 +12,7 @@ import {
 } from "./schema";
 import { handleRemoteCallback } from "../drizzle/handle-callback";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import type { Sqlite3Static, Database } from "../types";
 
 // Declare self as DedicatedWorkerGlobalScope for TypeScript
 declare var self: DedicatedWorkerGlobalScope;
@@ -27,7 +22,13 @@ class SqliteWorkerHelper extends WorkerHelper<
 	SqliteWorkerServerMessage
 > {
 	private initPromise: Promise<Sqlite3Static>;
-	private databases = new Map<DbId, { db: Database; initialized: boolean }>();
+	private databases = new Map<
+		DbId,
+		{
+			db: Database;
+			initialized: boolean;
+		}
+	>();
 
 	constructor() {
 		super(self, SqliteWorkerClientMessageSchema, sqliteWorkerServerMessage, {
@@ -50,10 +51,7 @@ class SqliteWorkerHelper extends WorkerHelper<
 
 		this.initPromise = import("@sqlite.org/sqlite-wasm").then(
 			async ({ default: sqlite3InitModule }) => {
-				const result = await sqlite3InitModule({
-					print: this.log.bind(this),
-					printErr: this.error.bind(this),
-				});
+				const result = await sqlite3InitModule();
 
 				return result;
 			},

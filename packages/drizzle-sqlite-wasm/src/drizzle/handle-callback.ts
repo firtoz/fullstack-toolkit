@@ -4,7 +4,7 @@ import {
 	success,
 	type MaybeError,
 } from "@firtoz/maybe-error";
-import type { Database } from "@sqlite.org/sqlite-wasm";
+import type { Database } from "../types";
 
 export const handleRemoteCallback = async ({
 	sqliteDb,
