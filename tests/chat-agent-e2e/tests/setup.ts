@@ -26,14 +26,17 @@ async function startServer(): Promise<void> {
 
 	wranglerProcess = Bun.spawn(["bun", "run", "dev"], {
 		cwd: `${import.meta.dir}/..`,
-		stdout: "pipe",
-		stderr: "pipe",
+		stdout: "inherit",
+		stderr: "inherit",
+		env: {
+			...process.env,
+		},
 	});
 
 	const ready = await waitForServer();
 	if (!ready) {
 		wranglerProcess.kill();
-		throw new Error("Server failed to start within 15 seconds");
+		throw new Error("Server failed to start within 30 seconds");
 	}
 
 	console.log("✓ Server ready");
