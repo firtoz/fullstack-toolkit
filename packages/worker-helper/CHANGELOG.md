@@ -1,5 +1,15 @@
 # @firtoz/worker-helper
 
+## 1.1.0
+
+### Minor Changes
+
+- [`b0f7893`](https://github.com/firtoz/fullstack-toolkit/commit/b0f789314c4ee85d8c08466b968baad2977a2581) Thanks [@firtoz](https://github.com/firtoz)! - Added cf-typegen script utility for generating Cloudflare Workers TypeScript types
+
+  - Added cf-typegen script that runs wrangler types command for specified worker directory
+  - Utility used by test packages to generate worker-configuration.d.ts
+  - Simplified type generation workflow for Cloudflare Workers projects
+
 ## 1.0.0
 
 ### Major Changes

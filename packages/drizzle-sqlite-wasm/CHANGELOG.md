@@ -1,5 +1,14 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 0.2.3
+
+### Patch Changes
+
+- [`d97681f`](https://github.com/firtoz/fullstack-toolkit/commit/d97681f56e103d033292005d31f298b03b4fa7ca) Thanks [@firtoz](https://github.com/firtoz)! - Add comprehensive Vite configuration documentation for OPFS support. Includes required COOP/COEP headers and a custom plugin to fix the sqlite-wasm 3.51.x OPFS proxy worker module format issue ("Unexpected token 'export'" error).
+
+- Updated dependencies [[`b0f7893`](https://github.com/firtoz/fullstack-toolkit/commit/b0f789314c4ee85d8c08466b968baad2977a2581)]:
+  - @firtoz/worker-helper@1.1.0
+
 ## 0.2.2
 
 ### Patch Changes

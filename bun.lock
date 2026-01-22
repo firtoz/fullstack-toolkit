@@ -26,7 +26,7 @@
     },
     "packages/chat-agent": {
       "name": "@firtoz/chat-agent",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "devDependencies": {
         "bun-types": "catalog:",
         "drizzle-kit": "^0.31.8",
@@ -71,7 +71,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "dependencies": {
         "@firtoz/drizzle-utils": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -167,7 +167,7 @@
     },
     "packages/worker-helper": {
       "name": "@firtoz/worker-helper",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "zod": "catalog:",
       },
@@ -179,7 +179,7 @@
     },
     "tests/chat-agent-e2e": {
       "name": "chat-agent-e2e",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
         "hono": "^4.7.11",
