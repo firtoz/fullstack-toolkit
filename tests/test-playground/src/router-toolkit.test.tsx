@@ -53,6 +53,9 @@ describe("formAction", () => {
 
 		return {
 			formData: mock(() => Promise.resolve(mockFormData)),
+			headers: {
+				get: mock(() => null), // No Content-Type header, defaults to FormData handling
+			},
 		} as unknown as Request;
 	};
 
@@ -330,6 +333,94 @@ describe("formAction", () => {
 			title: "Test Upload",
 			file: mockFile,
 		});
+	});
+
+	it("should handle JSON request bodies", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			email: z.email(),
+			password: z.string().min(8),
+		});
+
+		const mockHandler = mock(() => Promise.resolve(success({ userId: 456 })));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const jsonData = {
+			email: "json@example.com",
+			password: "jsonpassword123",
+		};
+
+		const args = {
+			request: {
+				json: mock(() => Promise.resolve(jsonData)),
+				headers: {
+					get: mock((header: string) =>
+						header === "Content-Type" ? "application/json" : null,
+					),
+				},
+			} as unknown as Request,
+			params: {},
+			context: {},
+			unstable_pattern: "match",
+		} as ActionFunctionArgs;
+
+		const result = await action(args);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.result).toEqual({ userId: 456 });
+		}
+		expect(mockHandler).toHaveBeenCalledWith(args, jsonData);
+	});
+
+	it("should return validation error for invalid JSON data", async () => {
+		const { formAction } = await import("@firtoz/router-toolkit");
+		const { success } = await import("@firtoz/maybe-error");
+
+		const schema = z.object({
+			email: z.email(),
+			password: z.string().min(8),
+		});
+
+		const mockHandler = mock(() => Promise.resolve(success({})));
+
+		const action = formAction({
+			schema,
+			handler: mockHandler,
+		});
+
+		const jsonData = {
+			email: "invalid-email",
+			password: "short",
+		};
+
+		const args = {
+			request: {
+				json: mock(() => Promise.resolve(jsonData)),
+				headers: {
+					get: mock((header: string) =>
+						header === "Content-Type" ? "application/json" : null,
+					),
+				},
+			} as unknown as Request,
+			params: {},
+			context: {},
+			unstable_pattern: "match",
+		} as ActionFunctionArgs;
+
+		const result = await action(args);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.type).toBe("validation");
+		}
+		expect(mockHandler).not.toHaveBeenCalled();
 	});
 });
 

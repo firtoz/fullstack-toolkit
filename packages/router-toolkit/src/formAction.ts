@@ -312,8 +312,8 @@ export const formAction = <
 		args: ActionArgs,
 	): Promise<MaybeError<TResult, FormActionError<TError, TSchema>>> => {
 		try {
-			const contentType = args.request.headers.get("Content-Type") ?? "";
-			const isJson = contentType.includes("application/json");
+			const contentType = args.request.headers.get("Content-Type");
+			const isJson = contentType?.includes("application/json") ?? false;
 
 			const parseResult = isJson
 				? await schema.safeParseAsync(await args.request.json())
