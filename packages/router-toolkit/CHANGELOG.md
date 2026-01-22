@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.3.0
+
+### Minor Changes
+
+- [`bb3b563`](https://github.com/firtoz/fullstack-toolkit/commit/bb3b563803da3eded70c0c11ca3246844784a438) Thanks [@firtoz](https://github.com/firtoz)! - Add JSON support to formAction. The function now automatically detects the Content-Type header and handles both JSON (`application/json`) and FormData (`multipart/form-data` or `application/x-www-form-urlencoded`) requests. This allows `submitJson()` to work seamlessly with formAction handlers.
+
 ## 5.2.0
 
 ### Minor Changes
