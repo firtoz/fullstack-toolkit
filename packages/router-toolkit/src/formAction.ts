@@ -317,7 +317,9 @@ export const formAction = <
 
 			const parseResult = isJson
 				? await schema.safeParseAsync(await args.request.json())
-				: await zfd.formData(schema).safeParseAsync(await args.request.formData());
+				: await zfd
+						.formData(schema)
+						.safeParseAsync(await args.request.formData());
 
 			if (!parseResult.success) {
 				return fail({
