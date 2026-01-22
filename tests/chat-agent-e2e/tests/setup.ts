@@ -24,7 +24,23 @@ async function startServer(): Promise<void> {
 
 	console.log("Starting wrangler dev server...");
 
-	wranglerProcess = Bun.spawn(["bun", "run", "dev"], {
+	// Build wrangler command with --var flags for env vars
+	const wranglerArgs = ["run", "wrangler", "dev", "--local"];
+	
+	if (process.env.OPENROUTER_API_KEY) {
+		wranglerArgs.push("--var", `OPENROUTER_API_KEY:${process.env.OPENROUTER_API_KEY}`);
+	}
+	if (process.env.CLOUDFLARE_ACCOUNT_ID) {
+		wranglerArgs.push("--var", `CLOUDFLARE_ACCOUNT_ID:${process.env.CLOUDFLARE_ACCOUNT_ID}`);
+	}
+	if (process.env.AI_GATEWAY_NAME) {
+		wranglerArgs.push("--var", `AI_GATEWAY_NAME:${process.env.AI_GATEWAY_NAME}`);
+	}
+	if (process.env.AI_GATEWAY_TOKEN) {
+		wranglerArgs.push("--var", `AI_GATEWAY_TOKEN:${process.env.AI_GATEWAY_TOKEN}`);
+	}
+
+	wranglerProcess = Bun.spawn(["bun", ...wranglerArgs], {
 		cwd: `${import.meta.dir}/..`,
 		stdout: "inherit",
 		stderr: "inherit",

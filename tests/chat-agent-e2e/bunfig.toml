@@ -1,3 +1,5 @@
 [test]
 # Global setup that runs before all tests
 preload = ["./tests/setup.ts"]
+# Increase timeout for CI where wrangler takes longer to start
+timeout = 60000
