@@ -24,7 +24,7 @@ async function startServer(): Promise<void> {
 
 	console.log("Starting wrangler dev server...");
 
-	// Build wrangler command with --var flags for env vars
+	// Build wrangler command with --var flags for env vars  
 	const wranglerArgs = ["run", "wrangler", "dev", "--local"];
 	
 	if (process.env.OPENROUTER_API_KEY) {
@@ -74,7 +74,7 @@ function stopServer(): void {
 // Global setup - runs once before all tests
 beforeAll(async () => {
 	await startServer();
-});
+}, 60000); // 60 second timeout for server startup
 
 // Global teardown - runs once after all tests
 afterAll(() => {
