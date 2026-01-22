@@ -1,8 +1,12 @@
 /**
  * @fileoverview Type-safe form action utility for React Router 7
  *
- * This module provides a wrapper for React Router actions that handles form data validation
- * using Zod schemas and provides structured error handling with MaybeError.
+ * This module provides a wrapper for React Router actions that handles form data and JSON
+ * validation using Zod schemas and provides structured error handling with MaybeError.
+ *
+ * Supports both:
+ * - **JSON requests** (`Content-Type: application/json`) - parsed with `request.json()` and validated directly
+ * - **FormData requests** (`multipart/form-data` or `application/x-www-form-urlencoded`) - parsed with `request.formData()` and validated with zod-form-data
  *
  * ## Overview
  *
@@ -230,13 +234,18 @@ export interface FormActionConfig<
 }
 
 /**
- * Creates a type-safe form action handler that validates form data and provides structured error handling.
+ * Creates a type-safe form action handler that validates form data or JSON and provides structured error handling.
  *
  * This function wraps a React Router action to:
- * 1. Parse and validate form data using a Zod schema
- * 2. Call the provided handler with validated data
- * 3. Return structured errors for validation failures, handler errors, or unknown errors
- * 4. Preserve React Router Response objects (redirects, etc.) by re-throwing them
+ * 1. Detect content type (JSON vs FormData) from the request headers
+ * 2. Parse and validate the request body using a Zod schema
+ * 3. Call the provided handler with validated data
+ * 4. Return structured errors for validation failures, handler errors, or unknown errors
+ * 5. Preserve React Router Response objects (redirects, etc.) by re-throwing them
+ *
+ * **Content-Type handling:**
+ * - `application/json`: Uses `request.json()` and validates directly with the schema
+ * - `multipart/form-data` or `application/x-www-form-urlencoded`: Uses `request.formData()` and validates with zod-form-data
  *
  * @template TSchema - The Zod schema type for form validation
  * @template TResult - The success result type from the handler (defaults to undefined)
@@ -303,19 +312,23 @@ export const formAction = <
 		args: ActionArgs,
 	): Promise<MaybeError<TResult, FormActionError<TError, TSchema>>> => {
 		try {
-			const rawFormData = await args.request.formData();
-			const formData = await zfd.formData(schema).safeParseAsync(rawFormData);
+			const contentType = args.request.headers.get("Content-Type") ?? "";
+			const isJson = contentType.includes("application/json");
 
-			if (!formData.success) {
+			const parseResult = isJson
+				? await schema.safeParseAsync(await args.request.json())
+				: await zfd.formData(schema).safeParseAsync(await args.request.formData());
+
+			if (!parseResult.success) {
 				return fail({
 					type: "validation" as const,
 					error: z.treeifyError<z.infer<TSchema>>(
-						formData.error as z.core.$ZodError<z.infer<TSchema>>,
+						parseResult.error as z.core.$ZodError<z.infer<TSchema>>,
 					),
 				});
 			}
 
-			const handlerResult = await handler(args, formData.data);
+			const handlerResult = await handler(args, parseResult.data);
 			if (!handlerResult.success) {
 				return fail({
 					type: "handler" as const,
