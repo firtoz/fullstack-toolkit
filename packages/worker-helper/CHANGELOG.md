@@ -1,5 +1,16 @@
 # @firtoz/worker-helper
 
+## 1.2.0
+
+### Minor Changes
+
+- [`2725815`](https://github.com/firtoz/fullstack-toolkit/commit/27258158dd318b34b44ed77b88b2ac9b2b4b6a3d) Thanks [@firtoz](https://github.com/firtoz)! - Improved workspace-wide type generation and environment setup
+
+  - Refactored `cf-typegen.ts` to automatically discover all wrangler configs using `git ls-files`
+  - Uses git for workspace discovery - fast, respects .gitignore, and finds all tracked configs
+  - Added `prepareEnvFiles` utility to handle .env file creation from .env.example templates
+  - Type generation now includes bindings from all workspace projects for better DX
+
 ## 1.1.0
 
 ### Minor Changes

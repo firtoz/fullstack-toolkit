@@ -1,5 +1,14 @@
 # @firtoz/drizzle-indexeddb
 
+## 0.6.1
+
+### Patch Changes
+
+- [`2725815`](https://github.com/firtoz/fullstack-toolkit/commit/27258158dd318b34b44ed77b88b2ac9b2b4b6a3d) Thanks [@firtoz](https://github.com/firtoz)! - Updated @tanstack/db peer dependency to >=0.5.23 for compatibility with latest versions
+
+- Updated dependencies [[`2725815`](https://github.com/firtoz/fullstack-toolkit/commit/27258158dd318b34b44ed77b88b2ac9b2b4b6a3d)]:
+  - @firtoz/drizzle-utils@0.3.2
+
 ## 0.6.0
 
 ### Minor Changes
