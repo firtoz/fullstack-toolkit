@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.3.1
+
+### Patch Changes
+
+- [`07b8aec`](https://github.com/firtoz/fullstack-toolkit/commit/07b8aecc1e3ecde6ed497965c2c40770b85a341d) Thanks [@firtoz](https://github.com/firtoz)! - Use bun for cf-typegen instead of node
+
 ## 1.3.0
 
 ### Minor Changes
