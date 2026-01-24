@@ -24,6 +24,23 @@
 				"@firtoz/worker-helper#typecheck"
 			],
 			"inputs": ["app/**", "src/**", "e2e/**", "*.config.*", "package.json"]
+		},
+		"typegen": {
+			"inputs": [
+				"wrangler.jsonc",
+				"wrangler.toml",
+				".env",
+				".env.local",
+				".dev.vars",
+				"package.json",
+				"src/**"
+			],
+			"outputs": ["worker-configuration.d.ts"]
+		},
+		"dev": {
+			"dependsOn": ["typegen"],
+			"persistent": true,
+			"cache": false
 		}
 	}
 }

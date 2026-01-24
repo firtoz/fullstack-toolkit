@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { prepareEnvFiles } from "./utils/prepare-env";
 
 // Use the current working directory
 const cwd = process.argv[2];
@@ -15,112 +16,95 @@ if (!cwd || !fs.existsSync(cwd)) {
 console.log(`Running CF typegen for: ${cwd}`);
 
 /**
- * Extracts required env vars from .env.local.example
+ * Find the git root directory using git command
  */
-function getRequiredEnvVars(examplePath: string): string[] {
+function findGitRoot(startPath: string): string | null {
 	try {
-		if (!fs.existsSync(examplePath)) {
-			return [];
-		}
-
-		const content = fs.readFileSync(examplePath, "utf8");
-		const vars: string[] = [];
-
-		// Parse .env format: VAR_NAME=value
-		for (const line of content.split("\n")) {
-			const trimmed = line.trim();
-			// Skip comments and empty lines
-			if (!trimmed || trimmed.startsWith("#")) continue;
-
-			const match = trimmed.match(/^([A-Z_][A-Z0-9_]*)=/);
-			if (match) {
-				vars.push(match[1]);
-			}
-		}
-
-		return vars;
-	} catch (err) {
-		console.warn(`Failed to read ${examplePath}:`, err);
-		return [];
+		const output = execSync("git rev-parse --show-toplevel", {
+			cwd: startPath,
+			encoding: "utf8",
+		});
+		return output.trim();
+	} catch {
+		return null;
 	}
 }
 
 /**
- * Ensures .env.local exists with required env vars from .env.local.example
+ * Find all wrangler config files using git ls-files
+ * This is more efficient and respects .gitignore
  */
-function prepareEnvLocal(): { created: boolean; added: string[] } {
-	const envPath = path.join(cwd, ".env.local");
-	const examplePath = path.join(cwd, ".env.local.example");
-
-	if (!fs.existsSync(examplePath)) {
-		console.log("No .env.local.example found, skipping env preparation");
-		return { created: false, added: [] };
-	}
-
-	const requiredVars = getRequiredEnvVars(examplePath);
-	if (requiredVars.length === 0) {
-		console.log("No vars found in .env.local.example");
-		return { created: false, added: [] };
-	}
-
-	let content = "";
-	let created = false;
-	const added: string[] = [];
-
-	if (fs.existsSync(envPath)) {
-		content = fs.readFileSync(envPath, "utf8");
-	} else {
-		created = true;
-	}
-
-	// Check which vars are missing
-	for (const varName of requiredVars) {
-		const regex = new RegExp(`^${varName}=`, "m");
-		if (!regex.test(content)) {
-			if (content && !content.endsWith("\n")) {
-				content += "\n";
-			}
-			content += `${varName}=\n`;
-			added.push(varName);
-		}
-	}
-
-	// Write if there were any changes
-	if (created || added.length > 0) {
-		fs.writeFileSync(envPath, content);
-	}
-
-	return { created, added };
-}
-
-// Step 1: Prepare .env.local with required vars from wrangler.jsonc
-function prepareEnv() {
+function findAllWranglerConfigs(gitRoot: string): string[] {
 	try {
-		const updates = prepareEnvLocal();
-		if (updates.created) {
-			console.log("✓ Created .env.local");
-		}
-		if (updates.added.length > 0) {
-			console.log(`✓ Added missing env vars: ${updates.added.join(", ")}`);
-		}
-		if (!updates.created && updates.added.length === 0) {
-			console.log("✓ .env.local file already has all required vars");
-		}
-	} catch (error) {
-		console.error(String(error));
-		process.exit(1);
+		// Use git ls-files to find all tracked wrangler configs
+		const output = execSync('git ls-files "**/wrangler.json*"', {
+			cwd: gitRoot,
+			encoding: "utf8",
+		});
+
+		return output
+			.trim()
+			.split("\n")
+			.filter((line) => line.length > 0)
+			.map((relativePath) => path.join(gitRoot, relativePath));
+	} catch (err) {
+		console.warn("⚠ Failed to run git ls-files:", err);
+		return [];
 	}
 }
 
-// Step 2: Run wrangler types
 function runWranglerTypes() {
+	const envFiles = prepareEnvFiles(cwd);
+
 	console.log("Running wrangler types...");
+
+	// Find git root to discover all wrangler configs
+	const gitRoot = findGitRoot(cwd);
+	if (!gitRoot) {
+		console.warn("⚠ Could not find git root, skipping workspace config discovery");
+		console.log("  Generating types for current directory only");
+	}
+
+	// Find all wrangler configs in the workspace
+	const allConfigs = gitRoot ? findAllWranglerConfigs(gitRoot) : [];
+	
+	if (allConfigs.length > 0) {
+		console.log(`  Found ${allConfigs.length} wrangler config(s) in workspace`);
+	}
+
+	// Build the command with multiple -c flags
+	// The first config should be the current directory's wrangler.jsonc
+	const configFlags = ["-c wrangler.jsonc"];
+
+	// Add other configs (relative to cwd for better readability)
+	const currentWranglerJsonc = path.join(cwd, "wrangler.jsonc");
+	const currentWranglerJson = path.join(cwd, "wrangler.json");
+	
+	for (const configPath of allConfigs) {
+		const resolvedPath = path.resolve(configPath);
+		// Skip if it's the current directory's config
+		if (resolvedPath === currentWranglerJsonc || resolvedPath === currentWranglerJson) {
+			continue;
+		}
+		// Make path relative to cwd
+		const relativePath = path.relative(cwd, configPath);
+		configFlags.push(`-c ${relativePath}`);
+	}
+
+	for (const envFile of envFiles) {
+		configFlags.push(`--env-file ${envFile}`);
+	}
+
+	const command = `wrangler types ${configFlags.join(" ")}`;
+
+	console.log(`  Command: ${command}`);
+
 	try {
-		execSync("wrangler types -c wrangler.jsonc --env-file .env.local", {
+		execSync(command, {
 			cwd,
 			stdio: "inherit",
 		});
-		console.log("✓ Wrangler types generated");
+		console.log("✓ Wrangler types generated with all workspace bindings");
 	} catch {
 		console.error("Failed to run wrangler types");
 		process.exit(1);
@@ -129,7 +113,6 @@ function runWranglerTypes() {
 
 // Run all steps
 try {
-	prepareEnv();
 	runWranglerTypes();
 	console.log("\n✓ CF typegen completed successfully");
 } catch (error: unknown) {
