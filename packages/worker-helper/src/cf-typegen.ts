@@ -61,13 +61,15 @@ function runWranglerTypes() {
 	// Find git root to discover all wrangler configs
 	const gitRoot = findGitRoot(cwd);
 	if (!gitRoot) {
-		console.warn("⚠ Could not find git root, skipping workspace config discovery");
+		console.warn(
+			"⚠ Could not find git root, skipping workspace config discovery",
+		);
 		console.log("  Generating types for current directory only");
 	}
 
 	// Find all wrangler configs in the workspace
 	const allConfigs = gitRoot ? findAllWranglerConfigs(gitRoot) : [];
-	
+
 	if (allConfigs.length > 0) {
 		console.log(`  Found ${allConfigs.length} wrangler config(s) in workspace`);
 	}
@@ -79,11 +81,14 @@ function runWranglerTypes() {
 	// Add other configs (relative to cwd for better readability)
 	const currentWranglerJsonc = path.join(cwd, "wrangler.jsonc");
 	const currentWranglerJson = path.join(cwd, "wrangler.json");
-	
+
 	for (const configPath of allConfigs) {
 		const resolvedPath = path.resolve(configPath);
 		// Skip if it's the current directory's config
-		if (resolvedPath === currentWranglerJsonc || resolvedPath === currentWranglerJson) {
+		if (
+			resolvedPath === currentWranglerJsonc ||
+			resolvedPath === currentWranglerJson
+		) {
 			continue;
 		}
 		// Make path relative to cwd
