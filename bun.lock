@@ -71,7 +71,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "dependencies": {
         "@firtoz/drizzle-utils": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -167,7 +167,7 @@
     },
     "packages/worker-helper": {
       "name": "@firtoz/worker-helper",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "dependencies": {
         "zod": "catalog:",
       },
