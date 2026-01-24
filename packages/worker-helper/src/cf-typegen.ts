@@ -38,10 +38,13 @@ function findGitRoot(startPath: string): string | null {
 function findAllWranglerConfigs(gitRoot: string): string[] {
 	try {
 		// Use git ls-files to find all tracked wrangler configs
-		const output = execSync('git ls-files "**/wrangler.json*"', {
-			cwd: gitRoot,
-			encoding: "utf8",
-		});
+		const output = execSync(
+			'git ls-files "**/wrangler.json" "**/wrangler.jsonc"',
+			{
+				cwd: gitRoot,
+				encoding: "utf8",
+			},
+		);
 
 		return output
 			.trim()
