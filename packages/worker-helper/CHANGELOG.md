@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.3.2
+
+### Patch Changes
+
+- [`70856f6`](https://github.com/firtoz/fullstack-toolkit/commit/70856f6b055d6d149ee1edc703a5c2acf451be4a) Thanks [@firtoz](https://github.com/firtoz)! - Fix wrangler json finding
+
 ## 1.3.1
 
 ### Patch Changes
