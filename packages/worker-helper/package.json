@@ -17,6 +17,9 @@
 			"require": "./src/*.ts"
 		}
 	},
+	"bin": {
+		"cf-typegen": "./src/cf-typegen.ts"
+	},
 	"files": [
 		"src/**/*.ts",
 		"README.md",
