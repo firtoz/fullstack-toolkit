@@ -1,5 +1,12 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`ef2b36e`](https://github.com/firtoz/fullstack-toolkit/commit/ef2b36e4be4fda049f02f1d000649e4c75ff08ec)]:
+  - @firtoz/worker-helper@1.3.0
+
 ## 0.2.4
 
 ### Patch Changes

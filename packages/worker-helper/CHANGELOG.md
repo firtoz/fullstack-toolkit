@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.3.0
+
+### Minor Changes
+
+- [`ef2b36e`](https://github.com/firtoz/fullstack-toolkit/commit/ef2b36e4be4fda049f02f1d000649e4c75ff08ec) Thanks [@firtoz](https://github.com/firtoz)! - Export `cf-typegen` as a CLI binary. Users can now run `cf-typegen $(pwd)` directly after installing the package as a dev dependency.
+
 ## 1.2.0
 
 ### Minor Changes
