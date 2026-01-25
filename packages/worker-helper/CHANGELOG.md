@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.3.3
+
+### Patch Changes
+
+- [`8f3143f`](https://github.com/firtoz/fullstack-toolkit/commit/8f3143ff5d9953350d2388d46ea7c859e7dbeda5) Thanks [@firtoz](https://github.com/firtoz)! - Fix cf-typegen to only include wrangler.json and wrangler.jsonc files, excluding template files like .hbs. Also sort config paths for consistent ordering.
+
 ## 1.3.2
 
 ### Patch Changes
