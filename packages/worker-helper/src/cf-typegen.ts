@@ -50,7 +50,8 @@ function findAllWranglerConfigs(gitRoot: string): string[] {
 			.trim()
 			.split("\n")
 			.filter((line) => line.length > 0)
-			.map((relativePath) => path.join(gitRoot, relativePath));
+			.map((relativePath) => path.join(gitRoot, relativePath))
+			.sort((a, b) => (a < b ? -1 : 1));
 	} catch (err) {
 		console.warn("⚠ Failed to run git ls-files:", err);
 		return [];
