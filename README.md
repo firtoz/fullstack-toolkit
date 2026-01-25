@@ -47,6 +47,18 @@ Type-safe WebSocket session management for Cloudflare Durable Objects with Zod v
 - 📦 **Buffer Mode** - Efficient msgpack serialization for binary messaging
 - 🚀 **Hono Integration** - Seamless integration with Hono framework and `@firtoz/hono-fetcher`
 
+### [@firtoz/chat-agent](./packages/chat-agent)
+
+DB-agnostic ChatAgent for Cloudflare Durable Objects with OpenRouter - a simplified alternative to `@cloudflare/ai-chat`.
+
+- 🤖 **OpenRouter Integration** - Simpler alternative to AI SDK for chat agents
+- 🔄 **Resumable Streaming** - Chunk buffering with stream restoration on reconnect
+- 🛠️ **Server & Client Tools** - Support for both server-side and client-side tool execution
+- 💾 **DB Agnostic** - Choose between Drizzle ORM or raw SQL implementations
+- 🌐 **AI Gateway Support** - Built-in Cloudflare AI Gateway integration
+- 📦 **Message Persistence** - Automatic message storage in Durable Objects SQLite
+- 🎯 **Type-safe** - Full TypeScript support with Drizzle ORM option
+
 ### [@firtoz/drizzle-indexeddb](./packages/drizzle-indexeddb) ⚠️ WIP
 
 TanStack DB collections backed by IndexedDB with automatic migrations powered by Drizzle ORM.
@@ -107,6 +119,9 @@ bun add @firtoz/hono-fetcher
 
 # For WebSocket Durable Objects
 bun add @firtoz/websocket-do
+
+# For ChatAgent with OpenRouter
+bun add @firtoz/chat-agent @openrouter/sdk agents drizzle-orm
 
 # For IndexedDB with Drizzle (WIP)
 bun add @firtoz/drizzle-indexeddb @firtoz/drizzle-utils drizzle-orm @tanstack/db
@@ -206,6 +221,7 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 - [Maybe Error on NPM](https://npmjs.com/package/@firtoz/maybe-error)
 - [Hono Fetcher on NPM](https://npmjs.com/package/@firtoz/hono-fetcher)
 - [WebSocket DO on NPM](https://npmjs.com/package/@firtoz/websocket-do)
+- [Chat Agent on NPM](https://npmjs.com/package/@firtoz/chat-agent)
 - [Drizzle IndexedDB on NPM](https://npmjs.com/package/@firtoz/drizzle-indexeddb)
 - [Drizzle SQLite WASM on NPM](https://npmjs.com/package/@firtoz/drizzle-sqlite-wasm)
 - [Drizzle Utils on NPM](https://npmjs.com/package/@firtoz/drizzle-utils)
