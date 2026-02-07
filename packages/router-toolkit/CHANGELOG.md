@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.3.1
+
+### Patch Changes
+
+- [`ec365af`](https://github.com/firtoz/fullstack-toolkit/commit/ec365af8c17bcd7efc2b0cf9b3bed5225b853e72) Thanks [@firtoz](https://github.com/firtoz)! - Update dependencies
+
 ## 5.3.0
 
 ### Minor Changes
