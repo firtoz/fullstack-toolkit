@@ -26,7 +26,7 @@
     },
     "packages/chat-agent": {
       "name": "@firtoz/chat-agent",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "devDependencies": {
         "bun-types": "catalog:",
         "drizzle-kit": "^0.31.9",
@@ -182,7 +182,7 @@
     },
     "tests/chat-agent-e2e": {
       "name": "chat-agent-e2e",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
         "hono": "^4.11.9",
@@ -245,7 +245,7 @@
     },
     "tests/websocket-do-test": {
       "name": "websocket-do-test",
-      "version": "1.2.5",
+      "version": "1.2.6",
       "dependencies": {
         "@firtoz/hono-fetcher": "^2.3.2",
         "@firtoz/websocket-do": "workspace:*",

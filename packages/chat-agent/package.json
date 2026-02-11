@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/chat-agent",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "ChatAgent for Cloudflare Durable Objects with OpenRouter - a simplified alternative to @cloudflare/ai-chat",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
