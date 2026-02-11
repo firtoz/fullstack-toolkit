@@ -1,5 +1,11 @@
 # websocket-do-test
 
+## 1.2.6
+
+### Patch Changes
+
+- [`494031b`](https://github.com/firtoz/fullstack-toolkit/commit/494031b94c17bd615cd3889d9d766f435b178f08) Thanks [@firtoz](https://github.com/firtoz)! - Update dependencies
+
 ## 1.2.5
 
 ### Patch Changes
