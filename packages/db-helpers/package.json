@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/db-helpers",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "TanStack DB helpers and utilities",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
@@ -12,14 +12,23 @@
 			"require": "./src/index.ts"
 		}
 	},
-	"files": ["src/**/*.ts", "!src/**/*.test.ts", "README.md"],
+	"files": [
+		"src/**/*.ts",
+		"!src/**/*.test.ts",
+		"README.md"
+	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
 		"format": "biome format src --write"
 	},
-	"keywords": ["typescript", "tanstack", "tanstack-db", "db-helpers"],
+	"keywords": [
+		"typescript",
+		"tanstack",
+		"tanstack-db",
+		"db-helpers"
+	],
 	"author": "Firtina Ozbalikchi <firtoz@github.com>",
 	"license": "MIT",
 	"homepage": "https://github.com/firtoz/fullstack-toolkit#readme",
@@ -28,9 +37,15 @@
 		"url": "https://github.com/firtoz/fullstack-toolkit.git",
 		"directory": "packages/db-helpers"
 	},
-	"bugs": {"url": "https://github.com/firtoz/fullstack-toolkit/issues"},
-	"engines": {"node": ">=18.0.0"},
-	"publishConfig": {"access": "public"},
+	"bugs": {
+		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
 	"peerDependencies": {
 		"@standard-schema/spec": ">=1.1.0",
 		"@tanstack/db": ">=0.5.25"
