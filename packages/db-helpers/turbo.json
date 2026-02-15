@@ -1,0 +1,1 @@
+{"$schema":"../../node_modules/turbo/schema.json","extends":["//"],"tasks":{"typecheck":{"inputs":["src/**","tsconfig.json","package.json"]},"lint":{"inputs":["src/**","../../biome.json"]},"lint:ci":{"inputs":["src/**","../../biome.json"]}}}

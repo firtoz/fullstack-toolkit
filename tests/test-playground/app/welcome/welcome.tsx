@@ -38,6 +38,11 @@ export function Welcome() {
 			</nav>
 
 			<nav>
+				<h2>@firtoz/db-helpers</h2>
+				<RouteList routes={dbHelpersRoutes} />
+			</nav>
+
+			<nav>
 				<h2>Utilities</h2>
 				<RouteList routes={utilityRoutes} />
 			</nav>
@@ -130,6 +135,15 @@ const sqliteRoutes: RouteItem[] = [
 		text: "Pagination Test",
 		description:
 			"Test native SQL LIMIT/OFFSET pagination with load more and page navigation",
+	},
+];
+
+const dbHelpersRoutes: RouteItem[] = [
+	{
+		path: href("/collections/memory-collection-test"),
+		text: "Memory Collection",
+		description:
+			"In-memory TanStack DB collection — data vanishes on refresh (no persistence)",
 	},
 ];
 

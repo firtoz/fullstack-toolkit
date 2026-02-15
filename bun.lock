@@ -42,6 +42,18 @@
         "drizzle-orm": "catalog:",
       },
     },
+    "packages/db-helpers": {
+      "name": "@firtoz/db-helpers",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@standard-schema/spec": "^1.1.0",
+        "@tanstack/db": "catalog:",
+      },
+      "peerDependencies": {
+        "@standard-schema/spec": ">=1.1.0",
+        "@tanstack/db": ">=0.5.25",
+      },
+    },
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
       "version": "0.6.2",
@@ -196,6 +208,7 @@
     "tests/test-playground": {
       "name": "test-playground",
       "dependencies": {
+        "@firtoz/db-helpers": "workspace:*",
         "@firtoz/drizzle-indexeddb": "workspace:*",
         "@firtoz/drizzle-sqlite-wasm": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
@@ -550,6 +563,8 @@
     "@exodus/bytes": ["@exodus/bytes@1.11.0", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-wO3vd8nsEHdumsXrjGO/v4p6irbg7hy9kvIeR6i2AwylZSk4HJdWgL0FNaVquW1+AweJcdvU1IEpuIWk/WaPnA=="],
 
     "@firtoz/chat-agent": ["@firtoz/chat-agent@workspace:packages/chat-agent"],
+
+    "@firtoz/db-helpers": ["@firtoz/db-helpers@workspace:packages/db-helpers"],
 
     "@firtoz/drizzle-indexeddb": ["@firtoz/drizzle-indexeddb@workspace:packages/drizzle-indexeddb"],
 
