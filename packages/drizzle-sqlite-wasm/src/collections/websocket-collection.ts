@@ -9,6 +9,7 @@ import type {
 	InferSchemaOutput,
 	InferSchemaInput,
 } from "@tanstack/db";
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 interface WebSocketMessage<T> {
@@ -155,6 +156,8 @@ export function webSocketCollectionOptions<TSchema extends StandardSchemaV1>(
 						commit();
 					}
 					break;
+				default:
+					exhaustiveGuard(message.type);
 			}
 		};
 
@@ -204,16 +207,30 @@ export function webSocketCollectionOptions<TSchema extends StandardSchemaV1>(
 		const transactionId = crypto.randomUUID();
 
 		// Convert all mutations in the transaction to the wire format
-		const mutations = params.transaction.mutations.map((mutation) => ({
-			type: mutation.type,
-			id: mutation.key,
-			data:
-				mutation.type === "delete"
-					? undefined
-					: mutation.type === "update"
-						? mutation.changes
-						: mutation.modified,
-		}));
+		const mutations = params.transaction.mutations.map((mutation) => {
+			switch (mutation.type) {
+				case "insert":
+					return {
+						type: mutation.type,
+						id: mutation.key,
+						data: mutation.modified,
+					};
+				case "update":
+					return {
+						type: mutation.type,
+						id: mutation.key,
+						data: mutation.changes,
+					};
+				case "delete":
+					return {
+						type: mutation.type,
+						id: mutation.key,
+						data: undefined,
+					};
+				default:
+					return exhaustiveGuard(mutation);
+			}
+		});
 
 		// Send the entire transaction at once
 		ws.send(

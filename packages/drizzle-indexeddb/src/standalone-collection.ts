@@ -8,12 +8,8 @@ import {
 	type WritableDeep,
 } from "@tanstack/db";
 import type { Table } from "drizzle-orm";
-import type {
-	IdOf,
-	InsertSchema,
-	SelectSchema,
-	CollectionUtils,
-} from "@firtoz/drizzle-utils";
+import type { CollectionUtils } from "@firtoz/db-helpers";
+import type { IdOf, InsertSchema, SelectSchema } from "@firtoz/drizzle-utils";
 import {
 	indexedDBCollectionOptions,
 	type IndexedDBCollectionConfig,
@@ -151,7 +147,7 @@ export interface StandaloneCollection<TTable extends Table> {
 	truncate(): Promise<void>;
 
 	/**
-	 * Access to collection utils (truncate, pushExternalSync)
+	 * Access to collection utils (truncate, receiveSync)
 	 */
 	utils: CollectionUtils<ItemType<TTable>>;
 

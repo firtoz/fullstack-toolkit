@@ -118,10 +118,8 @@ export function MemoryCollectionTestPage() {
 			setTodos(items);
 		};
 
-		console.log("preloading collection");
 		collection.preload().then(
 			() => {
-				console.log("collection preloaded");
 				refresh();
 				setIsReady(true);
 			},

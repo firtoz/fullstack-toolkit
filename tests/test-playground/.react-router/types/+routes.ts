@@ -32,13 +32,13 @@ type Pages = {
   "/collections/sqlite-sync-mode-test": {
     params: {};
   };
-  "/collections/proxy-test": {
-    params: {};
-  };
   "/collections/standalone-test": {
     params: {};
   };
   "/collections/memory-collection-test": {
+    params: {};
+  };
+  "/collections/memory-collection-n-sync-test": {
     params: {};
   };
   "/collections/pagination-test": {
@@ -70,7 +70,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/proxy-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -100,10 +100,6 @@ type RouteFiles = {
     id: "routes/collections/sqlite-sync-mode-test";
     page: "/collections/sqlite-sync-mode-test";
   };
-  "routes/collections/proxy-test.tsx": {
-    id: "routes/collections/proxy-test";
-    page: "/collections/proxy-test";
-  };
   "routes/collections/standalone-test.tsx": {
     id: "routes/collections/standalone-test";
     page: "/collections/standalone-test";
@@ -111,6 +107,10 @@ type RouteFiles = {
   "routes/collections/memory-collection-test.tsx": {
     id: "routes/collections/memory-collection-test";
     page: "/collections/memory-collection-test";
+  };
+  "routes/collections/memory-collection-n-sync-test.tsx": {
+    id: "routes/collections/memory-collection-n-sync-test";
+    page: "/collections/memory-collection-n-sync-test";
   };
   "routes/collections/pagination-test.tsx": {
     id: "routes/collections/pagination-test";
@@ -155,9 +155,9 @@ type RouteModules = {
   "routes/collections/indexeddb-migration-test": typeof import("./app/routes/collections/indexeddb-migration-test.tsx");
   "routes/collections/sync-mode-test": typeof import("./app/routes/collections/sync-mode-test.tsx");
   "routes/collections/sqlite-sync-mode-test": typeof import("./app/routes/collections/sqlite-sync-mode-test.tsx");
-  "routes/collections/proxy-test": typeof import("./app/routes/collections/proxy-test.tsx");
   "routes/collections/standalone-test": typeof import("./app/routes/collections/standalone-test.tsx");
   "routes/collections/memory-collection-test": typeof import("./app/routes/collections/memory-collection-test.tsx");
+  "routes/collections/memory-collection-n-sync-test": typeof import("./app/routes/collections/memory-collection-n-sync-test.tsx");
   "routes/collections/pagination-test": typeof import("./app/routes/collections/pagination-test.tsx");
   "routes/collections/sqlite-pagination-test": typeof import("./app/routes/collections/sqlite-pagination-test.tsx");
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");

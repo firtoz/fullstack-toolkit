@@ -110,12 +110,6 @@ const indexedDBRoutes: RouteItem[] = [
 		description:
 			"Test limit/offset pagination with load more and page navigation",
 	},
-	{
-		path: href("/collections/proxy-test"),
-		text: "Proxy Test",
-		description:
-			"IndexedDB proxy system for Chrome extensions with multi-client support",
-	},
 ];
 
 const sqliteRoutes: RouteItem[] = [
@@ -144,6 +138,12 @@ const dbHelpersRoutes: RouteItem[] = [
 		text: "Memory Collection",
 		description:
 			"In-memory TanStack DB collection — data vanishes on refresh (no persistence)",
+	},
+	{
+		path: href("/collections/memory-collection-n-sync-test"),
+		text: "N Collections Sync",
+		description:
+			"N memory collections that broadcast to each other; add/remove count, initial sync when adding",
 	},
 ];
 

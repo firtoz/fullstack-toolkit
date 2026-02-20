@@ -2,10 +2,10 @@
 
 import type { GetInfo, GetAnnotations } from "react-router/internal";
 
-type Module = typeof import("../proxy-test.js")
+type Module = typeof import("../memory-collection-n-sync-test.js")
 
 type Info = GetInfo<{
-  file: "routes/collections/proxy-test.tsx",
+  file: "routes/collections/memory-collection-n-sync-test.tsx",
   module: Module
 }>
 
@@ -13,8 +13,8 @@ type Matches = [{
   id: "root";
   module: typeof import("../../../root.js");
 }, {
-  id: "routes/collections/proxy-test";
-  module: typeof import("../proxy-test.js");
+  id: "routes/collections/memory-collection-n-sync-test";
+  module: typeof import("../memory-collection-n-sync-test.js");
 }];
 
 type Annotations = GetAnnotations<Info & { module: Module, matches: Matches }, false>;

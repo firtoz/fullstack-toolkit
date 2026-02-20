@@ -59,30 +59,3 @@ export {
 	useDrizzleIndexedDB,
 	type UseDrizzleIndexedDBContextReturn,
 } from "./context/useDrizzleIndexedDB";
-
-// IDB Proxy (for Chrome extension, messaging-based IDB access)
-export {
-	// Types
-	type IDBProxyRequest,
-	type IDBProxyRequestBody,
-	type IDBProxyResponse,
-	type IDBProxySyncMessage,
-	generateRequestId,
-	generateClientId,
-	// Transport
-	type IDBProxyClientTransport,
-	type IDBProxyServerTransport,
-	createInMemoryTransport,
-	createMultiClientTransport,
-	// Client
-	IDBProxyClient,
-	createProxyIDbCreator,
-	type SyncHandler,
-	// Server
-	IDBProxyServer,
-	createProxyServer,
-	type IDBProxyServerOptions,
-	// Sync adapter (connects proxy sync to collection)
-	createCollectionSyncHandler,
-	combineSyncHandlers,
-} from "./proxy";

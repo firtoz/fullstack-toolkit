@@ -69,6 +69,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@firtoz/db-helpers": "workspace:*",
 		"@firtoz/drizzle-utils": "workspace:*",
 		"@firtoz/maybe-error": "workspace:*",
 		"@firtoz/worker-helper": "workspace:*",

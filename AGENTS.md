@@ -1,8 +1,38 @@
+# Package boundaries
+
+**Do not re-export symbols from other packages.** Each package should export only what it defines. Consumers that need types or functions from package A should import from A directly, not via package B. This keeps dependency graphs clear and avoids transitive API surface.
+
+# Backwards compatibility
+
+**Do not worry about backwards compatibility.** Prefer the right API and design. Use semver correctly: breaking changes get a major bump (or appropriate bump), and the changeset describes the change. No need to preserve old APIs, re-exports, or compatibility layers for existing users.
+
+# Code Style: Discriminated Unions
+
+For **discriminated unions** and enum-like types (e.g. message shapes with a `type` or `kind` field), use a **switch** with **`exhaustiveGuard(value)`** from `@firtoz/maybe-error` in the default branch so new variants cause a compile error:
+
+```ts
+import { exhaustiveGuard } from "@firtoz/maybe-error";
+switch (msg.type) {
+  case "insert": ... break;
+  case "update": ... break;
+  case "delete": ... break;
+  case "truncate": ... break;
+  default:
+    exhaustiveGuard(msg);
+}
+```
+
+See [.cursor/skills/exhaustive-switches/SKILL.md](.cursor/skills/exhaustive-switches/SKILL.md) for the full guideline.
+
+---
+
 # Changeset Generation Guide
+
+**Always add or update a changeset when you change a published package.** Any change to a package that is published (has `publishConfig` or is released) must be reflected in a changeset so the next release has an accurate changelog and version bump. Do not add changesets for internal or unpublished packages (e.g. test apps, e2e, or workspace-only tooling).
 
 ## Creating Changesets
 
-When the user asks to create a changeset:
+When the user asks to create a changeset, or when you make changes to a published package:
 
 1. **Run the changeset command with --empty flag:**
    ```bash

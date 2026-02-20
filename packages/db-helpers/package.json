@@ -48,10 +48,13 @@
 	},
 	"peerDependencies": {
 		"@standard-schema/spec": ">=1.1.0",
-		"@tanstack/db": ">=0.5.25"
+		"@tanstack/db": ">=0.5.26"
 	},
 	"devDependencies": {
 		"@standard-schema/spec": "^1.1.0",
 		"@tanstack/db": "catalog:"
+	},
+	"dependencies": {
+		"@firtoz/maybe-error": "workspace:*"
 	}
 }

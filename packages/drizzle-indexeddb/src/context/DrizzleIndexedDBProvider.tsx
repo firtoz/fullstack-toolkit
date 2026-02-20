@@ -19,13 +19,13 @@ import {
 	indexedDBCollectionOptions,
 	type IndexedDBCollectionConfig,
 } from "@firtoz/drizzle-indexeddb";
+import type { CollectionUtils } from "@firtoz/db-helpers";
 import type {
 	IdOf,
 	InsertSchema,
 	SelectSchema,
 	GetTableFromSchema,
 	InferCollectionFromTable,
-	CollectionUtils,
 } from "@firtoz/drizzle-utils";
 import {
 	type Migration,
@@ -33,7 +33,6 @@ import {
 } from "../function-migrator";
 import type { IDBCreator, IDBDatabaseLike } from "../idb-types";
 import { openIndexedDb } from "../idb-operations";
-import type { IDBProxySyncMessage } from "../proxy/idb-proxy-types";
 
 interface CollectionCacheEntry {
 	// biome-ignore lint/suspicious/noExplicitAny: Cache needs to store collections of various types
@@ -65,11 +64,6 @@ export type DrizzleIndexedDBContextValue<
 	) => IndexedDbCollection<TSchema, TTableName>;
 	incrementRefCount: (tableName: string) => void;
 	decrementRefCount: (tableName: string) => void;
-	/**
-	 * Handle a sync message from a proxy server.
-	 * Routes the message to the appropriate collection's external sync handler.
-	 */
-	handleProxySync: (message: IDBProxySyncMessage) => void;
 };
 
 export const DrizzleIndexedDBContext =
@@ -94,18 +88,6 @@ type DrizzleIndexedDBProviderProps<TSchema extends Record<string, unknown>> =
 		 * Use createInstrumentedDbCreator() to track IndexedDB operations.
 		 */
 		dbCreator?: IDBCreator;
-		/**
-		 * Called when the sync handler is ready.
-		 * Use this to connect proxy sync messages to the provider.
-		 *
-		 * @example
-		 * const proxyClient = ...;
-		 * <DrizzleIndexedDBProvider
-		 *   onSyncReady={(handleSync) => proxyClient.onSync(handleSync)}
-		 *   ...
-		 * />
-		 */
-		onSyncReady?: (handleSync: (message: IDBProxySyncMessage) => void) => void;
 	}>;
 
 export function DrizzleIndexedDBProvider<
@@ -119,7 +101,6 @@ export function DrizzleIndexedDBProvider<
 	debug = false,
 	syncMode = "eager",
 	dbCreator,
-	onSyncReady,
 }: DrizzleIndexedDBProviderProps<TSchema>) {
 	const [indexedDB, setIndexedDB] = useState<IDBDatabaseLike | null>(null);
 	const indexedDBRef = useRef<IDBDatabaseLike | null>(null);
@@ -248,80 +229,14 @@ export function DrizzleIndexedDBProvider<
 			[collections],
 		);
 
-	// Handle proxy sync messages by routing to the appropriate collection
-	const handleProxySync: DrizzleIndexedDBContextValue<TSchema>["handleProxySync"] =
-		useCallback(
-			(message: IDBProxySyncMessage) => {
-				// Find the collection for this store by checking the schema
-				for (const [tableName, table] of Object.entries(schema)) {
-					const actualStoreName = getTableName(table as Table);
-					if (actualStoreName === message.storeName) {
-						const entry = collections.get(tableName);
-						if (entry) {
-							const { pushExternalSync } = entry.collection.utils;
-							// Route sync message to collection
-							switch (message.type) {
-								case "sync:add":
-									pushExternalSync({
-										type: "insert",
-										items: message.items,
-									});
-									break;
-								case "sync:put":
-									pushExternalSync({
-										type: "update",
-										items: message.items,
-									});
-									break;
-								case "sync:delete":
-									// For delete, construct items with id
-									pushExternalSync({
-										type: "delete",
-										items: message.keys.map((key) => ({ id: key })),
-									});
-									break;
-								case "sync:truncate":
-									pushExternalSync({
-										type: "truncate",
-									});
-									break;
-							}
-						}
-						return;
-					}
-				}
-
-				if (debug) {
-					console.warn(
-						`[DrizzleIndexedDBProvider] No collection found for store: ${message.storeName}`,
-					);
-				}
-			},
-			[collections, schema, debug],
-		);
-
-	// Call onSyncReady when handleProxySync is available
-	useEffect(() => {
-		if (onSyncReady) {
-			onSyncReady(handleProxySync);
-		}
-	}, [onSyncReady, handleProxySync]);
-
 	const contextValue: DrizzleIndexedDBContextValue<TSchema> = useMemo(
 		() => ({
 			indexedDB,
 			getCollection,
 			incrementRefCount,
 			decrementRefCount,
-			handleProxySync,
 		}),
-		[
-			indexedDB,
-			getCollection,
-			incrementRefCount,
-			decrementRefCount,
-			handleProxySync,
-		],
+		[indexedDB, getCollection, incrementRefCount, decrementRefCount],
 	);
 
 	return (

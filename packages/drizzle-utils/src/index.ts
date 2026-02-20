@@ -27,9 +27,6 @@ export type {
 	BaseSyncConfig,
 	SyncBackend,
 	SyncFunctionResult,
-	ExternalSyncEvent,
-	ExternalSyncHandler,
-	CollectionUtils,
 } from "./collection-utils";
 
 export {

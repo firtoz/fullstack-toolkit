@@ -1,3 +1,4 @@
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import { OpenRouter } from "@openrouter/sdk";
 
 // OpenRouter SDK message types (simplified for our use)
@@ -554,6 +555,8 @@ export abstract class ChatAgentBase<
 						}>,
 					);
 					break;
+				default:
+					exhaustiveGuard(data);
 			}
 		} catch (err) {
 			console.error("Error processing message:", err);
@@ -827,32 +830,40 @@ export abstract class ChatAgentBase<
 		];
 
 		for (const msg of this.messages) {
-			if (msg.role === "user") {
-				result.push({ role: "user", content: msg.content } as ORUserMessage);
-			} else if (msg.role === "assistant") {
-				const assistantMsg = msg as AssistantMessage;
-				const orMsg: ORAssistantMessage = {
-					role: "assistant",
-					content: assistantMsg.content,
-					...(assistantMsg.toolCalls && {
-						toolCalls: assistantMsg.toolCalls.map((tc) => ({
-							id: tc.id,
-							type: "function" as const,
-							function: {
-								name: tc.function.name,
-								arguments: tc.function.arguments,
-							},
-						})),
-					}),
-				};
-				result.push(orMsg);
-			} else if (msg.role === "tool") {
-				const toolMsg = msg as ToolMessage;
-				result.push({
-					role: "tool",
-					content: toolMsg.content,
-					toolCallId: toolMsg.toolCallId,
-				} as ORToolMessage);
+			switch (msg.role) {
+				case "user":
+					result.push({ role: "user", content: msg.content } as ORUserMessage);
+					break;
+				case "assistant": {
+					const assistantMsg = msg;
+					const orMsg: ORAssistantMessage = {
+						role: "assistant",
+						content: assistantMsg.content,
+						...(assistantMsg.toolCalls && {
+							toolCalls: assistantMsg.toolCalls.map((tc) => ({
+								id: tc.id,
+								type: "function" as const,
+								function: {
+									name: tc.function.name,
+									arguments: tc.function.arguments,
+								},
+							})),
+						}),
+					};
+					result.push(orMsg);
+					break;
+				}
+				case "tool": {
+					const toolMsg = msg;
+					result.push({
+						role: "tool",
+						content: toolMsg.content,
+						toolCallId: toolMsg.toolCallId,
+					} as ORToolMessage);
+					break;
+				}
+				default:
+					exhaustiveGuard(msg);
 			}
 		}
 

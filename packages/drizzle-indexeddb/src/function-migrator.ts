@@ -1,5 +1,6 @@
 // IndexedDB migrator with declarative migration format
 
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type { IDBCreator, IDBDatabaseLike } from "./idb-types";
 import { openIndexedDb } from "./idb-operations";
 
@@ -107,6 +108,8 @@ function executeMigrationOperation(
 			}
 			break;
 		}
+		default:
+			exhaustiveGuard(op);
 	}
 }
 

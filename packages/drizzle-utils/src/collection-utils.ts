@@ -1,3 +1,5 @@
+import type { CollectionUtils, SyncMessage } from "@firtoz/db-helpers";
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import { type Table, SQL, getTableColumns } from "drizzle-orm";
 import type { BuildSchema } from "drizzle-valibot";
 import { createInsertSchema } from "drizzle-valibot";
@@ -160,36 +162,6 @@ export interface SyncBackend<TTable extends Table> {
 	 * Optional - if not provided, truncate util won't be available
 	 */
 	handleTruncate?: () => Promise<void>;
-}
-
-/**
- * External sync event for pushing changes from outside (e.g., from a proxy server)
- */
-export type ExternalSyncEvent<T> =
-	| { type: "insert"; items: T[] }
-	| { type: "update"; items: T[] }
-	| { type: "delete"; items: T[] }
-	| { type: "truncate" };
-
-/**
- * Handler for external sync events
- */
-export type ExternalSyncHandler<T> = (event: ExternalSyncEvent<T>) => void;
-
-/**
- * Collection utils that include truncate and external sync functionality
- */
-export interface CollectionUtils<T = unknown> {
-	/**
-	 * Clear all data from the store (truncate).
-	 * This clears the backend store and updates the local reactive store.
-	 */
-	truncate: () => Promise<void>;
-	/**
-	 * Push external sync events to the collection.
-	 * Use this when receiving sync messages from a proxy server or other external source.
-	 */
-	pushExternalSync: ExternalSyncHandler<T>;
 }
 
 /**
@@ -364,49 +336,44 @@ export function createSyncFunction<TTable extends Table>(
 		} satisfies SyncConfigRes;
 	};
 
-	// External sync handler - allows pushing sync events from outside (e.g., proxy server)
-	const pushExternalSync: ExternalSyncHandler<ItemType> = (event) => {
+	// Apply SyncMessage[] to the sync layer (canonical receive API)
+	const receiveSync = async (messages: SyncMessage<ItemType>[]) => {
+		if (messages.length === 0) return;
 		if (!syncBegin || !syncWrite || !syncCommit || !syncTruncate) {
 			if (config.debug) {
 				console.warn(
-					"[pushExternalSync] Sync functions not initialized yet - event will be dropped",
-					event,
+					"[receiveSync] Sync functions not initialized yet - messages will be dropped",
+					messages.length,
 				);
 			}
 			return;
 		}
-
-		switch (event.type) {
-			case "insert":
-				syncBegin();
-				for (const item of event.items) {
-					syncWrite({ type: "insert", value: item });
-				}
-				syncCommit();
-				break;
-			case "update":
-				syncBegin();
-				for (const item of event.items) {
-					syncWrite({ type: "update", value: item });
-				}
-				syncCommit();
-				break;
-			case "delete":
-				syncBegin();
-				for (const item of event.items) {
-					syncWrite({ type: "delete", value: item });
-				}
-				syncCommit();
-				break;
-			case "truncate":
-				syncBegin();
-				syncTruncate();
-				syncCommit();
-				break;
+		syncBegin();
+		for (const msg of messages) {
+			switch (msg.type) {
+				case "insert":
+					syncWrite({ type: "insert", value: msg.value });
+					break;
+				case "update":
+					syncWrite({ type: "update", value: msg.value });
+					break;
+				case "delete":
+					syncWrite({
+						type: "delete",
+						value: { id: msg.key } as ItemType,
+					});
+					break;
+				case "truncate":
+					syncTruncate();
+					break;
+				default:
+					exhaustiveGuard(msg);
+			}
 		}
+		syncCommit();
 	};
 
-	// Create utils with truncate and external sync
+	// Create utils with truncate and receiveSync
 	const utils: CollectionUtils<ItemType> = {
 		truncate: async () => {
 			if (!backend.handleTruncate) {
@@ -424,7 +391,7 @@ export function createSyncFunction<TTable extends Table>(
 			syncTruncate();
 			syncCommit();
 		},
-		pushExternalSync,
+		receiveSync,
 	};
 
 	return {
@@ -614,7 +581,7 @@ export function createCollectionConfig<
 		onUpdate: config.onUpdate ?? config.syncResult.onUpdate,
 		onDelete: config.onDelete ?? config.syncResult.onDelete,
 		syncMode: config.syncMode,
-		// Include utils with truncate and pushExternalSync
+		// Include utils with truncate and receiveSync
 		utils: config.syncResult.utils,
 	};
 }

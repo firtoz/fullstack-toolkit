@@ -1,3 +1,4 @@
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type {
 	IDBDatabaseLike,
 	IDBCreator,
@@ -26,6 +27,8 @@ function createKeyRange(spec: KeyRangeSpec): IDBKeyRange {
 				spec.lowerOpen,
 				spec.upperOpen,
 			);
+		default:
+			exhaustiveGuard(spec.type);
 	}
 }
 

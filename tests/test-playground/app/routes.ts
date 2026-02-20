@@ -20,11 +20,14 @@ export default [
 			"sqlite-sync-mode-test",
 			"routes/collections/sqlite-sync-mode-test.tsx",
 		),
-		route("proxy-test", "routes/collections/proxy-test.tsx"),
 		route("standalone-test", "routes/collections/standalone-test.tsx"),
 		route(
 			"memory-collection-test",
 			"routes/collections/memory-collection-test.tsx",
+		),
+		route(
+			"memory-collection-n-sync-test",
+			"routes/collections/memory-collection-n-sync-test.tsx",
 		),
 		route("pagination-test", "routes/collections/pagination-test.tsx"),
 		route(

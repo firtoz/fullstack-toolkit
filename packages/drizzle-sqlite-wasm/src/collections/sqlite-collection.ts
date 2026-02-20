@@ -30,12 +30,12 @@ import {
 	type SQLiteInsertValue,
 	SQLiteColumn,
 } from "drizzle-orm/sqlite-core";
+import type { CollectionUtils } from "@firtoz/db-helpers";
 import type {
 	SelectSchema,
 	TableWithRequiredFields,
 	BaseSyncConfig,
 	SyncBackend,
-	CollectionUtils,
 } from "@firtoz/drizzle-utils";
 import {
 	createSyncFunction,
@@ -43,6 +43,7 @@ import {
 	createGetKeyFunction,
 	createCollectionConfig,
 } from "@firtoz/drizzle-utils";
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type * as v from "valibot";
 
 export type AnyDrizzleDatabase = BaseSQLiteDatabase<
@@ -192,87 +193,81 @@ function convertBasicExpressionToDrizzle<TTable extends Table>(
 	expression: IR.BasicExpression,
 	table: TTable,
 ): SQL {
-	if (expression.type === "ref") {
-		// PropRef - reference to a column
-		const propRef = expression as IR.PropRef;
-		const columnName = propRef.path[propRef.path.length - 1];
-		const column = table[columnName as keyof typeof table];
+	switch (expression.type) {
+		case "ref": {
+			const propRef = expression;
+			const columnName = propRef.path[propRef.path.length - 1];
+			const column = table[columnName as keyof typeof table];
 
-		if (!column || !(column instanceof SQLiteColumn)) {
-			console.error("[SQLite Collection] Column lookup failed:", {
-				columnName,
-				column,
-				tableKeys: Object.keys(table),
-				hasColumn: columnName in table,
-			});
-			throw new Error(`Column ${String(columnName)} not found in table`);
-		}
-
-		// Drizzle columns can be used directly in expressions
-		return column as unknown as SQL;
-	}
-
-	if (expression.type === "val") {
-		// Value - literal value
-		const value = expression as IR.Value;
-		return sql`${value.value}`;
-	}
-
-	if (expression.type === "func") {
-		// Func - function call like eq, gt, lt, etc.
-		const func = expression as IR.Func;
-		const args = func.args.map((arg) =>
-			convertBasicExpressionToDrizzle(arg, table),
-		);
-
-		switch (func.name) {
-			case "eq":
-				return eq(args[0], args[1]);
-			case "ne":
-				return ne(args[0], args[1]);
-			case "gt":
-				return gt(args[0], args[1]);
-			case "gte":
-				return gte(args[0], args[1]);
-			case "lt":
-				return lt(args[0], args[1]);
-			case "lte":
-				return lte(args[0], args[1]);
-			case "and": {
-				const result = and(...args);
-				if (!result) {
-					throw new Error("Invalid 'and' expression - no arguments provided");
-				}
-				return result;
+			if (!column || !(column instanceof SQLiteColumn)) {
+				console.error("[SQLite Collection] Column lookup failed:", {
+					columnName,
+					column,
+					tableKeys: Object.keys(table),
+					hasColumn: columnName in table,
+				});
+				throw new Error(`Column ${String(columnName)} not found in table`);
 			}
-			case "or": {
-				const result = or(...args);
-				if (!result) {
-					throw new Error("Invalid 'or' expression - no arguments provided");
-				}
-				return result;
-			}
-			case "not":
-				return not(args[0]);
-			case "isNull":
-				return isNull(args[0]);
-			case "isNotNull":
-				return isNotNull(args[0]);
-			case "like":
-				return like(args[0], args[1]);
-			case "in":
-				return inArray(args[0], args[1]);
-			case "isUndefined":
-				// isUndefined is same as isNull in SQLite
-				return isNull(args[0]);
-			default:
-				throw new Error(`Unsupported function: ${func.name}`);
-		}
-	}
 
-	throw new Error(
-		`Unsupported expression type: ${(expression as { type: string }).type}`,
-	);
+			return column as unknown as SQL;
+		}
+		case "val": {
+			const value = expression;
+			return sql`${value.value}`;
+		}
+		case "func": {
+			const func = expression;
+			const args = func.args.map((arg) =>
+				convertBasicExpressionToDrizzle(arg, table),
+			);
+
+			switch (func.name) {
+				case "eq":
+					return eq(args[0], args[1]);
+				case "ne":
+					return ne(args[0], args[1]);
+				case "gt":
+					return gt(args[0], args[1]);
+				case "gte":
+					return gte(args[0], args[1]);
+				case "lt":
+					return lt(args[0], args[1]);
+				case "lte":
+					return lte(args[0], args[1]);
+				case "and": {
+					const result = and(...args);
+					if (!result) {
+						throw new Error("Invalid 'and' expression - no arguments provided");
+					}
+					return result;
+				}
+				case "or": {
+					const result = or(...args);
+					if (!result) {
+						throw new Error("Invalid 'or' expression - no arguments provided");
+					}
+					return result;
+				}
+				case "not":
+					return not(args[0]);
+				case "isNull":
+					return isNull(args[0]);
+				case "isNotNull":
+					return isNotNull(args[0]);
+				case "like":
+					return like(args[0], args[1]);
+				case "in":
+					return inArray(args[0], args[1]);
+				case "isUndefined":
+					// isUndefined is same as isNull in SQLite
+					return isNull(args[0]);
+				default:
+					throw new Error(`Unsupported function: ${func.name}`);
+			}
+		}
+		default:
+			exhaustiveGuard(expression);
+	}
 }
 
 /**
