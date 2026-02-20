@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/drizzle-utils",
-	"version": "0.3.3",
+	"version": "1.0.0",
 	"description": "Shared utilities and types for Drizzle-based packages",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
