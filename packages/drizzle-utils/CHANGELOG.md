@@ -1,5 +1,20 @@
 # @firtoz/drizzle-utils
 
+## 1.0.0
+
+### Major Changes
+
+- [`3c7ce1d`](https://github.com/firtoz/fullstack-toolkit/commit/3c7ce1dbca5c5396386db9927ae7f5e19a562cf6) Thanks [@firtoz](https://github.com/firtoz)! - **Unified collection sync**
+
+  `CollectionUtils` now exposes `receiveSync(messages: SyncMessage<T>[])` instead of `pushExternalSync`. Canonical sync message type is `SyncMessage<T, TKey>` (`insert` | `update` | `delete` | `truncate`). `ExternalSyncEvent` / `ExternalSyncHandler` are internal only.
+
+  **Upgrade:** Replace `utils.pushExternalSync(events)` with `utils.receiveSync(messages)`. Import `SyncMessage` from `@firtoz/drizzle-utils` (or from `@firtoz/db-helpers`) and send per-mutation messages: `{ type: "insert", value }`, `{ type: "update", value, previousValue }`, `{ type: "delete", key }`, or `{ type: "truncate" }`. Stop using `ExternalSyncEvent` / `ExternalSyncHandler` in your code; they are no longer part of the public API. Generic sync types (`SyncMessage`, `CollectionUtils`) are now defined in `@firtoz/db-helpers` and re-exported here for backward compatibility.
+
+### Patch Changes
+
+- Updated dependencies [[`3c7ce1d`](https://github.com/firtoz/fullstack-toolkit/commit/3c7ce1dbca5c5396386db9927ae7f5e19a562cf6)]:
+  - @firtoz/db-helpers@1.0.0
+
 ## 0.3.3
 
 ### Patch Changes
