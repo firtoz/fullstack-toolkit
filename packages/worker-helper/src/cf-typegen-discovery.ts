@@ -70,10 +70,9 @@ export function getWorkspacePaths(root: string): string[] {
 		const pkg = JSON.parse(content) as {
 			workspaces?: string[] | { packages?: string[] };
 		};
-		const raw =
-			Array.isArray(pkg.workspaces)
-				? pkg.workspaces
-				: pkg.workspaces?.packages;
+		const raw = Array.isArray(pkg.workspaces)
+			? pkg.workspaces
+			: pkg.workspaces?.packages;
 		if (!Array.isArray(raw)) return [];
 		return expandWorkspacePatterns(root, raw);
 	} catch {
@@ -85,9 +84,7 @@ export function getWorkspacePaths(root: string): string[] {
  * Find all wrangler config files under the given workspace member paths.
  * Does not rely on git; includes untracked configs (e.g. new durable objects).
  */
-export function findWranglerConfigsInPaths(
-	workspacePaths: string[],
-): string[] {
+export function findWranglerConfigsInPaths(workspacePaths: string[]): string[] {
 	const results: string[] = [];
 	for (const dir of workspacePaths) {
 		for (const name of ["wrangler.json", "wrangler.jsonc"]) {
