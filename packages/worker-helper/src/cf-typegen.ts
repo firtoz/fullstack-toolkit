@@ -3,6 +3,10 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import {
+	discoverWranglerConfigs,
+	findWorkspaceRoot,
+} from "./cf-typegen-discovery";
 import { prepareEnvFiles } from "./utils/prepare-env";
 
 // Use the current working directory
@@ -16,64 +20,20 @@ if (!cwd || !fs.existsSync(cwd)) {
 
 console.log(`Running CF typegen for: ${cwd}`);
 
-/**
- * Find the git root directory using git command
- */
-function findGitRoot(startPath: string): string | null {
-	try {
-		const output = execSync("git rev-parse --show-toplevel", {
-			cwd: startPath,
-			encoding: "utf8",
-		});
-		return output.trim();
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Find all wrangler config files using git ls-files
- * This is more efficient and respects .gitignore
- */
-function findAllWranglerConfigs(gitRoot: string): string[] {
-	try {
-		// Use git ls-files to find all tracked wrangler configs
-		const output = execSync(
-			'git ls-files "**/wrangler.json" "**/wrangler.jsonc"',
-			{
-				cwd: gitRoot,
-				encoding: "utf8",
-			},
-		);
-
-		return output
-			.trim()
-			.split("\n")
-			.filter((line) => line.length > 0)
-			.map((relativePath) => path.join(gitRoot, relativePath))
-			.sort((a, b) => (a < b ? -1 : 1));
-	} catch (err) {
-		console.warn("⚠ Failed to run git ls-files:", err);
-		return [];
-	}
-}
-
 function runWranglerTypes() {
 	const envFiles = prepareEnvFiles(cwd);
 
 	console.log("Running wrangler types...");
 
-	// Find git root to discover all wrangler configs
-	const gitRoot = findGitRoot(cwd);
-	if (!gitRoot) {
-		console.warn(
-			"⚠ Could not find git root, skipping workspace config discovery",
-		);
-		console.log("  Generating types for current directory only");
+	// Discover wrangler configs from npm/bun workspace definition (includes untracked packages)
+	const workspaceRoot = findWorkspaceRoot(cwd);
+	let allConfigs: string[];
+	if (workspaceRoot) {
+		allConfigs = discoverWranglerConfigs(cwd);
+	} else {
+		console.warn("⚠ No workspace root found, using current directory only");
+		allConfigs = [];
 	}
-
-	// Find all wrangler configs in the workspace
-	const allConfigs = gitRoot ? findAllWranglerConfigs(gitRoot) : [];
 
 	if (allConfigs.length > 0) {
 		console.log(`  Found ${allConfigs.length} wrangler config(s) in workspace`);
