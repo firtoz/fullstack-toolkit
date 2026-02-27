@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.4.0
+
+### Minor Changes
+
+- [`6e96ebb`](https://github.com/firtoz/fullstack-toolkit/commit/6e96ebb05a992cc33ea339e5466b608774be62c3) Thanks [@firtoz](https://github.com/firtoz)! - cf-typegen now discovers wrangler configs from the npm/bun workspace definition (root package.json `workspaces` field) instead of using `git ls-files`. Untracked workspace packages (e.g. new durable objects like fal-user-do) are included in type generation without needing to be committed first.
+
 ## 1.3.4
 
 ### Patch Changes
