@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.5.1
+
+### Patch Changes
+
+- [`85948bf`](https://github.com/firtoz/fullstack-toolkit/commit/85948bf97380c6268871d24ff48dbd14699e2728) Thanks [@firtoz](https://github.com/firtoz)! - Add optional `options` to `submitFormData`: `submitFormData(formData, submittedData?, options?)` with `options.headers` (e.g. `Accept: application/json` so the action returns JSON instead of redirecting) and `options.method`. Export `SubmitFormDataOptions` type.
+
 ## 5.5.0
 
 ### Minor Changes
