@@ -13,6 +13,7 @@ Type-safe React Router 7 framework mode helpers with enhanced fetching, form sub
 - ✅ **Type-safe routing** - Full TypeScript support with React Router 7 framework mode
 - 🚀 **Enhanced fetching** - Dynamic fetchers with caching and query parameter support
 - 📝 **Form submission** - Type-safe form handling with Zod validation
+- 📤 **Concurrent submissions** - Multiple parallel submissions per action with per-operation tracking and optimistic UI (`useConcurrentDynamicSubmitter`)
 - 🔄 **State tracking** - Monitor fetcher state changes with ease
 - 🎯 **Zero configuration** - Works out of the box with React Router 7
 - 📦 **Tree-shakeable** - Import only what you need
@@ -277,6 +278,45 @@ export default function ContactForm() {
   );
 }
 ```
+
+### `useConcurrentDynamicSubmitter`
+
+Run multiple submissions to the same action in parallel, each tracked independently. No single fetcher; each call returns `{ id, promise }` and adds an entry to `operations` with `submittedData` (for optimistic UI) and `data` when done.
+
+```tsx
+import { useConcurrentDynamicSubmitter } from '@firtoz/router-toolkit';
+
+function UploadList() {
+  const { operations, submitJson } = useConcurrentDynamicSubmitter<
+    typeof import("./api.upload")
+  >("/api/upload");
+
+  const handleUpload = (file: { name: string; size: number }) => {
+    submitJson({ fileName: file.name, size: file.size });
+  };
+
+  return (
+    <ul>
+      {Object.values(operations).map((op) => (
+        <li key={op.id}>
+          {op.status === "pending" && (
+            <Skeleton>{op.submittedData.fileName}</Skeleton>
+          )}
+          {op.status === "done" && (
+            <span>Saved: {op.data?.id}</span>
+          )}
+          {op.status === "error" && (
+            <span>Failed: {String(op.error)}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+- **`operations`**: `Record<string, Operation<T>>` — each operation has `id`, `status` (`"pending"` | `"done"` | `"error"`), `submittedData` (payload sent), and when done `data` (action response).
+- **`submitJson(data)`**: returns `{ id, promise }`; use `id` to look up in `operations`, `promise` to await.
 
 ### `useFetcherStateChanged`
 
