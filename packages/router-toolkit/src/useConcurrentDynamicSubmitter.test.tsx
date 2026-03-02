@@ -284,4 +284,71 @@ describe("useConcurrentDynamicSubmitter", () => {
 			expect(op?.data).toEqual({ saved: true, id: "server-123" });
 		});
 	});
+
+	it("submitFormData sends FormData as body and uses optional submittedData for operations list", async () => {
+		const mockFetch = mock(() =>
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ success: true, fileId: "abc-123" }),
+			} as Response),
+		);
+		globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+
+		const { result } = renderHook(() =>
+			useConcurrentDynamicSubmitter("/api/upload"),
+		);
+
+		const formData = new FormData();
+		formData.set("file", "blob placeholder" as unknown as File);
+		const displayPayload = { type: "upload", label: "photo.jpg" };
+
+		let id!: string;
+		let promise!: Promise<unknown>;
+		await act(() => {
+			const out = result.current.submitFormData(formData, displayPayload);
+			id = out.id;
+			promise = out.promise;
+		});
+
+		expect(result.current.operations[id].submittedData).toEqual(displayPayload);
+
+		await act(async () => {
+			await promise;
+		});
+
+		await waitFor(() => {
+			const op = result.current.operations[id];
+			expect(op?.status).toBe("done");
+			expect(op?.submittedData).toEqual(displayPayload);
+			expect(op?.data).toEqual({ success: true, fileId: "abc-123" });
+		});
+
+		expect(mockFetch).toHaveBeenCalledWith(
+			"/api/upload",
+			expect.objectContaining({
+				method: "POST",
+				body: formData,
+			}),
+		);
+	});
+
+	it("submitFormData defaults submittedData to empty object when omitted", async () => {
+		globalThis.fetch = mock(() =>
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ ok: true }),
+			} as Response),
+		) as unknown as typeof globalThis.fetch;
+
+		const { result } = renderHook(() =>
+			useConcurrentDynamicSubmitter("/api/upload"),
+		);
+
+		let id!: string;
+		await act(() => {
+			id = result.current.submitFormData(new FormData()).id;
+		});
+
+		expect(result.current.operations[id].submittedData).toEqual({});
+	});
 });

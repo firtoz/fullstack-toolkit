@@ -283,16 +283,21 @@ export default function ContactForm() {
 
 Run multiple submissions to the same action in parallel, each tracked independently. No single fetcher; each call returns `{ id, promise }` and adds an entry to `operations` with `submittedData` (for optimistic UI) and `data` when done.
 
+- **`submitJson(data)`** — POST JSON; `submittedData` is the payload you send.
+- **`submitFormData(formData, submittedData?)`** — POST multipart/form-data (e.g. file uploads). Optional `submittedData` is a serializable object for the operations list (e.g. `{ type: "upload", label: "photo.jpg" }`); FormData/File are not stored in state.
+
 ```tsx
 import { useConcurrentDynamicSubmitter } from '@firtoz/router-toolkit';
 
 function UploadList() {
-  const { operations, submitJson } = useConcurrentDynamicSubmitter<
+  const { operations, submitFormData } = useConcurrentDynamicSubmitter<
     typeof import("./api.upload")
   >("/api/upload");
 
-  const handleUpload = (file: { name: string; size: number }) => {
-    submitJson({ fileName: file.name, size: file.size });
+  const handleUpload = (file: File) => {
+    const fd = new FormData();
+    fd.set("file", file);
+    submitFormData(fd, { type: "upload", label: file.name });
   };
 
   return (
@@ -300,7 +305,7 @@ function UploadList() {
       {Object.values(operations).map((op) => (
         <li key={op.id}>
           {op.status === "pending" && (
-            <Skeleton>{op.submittedData.fileName}</Skeleton>
+            <Skeleton>{(op.submittedData as { label?: string }).label}</Skeleton>
           )}
           {op.status === "done" && (
             <span>Saved: {op.data?.id}</span>
@@ -315,8 +320,9 @@ function UploadList() {
 }
 ```
 
-- **`operations`**: `Record<string, Operation<T>>` — each operation has `id`, `status` (`"pending"` | `"done"` | `"error"`), `submittedData` (payload sent), and when done `data` (action response).
-- **`submitJson(data)`**: returns `{ id, promise }`; use `id` to look up in `operations`, `promise` to await.
+- **`operations`**: `Record<string, Operation<T>>` — each operation has `id`, `status` (`"pending"` | `"done"` | `"error"`), `submittedData` (payload or display object), and when done `data` (action response).
+- **`submitJson(data)`**: returns `{ id, promise }`.
+- **`submitFormData(formData, submittedData?)`**: returns `{ id, promise }`; `submittedData` defaults to `{}` and is used only for display in the operations list.
 
 ### `useFetcherStateChanged`
 
