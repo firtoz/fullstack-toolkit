@@ -69,6 +69,12 @@ type SubmitJsonOptions = {
 /** Optional serializable payload for FormData submissions (for display in operations list; FormData/File are not stored in state). */
 export type FormDataSubmittedData = Record<string, unknown>;
 
+/** Options for submitFormData (e.g. Accept: application/json so the action returns JSON instead of redirecting). */
+export type SubmitFormDataOptions = {
+	headers?: HeadersInit;
+	method?: "POST" | "PUT" | "PATCH" | "DELETE";
+};
+
 /**
  * Submits JSON to the action URL via fetch and returns the parsed JSON.
  */
@@ -93,18 +99,17 @@ async function submitJsonToAction<T>(
 
 /**
  * Submits FormData to the action URL. No Content-Type header — browser sets multipart/form-data with boundary.
+ * Optional headers (e.g. Accept: application/json) let the action return JSON instead of redirecting.
  */
 async function submitFormDataToAction<T>(
 	actionUrl: string,
 	formData: FormData,
-	options: {
-		method?: "POST" | "PUT" | "PATCH" | "DELETE";
-		fetchFn?: typeof fetch;
-	},
+	options: SubmitFormDataOptions & { fetchFn?: typeof fetch },
 ): Promise<T> {
-	const { method = "POST", fetchFn = fetch } = options;
+	const { method = "POST", headers, fetchFn = fetch } = options;
 	const res = await fetchFn(actionUrl, {
 		method,
+		...(headers && { headers }),
 		body: formData,
 	});
 	if (!res.ok) {
@@ -145,6 +150,7 @@ export function useConcurrentDynamicSubmitter<TInfo extends RouteModule>(
 	submitFormData: (
 		formData: FormData,
 		submittedData?: FormDataSubmittedData,
+		options?: SubmitFormDataOptions,
 	) => SubmitJsonResult<ActionResult<TInfo>>;
 } {
 	const actionUrl = useMemo(() => {
@@ -211,6 +217,7 @@ export function useConcurrentDynamicSubmitter<TInfo extends RouteModule>(
 		(
 			formData: FormData,
 			submittedData: FormDataSubmittedData = {},
+			options: SubmitFormDataOptions = {},
 		): SubmitJsonResult<ActionResult<TInfo>> => {
 			const id = `op-${++nextIdRef.current}`;
 			setOperations((prev) => ({
@@ -221,7 +228,7 @@ export function useConcurrentDynamicSubmitter<TInfo extends RouteModule>(
 			const promise = submitFormDataToAction<ActionResult<TInfo>>(
 				actionUrl,
 				formData,
-				{ method: "POST" },
+				options,
 			)
 				.then((responseData) => {
 					setOperations((prev) => ({

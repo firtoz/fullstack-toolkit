@@ -351,4 +351,33 @@ describe("useConcurrentDynamicSubmitter", () => {
 
 		expect(result.current.operations[id].submittedData).toEqual({});
 	});
+
+	it("submitFormData passes optional options (e.g. headers) to fetch", async () => {
+		const mockFetch = mock(() =>
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ ok: true }),
+			} as Response),
+		);
+		globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+
+		const { result } = renderHook(() =>
+			useConcurrentDynamicSubmitter("/api/upload"),
+		);
+
+		await act(() => {
+			result.current.submitFormData(new FormData(), {}, {
+				headers: { Accept: "application/json" },
+			});
+		});
+
+		expect(mockFetch).toHaveBeenCalledWith(
+			"/api/upload",
+			expect.objectContaining({
+				method: "POST",
+				body: expect.any(FormData),
+				headers: { Accept: "application/json" },
+			}),
+		);
+	});
 });
