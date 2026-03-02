@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.5.0
+
+### Minor Changes
+
+- [`f458817`](https://github.com/firtoz/fullstack-toolkit/commit/f4588170d92762d786d8217e69433027234f6074) Thanks [@firtoz](https://github.com/firtoz)! - Add `submitFormData(formData, submittedData?)` to `useConcurrentDynamicSubmitter` for multipart/form-data submissions (e.g. file uploads, convert flows). Optional `submittedData` is a serializable display payload for the operations list; FormData/File are not stored in state. Export `FormDataSubmittedData` type.
+
 ## 5.4.0
 
 ### Minor Changes
