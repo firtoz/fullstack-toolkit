@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.4.0
+
+### Minor Changes
+
+- [`104ba1d`](https://github.com/firtoz/fullstack-toolkit/commit/104ba1ddcd0d9503f87fa4be344d2be54fb39dfa) Thanks [@firtoz](https://github.com/firtoz)! - Add `useConcurrentDynamicSubmitter` for multiple concurrent form submissions to the same action. Each submission is tracked independently (pending → done/error) via an `operations` map and returns `{ id, promise }` so you can await and correlate results without using multiple fetchers.
+
 ## 5.3.1
 
 ### Patch Changes
