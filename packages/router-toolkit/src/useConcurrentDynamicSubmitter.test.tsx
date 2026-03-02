@@ -38,8 +38,15 @@ describe("useConcurrentDynamicSubmitter", () => {
 	});
 
 	it("uses href to build action URL", () => {
-		globalThis.fetch = mock(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response));
-		renderHook(() => useConcurrentDynamicSubmitter("/api/upload", { id: "123" } as never));
+		globalThis.fetch = mock(() =>
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ success: true }),
+			} as Response),
+		) as unknown as typeof globalThis.fetch;
+		renderHook(() =>
+			useConcurrentDynamicSubmitter("/api/upload", { id: "123" } as never),
+		);
 		expect(mockHref).toHaveBeenCalledWith("/api/upload", { id: "123" });
 	});
 
@@ -54,7 +61,7 @@ describe("useConcurrentDynamicSubmitter", () => {
 					json: () => Promise.resolve({ success: true, value: "ok" }),
 				} as Response),
 			),
-		);
+		) as unknown as typeof globalThis.fetch;
 
 		const { result } = renderHook(() =>
 			useConcurrentDynamicSubmitter("/api/upload"),
@@ -73,9 +80,7 @@ describe("useConcurrentDynamicSubmitter", () => {
 		const statuses = Object.values(result.current.operations).map(
 			(op) => op.status,
 		);
-		expect(statuses.every((s) => s === "pending" || s === "done")).toBe(
-			true,
-		);
+		expect(statuses.every((s) => s === "pending" || s === "done")).toBe(true);
 
 		await act(async () => {
 			await Promise.all(submissions.map((s) => s.promise));
@@ -106,15 +111,15 @@ describe("useConcurrentDynamicSubmitter", () => {
 					json: () => Promise.resolve({ success: true }),
 				} as Response),
 			),
-		);
+		) as unknown as typeof globalThis.fetch;
 
 		const { result } = renderHook(() =>
 			useConcurrentDynamicSubmitter("/api/upload"),
 		);
 
-		let a: ReturnType<typeof result.current.submitJson>;
-		let b: ReturnType<typeof result.current.submitJson>;
-		let c: ReturnType<typeof result.current.submitJson>;
+		let a!: ReturnType<typeof result.current.submitJson>;
+		let b!: ReturnType<typeof result.current.submitJson>;
+		let c!: ReturnType<typeof result.current.submitJson>;
 		await act(async () => {
 			a = result.current.submitJson({ name: "a" } as never);
 			await delay(30);
@@ -168,13 +173,13 @@ describe("useConcurrentDynamicSubmitter", () => {
 				status: 500,
 				text: () => Promise.resolve("Server error"),
 			} as Response),
-		);
+		) as unknown as typeof globalThis.fetch;
 
 		const { result } = renderHook(() =>
 			useConcurrentDynamicSubmitter("/api/upload"),
 		);
 
-		let id: string;
+		let id!: string;
 		await act(() => {
 			const out = result.current.submitJson({ x: 1 } as never);
 			id = out.id;
@@ -201,7 +206,7 @@ describe("useConcurrentDynamicSubmitter", () => {
 				json: () => Promise.resolve({ success: true }),
 			} as Response),
 		);
-		globalThis.fetch = mockFetch;
+		globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
 
 		const { result } = renderHook(() =>
 			useConcurrentDynamicSubmitter("/api/upload"),
@@ -239,18 +244,17 @@ describe("useConcurrentDynamicSubmitter", () => {
 			fetchPromise.then(() =>
 				Promise.resolve({
 					ok: true,
-					json: () =>
-						Promise.resolve({ saved: true, id: "server-123" }),
+					json: () => Promise.resolve({ saved: true, id: "server-123" }),
 				} as Response),
 			),
-		);
+		) as unknown as typeof globalThis.fetch;
 
 		const { result } = renderHook(() =>
 			useConcurrentDynamicSubmitter("/api/upload"),
 		);
 
-		let id: string;
-		let promise: Promise<unknown>;
+		let id!: string;
+		let promise!: Promise<unknown>;
 		await act(() => {
 			const out = result.current.submitJson({
 				fileName: "doc.pdf",
@@ -261,7 +265,6 @@ describe("useConcurrentDynamicSubmitter", () => {
 		});
 
 		const payload = { fileName: "doc.pdf", size: 1024 };
-		if (!id) throw new Error("expected id");
 		const opId = id;
 		const opPending = result.current.operations[opId];
 		expect(opPending).toBeDefined();
