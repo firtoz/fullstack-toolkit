@@ -366,9 +366,13 @@ describe("useConcurrentDynamicSubmitter", () => {
 		);
 
 		await act(() => {
-			result.current.submitFormData(new FormData(), {}, {
-				headers: { Accept: "application/json" },
-			});
+			result.current.submitFormData(
+				new FormData(),
+				{},
+				{
+					headers: { Accept: "application/json" },
+				},
+			);
 		});
 
 		expect(mockFetch).toHaveBeenCalledWith(
