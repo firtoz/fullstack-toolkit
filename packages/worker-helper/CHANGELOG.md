@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.5.0
+
+### Minor Changes
+
+- [`894ee47`](https://github.com/firtoz/fullstack-toolkit/commit/894ee4775393f4c536397e7db869ccfb31d3f045) Thanks [@firtoz](https://github.com/firtoz)! - Allow passing extra arguments to `wrangler types` via cf-typegen. Any arguments after the directory are forwarded to the wrangler command (e.g. `--env-interface WebAppEnv`, `-c wrangler.jsonc`).
+
 ## 1.4.0
 
 ### Minor Changes
