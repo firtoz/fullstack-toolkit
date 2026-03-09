@@ -54,6 +54,20 @@ cd your-worker-package
 bun run cf-typegen
 ```
 
+Any arguments after the directory are passed through to `wrangler types`. For example, to use a custom env interface or config:
+
+```bash
+bun run cf-typegen -- --env-interface WebAppEnv
+# or with a custom config path
+bun run cf-typegen -- -c wrangler.jsonc --env-interface WebAppEnv
+```
+
+When invoking the script directly, pass the directory first, then extra args:
+
+```bash
+bun --cwd ../../packages/worker-helper cf-typegen $(pwd) --env-interface WebAppEnv
+```
+
 **Output:**
 ```
 Running CF typegen for: /path/to/your-worker

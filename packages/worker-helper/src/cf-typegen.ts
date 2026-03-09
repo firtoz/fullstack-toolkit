@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -9,8 +9,10 @@ import {
 } from "./cf-typegen-discovery";
 import { prepareEnvFiles } from "./utils/prepare-env";
 
-// Use the current working directory
+// First arg: directory (cwd). Remaining args: passed through to `wrangler types`.
 const cwd = process.argv[2];
+const extraWranglerArgs = process.argv.slice(3);
+
 if (!cwd || !fs.existsSync(cwd)) {
 	console.error(
 		"Please specify a directory as the first parameter. Usually $(pwd).",
@@ -39,9 +41,9 @@ function runWranglerTypes() {
 		console.log(`  Found ${allConfigs.length} wrangler config(s) in workspace`);
 	}
 
-	// Build the command with multiple -c flags
+	// Build args for wrangler types: multiple -c flags, --env-file, then any extra args
 	// The first config should be the current directory's wrangler.jsonc
-	const configFlags = ["-c wrangler.jsonc"];
+	const args: string[] = ["types", "-c", "wrangler.jsonc"];
 
 	// Add other configs (relative to cwd for better readability)
 	const currentWranglerJsonc = path.join(cwd, "wrangler.jsonc");
@@ -58,27 +60,27 @@ function runWranglerTypes() {
 		}
 		// Make path relative to cwd
 		const relativePath = path.relative(cwd, configPath);
-		configFlags.push(`-c ${relativePath}`);
+		args.push("-c", relativePath);
 	}
 
 	for (const envFile of envFiles) {
-		configFlags.push(`--env-file ${envFile}`);
+		args.push("--env-file", envFile);
 	}
 
-	const command = `wrangler types ${configFlags.join(" ")}`;
+	args.push(...extraWranglerArgs);
 
+	const command = `wrangler ${args.join(" ")}`;
 	console.log(`  Command: ${command}`);
 
-	try {
-		execSync(command, {
-			cwd,
-			stdio: "inherit",
-		});
-		console.log("✓ Wrangler types generated with all workspace bindings");
-	} catch {
+	const result = spawnSync("wrangler", args, {
+		cwd,
+		stdio: "inherit",
+	});
+	if (result.status !== 0) {
 		console.error("Failed to run wrangler types");
 		process.exit(1);
 	}
+	console.log("✓ Wrangler types generated with all workspace bindings");
 }
 
 // Run all steps
