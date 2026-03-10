@@ -311,7 +311,8 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 		(target, options) => {
 			return fetcher.submit(target, {
 				...options,
-				method: (options?.method ?? "POST") as import("react-router").HTMLFormMethod,
+				method: (options?.method ??
+					"POST") as import("react-router").HTMLFormMethod,
 				action: url,
 				encType: "multipart/form-data",
 			} as Parameters<typeof fetcher.submit>[1]);
@@ -321,12 +322,16 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 
 	const submitJson: SubmitJsonFunc<TInfo> = useCallback(
 		(data, options = {}) => {
-			return fetcher.submit(data as SubmitTarget, {
-				...options,
-				method: (options.method ?? "POST") as import("react-router").HTMLFormMethod,
-				action: url,
-				encType: "application/json",
-			} as Parameters<typeof fetcher.submit>[1]);
+			return fetcher.submit(
+				data as SubmitTarget,
+				{
+					...options,
+					method: (options.method ??
+						"POST") as import("react-router").HTMLFormMethod,
+					action: url,
+					encType: "application/json",
+				} as Parameters<typeof fetcher.submit>[1],
+			);
 		},
 		[fetcher.submit, url],
 	);
