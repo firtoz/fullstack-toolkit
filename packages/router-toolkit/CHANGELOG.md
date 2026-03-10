@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 5.5.2
+
+### Patch Changes
+
+- [`efb49bb`](https://github.com/firtoz/fullstack-toolkit/commit/efb49bbcb389063b44fa4c0bec9968f97e6d78a9) Thanks [@firtoz](https://github.com/firtoz)! - Fix typing for `useDynamicSubmitter` submit options: explicitly type `method` as `HTMLFormMethod` and cast submit options so `fetcher.submit` receives correctly typed arguments when using form and JSON submit.
+
 ## 5.5.1
 
 ### Patch Changes
