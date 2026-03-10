@@ -311,9 +311,10 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 		(target, options) => {
 			return fetcher.submit(target, {
 				...options,
+				method: (options?.method ?? "POST") as import("react-router").HTMLFormMethod,
 				action: url,
 				encType: "multipart/form-data",
-			});
+			} as Parameters<typeof fetcher.submit>[1]);
 		},
 		[fetcher.submit, url],
 	);
@@ -322,10 +323,10 @@ export const useDynamicSubmitter = <TInfo extends RouteModule>(
 		(data, options = {}) => {
 			return fetcher.submit(data as SubmitTarget, {
 				...options,
-				method: options.method ?? "POST",
+				method: (options.method ?? "POST") as import("react-router").HTMLFormMethod,
 				action: url,
 				encType: "application/json",
-			});
+			} as Parameters<typeof fetcher.submit>[1]);
 		},
 		[fetcher.submit, url],
 	);
