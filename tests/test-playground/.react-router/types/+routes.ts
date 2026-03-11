@@ -56,6 +56,9 @@ type Pages = {
   "/router-toolkit/form-action-test": {
     params: {};
   };
+  "/router-toolkit/concurrent-submitter-test": {
+    params: {};
+  };
   "/router-toolkit/submitter-with-loader": {
     params: {};
   };
@@ -70,7 +73,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -132,6 +135,10 @@ type RouteFiles = {
     id: "routes/router-toolkit/form-action-test";
     page: "/router-toolkit/form-action-test";
   };
+  "routes/router-toolkit/concurrent-submitter-test.tsx": {
+    id: "routes/router-toolkit/concurrent-submitter-test";
+    page: "/router-toolkit/concurrent-submitter-test";
+  };
   "routes/router-toolkit/submitter-with-loader.tsx": {
     id: "routes/router-toolkit/submitter-with-loader";
     page: "/router-toolkit/submitter-with-loader";
@@ -163,6 +170,7 @@ type RouteModules = {
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");
   "routes/router-toolkit/action-test": typeof import("./app/routes/router-toolkit/action-test.tsx");
   "routes/router-toolkit/form-action-test": typeof import("./app/routes/router-toolkit/form-action-test.tsx");
+  "routes/router-toolkit/concurrent-submitter-test": typeof import("./app/routes/router-toolkit/concurrent-submitter-test.tsx");
   "routes/router-toolkit/submitter-with-loader": typeof import("./app/routes/router-toolkit/submitter-with-loader.tsx");
   "routes/router-toolkit/fetcher-data-refresh": typeof import("./app/routes/router-toolkit/fetcher-data-refresh.tsx");
   "routes/router-toolkit/fetcher-invalidation": typeof import("./app/routes/router-toolkit/fetcher-invalidation.tsx");

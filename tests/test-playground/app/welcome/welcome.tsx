@@ -69,6 +69,12 @@ const routerToolkitRoutes: RouteItem[] = [
 		description: "Form validation with Zod schema and type-safe error handling",
 	},
 	{
+		path: "/router-toolkit/concurrent-submitter-test",
+		text: "useConcurrentSubmitter (Provider)",
+		description:
+			"Concurrent submissions via global provider; uses framework fetcher",
+	},
+	{
 		path: href("/router-toolkit/submitter-with-loader"),
 		text: "useDynamicSubmitter + useLoaderData",
 		description: "Form submissions working alongside loader data",

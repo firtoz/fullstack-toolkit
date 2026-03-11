@@ -40,6 +40,10 @@ export default [
 		route("action-test", "routes/router-toolkit/action-test.tsx"),
 		route("form-action-test", "routes/router-toolkit/form-action-test.tsx"),
 		route(
+			"concurrent-submitter-test",
+			"routes/router-toolkit/concurrent-submitter-test.tsx",
+		),
+		route(
 			"submitter-with-loader",
 			"routes/router-toolkit/submitter-with-loader.tsx",
 		),

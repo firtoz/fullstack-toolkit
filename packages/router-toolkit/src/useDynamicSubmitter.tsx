@@ -122,23 +122,8 @@ import {
 	useFetcher,
 } from "react-router";
 import type { z } from "zod";
-import type { Func } from "./types/Func";
 import type { HrefArgs } from "./types/HrefArgs";
-import type { RegisterPages } from "./types/RegisterPages";
-
-/**
- * Represents a route module with the required exports for useDynamicSubmitter.
- *
- * A valid route module must export:
- * - `route`: The route path (e.g., "/admin/posts/:id")
- * - `action`: The form action handler created with `formAction`
- * - `formSchema`: The Zod schema for form validation
- */
-type RouteModule = {
-	route: keyof RegisterPages;
-	action: Func;
-	formSchema: z.ZodType;
-};
+import type { RouteWithActionModule } from "./types/RouteWithActionModule";
 
 /**
  * Function type for submitting form data with a SubmitTarget.
@@ -155,7 +140,7 @@ type RouteModule = {
  * submitter.submit(formRef.current, { method: "POST" });
  * ```
  */
-type SubmitFunc<TModule extends RouteModule> = (
+type SubmitFunc<TModule extends RouteWithActionModule> = (
 	target: z.infer<TModule["formSchema"]> & SubmitTarget,
 	options: Omit<SubmitOptions, "action" | "method" | "encType"> & {
 		method: Exclude<SubmitOptions["method"], "GET">;
@@ -195,7 +180,7 @@ type SubmitJsonOptions = Omit<
  * await submitter.submitJson(data, { method: "PUT" });
  * ```
  */
-type SubmitJsonFunc<TModule extends RouteModule> = (
+type SubmitJsonFunc<TModule extends RouteWithActionModule> = (
 	data: z.infer<TModule["formSchema"]>,
 	options?: SubmitJsonOptions,
 ) => Promise<void>;
@@ -282,7 +267,7 @@ type SubmitForm = (
  * }
  * ```
  */
-export const useDynamicSubmitter = <TInfo extends RouteModule>(
+export const useDynamicSubmitter = <TInfo extends RouteWithActionModule>(
 	path: TInfo["route"],
 	...args: TInfo["route"] extends "undefined"
 		? HrefArgs<"/">

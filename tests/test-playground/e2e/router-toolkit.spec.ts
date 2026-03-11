@@ -227,6 +227,52 @@ test.describe("useDynamicFetcher (data fetching)", () => {
 	});
 });
 
+test.describe("useConcurrentSubmitter", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/router-toolkit/concurrent-submitter-test");
+	});
+
+	test("should show concurrent submitter page and submit one operation", async ({
+		page,
+	}) => {
+		await expect(page.getByRole("heading", { name: /Concurrent Submitter/ })).toBeVisible();
+		await expect(page.getByRole("button", { name: /Submit Alice/i })).toBeVisible();
+		await expect(page.getByRole("button", { name: /Submit Bob/i })).toBeVisible();
+		await expect(page.getByRole("button", { name: /Submit Carol/i })).toBeVisible();
+
+		// Submit Alice
+		await page.getByRole("button", { name: /Submit Alice/i }).click();
+
+		// Operation should appear and complete with success (scope to operations list to avoid matching the button)
+		const operationsList = page.getByRole("list");
+		await expect(operationsList.getByText(/op-1/)).toBeVisible({ timeout: 3000 });
+		await expect(operationsList.getByText(/status: done/)).toBeVisible({ timeout: 5000 });
+		await expect(operationsList.getByText(/— Alice/)).toBeVisible();
+		await expect(operationsList.getByText(/Registration successful!/)).toBeVisible({ timeout: 5000 });
+		await expect(operationsList.getByText(/alice@test\.com/)).toBeVisible();
+	});
+
+	test("should track multiple concurrent submissions", async ({ page }) => {
+		// Fire all three submissions in quick succession
+		await page.getByRole("button", { name: /Submit Alice/i }).click();
+		await page.getByRole("button", { name: /Submit Bob/i }).click();
+		await page.getByRole("button", { name: /Submit Carol/i }).click();
+
+		// Operations list should show 3 entries
+		await expect(page.getByRole("heading", { name: /Operations \(3\)/ })).toBeVisible({
+			timeout: 8000,
+		});
+
+		// All three should complete with done status and names (scope to list to avoid button matches)
+		const operationsList = page.getByRole("list");
+		await expect(operationsList.getByText(/status: done/).first()).toBeVisible({ timeout: 8000 });
+		await expect(operationsList.getByText(/— Alice/)).toBeVisible();
+		await expect(operationsList.getByText(/— Bob/)).toBeVisible();
+		await expect(operationsList.getByText(/— Carol/)).toBeVisible();
+		await expect(operationsList.getByText(/Registration successful!/).first()).toBeVisible();
+	});
+});
+
 test.describe("useDynamicFetcher (invalidation)", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/router-toolkit/fetcher-invalidation");

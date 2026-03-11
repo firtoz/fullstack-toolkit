@@ -1,3 +1,4 @@
+import { ConcurrentSubmitterProvider } from "@firtoz/router-toolkit";
 import {
 	isRouteErrorResponse,
 	Links,
@@ -42,7 +43,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-	return <Outlet />;
+	return (
+		<ConcurrentSubmitterProvider>
+			<Outlet />
+		</ConcurrentSubmitterProvider>
+	);
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

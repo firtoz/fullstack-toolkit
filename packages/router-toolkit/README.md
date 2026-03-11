@@ -13,7 +13,7 @@ Type-safe React Router 7 framework mode helpers with enhanced fetching, form sub
 - ✅ **Type-safe routing** - Full TypeScript support with React Router 7 framework mode
 - 🚀 **Enhanced fetching** - Dynamic fetchers with caching and query parameter support
 - 📝 **Form submission** - Type-safe form handling with Zod validation
-- 📤 **Concurrent submissions** - Multiple parallel submissions per action with per-operation tracking and optimistic UI (`useConcurrentDynamicSubmitter`)
+- 📤 **Concurrent submissions** - Multiple parallel submissions per action with per-operation tracking and optimistic UI (`ConcurrentSubmitterProvider` + `useConcurrentSubmitter`)
 - 🔄 **State tracking** - Monitor fetcher state changes with ease
 - 🎯 **Zero configuration** - Works out of the box with React Router 7
 - 📦 **Tree-shakeable** - Import only what you need
@@ -279,25 +279,37 @@ export default function ContactForm() {
 }
 ```
 
-### `useConcurrentDynamicSubmitter`
+### `ConcurrentSubmitterProvider` + `useConcurrentSubmitter`
 
-Run multiple submissions to the same action in parallel, each tracked independently. No single fetcher; each call returns `{ id, promise }` and adds an entry to `operations` with `submittedData` (for optimistic UI) and `data` when done.
+Run multiple submissions in parallel via the framework fetcher; each is tracked in `operations` with `submittedData` (for optimistic UI) and `data` when done. Wrap your app (or subtree) with `ConcurrentSubmitterProvider`, then use `useConcurrentSubmitter<TInfo>()` for typed `submitJson` / `submitFormData` with path and args per call.
 
-- **`submitJson(data)`** — POST JSON; `submittedData` is the payload you send.
-- **`submitFormData(formData, submittedData?)`** — POST multipart/form-data (e.g. file uploads). Optional `submittedData` is a serializable object for the operations list (e.g. `{ type: "upload", label: "photo.jpg" }`); FormData/File are not stored in state.
+- **`submitJson(path, args, data, options?)`** — POST JSON to the given route; path/args are per call.
+- **`submitFormData(path, args, formData, submittedData?, options?)`** — POST multipart/form-data. Optional `submittedData` is a serializable object for the operations list (e.g. `{ type: "upload", label: "photo.jpg" }`); FormData/File are not stored in state.
 
 ```tsx
-import { useConcurrentDynamicSubmitter } from '@firtoz/router-toolkit';
+// Root (e.g. root.tsx)
+import { ConcurrentSubmitterProvider } from '@firtoz/router-toolkit';
+
+export default function App() {
+  return (
+    <ConcurrentSubmitterProvider>
+      <Outlet />
+    </ConcurrentSubmitterProvider>
+  );
+}
+
+// Any route or component
+import { useConcurrentSubmitter } from '@firtoz/router-toolkit';
 
 function UploadList() {
-  const { operations, submitFormData } = useConcurrentDynamicSubmitter<
+  const { operations, submitFormData } = useConcurrentSubmitter<
     typeof import("./api.upload")
-  >("/api/upload");
+  >();
 
   const handleUpload = (file: File) => {
     const fd = new FormData();
     fd.set("file", file);
-    submitFormData(fd, { type: "upload", label: file.name });
+    submitFormData("/api/upload", undefined, fd, { type: "upload", label: file.name });
   };
 
   return (
@@ -321,8 +333,7 @@ function UploadList() {
 ```
 
 - **`operations`**: `Record<string, Operation<T>>` — each operation has `id`, `status` (`"pending"` | `"done"` | `"error"`), `submittedData` (payload or display object), and when done `data` (action response).
-- **`submitJson(data)`**: returns `{ id, promise }`.
-- **`submitFormData(formData, submittedData?)`**: returns `{ id, promise }`; `submittedData` defaults to `{}` and is used only for display in the operations list.
+- **`submitJson(path, args, data, options?)`** / **`submitFormData(path, args, formData, submittedData?, options?)`**: each returns `{ id, promise }`. `submittedData` defaults to `{}` and is used only for display in the operations list.
 
 ### `useFetcherStateChanged`
 
