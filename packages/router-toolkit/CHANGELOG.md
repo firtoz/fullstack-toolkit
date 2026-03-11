@@ -1,5 +1,15 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 6.0.0
+
+### Major Changes
+
+- [`c5edbfc`](https://github.com/firtoz/fullstack-toolkit/commit/c5edbfc27f96154a5943569094ebc08983058bd2) Thanks [@firtoz](https://github.com/firtoz)! - Remove `useConcurrentDynamicSubmitter`. Use `ConcurrentSubmitterProvider` (at app root) and `useConcurrentSubmitter()` instead. Submissions go through the framework fetcher with path/args per call; see README for the new API.
+
+### Minor Changes
+
+- [`c5edbfc`](https://github.com/firtoz/fullstack-toolkit/commit/c5edbfc27f96154a5943569094ebc08983058bd2) Thanks [@firtoz](https://github.com/firtoz)! - Add `ConcurrentSubmitterProvider` and `useConcurrentSubmitter` for concurrent form submissions via the framework fetcher. Use the global provider at the app root; path and args are passed per submission. Submissions go through React Router's fetcher so the correct `.data` URL and response decoding are handled by the framework.
+
 ## 5.5.2
 
 ### Patch Changes
