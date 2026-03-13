@@ -176,7 +176,7 @@ export function ConcurrentSubmitterProvider({
 			setOperationsState((prev) => {
 				const op = prev[id];
 				if (!op) return prev;
-				const { resolve, reject, ...rest } = op;
+				const { resolve, reject, pendingSubmit: _p, ...rest } = op;
 				if (error !== undefined) {
 					reject(error);
 					return {
@@ -187,7 +187,6 @@ export function ConcurrentSubmitterProvider({
 							error,
 							resolve,
 							reject,
-							pendingSubmit: undefined,
 						},
 					};
 				}
@@ -200,7 +199,6 @@ export function ConcurrentSubmitterProvider({
 						data,
 						resolve,
 						reject,
-						pendingSubmit: undefined,
 					},
 				};
 			});

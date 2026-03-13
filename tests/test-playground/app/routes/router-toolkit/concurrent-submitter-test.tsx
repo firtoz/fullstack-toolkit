@@ -21,7 +21,6 @@ export default function ConcurrentSubmitterTest() {
 	const handleSubmit = (label: string) => {
 		const { id, promise } = submitJson(
 			FORM_ACTION_PATH,
-			undefined,
 			{
 				name: label,
 				email: `${label.toLowerCase().replace(/\s/g, "")}@test.com`,

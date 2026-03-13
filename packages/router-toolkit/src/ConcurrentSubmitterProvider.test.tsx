@@ -37,8 +37,29 @@ mock.module("react-router", () => ({
 	useFetcher: mockUseFetcher,
 }));
 
-import { ConcurrentSubmitterProvider } from "./ConcurrentSubmitterProvider";
+import {
+	ConcurrentSubmitterProvider,
+	type FormDataSubmittedData,
+	type SubmitFormDataOptions,
+	type SubmitJsonOptions,
+} from "./ConcurrentSubmitterProvider";
 import { useConcurrentSubmitter } from "./useConcurrentSubmitter";
+
+/** Test helper: no-params API so we can call submitJson(path, data) and submitFormData(path, formData, ...) without args */
+type NoParamsTestApi = {
+	operations: Record<string, unknown>;
+	submitJson: (
+		path: string,
+		data: unknown,
+		options?: SubmitJsonOptions,
+	) => { id: string; promise: Promise<unknown> };
+	submitFormData: (
+		path: string,
+		formData: FormData,
+		submittedData?: FormDataSubmittedData,
+		options?: SubmitFormDataOptions,
+	) => { id: string; promise: Promise<unknown> };
+};
 
 function wrapper({ children }: { children: React.ReactNode }) {
 	return React.createElement(ConcurrentSubmitterProvider, null, children);
@@ -76,9 +97,10 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("submitJson adds operation with pending status and returns id and promise", () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		let out: { id: string; promise: Promise<unknown> } | undefined;
 		act(() => {
-			out = result.current.submitJson("/api/upload", undefined, { name: "a" });
+			out = api.submitJson("/api/upload", { name: "a" });
 		});
 		expect(out).toBeDefined();
 		expect(out!.id).toMatch(/^op-\d+$/);
@@ -93,9 +115,10 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("operation becomes done when fetcher settles with data", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		let opId!: string;
 		act(() => {
-			const out = result.current.submitJson("/api/upload", undefined, {
+			const out = api.submitJson("/api/upload", {
 				name: "test",
 			});
 			opId = out.id;
@@ -121,10 +144,11 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("promise from submitJson resolves with data when settled", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		let opId!: string;
 		let resolved: unknown;
 		act(() => {
-			const out = result.current.submitJson("/api/upload", undefined, {
+			const out = api.submitJson("/api/upload", {
 				key: "v",
 			});
 			opId = out.id;
@@ -135,8 +159,8 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 		await act(async () => {});
 		const response = { value: 42 };
 		act(() => {
-			fetcherSetters.get(opId)!.setData(response);
-			fetcherSetters.get(opId)!.setState("idle");
+			fetcherSetters.get(opId)?.setData(response);
+			fetcherSetters.get(opId)?.setState("idle");
 		});
 		await waitFor(() =>
 			expect(result.current.operations[opId].status).toBe("done"),
@@ -147,9 +171,10 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("operation becomes error when fetcher settles with error", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		let opId!: string;
 		act(() => {
-			const out = result.current.submitJson("/api/upload", undefined, { x: 1 });
+			const out = api.submitJson("/api/upload", { x: 1 });
 			opId = out.id;
 			void out.promise.catch(() => {}); // consume rejection
 		});
@@ -167,21 +192,22 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("each operation has unique id and independent pending -> done", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		let aId!: string;
 		let bId!: string;
 		let cId!: string;
 		act(() => {
-			aId = result.current.submitJson("/api/upload", undefined, {
+			aId = api.submitJson("/api/upload", {
 				name: "a",
 			}).id;
 		});
 		act(() => {
-			bId = result.current.submitJson("/api/upload", undefined, {
+			bId = api.submitJson("/api/upload", {
 				name: "b",
 			}).id;
 		});
 		act(() => {
-			cId = result.current.submitJson("/api/upload", undefined, {
+			cId = api.submitJson("/api/upload", {
 				name: "c",
 			}).id;
 		});
@@ -223,23 +249,19 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("submitFormData adds operation with submittedData for display", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		const formData = new FormData();
 		formData.set("file", "blob" as unknown as File);
 		const displayData = { type: "upload", label: "photo.jpg" };
 		let opId!: string;
 		act(() => {
-			opId = result.current.submitFormData(
-				"/api/upload",
-				undefined,
-				formData,
-				displayData,
-			).id;
+			opId = api.submitFormData("/api/upload", formData, displayData).id;
 		});
 		expect(result.current.operations[opId].submittedData).toEqual(displayData);
 		await act(async () => {});
 		act(() => {
-			fetcherSetters.get(opId)!.setData({ fileId: "abc" });
-			fetcherSetters.get(opId)!.setState("idle");
+			fetcherSetters.get(opId)?.setData({ fileId: "abc" });
+			fetcherSetters.get(opId)?.setState("idle");
 		});
 		await waitFor(() => {
 			expect(result.current.operations[opId].status).toBe("done");
@@ -252,21 +274,19 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 
 	it("submitFormData defaults submittedData to empty object when omitted", () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		let opId!: string;
 		act(() => {
-			opId = result.current.submitFormData(
-				"/api/upload",
-				undefined,
-				new FormData(),
-			).id;
+			opId = api.submitFormData("/api/upload", new FormData()).id;
 		});
 		expect(result.current.operations[opId].submittedData).toEqual({});
 	});
 
 	it("uses href without args when args is undefined", () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
+		const api = result.current as unknown as NoParamsTestApi;
 		act(() => {
-			result.current.submitJson("/api/upload", undefined, { x: 1 });
+			api.submitJson("/api/upload", { x: 1 });
 		});
 		expect(mockHref).toHaveBeenCalledWith("/api/upload");
 	});
