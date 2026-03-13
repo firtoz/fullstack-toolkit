@@ -153,7 +153,7 @@
     },
     "packages/router-toolkit": {
       "name": "@firtoz/router-toolkit",
-      "version": "6.0.0",
+      "version": "7.0.0",
       "dependencies": {
         "zod-form-data": "catalog:",
       },
