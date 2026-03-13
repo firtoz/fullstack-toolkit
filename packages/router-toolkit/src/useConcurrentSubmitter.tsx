@@ -28,19 +28,21 @@ type Equal<X, Y> =
 		? true
 		: false;
 
-type HasNoParams<R extends keyof RegisterPages> = Equal<
-	RouteParams<R>,
-	// biome-ignore lint/complexity/noBannedTypes: Intentionally empty for route with no params
-	{}
-> extends true
-	? true
-	: false;
-
-type HasOptionalParams<R extends keyof RegisterPages> = HasNoParams<R> extends true
-	? false
-	: Partial<RouteParams<R>> extends RouteParams<R>
+type HasNoParams<R extends keyof RegisterPages> =
+	Equal<
+		RouteParams<R>,
+		// biome-ignore lint/complexity/noBannedTypes: Intentionally empty for route with no params
+		{}
+	> extends true
 		? true
 		: false;
+
+type HasOptionalParams<R extends keyof RegisterPages> =
+	HasNoParams<R> extends true
+		? false
+		: Partial<RouteParams<R>> extends RouteParams<R>
+			? true
+			: false;
 
 // Args immediately after path (when needed), matching useDynamicFetcher/useDynamicSubmitter.
 // Order: (path, args?, data, options?) and (path, args?, formData, submittedData?, options?).
@@ -89,17 +91,18 @@ type SubmitFormDataFn<TInfo extends RouteWithActionModule> =
 					options?: SubmitFormDataOptions,
 				) => SubmitJsonResult<ActionResult<TInfo>>;
 
-export type UseConcurrentSubmitterReturn<TInfo extends RouteWithActionModule> = {
-	operations: Record<
-		string,
-		Operation<
-			ActionResult<TInfo>,
-			z.infer<TInfo["formSchema"]> | FormDataSubmittedData
-		>
-	>;
-	submitJson: SubmitJsonFn<TInfo>;
-	submitFormData: SubmitFormDataFn<TInfo>;
-};
+export type UseConcurrentSubmitterReturn<TInfo extends RouteWithActionModule> =
+	{
+		operations: Record<
+			string,
+			Operation<
+				ActionResult<TInfo>,
+				z.infer<TInfo["formSchema"]> | FormDataSubmittedData
+			>
+		>;
+		submitJson: SubmitJsonFn<TInfo>;
+		submitFormData: SubmitFormDataFn<TInfo>;
+	};
 
 export function useConcurrentSubmitter<
 	TInfo extends RouteWithActionModule,
@@ -172,7 +175,13 @@ export function useConcurrentSubmitter<
 			const options = (rest.length === 4 ? rest[3] : undefined) as
 				| SubmitFormDataOptions
 				| undefined;
-			return ctx.addFormSubmission(path, args, formData, submittedData, options);
+			return ctx.addFormSubmission(
+				path,
+				args,
+				formData,
+				submittedData,
+				options,
+			);
 		},
 		[ctx],
 	) as UseConcurrentSubmitterReturn<TInfo>["submitFormData"];
