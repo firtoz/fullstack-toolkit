@@ -1,5 +1,13 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 7.0.0
+
+### Major Changes
+
+- [`df96419`](https://github.com/firtoz/fullstack-toolkit/commit/df96419ee6b655b143a1c0ed882bbf117e19d536) Thanks [@firtoz](https://github.com/firtoz)! - **Breaking:** Reorder `useConcurrentSubmitter` `submitJson` / `submitFormData` parameters so route args come directly after `path` (matching `useDynamicFetcher` / `useDynamicSubmitter`). Routes with no params can omit `args` entirely instead of passing `undefined`.
+
+  Also fix `exactOptionalPropertyTypes` compatibility by omitting `pendingSubmit` from settled operation state instead of setting it to `undefined`.
+
 ## 6.0.0
 
 ### Major Changes
