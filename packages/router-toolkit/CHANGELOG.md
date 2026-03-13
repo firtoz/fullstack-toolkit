@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 7.0.1
+
+### Patch Changes
+
+- [`d0676c5`](https://github.com/firtoz/fullstack-toolkit/commit/d0676c578e982d0fad6046e7ee585b1c2daadaca) Thanks [@firtoz](https://github.com/firtoz)! - Fix FetcherRunner never settling operations: account for the `loading` (revalidation) phase in the fetcher lifecycle so the idle transition is correctly detected.
+
 ## 7.0.0
 
 ### Major Changes
