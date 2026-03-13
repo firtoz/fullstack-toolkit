@@ -142,10 +142,12 @@ function FetcherRunner({
 	}, [pendingSubmit, fetcher.submit]);
 
 	React.useEffect(() => {
-		const wasSubmitting = prevStateRef.current === "submitting";
+		const wasWorking =
+			prevStateRef.current === "submitting" ||
+			prevStateRef.current === "loading";
 		prevStateRef.current = fetcher.state;
 
-		if (wasSubmitting && fetcher.state === "idle" && !settledRef.current) {
+		if (wasWorking && fetcher.state === "idle" && !settledRef.current) {
 			settledRef.current = true;
 			if (fetcher.data !== undefined) {
 				onSettle(id, fetcher.data, undefined);
