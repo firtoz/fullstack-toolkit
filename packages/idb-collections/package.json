@@ -1,7 +1,7 @@
 {
-	"name": "@firtoz/db-helpers",
-	"version": "1.0.0",
-	"description": "TanStack DB helpers and utilities",
+	"name": "@firtoz/idb-collections",
+	"version": "0.1.0",
+	"description": "IndexedDB collection utilities for TanStack DB — key-value adapter, query optimization",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -28,7 +28,9 @@
 		"typescript",
 		"tanstack",
 		"tanstack-db",
-		"db-helpers"
+		"indexeddb",
+		"idb",
+		"collections"
 	],
 	"author": "Firtina Ozbalikchi <firtoz@github.com>",
 	"license": "MIT",
@@ -36,7 +38,7 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/firtoz/fullstack-toolkit.git",
-		"directory": "packages/db-helpers"
+		"directory": "packages/idb-collections"
 	},
 	"bugs": {
 		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
@@ -54,10 +56,10 @@
 	"devDependencies": {
 		"@standard-schema/spec": "^1.1.0",
 		"@tanstack/db": "catalog:",
-		"bun-types": "^1.3.10",
-		"zod": "^4.3.6"
+		"bun-types": "catalog:",
+		"zod": "catalog:"
 	},
 	"dependencies": {
-		"@firtoz/maybe-error": "workspace:*"
+		"@firtoz/db-helpers": "workspace:*"
 	}
 }

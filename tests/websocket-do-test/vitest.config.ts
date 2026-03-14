@@ -9,26 +9,20 @@
  * Reference: https://developers.cloudflare.com/workers/testing/vitest-integration/configuration/
  */
 
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			wrangler: {
+				configPath: "./wrangler.jsonc",
+			},
+		}),
+	],
 	test: {
-		// Only include websocket tests (chat-agent tests use vitest.chat-agent.config.ts)
 		include: ["src/websocket/**/*.test.ts"],
-
-		// Timeouts for async operations like WebSocket connections and message broadcasting
 		testTimeout: 30000,
 		hookTimeout: 30000,
-
-		poolOptions: {
-			workers: {
-				wrangler: {
-					// Point to wrangler config to get DO bindings, environment, etc.
-					// This automatically loads your Durable Object classes and bindings
-					// Reference: https://developers.cloudflare.com/workers/testing/vitest-integration/get-started/
-					configPath: "./wrangler.jsonc",
-				},
-			},
-		},
 	},
 });

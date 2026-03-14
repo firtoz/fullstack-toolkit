@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { tryExtractIndexedQuery } from "@firtoz/drizzle-indexeddb/collections/indexeddb-collection";
+import { tryExtractIndexedQuery } from "@firtoz/idb-collections";
 import type { IR } from "@tanstack/db";
 
 describe("tryExtractIndexedQuery - Unit Tests", () => {

@@ -4,10 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-	evaluateExpression,
-	getExpressionValue,
-} from "@firtoz/drizzle-indexeddb/collections/indexeddb-collection";
+import { evaluateExpression, getExpressionValue } from "@firtoz/db-helpers";
 import type { IR } from "@tanstack/db";
 import { createTestTodos } from "../test-utils/collection-test-utils";
 import type { Todo } from "test-schema/schema";

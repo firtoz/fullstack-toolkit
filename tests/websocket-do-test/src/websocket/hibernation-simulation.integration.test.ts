@@ -18,7 +18,7 @@
  * - https://thomasgauvin.com/writing/how-cloudflare-durable-objects-websocket-hibernation-works
  */
 
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { assert, describe, expect, it, vi } from "vitest";
 import type { ServerMessage } from "./test-fixtures/ChatRoomDO";
 
@@ -30,7 +30,7 @@ describe("Hibernation Resume Logic", () => {
 			const roomId = "test-hibernation-resume";
 
 			// Step 1: Connect a WebSocket and establish a session
-			const resp1 = await SELF.fetch(
+			const resp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: { Upgrade: "websocket" },
@@ -45,7 +45,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Step 2: Check initial session state
-			const infoResp1 = await SELF.fetch(
+			const infoResp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -69,7 +69,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Step 4: Verify the name was changed
-			const infoResp2 = await SELF.fetch(
+			const infoResp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -99,7 +99,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Step 6: Verify session was removed after close
-			const infoResp3 = await SELF.fetch(
+			const infoResp3 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -111,11 +111,11 @@ describe("Hibernation Resume Logic", () => {
 			const roomId = "test-multi-session-resume";
 
 			// Connect multiple WebSockets
-			const resp1 = await SELF.fetch(
+			const resp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{ headers: { Upgrade: "websocket" } },
 			);
-			const resp2 = await SELF.fetch(
+			const resp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{ headers: { Upgrade: "websocket" } },
 			);
@@ -143,7 +143,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Get initial session info
-			const infoResp1 = await SELF.fetch(
+			const infoResp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -162,7 +162,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Verify both sessions have updated state
-			const infoResp2 = await SELF.fetch(
+			const infoResp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -219,7 +219,7 @@ describe("Hibernation Resume Logic", () => {
 			// This test demonstrates the key mechanism that makes hibernation work:
 			// Session data is serialized to the WebSocket's attachment (cf:durable-websocket-state)
 
-			const resp = await SELF.fetch(
+			const resp = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{ headers: { Upgrade: "websocket" } },
 			);
@@ -231,7 +231,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Get initial session
-			const infoResp1 = await SELF.fetch(
+			const infoResp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -249,7 +249,7 @@ describe("Hibernation Resume Logic", () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Verify the update persisted
-			const infoResp2 = await SELF.fetch(
+			const infoResp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -281,7 +281,7 @@ describe("Hibernation Resume Logic", () => {
 			// Best Practice 1: Always call session.update() after modifying session data
 			// This ensures the data is serialized to the WebSocket attachment
 
-			const resp = await SELF.fetch(
+			const resp = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{ headers: { Upgrade: "websocket" } },
 			);
@@ -297,7 +297,7 @@ describe("Hibernation Resume Logic", () => {
 
 			// The session implementation should call this.update() after modifying this.data
 			// Let's verify the state persisted
-			const infoResp = await SELF.fetch(
+			const infoResp = await exports.default.fetch(
 				`http://example.com/room/${roomId}/info`,
 				{ method: "POST" },
 			);
@@ -326,7 +326,7 @@ describe("Constructor Hibernation Resume Logic", () => {
 		const roomId = "test-constructor-resume";
 
 		// Connect a WebSocket - this triggers the normal path: createSession(ctx, websocket)
-		const resp = await SELF.fetch(
+		const resp = await exports.default.fetch(
 			`http://example.com/room/${roomId}/websocket`,
 			{ headers: { Upgrade: "websocket" } },
 		);
@@ -337,7 +337,7 @@ describe("Constructor Hibernation Resume Logic", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Verify session exists
-		const infoResp = await SELF.fetch(
+		const infoResp = await exports.default.fetch(
 			`http://example.com/room/${roomId}/info`,
 			{ method: "POST" },
 		);
@@ -362,7 +362,7 @@ describe("Constructor Hibernation Resume Logic", () => {
 		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		// Verify the state was persisted (serialized to WebSocket attachment)
-		const infoResp2 = await SELF.fetch(
+		const infoResp2 = await exports.default.fetch(
 			`http://example.com/room/${roomId}/info`,
 			{ method: "POST" },
 		);
@@ -390,11 +390,11 @@ describe("Constructor Hibernation Resume Logic", () => {
 		const roomId = "test-constructor-error-handling";
 
 		// Connect multiple WebSockets
-		const resp1 = await SELF.fetch(
+		const resp1 = await exports.default.fetch(
 			`http://example.com/room/${roomId}/websocket`,
 			{ headers: { Upgrade: "websocket" } },
 		);
-		const resp2 = await SELF.fetch(
+		const resp2 = await exports.default.fetch(
 			`http://example.com/room/${roomId}/websocket`,
 			{ headers: { Upgrade: "websocket" } },
 		);
@@ -409,7 +409,7 @@ describe("Constructor Hibernation Resume Logic", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Both sessions should be created successfully
-		const infoResp = await SELF.fetch(
+		const infoResp = await exports.default.fetch(
 			`http://example.com/room/${roomId}/info`,
 			{ method: "POST" },
 		);

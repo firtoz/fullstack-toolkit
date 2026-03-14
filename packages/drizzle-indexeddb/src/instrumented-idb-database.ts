@@ -1,3 +1,4 @@
+import type { KeyRangeSpec } from "@firtoz/idb-collections";
 import type {
 	IDBDatabaseLike,
 	IDBCreator,
@@ -5,7 +6,6 @@ import type {
 	IndexInfo,
 	CreateStoreOptions,
 	CreateIndexOptions,
-	KeyRangeSpec,
 } from "./idb-types";
 import type { IDBInterceptor } from "./idb-interceptor";
 import { defaultIDBCreator } from "./native-idb-database";

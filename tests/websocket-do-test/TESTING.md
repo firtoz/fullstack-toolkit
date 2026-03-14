@@ -49,41 +49,44 @@ Worker's binding "CHAT_ROOM" refers to a service "websocket-do-test", but no suc
 
 ```typescript
 // vitest.config.ts
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
+export default defineConfig({
+  plugins: [
+    cloudflareTest({
+      wrangler: { configPath: "./wrangler.jsonc" },
+    }),
+  ],
   test: {
-    poolOptions: {
-      workers: {
-        wrangler: { configPath: "./wrangler.jsonc" },
-      },
-    },
+    // include, testTimeout, hookTimeout, etc.
   },
 });
 ```
 
 **Key points:**
-- Use `defineWorkersConfig` instead of regular `defineConfig`
+- Use the `cloudflareTest()` plugin from `@cloudflare/vitest-pool-workers` with `defineConfig` from `vitest/config`
 - The `wrangler.configPath` must point to your wrangler configuration file
+- Requires Vitest 4.x (`vitest@^4.1.0`)
 - This integration uses Miniflare under the hood, which has proper WebSocket support
 
-### Test Setup with SELF
+### Test Setup with Worker Default Export
 
 **Reference:** [Cloudflare Vitest Integration - Write Your First Test](https://developers.cloudflare.com/workers/testing/vitest-integration/write-your-first-test/)
 
-The `SELF` import from `cloudflare:test` is the key to testing your Worker:
+Use `exports` from `cloudflare:workers` to call your Worker's default export (same behaviour as the old `SELF` from `cloudflare:test`):
 
 ```typescript
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 // IMPORTANT: Import your worker to load it into the test environment
-// This ensures the Worker and DO classes are available to SELF
+// This ensures the Worker and DO classes are available
 import "./test-fixtures/worker";
 
 it("should establish WebSocket connection", async () => {
-  // SELF.fetch() routes to your Worker's default export
-  const resp = await SELF.fetch("http://example.com/room/test/websocket", {
+  // exports.default.fetch() routes to your Worker's default export
+  const resp = await exports.default.fetch("http://example.com/room/test/websocket", {
     headers: { Upgrade: "websocket" }
   });
 
@@ -93,7 +96,7 @@ it("should establish WebSocket connection", async () => {
 ```
 
 **Why this works:**
-- `SELF` is a service binding to your Worker's default export
+- `exports.default` is your Worker's default export (fetch handler)
 - When you import your worker file, it registers with the test environment
 - The `response.webSocket` property is available when using `vitest-pool-workers`, unlike `unstable_dev`
 
@@ -302,7 +305,7 @@ it("should isolate different room instances", async () => {
 ## Configuration Files
 
 - **`wrangler.jsonc`** - Wrangler configuration with DO bindings (includes JSON schema for IDE support)
-- **`vitest.config.ts`** - Vitest configuration using `defineWorkersConfig`
+- **`vitest.config.ts`** - Vitest configuration using `cloudflareTest()` plugin
 - **`tsconfig.json`** - TypeScript configuration including generated `worker-configuration.d.ts`
 - **`biome.json`** - Linting configuration (ignores generated files)
 - **`turbo.json`** - Task dependencies ensuring proper build order

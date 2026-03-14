@@ -9,7 +9,7 @@
  * Reference: https://github.com/firtoz/router-toolkit/tree/main/packages/hono-fetcher
  */
 
-import { env, SELF } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import {
 	honoDoFetcher,
 	honoDoFetcherWithId,
@@ -181,7 +181,7 @@ describe("honoDoFetcher Integration Tests", () => {
 			expect(info.sessions).toHaveLength(0);
 
 			// Connect first WebSocket client
-			const wsResp1 = await SELF.fetch(
+			const wsResp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: { Upgrade: "websocket" },
@@ -210,7 +210,7 @@ describe("honoDoFetcher Integration Tests", () => {
 			expect(session1.name.startsWith("User-")).toBe(true);
 
 			// Connect second WebSocket client
-			const wsResp2 = await SELF.fetch(
+			const wsResp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: { Upgrade: "websocket" },
@@ -263,7 +263,7 @@ describe("honoDoFetcher Integration Tests", () => {
 			const api = honoDoFetcherWithName(env.CHAT_ROOM, roomId);
 
 			// Connect WebSocket
-			const wsResp = await SELF.fetch(
+			const wsResp = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: { Upgrade: "websocket" },

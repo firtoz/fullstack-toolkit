@@ -29,6 +29,10 @@ export default [
 			"memory-collection-n-sync-test",
 			"routes/collections/memory-collection-n-sync-test.tsx",
 		),
+		route(
+			"keyval-collection-test",
+			"routes/collections/keyval-collection-test.tsx",
+		),
 		route("pagination-test", "routes/collections/pagination-test.tsx"),
 		route(
 			"sqlite-pagination-test",

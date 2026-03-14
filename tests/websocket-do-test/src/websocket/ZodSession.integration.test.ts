@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { pack, unpack } from "msgpackr";
 import { assert, describe, expect, it, vi } from "vitest";
 import type {
@@ -13,7 +13,7 @@ import "./test-fixtures/worker";
 describe("ZodSession Integration Tests", () => {
 	describe("Custom Protocol Error Handling", () => {
 		it("should use custom protocol error handler when provided", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-custom-error/websocket",
 				{
 					headers: {
@@ -56,7 +56,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should still use default protocol error handler when not provided", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat/websocket",
 				{
 					headers: {
@@ -99,7 +99,7 @@ describe("ZodSession Integration Tests", () => {
 
 	describe("WebSocket Connection with Zod Validation (JSON mode)", () => {
 		it("should establish websocket connection and validate messages", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -146,7 +146,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should reject invalid messages and send error", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -188,7 +188,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should validate message content constraints", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -233,7 +233,7 @@ describe("ZodSession Integration Tests", () => {
 
 	describe("Buffer Message Support with msgpack", () => {
 		it("should handle msgpack encoded messages and respond with buffers", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat/websocket",
 				{
 					headers: {
@@ -282,7 +282,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should reject invalid msgpack messages and respond with buffer error", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat/websocket",
 				{
 					headers: {
@@ -329,7 +329,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should handle corrupted buffer data gracefully", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat/websocket",
 				{
 					headers: {
@@ -374,7 +374,7 @@ describe("ZodSession Integration Tests", () => {
 
 	describe("Protocol Enforcement", () => {
 		it("should reject JSON messages when buffer mode is enabled", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat/websocket",
 				{
 					headers: {
@@ -417,7 +417,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should silently ignore buffer messages when buffer mode is disabled", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -455,7 +455,7 @@ describe("ZodSession Integration Tests", () => {
 
 	describe("Discriminated Union Message Types", () => {
 		it("should properly validate discriminated union types", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -506,7 +506,7 @@ describe("ZodSession Integration Tests", () => {
 		});
 
 		it("should reject unknown message types", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -551,7 +551,7 @@ describe("ZodSession Integration Tests", () => {
 	describe("Session Management", () => {
 		it("should track session info correctly", async () => {
 			// Test the /info endpoint
-			const infoResponse = await SELF.fetch(
+			const infoResponse = await exports.default.fetch(
 				"http://example.com/zod-chat-json/info",
 				{
 					method: "POST",
@@ -572,10 +572,10 @@ describe("ZodSession Integration Tests", () => {
 		it("should handle multiple concurrent sessions with validation", async () => {
 			// Create multiple WebSocket connections
 			const connections = await Promise.all([
-				SELF.fetch("http://example.com/zod-chat-json/websocket", {
+				exports.default.fetch("http://example.com/zod-chat-json/websocket", {
 					headers: { Upgrade: "websocket" },
 				}),
-				SELF.fetch("http://example.com/zod-chat-json/websocket", {
+				exports.default.fetch("http://example.com/zod-chat-json/websocket", {
 					headers: { Upgrade: "websocket" },
 				}),
 			]);
@@ -606,8 +606,9 @@ describe("ZodSession Integration Tests", () => {
 			// Wait a moment for messages to be processed (we don't need to wait for specific messages in this test)
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			// Check session count via info endpoint (must match the websocket endpoint)
-			const infoResponse = await SELF.fetch(
+			// Check session count via info endpoint (must match the websocket endpoint).
+			// With Vitest 4 pool, storage is per-test-file so the DO may already have sessions from other tests.
+			const infoResponse = await exports.default.fetch(
 				"http://example.com/zod-chat-json/info",
 				{
 					method: "POST",
@@ -618,8 +619,8 @@ describe("ZodSession Integration Tests", () => {
 				sessions: SessionData[];
 			};
 
-			expect(info.sessionCount).toBe(2);
-			expect(info.sessions).toHaveLength(2);
+			expect(info.sessionCount).toBeGreaterThanOrEqual(2);
+			expect(info.sessions).toHaveLength(info.sessionCount);
 		});
 	});
 });

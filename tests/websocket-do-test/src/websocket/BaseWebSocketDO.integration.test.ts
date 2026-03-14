@@ -2,7 +2,7 @@
  * Integration tests for BaseWebSocketDO using @cloudflare/vitest-pool-workers
  *
  * Key concepts demonstrated:
- * 1. Using SELF from cloudflare:test for integration testing
+ * 1. Using exports.default from cloudflare:workers for integration testing
  *    Reference: https://developers.cloudflare.com/workers/testing/vitest-integration/write-your-first-test/
  *
  * 2. WebSocket testing with vitest-pool-workers (unlike unstable_dev, this works!)
@@ -12,18 +12,18 @@
  *    Reference: https://github.com/cloudflare/workers-sdk/tree/main/fixtures/vitest-pool-workers-examples/durable-objects
  */
 
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 import type { ServerMessage } from "./test-fixtures/ChatRoomDO";
 
 // IMPORTANT: This import loads the worker module into the test environment
-// Without this, SELF won't know what to route to
+// Without this, the worker default export won't be available to route to
 // Reference: https://developers.cloudflare.com/workers/testing/vitest-integration/get-started/
 import "./test-fixtures/worker";
 
 describe("BaseWebSocketDO Integration Tests", () => {
 	it("should return worker info on root path", async () => {
-		const resp = await SELF.fetch("http://example.com/");
+		const resp = await exports.default.fetch("http://example.com/");
 		expect(resp.status).toBe(200);
 		const text = await resp.text();
 		expect(text).toBe("WebSocket DO Test Worker");
@@ -32,7 +32,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 	describe("Durable Object Routing", () => {
 		it("should reject non-WebSocket requests to /websocket endpoint", async () => {
 			const roomId = "test-room-1";
-			const resp = await SELF.fetch(
+			const resp = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 			);
 
@@ -43,9 +43,12 @@ describe("BaseWebSocketDO Integration Tests", () => {
 
 		it("should respond to /info endpoint on the DO", async () => {
 			const roomId = "test-room-info";
-			const resp = await SELF.fetch(`http://example.com/room/${roomId}/info`, {
-				method: "POST",
-			});
+			const resp = await exports.default.fetch(
+				`http://example.com/room/${roomId}/info`,
+				{
+					method: "POST",
+				},
+			);
 
 			expect(resp.status).toBe(200);
 			const info = (await resp.json()) as {
@@ -65,7 +68,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			const roomId2 = `test-room-${Date.now()}-b`;
 
 			// Each room should have its own DO instance and independent state
-			const resp1 = await SELF.fetch(
+			const resp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId1}/info`,
 				{
 					method: "POST",
@@ -74,7 +77,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			const info1 = (await resp1.json()) as { sessionCount: number };
 			expect(info1.sessionCount).toBe(0);
 
-			const resp2 = await SELF.fetch(
+			const resp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId2}/info`,
 				{
 					method: "POST",
@@ -92,14 +95,20 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			const roomId = `test-room-${Date.now()}-consistent`;
 
 			// Multiple requests to same room should hit same DO
-			const resp1 = await SELF.fetch(`http://example.com/room/${roomId}/info`, {
-				method: "POST",
-			});
+			const resp1 = await exports.default.fetch(
+				`http://example.com/room/${roomId}/info`,
+				{
+					method: "POST",
+				},
+			);
 			expect(resp1.status).toBe(200);
 
-			const resp2 = await SELF.fetch(`http://example.com/room/${roomId}/info`, {
-				method: "POST",
-			});
+			const resp2 = await exports.default.fetch(
+				`http://example.com/room/${roomId}/info`,
+				{
+					method: "POST",
+				},
+			);
 			expect(resp2.status).toBe(200);
 
 			// State should be consistent (both show 0 sessions since we're not connecting)
@@ -113,11 +122,11 @@ describe("BaseWebSocketDO Integration Tests", () => {
 		it("should establish WebSocket connection", async () => {
 			const roomId = "test-ws-connection";
 
-			// WebSocket upgrade via SELF.fetch - this returns a Response with a webSocket property
+			// WebSocket upgrade via exports.default.fetch - this returns a Response with a webSocket property
 			// Unlike unstable_dev which fails with "invalid upgrade header", vitest-pool-workers
 			// properly handles WebSocket upgrades
 			// Reference: https://developers.cloudflare.com/workers/runtime-apis/websockets/
-			const resp = await SELF.fetch(
+			const resp = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: {
@@ -135,7 +144,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			const roomId = "test-ws-chat";
 
 			// Connect first client
-			const resp1 = await SELF.fetch(
+			const resp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: {
@@ -152,7 +161,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			ws1.accept();
 
 			// Connect second client to the same room (same DO instance)
-			const resp2 = await SELF.fetch(
+			const resp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: {
@@ -204,7 +213,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 		it("should handle name changes", async () => {
 			const roomId = "test-ws-names";
 
-			const resp1 = await SELF.fetch(
+			const resp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: {
@@ -216,7 +225,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			const ws1 = resp1.webSocket;
 			ws1.accept();
 
-			const resp2 = await SELF.fetch(
+			const resp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId}/websocket`,
 				{
 					headers: {
@@ -266,7 +275,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			// DO isolation is achieved via idFromName() which deterministically
 			// maps room IDs to unique DO instances
 			// Reference: https://developers.cloudflare.com/durable-objects/best-practices/access-durable-objects-from-a-worker/#generating-ids-by-name
-			const resp1 = await SELF.fetch(
+			const resp1 = await exports.default.fetch(
 				`http://example.com/room/${roomId1}/websocket`,
 				{
 					headers: {
@@ -279,7 +288,7 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			ws1.accept();
 
 			// Connect to room 2 - this creates a DIFFERENT DO instance for roomId2
-			const resp2 = await SELF.fetch(
+			const resp2 = await exports.default.fetch(
 				`http://example.com/room/${roomId2}/websocket`,
 				{
 					headers: {

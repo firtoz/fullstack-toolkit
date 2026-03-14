@@ -41,6 +41,9 @@ type Pages = {
   "/collections/memory-collection-n-sync-test": {
     params: {};
   };
+  "/collections/keyval-collection-test": {
+    params: {};
+  };
   "/collections/pagination-test": {
     params: {};
   };
@@ -73,7 +76,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/keyval-collection-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -114,6 +117,10 @@ type RouteFiles = {
   "routes/collections/memory-collection-n-sync-test.tsx": {
     id: "routes/collections/memory-collection-n-sync-test";
     page: "/collections/memory-collection-n-sync-test";
+  };
+  "routes/collections/keyval-collection-test.tsx": {
+    id: "routes/collections/keyval-collection-test";
+    page: "/collections/keyval-collection-test";
   };
   "routes/collections/pagination-test.tsx": {
     id: "routes/collections/pagination-test";
@@ -165,6 +172,7 @@ type RouteModules = {
   "routes/collections/standalone-test": typeof import("./app/routes/collections/standalone-test.tsx");
   "routes/collections/memory-collection-test": typeof import("./app/routes/collections/memory-collection-test.tsx");
   "routes/collections/memory-collection-n-sync-test": typeof import("./app/routes/collections/memory-collection-n-sync-test.tsx");
+  "routes/collections/keyval-collection-test": typeof import("./app/routes/collections/keyval-collection-test.tsx");
   "routes/collections/pagination-test": typeof import("./app/routes/collections/pagination-test.tsx");
   "routes/collections/sqlite-pagination-test": typeof import("./app/routes/collections/sqlite-pagination-test.tsx");
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");

@@ -5,10 +5,8 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import type { IR } from "@tanstack/db";
-import {
-	evaluateExpression,
-	tryExtractIndexedQuery,
-} from "@firtoz/drizzle-indexeddb/collections/indexeddb-collection";
+import { evaluateExpression } from "@firtoz/db-helpers";
+import { tryExtractIndexedQuery } from "@firtoz/idb-collections";
 import { createTestTodos } from "../test-utils/collection-test-utils";
 import type { Todo } from "test-schema/schema";
 

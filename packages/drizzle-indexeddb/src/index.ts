@@ -17,7 +17,6 @@ export type {
 	IndexInfo,
 	CreateStoreOptions,
 	CreateIndexOptions,
-	KeyRangeSpec,
 } from "./idb-types";
 
 // IDB Interceptor (for testing/debugging)
@@ -34,10 +33,10 @@ export { createInstrumentedDbCreator } from "./instrumented-idb-database";
 
 // Collection
 export {
-	indexedDBCollectionOptions,
-	type IndexedDBCollectionConfig,
-	type IndexedDBSyncItem,
-} from "./collections/indexeddb-collection";
+	drizzleIndexedDBCollectionOptions,
+	type DrizzleIndexedDBCollectionConfig,
+	type DrizzleIndexedDBSyncItem,
+} from "./collections/drizzle-indexeddb-collection";
 
 // Standalone Collection (for use outside React)
 export {

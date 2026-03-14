@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { ZodWebSocketClient } from "@firtoz/websocket-do";
 import { assert, describe, expect, it, vi } from "vitest";
 import type {
@@ -16,8 +16,8 @@ import "./test-fixtures/worker";
 describe("ZodWebSocketClient Integration Tests", () => {
 	describe("JSON Mode Client", () => {
 		it("should connect and send/receive JSON messages", async () => {
-			// Get WebSocket URL from SELF (simulating client connection)
-			const response = await SELF.fetch(
+			// Get WebSocket URL from worker default export (simulating client connection)
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-json/websocket",
 				{
 					headers: {
@@ -148,8 +148,8 @@ describe("ZodWebSocketClient Integration Tests", () => {
 
 	describe("Buffer Mode Client", () => {
 		it("should connect and send/receive buffer messages", async () => {
-			// Get WebSocket URL from SELF
-			const response = await SELF.fetch(
+			// Get WebSocket URL from worker default export
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat/websocket",
 				{
 					headers: {

@@ -1,3 +1,5 @@
+import type { KeyRangeSpec } from "@firtoz/idb-collections";
+
 /**
  * Index information returned by getStoreIndexes
  */
@@ -19,18 +21,6 @@ export interface CreateStoreOptions {
  */
 export interface CreateIndexOptions {
 	unique?: boolean;
-}
-
-/**
- * Key range specification for index queries
- */
-export interface KeyRangeSpec {
-	type: "only" | "lowerBound" | "upperBound" | "bound";
-	value?: unknown;
-	lower?: unknown;
-	upper?: unknown;
-	lowerOpen?: boolean;
-	upperOpen?: boolean;
 }
 
 /**

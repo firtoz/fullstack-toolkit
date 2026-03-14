@@ -16,8 +16,8 @@ import {
 } from "@tanstack/db";
 import { getTableName, type Table } from "drizzle-orm";
 import {
-	indexedDBCollectionOptions,
-	type IndexedDBCollectionConfig,
+	drizzleIndexedDBCollectionOptions,
+	type DrizzleIndexedDBCollectionConfig,
 } from "@firtoz/drizzle-indexeddb";
 import type { CollectionUtils } from "@firtoz/db-helpers";
 import type {
@@ -173,14 +173,14 @@ export function DrizzleIndexedDBProvider<
 				const actualTableName = getTableName(table);
 
 				// Create collection options
-				const collectionConfig = indexedDBCollectionOptions({
+				const collectionConfig = drizzleIndexedDBCollectionOptions({
 					indexedDBRef,
 					table,
 					storeName: actualTableName,
 					readyPromise: readyPromise.promise,
 					debug,
 					syncMode,
-				} as IndexedDBCollectionConfig<Table>);
+				} as DrizzleIndexedDBCollectionConfig<Table>);
 
 				// Create new collection and cache it with ref count 0
 				// The collection will wait for readyPromise before accessing the database

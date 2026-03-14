@@ -53,7 +53,7 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"@tanstack/db": ">=0.5.26",
+		"@tanstack/db": ">=0.5.33",
 		"drizzle-orm": ">=0.45.1",
 		"drizzle-valibot": ">=0.4.0",
 		"valibot": ">=1.0.0"

@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports } from "cloudflare:workers";
 import { pack, unpack } from "msgpackr";
 import { assert, describe, expect, it, vi } from "vitest";
 import type {
@@ -13,7 +13,7 @@ import "./test-fixtures/worker";
 describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 	describe("Query Parameter-Based Format Switching", () => {
 		it("should use JSON format when format=json query param is set", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=json",
 				{
 					headers: {
@@ -63,7 +63,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 		});
 
 		it("should use buffer format when format=buffer query param is set", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
@@ -116,7 +116,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 		});
 
 		it("should default to JSON when no format query param is provided", async () => {
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket",
 				{
 					headers: {
@@ -167,7 +167,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 
 		it("should track the format in session data", async () => {
 			// Connect with buffer format
-			const response1 = await SELF.fetch(
+			const response1 = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
@@ -180,7 +180,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 			ws1.accept();
 
 			// Connect with JSON format
-			const response2 = await SELF.fetch(
+			const response2 = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=json",
 				{
 					headers: {
@@ -196,7 +196,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Check session info
-			const infoResponse = await SELF.fetch(
+			const infoResponse = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/info",
 				{
 					method: "POST",
@@ -226,7 +226,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 
 		it("should enforce protocol based on query param", async () => {
 			// Connect with buffer format
-			const response = await SELF.fetch(
+			const response = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
@@ -270,7 +270,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 
 		it("should allow broadcasting between sessions with different formats", async () => {
 			// Connect with buffer format
-			const response1 = await SELF.fetch(
+			const response1 = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
@@ -289,7 +289,7 @@ describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
 			ws1.accept();
 
 			// Connect with JSON format
-			const response2 = await SELF.fetch(
+			const response2 = await exports.default.fetch(
 				"http://example.com/zod-chat-dynamic/websocket?format=json",
 				{
 					headers: {

@@ -8,9 +8,9 @@
 	"compilerOptions": {
 		"checkJs": true,
 		"verbatimModuleSyntax": true,
+		"types": ["@cloudflare/vitest-pool-workers"],
 		"skipLibCheck": true,
 		"strict": true,
-		"noEmit": true,
-		"types": []
+		"noEmit": true
 	}
 }

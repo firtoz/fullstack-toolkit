@@ -11,9 +11,9 @@ import type { Table } from "drizzle-orm";
 import type { CollectionUtils } from "@firtoz/db-helpers";
 import type { IdOf, InsertSchema, SelectSchema } from "@firtoz/drizzle-utils";
 import {
-	indexedDBCollectionOptions,
-	type IndexedDBCollectionConfig,
-} from "./collections/indexeddb-collection";
+	drizzleIndexedDBCollectionOptions,
+	type DrizzleIndexedDBCollectionConfig,
+} from "./collections/drizzle-indexeddb-collection";
 import {
 	migrateIndexedDBWithFunctions,
 	type Migration,
@@ -262,14 +262,14 @@ export function createStandaloneCollection<TTable extends Table>(
 	initDB();
 
 	// Create collection config
-	const collectionConfig = indexedDBCollectionOptions({
+	const collectionConfig = drizzleIndexedDBCollectionOptions({
 		indexedDBRef,
 		table,
 		storeName,
 		readyPromise,
 		debug,
 		syncMode,
-	} as IndexedDBCollectionConfig<TTable>);
+	} as DrizzleIndexedDBCollectionConfig<TTable>);
 
 	// Create the collection
 	const collection = createCollection(

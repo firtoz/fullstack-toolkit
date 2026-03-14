@@ -107,7 +107,7 @@ export default app;
 export {
 	ChatRoomDO,
 	ZodChatRoomDO,
-	ZodChatRoomDO_JSON,
-	ZodChatRoomDO_Dynamic,
 	ZodChatRoomDO_CustomProtocolError,
+	ZodChatRoomDO_Dynamic,
+	ZodChatRoomDO_JSON,
 };
