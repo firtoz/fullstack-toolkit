@@ -1,5 +1,17 @@
 # @firtoz/db-helpers
 
+## 2.0.0
+
+### Major Changes
+
+- [`5c667ec`](https://github.com/firtoz/fullstack-toolkit/commit/5c667ecfce1ed4f22ccf9686ad37f00e7a4ecee3) Thanks [@firtoz](https://github.com/firtoz)! - BREAKING: Removed `createKeyValCollection`, `keyvalCollectionOptions`, `KeyValAdapter`, `KeyValCollectionConfig`, and `KeyValCollection` exports. These have moved to the new `@firtoz/idb-collections` package.
+
+### Minor Changes
+
+- [`5c667ec`](https://github.com/firtoz/fullstack-toolkit/commit/5c667ecfce1ed4f22ccf9686ad37f00e7a4ecee3) Thanks [@firtoz](https://github.com/firtoz)! - Add keyval collection (`keyvalCollectionOptions`, `createKeyValCollection`) backed by a simple `KeyValAdapter` (get/set/del/entries/clear) interface, compatible with localforage and idb-keyval. Uses StandardSchemaV1 for schema definition instead of Drizzle tables.
+
+  Also exports generic sync infrastructure (`GenericSyncBackend`, `createGenericSyncFunction`, `createGenericCollectionConfig`) and IR expression evaluator (`evaluateExpression`, `getExpressionValue`) that were previously Drizzle-only or embedded in drizzle-indexeddb.
+
 ## 1.0.0
 
 ### Major Changes

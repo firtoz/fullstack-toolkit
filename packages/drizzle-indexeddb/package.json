@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/drizzle-indexeddb",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"description": "IndexedDB migrations powered by Drizzle ORM",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
@@ -68,7 +68,7 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"@firtoz/drizzle-utils": ">=1.0.0",
+		"@firtoz/drizzle-utils": ">=1.0.1",
 		"@tanstack/db": ">=0.5.33",
 		"drizzle-orm": ">=0.45.1",
 		"drizzle-valibot": ">=0.4.0",
