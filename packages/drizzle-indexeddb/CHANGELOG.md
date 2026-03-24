@@ -1,5 +1,15 @@
 # @firtoz/drizzle-indexeddb
 
+## 2.0.1
+
+### Patch Changes
+
+- [`bca3758`](https://github.com/firtoz/fullstack-toolkit/commit/bca3758ab5ad2661b950360dc35edda2680c3b4e) Thanks [@firtoz](https://github.com/firtoz)! - Bump minimum `valibot` peer dependency from `>=1.0.0` to `>=1.3.1`.
+
+- Updated dependencies [[`bca3758`](https://github.com/firtoz/fullstack-toolkit/commit/bca3758ab5ad2661b950360dc35edda2680c3b4e), [`bca3758`](https://github.com/firtoz/fullstack-toolkit/commit/bca3758ab5ad2661b950360dc35edda2680c3b4e)]:
+  - @firtoz/idb-collections@0.2.1
+  - @firtoz/drizzle-utils@1.0.2
+
 ## 2.0.0
 
 ### Major Changes
