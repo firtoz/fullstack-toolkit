@@ -7,7 +7,14 @@
 			"outputs": ["build/**"]
 		},
 		"typecheck": {
-			"inputs": ["app/**", "src/**", "tsconfig.json", "package.json"]
+			"inputs": [
+				"app/**",
+				"src/**",
+				"e2e/**",
+				"tsconfig.json",
+				"package.json",
+				"playwright.config.ts"
+			]
 		},
 		"lint": {
 			"inputs": ["app/**", "src/**", "../../biome.json"]

@@ -320,8 +320,9 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 
 			tryExtractIndexedQuery(expression, testIndexes, true);
 
-			// Note: The function might not log for LIKE since it fails at extractSimpleComparisons
-			// This test verifies the debug parameter is passed through
+			expect(consoleSpy).toHaveBeenCalledWith(
+				"Indexed query extraction skipped: expression not supported by extractSimpleComparisons",
+			);
 
 			consoleSpy.mockRestore();
 		});
@@ -351,6 +352,30 @@ describe("tryExtractIndexedQuery - Unit Tests", () => {
 
 			const result = tryExtractIndexedQuery(expression, {});
 			expect(result).toBeNull();
+		});
+
+		it("should resolve index using last path segment when alias prefix is not in index map", () => {
+			const indexesByColumnOnly: Record<string, string> = {
+				priority: "todo_priority_index",
+			};
+
+			const expression = {
+				type: "func",
+				name: "gt",
+				args: [
+					{ type: "ref", path: ["todo", "priority"] } as IR.PropRef,
+					{ type: "val", value: 10 } as IR.Value,
+				],
+			} as IR.Func;
+
+			const result = tryExtractIndexedQuery(expression, indexesByColumnOnly);
+
+			expect(result).not.toBeNull();
+			expect(result?.fieldName).toBe("todo.priority");
+			expect(result?.indexName).toBe("todo_priority_index");
+			expect(result?.keyRange.type).toBe("lowerBound");
+			expect(result?.keyRange.lower).toBe(10);
+			expect(result?.keyRange.lowerOpen).toBe(true);
 		});
 
 		it("should handle nested property paths", () => {

@@ -33,7 +33,18 @@ export function tryExtractIndexedQuery(
 	}
 
 	try {
-		const comparisons = extractSimpleComparisons(expression);
+		let comparisons: ReturnType<typeof extractSimpleComparisons>;
+		try {
+			comparisons = extractSimpleComparisons(expression);
+		} catch {
+			// e.g. `like` and other ops TanStack does not decompose here — fall back to full scan + filter
+			if (debug) {
+				console.warn(
+					"Indexed query extraction skipped: expression not supported by extractSimpleComparisons",
+				);
+			}
+			return null;
+		}
 
 		if (comparisons.length !== 1) {
 			return null;
@@ -41,7 +52,10 @@ export function tryExtractIndexedQuery(
 
 		const comparison = comparisons[0];
 		const fieldName = comparison.field.join(".");
-		const indexName = indexes[fieldName];
+		const lastIdx = comparison.field.length - 1;
+		const lastSegment = lastIdx >= 0 ? (comparison.field[lastIdx] ?? "") : "";
+		// TanStack may use nested refs (`todo.priority`); IDB indexes are keyed by column (e.g. `priority`)
+		const indexName = indexes[fieldName] ?? indexes[lastSegment];
 
 		if (!indexName) {
 			return null;
@@ -96,7 +110,9 @@ export function tryExtractIndexedQuery(
 
 		return { fieldName, indexName, keyRange };
 	} catch (error) {
-		console.error("Error extracting indexed query", error, expression);
+		if (debug) {
+			console.warn("Error extracting indexed query", error, expression);
+		}
 		return null;
 	}
 }

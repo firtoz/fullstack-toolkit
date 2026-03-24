@@ -10,7 +10,7 @@ import { expect, test, type Page } from "@playwright/test";
  * This would be GOOD NEWS - check the TanStack DB changelog and update
  * our implementation to take advantage of the new optimizations!
  *
- * Current SUPPORTED_COLLECTION_FUNCS (as of TanStack DB 0.5.0):
+ * Current SUPPORTED_COLLECTION_FUNCS (as of TanStack DB 0.5.x):
  * - eq, gt, lt, gte, lte, and, or, in, isNull, isUndefined, not, like
  *
  * Known unsupported (filtered in memory):
@@ -51,8 +51,23 @@ async function getSQLOperationTypes(page: Page): Promise<string[]> {
 	return types;
 }
 
-async function clearOperations(page: Page) {
+async function clearOperations(page: Page, kind: "idb" | "sql") {
 	await page.click('[data-testid="clear-operations"]');
+	const testId = kind === "idb" ? "idb-operations" : "sql-operations";
+	await expect(page.getByTestId(testId)).toContainText("No operations yet", {
+		timeout: 5000,
+	});
+}
+
+/** Avoid matching the wrong query when multiple `query-status` nodes exist during transitions. */
+async function waitQueryReadyInWrapper(
+	page: Page,
+	wrapperTestId: string,
+	timeout = 15000,
+) {
+	await expect(
+		page.getByTestId(wrapperTestId).getByTestId("query-status"),
+	).toHaveText("Ready", { timeout });
 }
 
 // Helper to wait for database population to complete
@@ -91,14 +106,9 @@ test.describe("IndexedDB Operator Optimization", () => {
 	test("GT operator should use index (select-where or index-getAll)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "idb");
 		await page.click('[data-testid="query-priority-gt-10"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 15000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "priority-query-gt-10");
 
 		const types = await getOperationTypes(page);
 		console.log("GT operation types:", types);
@@ -112,14 +122,9 @@ test.describe("IndexedDB Operator Optimization", () => {
 	test("EQ operator should use index (select-where or index-getAll)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "idb");
 		await page.click('[data-testid="query-status-pending"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "status-query-pending");
 
 		const types = await getOperationTypes(page);
 		console.log("EQ operation types:", types);
@@ -133,14 +138,9 @@ test.describe("IndexedDB Operator Optimization", () => {
 	test("Range query (GTE + LTE + AND) should use index or select-all with in-memory filter", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "idb");
 		await page.click('[data-testid="query-range-5-15"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "range-query-5-15");
 
 		const types = await getOperationTypes(page);
 		console.log("Range query operation types:", types);
@@ -155,14 +155,9 @@ test.describe("IndexedDB Operator Optimization", () => {
 	test("IN array operator should be optimized (if supported)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "idb");
 		await page.click('[data-testid="query-inarray-active"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "inarray-query");
 
 		const types = await getOperationTypes(page);
 		console.log("IN array operation types:", types);
@@ -177,14 +172,9 @@ test.describe("IndexedDB Operator Optimization", () => {
 	test("LIKE operator should ALWAYS use select-all (not optimized)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "idb");
 		await page.click('[data-testid="query-like-task"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "like-query-%task%");
 
 		const types = await getOperationTypes(page);
 		console.log("LIKE operation types:", types);
@@ -240,14 +230,9 @@ test.describe("SQLite Operator Optimization", () => {
 	test("GT operator should use select-where (SQL WHERE clause)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-priority-gt-10"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "query-with-helper-Priority > 10");
 
 		const types = await getSQLOperationTypes(page);
 		console.log("SQLite GT operation types:", types);
@@ -260,14 +245,9 @@ test.describe("SQLite Operator Optimization", () => {
 	test("LT operator should use select-where (SQL WHERE clause)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-priority-lt-10"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "query-with-helper-Priority < 10");
 
 		const types = await getSQLOperationTypes(page);
 		console.log("SQLite LT operation types:", types);
@@ -280,14 +260,9 @@ test.describe("SQLite Operator Optimization", () => {
 	test("EQ operator should use select-where (SQL WHERE clause)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-status-pending"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "query-with-helper-Status = pending");
 
 		const types = await getSQLOperationTypes(page);
 		console.log("SQLite EQ operation types:", types);
@@ -300,13 +275,11 @@ test.describe("SQLite Operator Optimization", () => {
 	test("Range query (GTE + LTE + AND) should use select-where", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-range-5-15"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
+		await waitQueryReadyInWrapper(
+			page,
+			"query-with-helper-Priority 5-15 (GTE/LTE)",
 		);
 
 		const types = await getSQLOperationTypes(page);
@@ -318,13 +291,11 @@ test.describe("SQLite Operator Optimization", () => {
 	});
 
 	test("Complex AND query should use select-where", async ({ page }) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-complex-and"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
+		await waitQueryReadyInWrapper(
+			page,
+			"query-with-helper-Priority > 5 AND Status = pending",
 		);
 
 		const types = await getSQLOperationTypes(page);
@@ -336,14 +307,9 @@ test.describe("SQLite Operator Optimization", () => {
 	});
 
 	test("IS NULL operator should use select-where", async ({ page }) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-isnull"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
-		);
+		await waitQueryReadyInWrapper(page, "query-with-helper-Parent ID IS NULL");
 
 		const types = await getSQLOperationTypes(page);
 		console.log("SQLite IS NULL operation types:", types);
@@ -354,13 +320,11 @@ test.describe("SQLite Operator Optimization", () => {
 	});
 
 	test("IN array operator should use select-where", async ({ page }) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-inarray-active"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
+		await waitQueryReadyInWrapper(
+			page,
+			"query-with-helper-Status IN [pending, in-progress]",
 		);
 
 		const types = await getSQLOperationTypes(page);
@@ -374,13 +338,11 @@ test.describe("SQLite Operator Optimization", () => {
 	test("LIKE operator should use select-where (SQL WHERE clause)", async ({
 		page,
 	}) => {
-		await clearOperations(page);
+		await clearOperations(page, "sql");
 		await page.click('[data-testid="query-like-task"]');
-		await page.waitForSelector(
-			'[data-testid="query-status"]:has-text("Ready")',
-			{
-				timeout: 10000,
-			},
+		await waitQueryReadyInWrapper(
+			page,
+			'query-with-helper-Content LIKE "%task%"',
 		);
 
 		const types = await getSQLOperationTypes(page);

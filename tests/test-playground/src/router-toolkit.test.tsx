@@ -66,6 +66,7 @@ describe("formAction", () => {
 		params: {},
 		context: {},
 		unstable_pattern: "match",
+		unstable_url: new URL("http://localhost/"),
 	});
 
 	it("should successfully validate and process form data", async () => {

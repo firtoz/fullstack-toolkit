@@ -20,6 +20,7 @@ import {
 	isNull,
 	type InitialQueryBuilder,
 	type QueryBuilder,
+	type SchemaFromSource,
 } from "@tanstack/react-db";
 import * as schema from "test-schema/schema";
 import migrations from "test-schema/drizzle/migrations";
@@ -27,7 +28,6 @@ import SqliteWorker from "@firtoz/drizzle-sqlite-wasm/worker/sqlite.worker?worke
 import { ClientOnly } from "~/components/shared/ClientOnly";
 import { makeId, type InferCollectionFromTable } from "@firtoz/drizzle-utils";
 import { todoTable, userTable, type Todo } from "test-schema/schema";
-import type { SchemaFromSource } from "node_modules/@tanstack/db/dist/esm/query/builder/types";
 
 const QueryWithHelper = ({
 	helper,

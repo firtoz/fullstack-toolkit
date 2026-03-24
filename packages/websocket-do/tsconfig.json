@@ -16,7 +16,6 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
-		"baseUrl": ".",
 		"types": ["bun-types", "@cloudflare/workers-types"]
 	},
 	"include": ["src/**/*", "examples/**/*"],

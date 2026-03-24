@@ -22,7 +22,6 @@ async function clearOPFS(page: Page) {
 	try {
 		await page.evaluate(async () => {
 			const root = await navigator.storage.getDirectory();
-			// @ts-expect-error
 			for await (const [name] of root.entries()) {
 				await root.removeEntry(name, { recursive: true });
 			}

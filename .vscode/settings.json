@@ -2,5 +2,6 @@
 	// settings.json
 	"files.associations": {
 		"*.css": "tailwindcss" // https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss#files.associations
-	}
+	},
+	"typescript.tsdk": "node_modules/typescript/lib"
 }
