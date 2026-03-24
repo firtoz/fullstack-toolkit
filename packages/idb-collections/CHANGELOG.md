@@ -1,5 +1,11 @@
 # @firtoz/idb-collections
 
+## 0.2.1
+
+### Patch Changes
+
+- [`bca3758`](https://github.com/firtoz/fullstack-toolkit/commit/bca3758ab5ad2661b950360dc35edda2680c3b4e) Thanks [@firtoz](https://github.com/firtoz)! - `tryExtractIndexedQuery` now resolves indexes when TanStack DB uses nested property refs (e.g. `todo.priority`) by falling back to the last path segment, matching single-column IndexedDB key paths. `extractSimpleComparisons` failures (e.g. `like`) return null without logging an error; optional debug logging uses `console.warn`.
+
 ## 0.2.0
 
 ### Minor Changes
