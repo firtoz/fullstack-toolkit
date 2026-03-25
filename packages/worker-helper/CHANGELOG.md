@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.5.1
+
+### Patch Changes
+
+- [#60](https://github.com/firtoz/fullstack-toolkit/pull/60) [`f887a36`](https://github.com/firtoz/fullstack-toolkit/commit/f887a3683bfc1e3db3db0e399c1494755af4008c) Thanks [@firtoz](https://github.com/firtoz)! - `prepareEnvFiles` no longer copies `.env.example` / `.env.local.example` to real env files when `CI` or `GITHUB_ACTIONS` is set, so CI typegen does not create or rely on generated `.env` files.
+
 ## 1.5.0
 
 ### Minor Changes
