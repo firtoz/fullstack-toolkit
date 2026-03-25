@@ -13,9 +13,21 @@ Three classes for different database preferences:
 All implementations share the same API and features:
 - OpenRouter API integration (simpler than AI SDK)
 - Resumable streaming with chunk buffering
+- **Multi-tab sync**: `messageStart`, chunks, `messageEnd`, `messageUpdated`, `streamResume`, and post-mutation `history` are **broadcast** to every WebSocket on the same Durable Object instance (merge updates by message `id` / `streamId` on the client)
+- Serialized chat turns with batched `toolResult` + `autoContinue` (one model continuation per microtask batch)
 - Server-side and client-side tool execution
 - Cloudflare AI Gateway support
 - Message persistence in SQLite
+- Optional `maxPersistedMessages` and `sanitizeMessageForPersistence()` for storage control
+- `waitUntilStable()`, `resetTurnState()`, and `hasPendingInteraction()` for coordination (subclasses)
+- **Tool approval** for server `defineTool` entries: optional `needsApproval(args)` → server broadcasts `toolApprovalRequest`; client answers with `toolApprovalResponse` before `execute` runs
+- **Regenerate / client sync**: extend `sendMessage` with optional `messages` and `trigger: "regenerate-message"` (trim history on the client, then replace server state and run one model turn). Optional `messages` on normal submit replaces stored history before appending `content` (when provided)
+- **Provider metadata** on tool calls: extra fields from the upstream stream are captured into `toolCall.providerMetadata` (and deltas), persisted on assistant messages, and merged back into outbound OpenRouter `tool_calls` for continuations (for provider-specific round-trips such as Gemini / Anthropic extras when the API returns them)
+- Wire schemas use **Zod 4** (`zod/v4`)
+
+### Long-running streams (Durable Object keep-alive)
+
+Streaming uses Partyserver’s `experimental_waitUntil` so the Durable Object stays alive for the OpenRouter request after the inbound WebSocket handler returns. Enable the Workers compatibility flag **`enable_ctx_exports`** in `wrangler.jsonc` (required for `experimental_waitUntil` on `Server` / `Agent`).
 
 ## Installation
 

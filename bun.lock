@@ -29,14 +29,12 @@
       "version": "1.0.1",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "bun-types": "catalog:",
         "drizzle-kit": "^0.31.10",
         "typescript": "catalog:",
-      },
-      "optionalDependencies": {
-        "zod": "catalog:",
       },
       "peerDependencies": {
         "@cloudflare/workers-types": "catalog:",

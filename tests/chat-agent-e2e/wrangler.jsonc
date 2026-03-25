@@ -5,7 +5,7 @@
 	"name": "chat-agent-e2e-test",
 	"main": "src/worker.ts",
 	"compatibility_date": "2025-09-01",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": ["nodejs_compat", "enable_ctx_exports"],
 
 	// Durable Object configuration for chat-agent tests
 	"durable_objects": {

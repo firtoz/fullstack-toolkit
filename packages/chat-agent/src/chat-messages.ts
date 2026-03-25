@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/v4";
 
 // ============================================================================
 // Tool Definitions (for sending to OpenRouter)
@@ -37,9 +37,18 @@ export type ToolExecuteFunction = (args: any) => unknown | Promise<unknown>;
  * - If `execute` is provided: server runs it automatically and continues
  * - If `execute` is omitted: tool call is sent to client for execution
  */
+export type ToolNeedsApprovalFn = (
+	args: Record<string, unknown>,
+) => boolean | Promise<boolean>;
+
 export type ToolDefinition = z.infer<typeof ToolDefinitionSchema> & {
 	/** Optional server-side execute function. If omitted, tool call goes to client. */
 	execute?: ToolExecuteFunction;
+	/**
+	 * When `execute` is set, if this returns true the server waits for a client
+	 * `toolApprovalResponse` before running `execute` (human-in-the-loop).
+	 */
+	needsApproval?: ToolNeedsApprovalFn;
 };
 
 // ============================================================================
@@ -56,6 +65,11 @@ export const ToolCallSchema = z.object({
 		name: z.string(),
 		arguments: z.string(), // JSON string
 	}),
+	/**
+	 * Opaque provider-specific fields from the upstream stream (e.g. Gemini / Anthropic extras).
+	 * Forwarded on the wire when calling the model again after tool results.
+	 */
+	providerMetadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ToolCall = z.infer<typeof ToolCallSchema>;
@@ -73,6 +87,7 @@ export const ToolCallDeltaSchema = z.object({
 			arguments: z.string().optional(),
 		})
 		.optional(),
+	providerMetadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ToolCallDelta = z.infer<typeof ToolCallDeltaSchema>;
@@ -160,11 +175,47 @@ export type TokenUsage = z.infer<typeof TokenUsageSchema>;
 // Client → Server Messages (Discriminated Union)
 // ============================================================================
 
+export const SendMessageTriggerSchema = z.enum([
+	"submit-message",
+	"regenerate-message",
+]);
+
+export type SendMessageTrigger = z.infer<typeof SendMessageTriggerSchema>;
+
 export const ClientMessageSchema = z.discriminatedUnion("type", [
-	z.object({
-		type: z.literal("sendMessage"),
-		content: z.string(),
-	}),
+	z
+		.object({
+			type: z.literal("sendMessage"),
+			content: z.string().optional(),
+			/** Full conversation snapshot; used with `regenerate-message` or to reconcile before a new user turn */
+			messages: z.array(ChatMessageSchema).optional(),
+			trigger: SendMessageTriggerSchema.optional(),
+		})
+		.superRefine((data, ctx) => {
+			const trigger = data.trigger ?? "submit-message";
+			if (trigger === "regenerate-message") {
+				if (!data.messages || data.messages.length === 0) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message:
+							"sendMessage with trigger regenerate-message requires non-empty messages",
+					});
+				}
+			} else {
+				const hasContent = data.content !== undefined && data.content !== "";
+				const messagesEndWithUser =
+					!!data.messages &&
+					data.messages.length > 0 &&
+					data.messages[data.messages.length - 1].role === "user";
+				if (!hasContent && !messagesEndWithUser) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message:
+							"sendMessage requires non-empty content, or messages ending with a user message",
+					});
+				}
+			}
+		}),
 	z.object({
 		type: z.literal("clearHistory"),
 	}),
@@ -187,6 +238,11 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 		output: z.unknown(),
 		// If true, server should continue the conversation after tool result
 		autoContinue: z.boolean().optional(),
+	}),
+	z.object({
+		type: z.literal("toolApprovalResponse"),
+		approvalId: z.string(),
+		approved: z.boolean(),
 	}),
 	// Register client-defined tools at runtime
 	z.object({
@@ -222,6 +278,10 @@ export type CancelRequestPayload = Extract<
 	{ type: "cancelRequest" }
 >;
 export type ToolResultPayload = Extract<ClientMessage, { type: "toolResult" }>;
+export type ToolApprovalResponsePayload = Extract<
+	ClientMessage,
+	{ type: "toolApprovalResponse" }
+>;
 export type RegisterToolsPayload = Extract<
 	ClientMessage,
 	{ type: "registerTools" }
@@ -300,6 +360,13 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 		toolName: z.string(),
 		message: z.string(),
 	}),
+	z.object({
+		type: z.literal("toolApprovalRequest"),
+		approvalId: z.string(),
+		toolCallId: z.string(),
+		toolName: z.string(),
+		arguments: z.string(),
+	}),
 ]);
 
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
@@ -334,6 +401,10 @@ export type MessageUpdatedMessage = Extract<
 >;
 export type ErrorMessage = Extract<ServerMessage, { type: "error" }>;
 export type ToolErrorMessage = Extract<ServerMessage, { type: "toolError" }>;
+export type ToolApprovalRequestMessage = Extract<
+	ServerMessage,
+	{ type: "toolApprovalRequest" }
+>;
 
 // ============================================================================
 // Parsing Helpers
@@ -455,6 +526,8 @@ export function defineTool(config: {
 	strict?: boolean;
 	/** Server-side execute function. If omitted, tool call goes to client. */
 	execute?: ToolExecuteFunction;
+	/** If set with `execute`, client must approve before the server runs `execute`. */
+	needsApproval?: ToolNeedsApprovalFn;
 }): ToolDefinition {
 	const tool: ToolDefinition = {
 		type: "function",
@@ -467,6 +540,9 @@ export function defineTool(config: {
 	};
 	if (config.execute) {
 		tool.execute = config.execute;
+	}
+	if (config.needsApproval) {
+		tool.needsApproval = config.needsApproval;
 	}
 	return tool;
 }

@@ -21,7 +21,7 @@ if (shouldSkipEnvTest) {
 		"\n⚠️  Skipping environment variable tests: Required secrets not configured.",
 	);
 	console.warn(
-		"   Create a .env.local file with OPENROUTER_API_KEY, CLOUDFLARE_ACCOUNT_ID, AI_GATEWAY_NAME, and AI_GATEWAY_TOKEN.\n",
+		"   Add `tests/chat-agent-e2e/.env.local` (see `.env.local.example`); it is loaded by `tests/setup.ts`.\n",
 	);
 }
 

@@ -6,7 +6,7 @@ type ORToolCall = {
 	id: string;
 	type: "function";
 	function: { name: string; arguments: string };
-};
+} & Record<string, unknown>;
 
 type ORSystemMessage = { role: "system"; content: string };
 type ORUserMessage = { role: "user"; content: string };
@@ -40,6 +40,7 @@ import {
 	type ToolDefinition,
 	type ToolMessage,
 	type UserMessage,
+	type SendMessagePayload,
 } from "./chat-messages";
 
 // Re-export types for external use
@@ -53,6 +54,11 @@ export type {
 	ToolDefinition,
 	ToolMessage,
 	UserMessage,
+	ToolNeedsApprovalFn,
+	SendMessagePayload,
+	SendMessageTrigger,
+	ToolApprovalResponsePayload,
+	ToolApprovalRequestMessage,
 } from "./chat-messages";
 export { defineTool } from "./chat-messages";
 
@@ -74,6 +80,72 @@ const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 /** Age threshold for cleaning up completed streams (24 hours) */
 const CLEANUP_AGE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
+/** Default max length for persisted tool message `content` (characters) */
+const DEFAULT_MAX_TOOL_CONTENT_CHARS = 200_000;
+
+/** OpenAI stream keys on each tool_calls[] element (camelCase or snake_case) */
+const STREAM_TOOL_TOP_KEYS = new Set(["index", "id", "type", "function"]);
+
+function getRawToolCallDeltaEntry(
+	chunk: unknown,
+	index: number,
+): Record<string, unknown> | undefined {
+	const c = chunk as {
+		choices?: Array<{ delta?: Record<string, unknown> }>;
+	};
+	const delta = c.choices?.[0]?.delta;
+	if (!delta) {
+		return undefined;
+	}
+	const list = (delta.tool_calls ?? delta.toolCalls) as unknown;
+	if (!Array.isArray(list) || index < 0 || index >= list.length) {
+		return undefined;
+	}
+	const raw = list[index];
+	if (!raw || typeof raw !== "object") {
+		return undefined;
+	}
+	return raw as Record<string, unknown>;
+}
+
+function extractProviderMetadataFromRawToolPart(
+	raw: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+	const meta: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(raw)) {
+		if (STREAM_TOOL_TOP_KEYS.has(k)) {
+			continue;
+		}
+		meta[k] = v;
+	}
+	const fn = raw.function;
+	if (fn && typeof fn === "object" && !Array.isArray(fn)) {
+		const f = fn as Record<string, unknown>;
+		const fnExtra: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(f)) {
+			if (k === "name" || k === "arguments") {
+				continue;
+			}
+			fnExtra[k] = v;
+		}
+		if (Object.keys(fnExtra).length > 0) {
+			meta.function = fnExtra;
+		}
+	}
+	return Object.keys(meta).length > 0 ? meta : undefined;
+}
+
+type PendingClientToolAutoContinue = {
+	connection: Connection;
+	toolCallId: string;
+	toolName: string;
+	output: unknown;
+};
+
+type PendingToolApproval = {
+	resolve: (approved: boolean) => void;
+};
+
 // ============================================================================
 // ChatAgent Class
 // ============================================================================
@@ -84,8 +156,9 @@ const CLEANUP_AGE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
  * Features:
  * - DB-agnostic SQLite persistence in Durable Objects
  * - Resumable streaming with chunk buffering (like @cloudflare/ai-chat)
+ * - Broadcast of stream and history updates to all WebSocket connections (multi-tab)
+ * - Serialized chat turns + batched client tool auto-continue
  * - OpenRouter via Cloudflare AI Gateway
- * - Constructor-based initialization pattern
  *
  * Subclasses must implement database operations via abstract methods.
  *
@@ -99,6 +172,12 @@ export abstract class ChatAgentBase<
 	/** In-memory cache of messages */
 	messages: ChatMessage[] = [];
 
+	/**
+	 * When set, oldest messages are deleted from storage after each save so only the last N remain.
+	 * Does not change what is sent to the model unless you prune separately.
+	 */
+	protected maxPersistedMessages?: number;
+
 	/** Map of message IDs to AbortControllers for request cancellation */
 	private _abortControllers: Map<string, AbortController> = new Map();
 
@@ -106,6 +185,8 @@ export abstract class ChatAgentBase<
 	private _activeStreamId: string | null = null;
 	/** Message ID being streamed */
 	private _activeMessageId: string | null = null;
+	/** True only while the OpenRouter async iterator for the active stream is running */
+	private _openRouterStreamLive = false;
 	/** Current chunk index for active stream */
 	private _streamChunkIndex = 0;
 	/** Buffer for chunks pending write */
@@ -125,6 +206,20 @@ export abstract class ChatAgentBase<
 		{ name: string; description?: string; parameters?: Record<string, unknown> }
 	> = new Map();
 
+	/** FIFO serialization of chat turns (user sends, tool continuations, etc.) */
+	private _turnTail: Promise<void> = Promise.resolve();
+	/** Bumped by {@link resetTurnState} to ignore stale async work */
+	private _turnGeneration = 0;
+
+	/** Connection id that last queued an auto-continue after client tools (for multi-tab hints) */
+	private _continuationOriginConnectionId: string | null = null;
+
+	private _pendingClientToolAutoContinue: PendingClientToolAutoContinue[] = [];
+	private _clientToolAutoContinueFlushScheduled = false;
+
+	/** Human-in-the-loop: server tools awaiting `toolApprovalResponse` (not queued — avoids deadlock). */
+	private _pendingToolApprovals: Map<string, PendingToolApproval> = new Map();
+
 	// ============================================================================
 	// Constructor - Following @cloudflare/ai-chat pattern
 	// ============================================================================
@@ -138,8 +233,9 @@ export abstract class ChatAgentBase<
 		// Load messages from DB
 		this.messages = this.dbLoadMessages();
 
-		// Restore any active stream from a previous session
+		// Restore any active stream from a previous session (never live after restore)
 		this._restoreActiveStream();
+		this._openRouterStreamLive = false;
 
 		// Wrap onConnect to handle stream resumption
 		const _onConnect = this.onConnect.bind(this);
@@ -147,7 +243,6 @@ export abstract class ChatAgentBase<
 			connection: Connection,
 			connCtx: ConnectionContext,
 		) => {
-			// Notify client about active streams that can be resumed
 			if (this._activeStreamId && this._activeMessageId) {
 				this._notifyStreamResuming(connection);
 			}
@@ -257,15 +352,120 @@ export abstract class ChatAgentBase<
 	 */
 	protected abstract dbDeleteChunks(streamId: string): void;
 
+	/**
+	 * Whether stream metadata or chunks exist for this stream id
+	 */
+	protected abstract dbIsStreamKnown(streamId: string): boolean;
+
+	/**
+	 * Delete oldest messages until at most `maxMessages` rows remain
+	 */
+	protected abstract dbTrimMessagesToMax(maxMessages: number): void;
+
+	/**
+	 * Replace all chat messages (used for client sync / regenerate). Implementations should delete existing rows then insert.
+	 */
+	protected abstract dbReplaceAllMessages(messages: ChatMessage[]): void;
+
+	// ============================================================================
+	// Persistence hooks (override in subclasses)
+	// ============================================================================
+
+	/**
+	 * Transform a message immediately before it is written to storage.
+	 * Default: return the message unchanged.
+	 */
+	protected sanitizeMessageForPersistence(msg: ChatMessage): ChatMessage {
+		return msg;
+	}
+
+	// ============================================================================
+	// Turn coordination (subclasses / host code)
+	// ============================================================================
+
+	/**
+	 * Resolves after all queued turns have finished and no OpenRouter stream is active.
+	 */
+	protected waitUntilStable(): Promise<void> {
+		return this._turnTail.then(async () => {
+			while (this._openRouterStreamLive) {
+				await new Promise((r) => queueMicrotask(r));
+			}
+		});
+	}
+
+	/**
+	 * Abort in-flight generation, clear pending client tool auto-continue batch, and invalidate queued async work.
+	 * Call from custom clear handlers; {@link clearHistory} path also resets state.
+	 */
+	protected resetTurnState(): void {
+		this._turnGeneration++;
+		this._pendingClientToolAutoContinue = [];
+		this._clientToolAutoContinueFlushScheduled = false;
+		this._continuationOriginConnectionId = null;
+		for (const p of this._pendingToolApprovals.values()) {
+			p.resolve(false);
+		}
+		this._pendingToolApprovals.clear();
+		for (const id of [...this._abortControllers.keys()]) {
+			this._cancelRequest(id);
+		}
+	}
+
+	/**
+	 * True when the last assistant message still has tool calls without matching tool role replies.
+	 */
+	protected hasPendingInteraction(): boolean {
+		if (this._pendingToolApprovals.size > 0) {
+			return true;
+		}
+		const last = this.messages[this.messages.length - 1];
+		if (!last || last.role !== "assistant") {
+			return false;
+		}
+		if (!last.toolCalls?.length) {
+			return false;
+		}
+		const pending = new Set(last.toolCalls.map((t) => t.id));
+		for (const m of this.messages) {
+			if (m.role === "tool" && pending.has(m.toolCallId)) {
+				pending.delete(m.toolCallId);
+			}
+		}
+		return pending.size > 0;
+	}
+
 	// ============================================================================
 	// Message Persistence
 	// ============================================================================
 
-	private _saveMessage(msg: ChatMessage): void {
-		this.dbSaveMessage(msg);
+	private _persistMessage(msg: ChatMessage): void {
+		const sanitized = this.sanitizeMessageForPersistence(msg);
+		const stored = this._maybeTruncateToolMessageContent(sanitized);
+		this.dbSaveMessage(stored);
+		const max = this.maxPersistedMessages;
+		if (typeof max === "number" && max > 0) {
+			this.dbTrimMessagesToMax(max);
+			this.messages = this.dbLoadMessages();
+		}
+	}
+
+	private _maybeTruncateToolMessageContent(msg: ChatMessage): ChatMessage {
+		if (msg.role !== "tool") {
+			return msg;
+		}
+		const content = msg.content;
+		if (content.length <= DEFAULT_MAX_TOOL_CONTENT_CHARS) {
+			return msg;
+		}
+		const truncated =
+			content.slice(0, DEFAULT_MAX_TOOL_CONTENT_CHARS) +
+			`\n… [truncated ${content.length - DEFAULT_MAX_TOOL_CONTENT_CHARS} chars for storage]`;
+		return { ...msg, content: truncated };
 	}
 
 	private _clearMessages(): void {
+		this.resetTurnState();
 		this.dbClearAll();
 		this._activeStreamId = null;
 		this._activeMessageId = null;
@@ -315,13 +515,11 @@ export abstract class ChatAgentBase<
 			return;
 		}
 
-		connection.send(
-			JSON.stringify({
-				type: "streamResuming",
-				id: this._activeMessageId,
-				streamId: this._activeStreamId,
-			}),
-		);
+		this._sendTo(connection, {
+			type: "streamResuming",
+			id: this._activeMessageId,
+			streamId: this._activeStreamId,
+		});
 	}
 
 	// ============================================================================
@@ -397,8 +595,10 @@ export abstract class ChatAgentBase<
 		this.dbUpdateStreamStatus(streamId, "completed");
 
 		// Save the complete message
-		this._saveMessage(message);
-		this.messages.push(message);
+		this._persistMessage(message);
+		if (typeof this.maxPersistedMessages !== "number") {
+			this.messages.push(message);
+		}
 
 		// Clean up stream chunks
 		this.dbDeleteChunks(streamId);
@@ -442,6 +642,30 @@ export abstract class ChatAgentBase<
 		return this.dbGetChunks(streamId);
 	}
 
+	/**
+	 * Finalize a stream that has buffered chunks but no live OpenRouter reader (e.g. after DO restart).
+	 */
+	private _finalizeOrphanedStreamFromChunks(streamId: string): void {
+		if (this._activeStreamId !== streamId || !this._activeMessageId) {
+			return;
+		}
+		const messageId = this._activeMessageId;
+		const chunks = this._getStreamChunks(streamId);
+		const text = chunks.join("");
+		const assistantMessage: AssistantMessage = {
+			id: messageId,
+			role: "assistant",
+			content: text.length > 0 ? text : null,
+			createdAt: Date.now(),
+		};
+		this._completeStreamWithMessage(streamId, assistantMessage);
+		this._broadcast({
+			type: "messageEnd",
+			id: messageId,
+			createdAt: assistantMessage.createdAt,
+		});
+	}
+
 	// ============================================================================
 	// Abort Controller Management
 	// ============================================================================
@@ -465,6 +689,62 @@ export abstract class ChatAgentBase<
 
 	private _removeAbortController(id: string): void {
 		this._abortControllers.delete(id);
+	}
+
+	// ============================================================================
+	// Broadcasting
+	// ============================================================================
+
+	private _broadcast(msg: ServerMessage): void {
+		this.broadcast(JSON.stringify(msg));
+	}
+
+	private _sendTo(connection: Connection, msg: ServerMessage): void {
+		connection.send(JSON.stringify(msg));
+	}
+
+	private _enqueueTurn(fn: () => Promise<void>): Promise<void> {
+		const run = this._turnTail.then(fn);
+		this._turnTail = run.then(
+			() => {},
+			() => {},
+		);
+		return run;
+	}
+
+	private _resolveToolApproval(approvalId: string, approved: boolean): void {
+		const pending = this._pendingToolApprovals.get(approvalId);
+		if (!pending) {
+			return;
+		}
+		this._pendingToolApprovals.delete(approvalId);
+		pending.resolve(approved);
+	}
+
+	private _mergeProviderMetadata(
+		a: Record<string, unknown> | undefined,
+		b: Record<string, unknown> | undefined,
+	): Record<string, unknown> | undefined {
+		if (!a && !b) {
+			return undefined;
+		}
+		return { ...(a ?? {}), ...(b ?? {}) };
+	}
+
+	private _replaceMessagesFromClient(
+		messages: ReadonlyArray<ChatMessage>,
+	): void {
+		this.resetTurnState();
+		this._flushChunkBuffer();
+		if (this._activeStreamId) {
+			this.dbDeleteStreamWithChunks(this._activeStreamId);
+		}
+		this._activeStreamId = null;
+		this._activeMessageId = null;
+		this._streamChunkIndex = 0;
+		this._chunkBuffer = [];
+		this.dbReplaceAllMessages([...messages]);
+		this.messages = [...messages];
 	}
 
 	// ============================================================================
@@ -495,8 +775,18 @@ export abstract class ChatAgentBase<
 	// ============================================================================
 
 	async onConnect(connection: Connection, _ctx: ConnectionContext) {
-		// Send history to client
-		this.send(connection, { type: "history", messages: this.messages });
+		this._sendTo(connection, { type: "history", messages: this.messages });
+	}
+
+	async onClose(
+		connection: Connection,
+		_code: number,
+		_reason: string,
+		_wasClean: boolean,
+	): Promise<void> {
+		if (this._continuationOriginConnectionId === connection.id) {
+			this._continuationOriginConnectionId = null;
+		}
 	}
 
 	async onMessage(connection: Connection, message: string) {
@@ -504,7 +794,7 @@ export abstract class ChatAgentBase<
 
 		if (!data) {
 			console.error("Invalid client message:", message);
-			this.send(connection, {
+			this._sendTo(connection, {
 				type: "error",
 				message: "Invalid message format",
 			});
@@ -514,20 +804,32 @@ export abstract class ChatAgentBase<
 		try {
 			switch (data.type) {
 				case "getHistory":
-					this.send(connection, { type: "history", messages: this.messages });
+					this._sendTo(connection, {
+						type: "history",
+						messages: this.messages,
+					});
 					break;
 
 				case "clearHistory":
-					this._clearMessages();
-					this.send(connection, { type: "history", messages: [] });
+					await this._enqueueTurn(async () => {
+						this._clearMessages();
+						this._broadcast({ type: "history", messages: [] });
+					});
 					break;
 
 				case "sendMessage":
-					await this._handleChatMessage(connection, data.content);
+					await this._enqueueTurn(async () => {
+						this._continuationOriginConnectionId = connection.id;
+						await this._handleSendMessagePayload(data);
+					});
+					break;
+
+				case "toolApprovalResponse":
+					this._resolveToolApproval(data.approvalId, data.approved);
 					break;
 
 				case "resumeStream":
-					this._handleResumeStream(connection, data.streamId);
+					this._handleResumeStream(data.streamId);
 					break;
 
 				case "cancelRequest":
@@ -535,7 +837,7 @@ export abstract class ChatAgentBase<
 					break;
 
 				case "toolResult":
-					await this._handleToolResult(
+					await this._handleToolResultMessage(
 						connection,
 						data.toolCallId,
 						data.toolName,
@@ -545,30 +847,27 @@ export abstract class ChatAgentBase<
 					break;
 
 				case "registerTools":
-					// Cast needed due to Zod's type inference with exactOptionalPropertyTypes
-					this._registerClientTools(
-						connection,
-						data.tools as ReadonlyArray<{
-							name: string;
-							description?: string;
-							parameters?: Record<string, unknown>;
-						}>,
-					);
+					await this._enqueueTurn(async () => {
+						this._registerClientTools(
+							connection,
+							data.tools as ReadonlyArray<{
+								name: string;
+								description?: string;
+								parameters?: Record<string, unknown>;
+							}>,
+						);
+					});
 					break;
 				default:
 					exhaustiveGuard(data);
 			}
 		} catch (err) {
 			console.error("Error processing message:", err);
-			this.send(connection, {
+			this._broadcast({
 				type: "error",
 				message: "Failed to process message",
 			});
 		}
-	}
-
-	private send(connection: Connection, msg: ServerMessage): void {
-		connection.send(JSON.stringify(msg));
 	}
 
 	// ============================================================================
@@ -586,11 +885,6 @@ export abstract class ChatAgentBase<
 	/**
 	 * Get the AI model to use
 	 * Override this method to use a different model
-	 *
-	 * Popular Anthropic models on OpenRouter:
-	 * - anthropic/claude-opus-4.5 (most capable)
-	 * - anthropic/claude-sonnet-4.5 (balanced, default)
-	 * - anthropic/claude-haiku-3.5 (fastest, cheapest)
 	 */
 	protected getModel(): string {
 		return "anthropic/claude-sonnet-4.5";
@@ -601,48 +895,161 @@ export abstract class ChatAgentBase<
 	 * Override this method to provide custom tools
 	 */
 	protected getTools(): ToolDefinition[] {
-		// Default: no tools. Override in subclass to add tools.
 		return [];
 	}
 
-	private async _handleChatMessage(
-		connection: Connection,
-		content: string,
+	private async _handleSendMessagePayload(
+		data: SendMessagePayload,
 	): Promise<void> {
-		// Add user message
-		const userMessage: UserMessage = {
+		const trigger = data.trigger ?? "submit-message";
+		if (trigger === "regenerate-message") {
+			this._replaceMessagesFromClient(data.messages ?? []);
+			await this._generateAIResponse();
+			return;
+		}
+		if (data.messages && data.messages.length > 0) {
+			this._replaceMessagesFromClient(data.messages);
+		}
+		const content = data.content;
+		if (content !== undefined && content !== "") {
+			const userMessage: UserMessage = {
+				id: crypto.randomUUID(),
+				role: "user",
+				content,
+				createdAt: Date.now(),
+			};
+			this._persistMessage(userMessage);
+			if (typeof this.maxPersistedMessages !== "number") {
+				this.messages.push(userMessage);
+			}
+		}
+		const last = this.messages[this.messages.length - 1];
+		if (!last || last.role !== "user") {
+			this._broadcast({
+				type: "error",
+				message:
+					"Cannot generate: conversation must end with a user message (sync `messages` and/or send `content`).",
+			});
+			return;
+		}
+		await this._generateAIResponse();
+	}
+
+	private async _handleToolResultMessage(
+		connection: Connection,
+		toolCallId: string,
+		toolName: string,
+		output: unknown,
+		autoContinue: boolean,
+	): Promise<void> {
+		if (!autoContinue) {
+			await this._enqueueTurn(async () => {
+				await this._applyClientToolResult(connection, toolCallId, output);
+			});
+			return;
+		}
+
+		this._pendingClientToolAutoContinue.push({
+			connection,
+			toolCallId,
+			toolName,
+			output,
+		});
+		this._scheduleClientToolAutoContinueFlush();
+	}
+
+	private _scheduleClientToolAutoContinueFlush(): void {
+		if (this._clientToolAutoContinueFlushScheduled) {
+			return;
+		}
+		this._clientToolAutoContinueFlushScheduled = true;
+		queueMicrotask(() => {
+			this._clientToolAutoContinueFlushScheduled = false;
+			const batch = this._pendingClientToolAutoContinue.splice(0);
+			if (batch.length === 0) {
+				return;
+			}
+			void this._enqueueTurn(async () => {
+				const origin = batch[0]?.connection;
+				if (origin) {
+					this._continuationOriginConnectionId = origin.id;
+				}
+				for (const item of batch) {
+					await this._applyClientToolResult(
+						item.connection,
+						item.toolCallId,
+						item.output,
+					);
+				}
+				await this._generateAIResponse();
+			});
+		});
+	}
+
+	private async _applyClientToolResult(
+		_connection: Connection,
+		toolCallId: string,
+		output: unknown,
+	): Promise<void> {
+		const assistantMsg = this.messages.find(
+			(m) =>
+				isAssistantMessage(m) &&
+				m.toolCalls?.some((tc: ToolCall) => tc.id === toolCallId),
+		) as AssistantMessage | undefined;
+
+		if (!assistantMsg) {
+			console.warn(
+				`[ChatAgent] Tool result for unknown tool call: ${toolCallId}`,
+			);
+			this._broadcast({ type: "error", message: "Tool call not found" });
+			return;
+		}
+
+		const toolMessage: ToolMessage = {
 			id: crypto.randomUUID(),
-			role: "user",
-			content,
+			role: "tool",
+			toolCallId,
+			content: JSON.stringify(output),
 			createdAt: Date.now(),
 		};
-		this._saveMessage(userMessage);
-		this.messages.push(userMessage);
 
-		// Generate AI response
-		await this._generateAIResponse(connection);
+		this._persistMessage(toolMessage);
+		if (typeof this.maxPersistedMessages !== "number") {
+			this.messages.push(toolMessage);
+		}
+		this._broadcast({ type: "messageUpdated", message: toolMessage });
 	}
 
 	/**
 	 * Generate AI response (can be called for initial message or after tool results)
 	 */
-	private async _generateAIResponse(connection: Connection): Promise<void> {
+	private async _generateAIResponse(): Promise<void> {
+		const generation = this._turnGeneration;
 		const assistantId = crypto.randomUUID();
 		const streamId = this._startStream(assistantId);
 		const abortSignal = this._getAbortSignal(assistantId);
 
-		this.send(connection, { type: "messageStart", id: assistantId, streamId });
+		this._broadcast({ type: "messageStart", id: assistantId, streamId });
 
-		try {
+		const runStream = async (): Promise<void> => {
+			let fullContent = "";
+			let usage: TokenUsage | undefined;
+
+			const toolCallsInProgress: Map<
+				number,
+				{
+					id: string;
+					name: string;
+					arguments: string;
+					providerMetadata?: Record<string, unknown>;
+				}
+			> = new Map();
+
 			const openRouter = this._getOpenRouter();
-			// Get all tools (server-defined + client-registered)
 			const toolsMap = this._getToolsMap();
 			const tools = Array.from(toolsMap.values());
-
-			// Build messages for API (convert our format to OpenRouter format)
 			const apiMessages = this._buildApiMessages();
 
-			// Stream response from OpenRouter via AI Gateway
 			const envWithGateway = this.env as Env & { AI_GATEWAY_TOKEN?: string };
 			const headers = envWithGateway.AI_GATEWAY_TOKEN
 				? {
@@ -663,162 +1070,161 @@ export abstract class ChatAgentBase<
 				},
 			);
 
-			let fullContent = "";
-			let usage: TokenUsage | undefined;
+			this._openRouterStreamLive = true;
+			try {
+				for await (const chunk of stream) {
+					if (generation !== this._turnGeneration) {
+						return;
+					}
+					if (abortSignal.aborted) {
+						throw new Error("Request cancelled");
+					}
 
-			// Track tool calls being streamed
-			const toolCallsInProgress: Map<
-				number,
-				{
-					id: string;
-					name: string;
-					arguments: string;
-				}
-			> = new Map();
+					const delta = chunk.choices?.[0]?.delta;
 
-			for await (const chunk of stream) {
-				if (abortSignal.aborted) {
-					throw new Error("Request cancelled");
-				}
+					if (delta?.content) {
+						fullContent += delta.content;
+						this._storeChunk(streamId, delta.content);
+						this._broadcast({
+							type: "messageChunk",
+							id: assistantId,
+							chunk: delta.content,
+						});
+					}
 
-				const delta = chunk.choices?.[0]?.delta;
+					if (delta?.toolCalls) {
+						for (const toolCallDelta of delta.toolCalls) {
+							const index = toolCallDelta.index;
 
-				// Handle text content
-				if (delta?.content) {
-					fullContent += delta.content;
-					this._storeChunk(streamId, delta.content);
-					this.send(connection, {
-						type: "messageChunk",
-						id: assistantId,
-						chunk: delta.content,
-					});
-				}
+							if (!toolCallsInProgress.has(index)) {
+								toolCallsInProgress.set(index, {
+									id: toolCallDelta.id || "",
+									name: toolCallDelta.function?.name || "",
+									arguments: "",
+								});
+							}
 
-				// Handle tool calls
-				if (delta?.toolCalls) {
-					for (const toolCallDelta of delta.toolCalls) {
-						const index = toolCallDelta.index;
+							const tcRow = toolCallsInProgress.get(index);
+							if (tcRow) {
+								if (toolCallDelta.id) {
+									tcRow.id = toolCallDelta.id;
+								}
+								if (toolCallDelta.function?.name) {
+									tcRow.name = toolCallDelta.function.name;
+								}
+								if (toolCallDelta.function?.arguments) {
+									tcRow.arguments += toolCallDelta.function.arguments;
+								}
+								const rawEntry = getRawToolCallDeltaEntry(chunk, index);
+								const extra = rawEntry
+									? extractProviderMetadataFromRawToolPart(rawEntry)
+									: undefined;
+								if (extra) {
+									tcRow.providerMetadata = this._mergeProviderMetadata(
+										tcRow.providerMetadata,
+										extra,
+									);
+								}
+							}
 
-						// Initialize or update tool call
-						if (!toolCallsInProgress.has(index)) {
-							toolCallsInProgress.set(index, {
-								id: toolCallDelta.id || "",
-								name: toolCallDelta.function?.name || "",
-								arguments: "",
+							const deltaMsg: ToolCallDelta = {
+								index: toolCallDelta.index,
+								id: toolCallDelta.id,
+								type: toolCallDelta.type as "function" | undefined,
+								function: toolCallDelta.function
+									? {
+											name: toolCallDelta.function.name,
+											arguments: toolCallDelta.function.arguments,
+										}
+									: undefined,
+								...(tcRow?.providerMetadata &&
+									Object.keys(tcRow.providerMetadata).length > 0 && {
+										providerMetadata: tcRow.providerMetadata,
+									}),
+							};
+							this._broadcast({
+								type: "toolCallDelta",
+								id: assistantId,
+								delta: deltaMsg,
 							});
 						}
+					}
 
-						const tc = toolCallsInProgress.get(index);
-						if (tc) {
-							if (toolCallDelta.id) {
-								tc.id = toolCallDelta.id;
-							}
-							if (toolCallDelta.function?.name) {
-								tc.name = toolCallDelta.function.name;
-							}
-							if (toolCallDelta.function?.arguments) {
-								tc.arguments += toolCallDelta.function.arguments;
-							}
-						}
-
-						// Send delta to client for streaming UI
-						const deltaMsg: ToolCallDelta = {
-							index: toolCallDelta.index,
-							id: toolCallDelta.id,
-							type: toolCallDelta.type as "function" | undefined,
-							function: toolCallDelta.function
-								? {
-										name: toolCallDelta.function.name,
-										arguments: toolCallDelta.function.arguments,
-									}
-								: undefined,
+					if (chunk.usage) {
+						usage = {
+							prompt_tokens: chunk.usage.promptTokens ?? 0,
+							completion_tokens: chunk.usage.completionTokens ?? 0,
+							total_tokens: chunk.usage.totalTokens ?? 0,
 						};
-						this.send(connection, {
-							type: "toolCallDelta",
+					}
+				}
+
+				const finalToolCalls: ToolCall[] = [];
+				for (const [, tc] of toolCallsInProgress) {
+					if (tc.id && tc.name) {
+						const toolCall: ToolCall = {
+							id: tc.id,
+							type: "function",
+							function: {
+								name: tc.name,
+								arguments: tc.arguments,
+							},
+							...(tc.providerMetadata &&
+								Object.keys(tc.providerMetadata).length > 0 && {
+									providerMetadata: tc.providerMetadata,
+								}),
+						};
+						finalToolCalls.push(toolCall);
+
+						this._broadcast({
+							type: "toolCall",
 							id: assistantId,
-							delta: deltaMsg,
+							toolCall,
 						});
 					}
 				}
 
-				// Capture usage stats from final chunk
-				if (chunk.usage) {
-					usage = {
-						prompt_tokens: chunk.usage.promptTokens ?? 0,
-						completion_tokens: chunk.usage.completionTokens ?? 0,
-						total_tokens: chunk.usage.totalTokens ?? 0,
-					};
+				const assistantMessage: AssistantMessage = {
+					id: assistantId,
+					role: "assistant",
+					content: fullContent || null,
+					toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+					createdAt: Date.now(),
+				};
+
+				this._completeStreamWithMessage(streamId, assistantMessage);
+				this._removeAbortController(assistantId);
+
+				this._broadcast({
+					type: "messageEnd",
+					id: assistantId,
+					toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+					createdAt: assistantMessage.createdAt,
+					...(usage && { usage }),
+				});
+
+				if (finalToolCalls.length > 0) {
+					const hasServerTools =
+						await this._executeServerSideTools(finalToolCalls);
+					if (hasServerTools) {
+						return;
+					}
 				}
+			} catch (err) {
+				console.error("OpenRouter error:", err);
+				this._markStreamError(streamId);
+				this._removeAbortController(assistantId);
+				this._broadcast({
+					type: "error",
+					message:
+						err instanceof Error ? err.message : "Failed to get AI response",
+				});
+			} finally {
+				this._openRouterStreamLive = false;
 			}
+		};
 
-			// Build final tool calls array
-			const finalToolCalls: ToolCall[] = [];
-			for (const [, tc] of toolCallsInProgress as Map<
-				number,
-				{ id: string; name: string; arguments: string }
-			>) {
-				if (tc.id && tc.name) {
-					const toolCall: ToolCall = {
-						id: tc.id,
-						type: "function",
-						function: {
-							name: tc.name,
-							arguments: tc.arguments,
-						},
-					};
-					finalToolCalls.push(toolCall);
-
-					// Send complete tool call to client
-					this.send(connection, {
-						type: "toolCall",
-						id: assistantId,
-						toolCall,
-					});
-				}
-			}
-
-			// Create and save assistant message
-			const assistantMessage: AssistantMessage = {
-				id: assistantId,
-				role: "assistant",
-				content: fullContent || null,
-				toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
-				createdAt: Date.now(),
-			};
-
-			this._completeStreamWithMessage(streamId, assistantMessage);
-			this._removeAbortController(assistantId);
-
-			this.send(connection, {
-				type: "messageEnd",
-				id: assistantId,
-				toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
-				createdAt: assistantMessage.createdAt,
-				...(usage && { usage }),
-			});
-
-			// Execute server-side tools if any
-			if (finalToolCalls.length > 0) {
-				const hasServerTools = await this._executeServerSideTools(
-					connection,
-					finalToolCalls,
-				);
-				// If we executed server tools, the conversation continues automatically
-				// Client-side tools will wait for toolResult from client
-				if (hasServerTools) {
-					return; // Response continues from _executeServerSideTools
-				}
-			}
-		} catch (err) {
-			console.error("OpenRouter error:", err);
-			this._markStreamError(streamId);
-			this._removeAbortController(assistantId);
-			this.send(connection, {
-				type: "error",
-				message:
-					err instanceof Error ? err.message : "Failed to get AI response",
-			});
-		}
+		await this.experimental_waitUntil(runStream);
 	}
 
 	/**
@@ -840,14 +1246,27 @@ export abstract class ChatAgentBase<
 						role: "assistant",
 						content: assistantMsg.content,
 						...(assistantMsg.toolCalls && {
-							toolCalls: assistantMsg.toolCalls.map((tc) => ({
-								id: tc.id,
-								type: "function" as const,
-								function: {
-									name: tc.function.name,
-									arguments: tc.function.arguments,
-								},
-							})),
+							toolCalls: assistantMsg.toolCalls.map((tc) => {
+								const call: ORToolCall = {
+									id: tc.id,
+									type: "function",
+									function: {
+										name: tc.function.name,
+										arguments: tc.function.arguments,
+									},
+								};
+								const meta = tc.providerMetadata;
+								if (meta) {
+									const {
+										id: _i,
+										type: _t,
+										function: _fn,
+										...rest
+									} = meta as Record<string, unknown>;
+									Object.assign(call, rest);
+								}
+								return call;
+							}),
 						}),
 					};
 					result.push(orMsg);
@@ -872,13 +1291,11 @@ export abstract class ChatAgentBase<
 
 	/**
 	 * Build a map of tool definitions by name for quick lookup
-	 * Includes both server-defined tools and client-registered tools
 	 */
 	private _getToolsMap(): Map<string, ToolDefinition> {
 		const tools = this.getTools();
 		const map = new Map(tools.map((t) => [t.function.name, t]));
 
-		// Add client-registered tools (no execute function - client handles them)
 		for (const [name, tool] of this._clientTools) {
 			if (!map.has(name)) {
 				const toolDef: ToolDefinition = {
@@ -904,7 +1321,7 @@ export abstract class ChatAgentBase<
 	 * Register tools from the client at runtime
 	 */
 	private _registerClientTools(
-		connection: Connection,
+		_connection: Connection,
 		tools: ReadonlyArray<{
 			name: string;
 			description?: string;
@@ -929,8 +1346,7 @@ export abstract class ChatAgentBase<
 			console.log(`[ChatAgent] Registered client tool: ${tool.name}`);
 		}
 
-		// Acknowledge registration
-		this.send(connection, {
+		this._broadcast({
 			type: "history",
 			messages: this.messages,
 		});
@@ -938,10 +1354,8 @@ export abstract class ChatAgentBase<
 
 	/**
 	 * Execute server-side tools and continue the conversation
-	 * Returns true if any server-side tools were executed
 	 */
 	private async _executeServerSideTools(
-		connection: Connection,
 		toolCalls: ToolCall[],
 	): Promise<boolean> {
 		const toolsMap = this._getToolsMap();
@@ -950,10 +1364,8 @@ export abstract class ChatAgentBase<
 		for (const toolCall of toolCalls) {
 			const toolDef = toolsMap.get(toolCall.function.name);
 
-			// Check if tool exists
 			if (!toolDef) {
-				// Send tool error for unknown tool
-				this.send(connection, {
+				this._broadcast({
 					type: "toolError",
 					errorType: "not_found",
 					toolCallId: toolCall.id,
@@ -963,7 +1375,6 @@ export abstract class ChatAgentBase<
 				continue;
 			}
 
-			// Skip if tool has no execute function (client-side tool)
 			if (!toolDef.execute) {
 				continue;
 			}
@@ -971,15 +1382,13 @@ export abstract class ChatAgentBase<
 			executedServerTools = true;
 
 			try {
-				// Parse arguments (handle empty arguments)
 				let args: Record<string, unknown>;
 				try {
 					args = toolCall.function.arguments
 						? JSON.parse(toolCall.function.arguments)
 						: {};
 				} catch (parseErr) {
-					// Send input error for malformed arguments
-					this.send(connection, {
+					this._broadcast({
 						type: "toolError",
 						errorType: "input",
 						toolCallId: toolCall.id,
@@ -989,6 +1398,52 @@ export abstract class ChatAgentBase<
 					continue;
 				}
 
+				if (toolDef.needsApproval) {
+					const needApproval = await toolDef.needsApproval(args);
+					if (needApproval) {
+						const approvalId = crypto.randomUUID();
+						const approved = await new Promise<boolean>((resolve) => {
+							this._pendingToolApprovals.set(approvalId, { resolve });
+							this._broadcast({
+								type: "toolApprovalRequest",
+								approvalId,
+								toolCallId: toolCall.id,
+								toolName: toolCall.function.name,
+								arguments: toolCall.function.arguments,
+							});
+						});
+						if (!approved) {
+							const errorMsg = "Tool execution rejected by user";
+							this._broadcast({
+								type: "toolError",
+								errorType: "output",
+								toolCallId: toolCall.id,
+								toolName: toolCall.function.name,
+								message: errorMsg,
+							});
+							const rejectedMessage: ToolMessage = {
+								id: crypto.randomUUID(),
+								role: "tool",
+								toolCallId: toolCall.id,
+								content: JSON.stringify({
+									error: errorMsg,
+									rejected: true,
+								}),
+								createdAt: Date.now(),
+							};
+							this._persistMessage(rejectedMessage);
+							if (typeof this.maxPersistedMessages !== "number") {
+								this.messages.push(rejectedMessage);
+							}
+							this._broadcast({
+								type: "messageUpdated",
+								message: rejectedMessage,
+							});
+							continue;
+						}
+					}
+				}
+
 				console.log(
 					`[ChatAgent] Executing server tool: ${toolCall.function.name}`,
 					args,
@@ -996,7 +1451,6 @@ export abstract class ChatAgentBase<
 
 				const result = await toolDef.execute(args);
 
-				// Create and save tool message
 				const toolMessage: ToolMessage = {
 					id: crypto.randomUUID(),
 					role: "tool",
@@ -1005,11 +1459,12 @@ export abstract class ChatAgentBase<
 					createdAt: Date.now(),
 				};
 
-				this._saveMessage(toolMessage);
-				this.messages.push(toolMessage);
+				this._persistMessage(toolMessage);
+				if (typeof this.maxPersistedMessages !== "number") {
+					this.messages.push(toolMessage);
+				}
 
-				// Notify clients of tool result
-				this.send(connection, { type: "messageUpdated", message: toolMessage });
+				this._broadcast({ type: "messageUpdated", message: toolMessage });
 
 				console.log(
 					`[ChatAgent] Server tool completed: ${toolCall.function.name}`,
@@ -1021,10 +1476,9 @@ export abstract class ChatAgentBase<
 					err,
 				);
 
-				// Send output error
 				const errorMsg =
 					err instanceof Error ? err.message : "Tool execution failed";
-				this.send(connection, {
+				this._broadcast({
 					type: "toolError",
 					errorType: "output",
 					toolCallId: toolCall.id,
@@ -1032,7 +1486,6 @@ export abstract class ChatAgentBase<
 					message: errorMsg,
 				});
 
-				// Still create an error tool message so conversation can continue
 				const errorMessage: ToolMessage = {
 					id: crypto.randomUUID(),
 					role: "tool",
@@ -1041,83 +1494,49 @@ export abstract class ChatAgentBase<
 					createdAt: Date.now(),
 				};
 
-				this._saveMessage(errorMessage);
-				this.messages.push(errorMessage);
-				this.send(connection, {
+				this._persistMessage(errorMessage);
+				if (typeof this.maxPersistedMessages !== "number") {
+					this.messages.push(errorMessage);
+				}
+				this._broadcast({
 					type: "messageUpdated",
 					message: errorMessage,
 				});
 			}
 		}
 
-		// If we executed any server-side tools, continue the conversation
 		if (executedServerTools) {
-			await this._generateAIResponse(connection);
+			await this._generateAIResponse();
 		}
 
 		return executedServerTools;
 	}
 
-	/**
-	 * Handle tool result from client
-	 */
-	private async _handleToolResult(
-		connection: Connection,
-		toolCallId: string,
-		_toolName: string, // Reserved for future use (logging, validation)
-		output: unknown,
-		autoContinue: boolean,
-	): Promise<void> {
-		// Find the assistant message with this tool call
-		const assistantMsg = this.messages.find(
-			(m) =>
-				isAssistantMessage(m) &&
-				m.toolCalls?.some((tc: ToolCall) => tc.id === toolCallId),
-		) as AssistantMessage | undefined;
-
-		if (!assistantMsg) {
-			console.warn(
-				`[ChatAgent] Tool result for unknown tool call: ${toolCallId}`,
-			);
-			this.send(connection, { type: "error", message: "Tool call not found" });
+	private _handleResumeStream(streamId: string): void {
+		if (!this.dbIsStreamKnown(streamId)) {
+			this._broadcast({
+				type: "streamResume",
+				streamId,
+				chunks: [],
+				done: true,
+			});
 			return;
 		}
 
-		// Create tool message with result
-		const toolMessage: ToolMessage = {
-			id: crypto.randomUUID(),
-			role: "tool",
-			toolCallId,
-			content: JSON.stringify(output),
-			createdAt: Date.now(),
-		};
-
-		this._saveMessage(toolMessage);
-		this.messages.push(toolMessage);
-
-		// Notify clients
-		this.send(connection, { type: "messageUpdated", message: toolMessage });
-
-		// If autoContinue, generate next AI response
-		if (autoContinue) {
-			await this._generateAIResponse(connection);
-		}
-	}
-
-	private _handleResumeStream(connection: Connection, streamId: string): void {
-		// Get stored chunks
 		const chunks = this._getStreamChunks(streamId);
+		const isLive =
+			this._openRouterStreamLive && this._activeStreamId === streamId;
 
-		// Check if stream is still active
-		const isActive = this._activeStreamId === streamId;
-
-		// Send all buffered chunks
-		this.send(connection, {
+		this._broadcast({
 			type: "streamResume",
 			streamId,
 			chunks,
-			done: !isActive,
+			done: !isLive,
 		});
+
+		if (!isLive && this._activeStreamId === streamId) {
+			this._finalizeOrphanedStreamFromChunks(streamId);
+		}
 	}
 
 	// ============================================================================
@@ -1125,13 +1544,11 @@ export abstract class ChatAgentBase<
 	// ============================================================================
 
 	async destroy(): Promise<void> {
-		// Abort all pending requests
 		for (const controller of this._abortControllers.values()) {
 			controller.abort();
 		}
 		this._abortControllers.clear();
 
-		// Flush remaining chunks
 		this._flushChunkBuffer();
 
 		await super.destroy();

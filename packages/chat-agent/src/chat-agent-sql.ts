@@ -196,4 +196,47 @@ export class SqlChatAgent<
 		this
 			.sql`delete from cf_ai_chat_stream_chunks where stream_id = ${streamId}`;
 	}
+
+	protected dbIsStreamKnown(streamId: string): boolean {
+		const meta = this.sql`
+			select id from cf_ai_chat_stream_metadata where id = ${streamId} limit 1
+		` as Array<{ id: string }>;
+		if (meta?.length) {
+			return true;
+		}
+		const chunk = this.sql`
+			select id from cf_ai_chat_stream_chunks where stream_id = ${streamId} limit 1
+		` as Array<{ id: string }>;
+		return !!chunk?.length;
+	}
+
+	protected dbReplaceAllMessages(messages: ChatMessage[]): void {
+		this.sql`delete from cf_ai_chat_agent_messages`;
+		for (const msg of messages) {
+			const messageJson = JSON.stringify(msg);
+			this.sql`
+				insert into cf_ai_chat_agent_messages (id, message)
+				values (${msg.id}, ${messageJson})
+			`;
+		}
+	}
+
+	protected dbTrimMessagesToMax(maxMessages: number): void {
+		const countRows = this.sql`
+			select count(*) as c from cf_ai_chat_agent_messages
+		` as Array<{ c: number }>;
+		const total = countRows?.[0]?.c ?? 0;
+		if (total <= maxMessages) {
+			return;
+		}
+		const toRemove = total - maxMessages;
+		const oldest = this.sql`
+			select id from cf_ai_chat_agent_messages 
+			order by created_at asc 
+			limit ${toRemove}
+		` as Array<{ id: string }>;
+		for (const row of oldest || []) {
+			this.sql`delete from cf_ai_chat_agent_messages where id = ${row.id}`;
+		}
+	}
 }

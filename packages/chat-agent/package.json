@@ -26,6 +26,8 @@
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
+		"test": "bun test",
+		"test:watch": "bun test --watch",
 		"db:generate": "drizzle-kit generate",
 		"format": "biome format src --write"
 	},
@@ -57,9 +59,6 @@
 		"agents": "catalog:",
 		"drizzle-orm": "catalog:"
 	},
-	"optionalDependencies": {
-		"zod": "catalog:"
-	},
 	"engines": {
 		"node": ">=18.0.0"
 	},
@@ -72,6 +71,7 @@
 		"typescript": "catalog:"
 	},
 	"dependencies": {
-		"@firtoz/maybe-error": "workspace:*"
+		"@firtoz/maybe-error": "workspace:*",
+		"zod": "catalog:"
 	}
 }
