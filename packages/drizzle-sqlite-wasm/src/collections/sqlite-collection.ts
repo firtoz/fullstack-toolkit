@@ -130,7 +130,7 @@ export interface SQLInterceptor {
 	onOperation?: (operation: SQLOperation) => void;
 }
 
-export interface DrizzleCollectionConfig<
+export interface DrizzleSqliteCollectionConfig<
 	TDrizzle extends AnyDrizzleDatabase,
 	TTableName extends ValidTableNames<DrizzleSchema<TDrizzle>>,
 > {
@@ -293,7 +293,7 @@ export function sqliteCollectionOptions<
 	const TTableName extends string & ValidTableNames<DrizzleSchema<TDrizzle>>,
 	TTable extends DrizzleSchema<TDrizzle>[TTableName] & TableWithRequiredFields,
 >(
-	config: DrizzleCollectionConfig<TDrizzle, TTableName>,
+	config: DrizzleSqliteCollectionConfig<TDrizzle, TTableName>,
 ): SqliteCollectionConfig<TTable> {
 	const tableName = config.tableName as string &
 		ValidTableNames<DrizzleSchema<TDrizzle>>;
