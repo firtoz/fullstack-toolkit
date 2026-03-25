@@ -1,5 +1,13 @@
 # chat-agent-e2e
 
+## 1.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`4d936e6`](https://github.com/firtoz/fullstack-toolkit/commit/4d936e6ef9a3eb7eb3ff2477c772125cae4297b9)]:
+  - @firtoz/chat-agent@2.0.0
+  - @firtoz/chat-agent-drizzle@1.0.0
+
 ## 1.0.3
 
 ### Patch Changes

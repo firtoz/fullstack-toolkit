@@ -1,6 +1,6 @@
 {
 	"name": "chat-agent-e2e",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"private": true,
 	"description": "E2E tests for ChatAgent using Playwright and wrangler dev",
 	"type": "module",
