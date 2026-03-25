@@ -11,6 +11,22 @@
 		"lint:ci": {
 			"inputs": ["src/**", "../../biome.json"]
 		},
+		"test": {
+			"dependsOn": ["typegen", "^typecheck"],
+			"inputs": [
+				"src/**",
+				"tests/**",
+				"wrangler.jsonc",
+				"wrangler.toml",
+				"tsconfig.json",
+				"package.json"
+			]
+		},
+		"test:watch": {
+			"dependsOn": ["typegen", "^typecheck"],
+			"cache": false,
+			"persistent": true
+		},
 		"dev": {
 			"dependsOn": ["typegen"],
 			"persistent": true,
