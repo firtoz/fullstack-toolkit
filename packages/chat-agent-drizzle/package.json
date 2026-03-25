@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/chat-agent-drizzle",
-	"version": "0.0.0",
+	"version": "1.0.0",
 	"description": "Drizzle ORM persistence for @firtoz/chat-agent on Cloudflare Durable Objects",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",

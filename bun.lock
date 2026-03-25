@@ -26,7 +26,7 @@
     },
     "packages/chat-agent": {
       "name": "@firtoz/chat-agent",
-      "version": "1.0.1",
+      "version": "2.0.0",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
         "zod": "catalog:",
@@ -43,7 +43,7 @@
     },
     "packages/chat-agent-drizzle": {
       "name": "@firtoz/chat-agent-drizzle",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
       },
@@ -62,7 +62,7 @@
     },
     "packages/chat-agent-sql": {
       "name": "@firtoz/chat-agent-sql",
-      "version": "0.0.0",
+      "version": "1.0.0",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
       },
@@ -259,7 +259,7 @@
     },
     "tests/chat-agent-e2e": {
       "name": "chat-agent-e2e",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
         "@firtoz/chat-agent-drizzle": "workspace:*",
