@@ -13,7 +13,9 @@ import { BASE_URL } from "./common";
  * The wrangler dev server is automatically managed by the global setup (setup.ts).
  */
 
-const AGENT_ID = "test-agent-bun";
+const RUN_ID = Math.random().toString(36).slice(2, 10);
+const agentId = (name: string) => `${name}-${RUN_ID}`;
+const AGENT_ID = agentId("test-agent-bun");
 
 // Check if environment variables are configured
 const shouldSkip = !(
@@ -146,7 +148,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 
 	test.skipIf(shouldSkip)("should handle tool calls with test tool", async () => {
 
-		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}-tools`;
+		const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-bun-tools")}`;
 
 		const result = await new Promise<{
 			success: boolean;
@@ -208,8 +210,8 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 
 	test.skipIf(shouldSkip)("should handle different agent IDs separately", async () => {
 
-		const agent1Url = `${BASE_URL}/chat-agent/agent-1-separate-bun`;
-		const agent2Url = `${BASE_URL}/chat-agent/agent-2-separate-bun`;
+		const agent1Url = `${BASE_URL}/chat-agent/${agentId("agent-1-separate-bun")}`;
+		const agent2Url = `${BASE_URL}/chat-agent/${agentId("agent-2-separate-bun")}`;
 
 		const sendMessage = (wsUrl: string, content: string) => {
 			return new Promise<{ success: boolean }>((resolve) => {
@@ -254,7 +256,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 	test.skipIf(shouldSkip)(
 		"should broadcast streaming to a second WebSocket on the same agent",
 		async () => {
-			const wsUrl = `${BASE_URL}/chat-agent/test-agent-broadcast-bun`;
+			const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-broadcast-bun")}`;
 			const bTypes: string[] = [];
 
 			await new Promise<void>((resolve, reject) => {
@@ -318,7 +320,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 	test.skipIf(shouldSkip)(
 		"should run approval_ping after client approves toolApprovalRequest",
 		async () => {
-			const wsUrl = `${BASE_URL}/chat-agent/test-agent-approval-bun`;
+			const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-approval-bun")}`;
 			const collected: ServerMessage[] = [];
 			let sawApproval = false;
 			let phase: "wait_empty" | "chat" = "wait_empty";
@@ -423,7 +425,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 	test.skipIf(shouldSkip)(
 		"should surface toolError when tool approval is rejected",
 		async () => {
-			const wsUrl = `${BASE_URL}/chat-agent/test-agent-approval-reject-bun`;
+			const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-approval-reject-bun")}`;
 			const collected: ServerMessage[] = [];
 			let sawApproval = false;
 			let phase: "wait_empty" | "chat" = "wait_empty";
@@ -529,7 +531,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 	test.skipIf(shouldSkip)(
 		"should complete regenerate-message after replacing messages from history",
 		async () => {
-			const wsUrl = `${BASE_URL}/chat-agent/test-agent-regenerate-bun`;
+			const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-regenerate-bun")}`;
 			const collected: ServerMessage[] = [];
 			let stage: "first" | "history" | "regenerating" = "first";
 
