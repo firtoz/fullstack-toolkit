@@ -16,7 +16,7 @@ if (shouldSkipEnvTest) {
 		"\n⚠️  Skipping environment variable tests: required secrets missing or still example placeholders.",
 	);
 	console.warn(
-		"   Set the variables in the environment or in tests/chat-agent-e2e/.env.local; existing process env is never overwritten by files.\n",
+		"   In CI: configure workflow secrets. Locally: use tests/chat-agent-e2e/.env.local (overrides shell for set keys).\n",
 	);
 }
 

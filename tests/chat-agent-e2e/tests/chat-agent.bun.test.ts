@@ -26,10 +26,7 @@ if (shouldSkip) {
 		"\n⚠️  Skipping ChatAgent E2E tests: required API credentials missing or still example placeholders.",
 	);
 	console.warn(
-		"   Set OPENROUTER_API_KEY, CLOUDFLARE_ACCOUNT_ID, AI_GATEWAY_NAME, AI_GATEWAY_TOKEN in the environment, or add them to tests/chat-agent-e2e/.env.local (see .env.local.example).",
-	);
-	console.warn(
-		"   Shell and CI env always win; files only fill variables that are not already set.\n",
+		"   In CI: configure repo/workflow secrets. Locally: set those variables or put them in tests/chat-agent-e2e/.env.local (see .env.local.example); local env files override the shell.\n",
 	);
 }
 

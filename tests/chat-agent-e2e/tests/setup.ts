@@ -5,9 +5,8 @@ import { loadChatAgentE2eEnvFiles } from "./e2e-env";
 import { waitForServer } from "./common";
 
 /**
- * Load `.env` then `.env.local` from `tests/chat-agent-e2e/` so `process.env` is set
- * before test modules run (they read `shouldSkip` at import time). Preload runs first.
- * Existing `process.env` (shell / CI) is never overwritten by files; files only fill missing keys.
+ * Load `.env` then `.env.local` from `tests/chat-agent-e2e/` before tests run (preload).
+ * Skipped in CI (`CI` / `GITHUB_ACTIONS`): use workflow env only. Locally, files override shell for set keys.
  */
 const e2eRoot = join(import.meta.dir, "..");
 loadChatAgentE2eEnvFiles(e2eRoot);

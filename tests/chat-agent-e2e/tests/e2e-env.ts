@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import process from "node:process";
 
 /** Env vars required for ChatAgent LLM / gateway integration tests */
 export const CHAT_AGENT_E2E_REQUIRED_ENV = [
@@ -47,16 +48,28 @@ export function isChatAgentE2eFullyConfigured(): boolean {
 	);
 }
 
-/**
- * Load `.env` then `.env.local` from the e2e package root.
- * Never overwrites keys already present in `process.env` (shell / CI always wins over files).
- */
-export function loadChatAgentE2eEnvFiles(e2eRoot: string): void {
-	loadEnvFromFile(join(e2eRoot, ".env"));
-	loadEnvFromFile(join(e2eRoot, ".env.local"));
+/** True in GitHub Actions and other CI where env must come only from the job environment. */
+export function isChatAgentE2eCi(): boolean {
+	return (
+		Boolean(process.env.CI) || process.env.GITHUB_ACTIONS === "true"
+	);
 }
 
-function loadEnvFromFile(filePath: string): void {
+/**
+ * Load `.env` then `.env.local` from the e2e package root (local dev only).
+ * In CI, does nothing — secrets must be supplied by the workflow environment.
+ *
+ * Locally: each file overwrites matching keys in `process.env` (`.env.local` wins over `.env`).
+ */
+export function loadChatAgentE2eEnvFiles(e2eRoot: string): void {
+	if (isChatAgentE2eCi()) {
+		return;
+	}
+	loadEnvFromFile(join(e2eRoot, ".env"), true);
+	loadEnvFromFile(join(e2eRoot, ".env.local"), true);
+}
+
+function loadEnvFromFile(filePath: string, overrideExisting: boolean): void {
 	if (!existsSync(filePath)) {
 		return;
 	}
@@ -81,8 +94,7 @@ function loadEnvFromFile(filePath: string): void {
 		) {
 			value = value.slice(1, -1);
 		}
-		// Process / parent environment always wins; files only fill missing keys.
-		if (process.env[key] === undefined) {
+		if (overrideExisting || process.env[key] === undefined) {
 			process.env[key] = value;
 		}
 	}
