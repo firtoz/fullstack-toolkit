@@ -6,6 +6,7 @@ import type {
 	UserMessage,
 } from "@firtoz/chat-agent";
 import { BASE_URL } from "./common";
+import { isChatAgentE2eFullyConfigured } from "./e2e-env";
 
 /**
  * ChatAgent E2E tests using Bun's test runner and WebSocket client
@@ -17,20 +18,15 @@ const RUN_ID = Math.random().toString(36).slice(2, 10);
 const agentId = (name: string) => `${name}-${RUN_ID}`;
 const AGENT_ID = agentId("test-agent-bun");
 
-// Check if environment variables are configured
-const shouldSkip = !(
-	process.env.OPENROUTER_API_KEY &&
-	process.env.CLOUDFLARE_ACCOUNT_ID &&
-	process.env.AI_GATEWAY_NAME &&
-	process.env.AI_GATEWAY_TOKEN
-);
+// Skip when secrets are missing or still example placeholders (e.g. `.env.local` from template).
+const shouldSkip = !isChatAgentE2eFullyConfigured();
 
 if (shouldSkip) {
 	console.warn(
-		"\n⚠️  Skipping ChatAgent E2E tests: Required API credentials not configured.",
+		"\n⚠️  Skipping ChatAgent E2E tests: required API credentials missing or still example placeholders.",
 	);
 	console.warn(
-		"   Copy tests/chat-agent-e2e/.env.local.example to .env.local in that folder and fill in values (loaded automatically by tests/setup.ts).\n",
+		"   In CI: configure repo/workflow secrets. Locally: set those variables or put them in tests/chat-agent-e2e/.env.local (see .env.local.example); local env files override the shell.\n",
 	);
 }
 

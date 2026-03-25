@@ -1,9 +1,16 @@
 import * as fs from "node:fs";
 import path from "node:path";
+import process from "node:process";
+
+function isCiEnvironment(): boolean {
+	return Boolean(process.env.CI) || process.env.GITHUB_ACTIONS === "true";
+}
 
 /**
  * Ensures a .env and .env.local file exists in the target directory.
  * If it doesn't exist, copies from .env.example and .env.local.example.
+ *
+ * In CI, does not create those files — typegen uses `.env.example` / `.env.local.example` only when real files are absent.
  *
  * @param targetDir - The directory where the .env and .env.local files should exist
  * @returns An array of the files that were created or already existed
@@ -21,7 +28,9 @@ export function prepareEnvFiles(targetDir: string): string[] {
 	let envExists = fs.existsSync(envPath);
 	let envLocalExists = fs.existsSync(envLocalPath);
 
-	if (exampleEnvExists) {
+	const allowCopies = !isCiEnvironment();
+
+	if (allowCopies && exampleEnvExists) {
 		if (!envExists) {
 			fs.cpSync(exampleEnvPath, envPath);
 
@@ -30,7 +39,7 @@ export function prepareEnvFiles(targetDir: string): string[] {
 		}
 	}
 
-	if (exampleLocalEnvExists) {
+	if (allowCopies && exampleLocalEnvExists) {
 		if (!envLocalExists) {
 			fs.cpSync(exampleEnvLocalPath, envLocalPath);
 
