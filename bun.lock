@@ -126,7 +126,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "0.2.14",
+      "version": "0.2.15",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
@@ -244,7 +244,7 @@
     },
     "packages/worker-helper": {
       "name": "@firtoz/worker-helper",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "bin": {
         "cf-typegen": "./src/cf-typegen.ts",
       },
