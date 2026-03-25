@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { HTTP_BASE_URL } from "./common";
+import { isChatAgentE2eFullyConfigured } from "./e2e-env";
 
 /**
  * Basic health and environment tests for ChatAgent worker
@@ -8,20 +9,14 @@ import { HTTP_BASE_URL } from "./common";
  * The wrangler dev server is automatically managed by the global setup (setup.ts).
  */
 
-// Check if environment variables are configured
-const shouldSkipEnvTest = !(
-	process.env.OPENROUTER_API_KEY &&
-	process.env.CLOUDFLARE_ACCOUNT_ID &&
-	process.env.AI_GATEWAY_NAME &&
-	process.env.AI_GATEWAY_TOKEN
-);
+const shouldSkipEnvTest = !isChatAgentE2eFullyConfigured();
 
 if (shouldSkipEnvTest) {
 	console.warn(
-		"\n⚠️  Skipping environment variable tests: Required secrets not configured.",
+		"\n⚠️  Skipping environment variable tests: required secrets missing or still example placeholders.",
 	);
 	console.warn(
-		"   Add `tests/chat-agent-e2e/.env.local` (see `.env.local.example`); it is loaded by `tests/setup.ts`.\n",
+		"   Set the variables in the environment or in tests/chat-agent-e2e/.env.local; existing process env is never overwritten by files.\n",
 	);
 }
 
