@@ -49,15 +49,18 @@ Type-safe WebSocket session management for Cloudflare Durable Objects with Zod v
 
 ### [@firtoz/chat-agent](./packages/chat-agent)
 
-DB-agnostic ChatAgent for Cloudflare Durable Objects with OpenRouter - a simplified alternative to `@cloudflare/ai-chat`.
+Wire protocol, tools, and `ChatAgentBase` for Cloudflare Durable Objects with OpenRouter—a simplified alternative to `@cloudflare/ai-chat`. **Persistence** lives in sibling packages:
+
+- **`@firtoz/chat-agent-drizzle`** — Drizzle ORM (recommended; ships migrations and `./db/schema`)
+- **`@firtoz/chat-agent-sql`** — raw `this.sql` persistence
 
 - 🤖 **OpenRouter Integration** - Simpler alternative to AI SDK for chat agents
 - 🔄 **Resumable Streaming** - Chunk buffering with stream restoration on reconnect
 - 🛠️ **Server & Client Tools** - Support for both server-side and client-side tool execution
-- 💾 **DB Agnostic** - Choose between Drizzle ORM or raw SQL implementations
+- 💾 **DB Agnostic** - Install Drizzle or SQL package alongside core
 - 🌐 **AI Gateway Support** - Built-in Cloudflare AI Gateway integration
 - 📦 **Message Persistence** - Automatic message storage in Durable Objects SQLite
-- 🎯 **Type-safe** - Full TypeScript support with Drizzle ORM option
+- 🎯 **Type-safe** - Full TypeScript support; Drizzle path uses typed schema
 
 ### [@firtoz/drizzle-indexeddb](./packages/drizzle-indexeddb) ⚠️ WIP
 
@@ -120,8 +123,10 @@ bun add @firtoz/hono-fetcher
 # For WebSocket Durable Objects
 bun add @firtoz/websocket-do
 
-# For ChatAgent with OpenRouter
-bun add @firtoz/chat-agent @openrouter/sdk agents drizzle-orm
+# For ChatAgent with OpenRouter (core + peers; add drizzle or sql package for persistence)
+bun add @firtoz/chat-agent @openrouter/sdk agents
+# bun add @firtoz/chat-agent-drizzle drizzle-orm
+# or: bun add @firtoz/chat-agent-sql
 
 # For IndexedDB with Drizzle (WIP)
 bun add @firtoz/drizzle-indexeddb @firtoz/drizzle-utils drizzle-orm @tanstack/db

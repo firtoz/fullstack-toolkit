@@ -1,5 +1,5 @@
-import type { ChatMessage } from "./chat-messages";
-import { ChatAgentBase } from "./chat-agent-base";
+import type { ChatMessage } from "@firtoz/chat-agent";
+import { ChatAgentBase } from "@firtoz/chat-agent";
 
 /**
  * ChatAgent implementation using raw SQL (like @cloudflare/ai-chat)

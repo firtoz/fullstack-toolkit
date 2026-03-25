@@ -1,7 +1,7 @@
 {
-	"name": "@firtoz/chat-agent",
-	"version": "1.0.1",
-	"description": "Wire protocol, tools, and ChatAgentBase for Cloudflare Durable Objects with OpenRouter (use @firtoz/chat-agent-drizzle or @firtoz/chat-agent-sql for persistence)",
+	"name": "@firtoz/chat-agent-drizzle",
+	"version": "0.0.0",
+	"description": "Drizzle ORM persistence for @firtoz/chat-agent on Cloudflare Durable Objects",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -10,30 +10,36 @@
 			"types": "./src/index.ts",
 			"import": "./src/index.ts",
 			"require": "./src/index.ts"
+		},
+		"./db/schema": {
+			"types": "./src/db/schema.ts",
+			"import": "./src/db/schema.ts",
+			"require": "./src/db/schema.ts"
 		}
 	},
 	"files": [
 		"src/**/*.ts",
 		"!src/**/*.test.ts",
+		"drizzle/**/*.sql",
+		"drizzle/**/*.json",
+		"drizzle/migrations.js",
+		"drizzle/migrations.d.ts",
 		"README.md"
 	],
 	"scripts": {
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
-		"test": "bun test",
-		"test:watch": "bun test --watch",
+		"db:generate": "drizzle-kit generate",
 		"format": "biome format src --write"
 	},
 	"keywords": [
 		"typescript",
 		"durable-objects",
 		"cloudflare",
-		"cloudflare-workers",
 		"chat",
 		"ai",
-		"openrouter",
-		"agents"
+		"drizzle-orm"
 	],
 	"author": "Firtina Ozbalikchi <firtoz@github.com>",
 	"license": "MIT",
@@ -41,15 +47,17 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/firtoz/fullstack-toolkit.git",
-		"directory": "packages/chat-agent"
+		"directory": "packages/chat-agent-drizzle"
 	},
 	"bugs": {
 		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
 	},
 	"peerDependencies": {
+		"@firtoz/chat-agent": "^2.0.0",
 		"@cloudflare/workers-types": "catalog:",
 		"@openrouter/sdk": "catalog:",
-		"agents": "catalog:"
+		"agents": "catalog:",
+		"drizzle-orm": "catalog:"
 	},
 	"engines": {
 		"node": ">=18.0.0"
@@ -57,12 +65,12 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"dependencies": {
+		"@firtoz/chat-agent": "workspace:*"
+	},
 	"devDependencies": {
 		"bun-types": "catalog:",
+		"drizzle-kit": "^0.31.10",
 		"typescript": "catalog:"
-	},
-	"dependencies": {
-		"@firtoz/maybe-error": "workspace:*",
-		"zod": "catalog:"
 	}
 }

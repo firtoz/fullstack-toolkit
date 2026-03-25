@@ -18,6 +18,6 @@
 		"forceConsistentCasingInFileNames": true,
 		"types": ["bun-types", "@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "drizzle"],
 	"exclude": ["node_modules"]
 }

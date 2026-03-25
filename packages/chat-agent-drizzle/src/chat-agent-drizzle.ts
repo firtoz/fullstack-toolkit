@@ -1,5 +1,7 @@
 import { and, asc, count, desc, eq, lt } from "drizzle-orm";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
+import type { ChatMessage } from "@firtoz/chat-agent";
+import { ChatAgentBase } from "@firtoz/chat-agent";
 import { createDb, type Database } from "./db/index";
 import {
 	messagesTable,
@@ -7,8 +9,6 @@ import {
 	streamChunksTable,
 	streamMetadataTable,
 } from "./db/schema";
-import type { ChatMessage } from "./chat-messages";
-import { ChatAgentBase } from "./chat-agent-base";
 import migrations from "../drizzle/migrations.js";
 
 /**

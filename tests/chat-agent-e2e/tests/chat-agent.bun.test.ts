@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type {
-	ServerMessage,
 	HistoryMessage,
+	ServerMessage,
 	ToolCallMessage,
 	UserMessage,
 } from "@firtoz/chat-agent";

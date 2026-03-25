@@ -33,14 +33,48 @@
       },
       "devDependencies": {
         "bun-types": "catalog:",
-        "drizzle-kit": "^0.31.10",
         "typescript": "catalog:",
       },
       "peerDependencies": {
         "@cloudflare/workers-types": "catalog:",
         "@openrouter/sdk": "catalog:",
         "agents": "catalog:",
+      },
+    },
+    "packages/chat-agent-drizzle": {
+      "name": "@firtoz/chat-agent-drizzle",
+      "version": "0.0.0",
+      "dependencies": {
+        "@firtoz/chat-agent": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "catalog:",
+        "drizzle-kit": "^0.31.10",
+        "typescript": "catalog:",
+      },
+      "peerDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@firtoz/chat-agent": "^2.0.0",
+        "@openrouter/sdk": "catalog:",
+        "agents": "catalog:",
         "drizzle-orm": "catalog:",
+      },
+    },
+    "packages/chat-agent-sql": {
+      "name": "@firtoz/chat-agent-sql",
+      "version": "0.0.0",
+      "dependencies": {
+        "@firtoz/chat-agent": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "catalog:",
+        "typescript": "catalog:",
+      },
+      "peerDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@firtoz/chat-agent": "^2.0.0",
+        "@openrouter/sdk": "catalog:",
+        "agents": "catalog:",
       },
     },
     "packages/db-helpers": {
@@ -228,6 +262,7 @@
       "version": "1.0.3",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
+        "@firtoz/chat-agent-drizzle": "workspace:*",
         "hono": "^4.12.9",
       },
       "devDependencies": {
@@ -601,6 +636,10 @@
     "@exodus/bytes": ["@exodus/bytes@1.15.0", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-UY0nlA+feH81UGSHv92sLEPLCeZFjXOuHhrIo0HQydScuQc8s0A7kL/UdgwgDq8g8ilksmuoF35YVTNphV2aBQ=="],
 
     "@firtoz/chat-agent": ["@firtoz/chat-agent@workspace:packages/chat-agent"],
+
+    "@firtoz/chat-agent-drizzle": ["@firtoz/chat-agent-drizzle@workspace:packages/chat-agent-drizzle"],
+
+    "@firtoz/chat-agent-sql": ["@firtoz/chat-agent-sql@workspace:packages/chat-agent-sql"],
 
     "@firtoz/db-helpers": ["@firtoz/db-helpers@workspace:packages/db-helpers"],
 

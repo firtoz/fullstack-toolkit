@@ -1,7 +1,7 @@
 {
-	"name": "@firtoz/chat-agent",
-	"version": "1.0.1",
-	"description": "Wire protocol, tools, and ChatAgentBase for Cloudflare Durable Objects with OpenRouter (use @firtoz/chat-agent-drizzle or @firtoz/chat-agent-sql for persistence)",
+	"name": "@firtoz/chat-agent-sql",
+	"version": "0.0.0",
+	"description": "Raw SQL persistence for @firtoz/chat-agent on Cloudflare Durable Objects",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -21,19 +21,14 @@
 		"typecheck": "tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",
-		"test": "bun test",
-		"test:watch": "bun test --watch",
 		"format": "biome format src --write"
 	},
 	"keywords": [
 		"typescript",
 		"durable-objects",
 		"cloudflare",
-		"cloudflare-workers",
 		"chat",
-		"ai",
-		"openrouter",
-		"agents"
+		"ai"
 	],
 	"author": "Firtina Ozbalikchi <firtoz@github.com>",
 	"license": "MIT",
@@ -41,12 +36,13 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/firtoz/fullstack-toolkit.git",
-		"directory": "packages/chat-agent"
+		"directory": "packages/chat-agent-sql"
 	},
 	"bugs": {
 		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
 	},
 	"peerDependencies": {
+		"@firtoz/chat-agent": "^2.0.0",
 		"@cloudflare/workers-types": "catalog:",
 		"@openrouter/sdk": "catalog:",
 		"agents": "catalog:"
@@ -57,12 +53,11 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"dependencies": {
+		"@firtoz/chat-agent": "workspace:*"
+	},
 	"devDependencies": {
 		"bun-types": "catalog:",
 		"typescript": "catalog:"
-	},
-	"dependencies": {
-		"@firtoz/maybe-error": "workspace:*",
-		"zod": "catalog:"
 	}
 }

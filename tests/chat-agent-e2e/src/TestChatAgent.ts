@@ -1,4 +1,5 @@
-import { DrizzleChatAgent, defineTool } from "@firtoz/chat-agent";
+import { defineTool } from "@firtoz/chat-agent";
+import { DrizzleChatAgent } from "@firtoz/chat-agent-drizzle";
 
 export class TestChatAgent extends DrizzleChatAgent<Env> {
 	protected override getSystemPrompt(): string {

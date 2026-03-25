@@ -13,6 +13,7 @@
 	},
 	"dependencies": {
 		"@firtoz/chat-agent": "workspace:*",
+		"@firtoz/chat-agent-drizzle": "workspace:*",
 		"hono": "^4.12.9"
 	},
 	"devDependencies": {

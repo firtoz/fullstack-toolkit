@@ -1,14 +1,16 @@
 /**
- * @firtoz/chat-agent - ChatAgent for Cloudflare Durable Objects with OpenRouter
+ * @firtoz/chat-agent — wire protocol, tool helpers, and abstract `ChatAgentBase`.
  *
- * A simplified alternative to @cloudflare/ai-chat's AIChatAgent that uses OpenRouter
- * directly instead of Vercel AI SDK.
+ * Install a persistence package separately:
+ * - `@firtoz/chat-agent-drizzle` — Drizzle ORM (recommended)
+ * - `@firtoz/chat-agent-sql` — raw `this.sql`
  *
  * @example
  * ```typescript
- * import { ChatAgent, defineTool, type ToolDefinition } from "@firtoz/chat-agent";
+ * import { ChatAgentBase, defineTool, type ToolDefinition } from "@firtoz/chat-agent";
+ * import { DrizzleChatAgent } from "@firtoz/chat-agent-drizzle";
  *
- * class MyAgent extends ChatAgent {
+ * class MyAgent extends DrizzleChatAgent<Env> {
  *   protected override getSystemPrompt(): string {
  *     return "You are a helpful assistant.";
  *   }
@@ -31,30 +33,18 @@
  * ```
  */
 
-// Export the abstract base class
 export { ChatAgentBase } from "./chat-agent-base";
 
-// Export concrete implementations
-export { DrizzleChatAgent } from "./chat-agent-drizzle";
-export { SqlChatAgent } from "./chat-agent-sql";
-
-// Alias DrizzleChatAgent as ChatAgent for convenience (Drizzle is recommended)
-export { DrizzleChatAgent as ChatAgent } from "./chat-agent-drizzle";
-
-// Re-export all types and utilities from chat-messages
 export type {
-	// Message types
 	AssistantMessage,
 	ChatMessage,
 	UserMessage,
 	ToolMessage,
-	// Tool types
 	ToolCall,
 	ToolCallDelta,
 	ToolDefinition,
 	ToolResult,
 	JSONSchema,
-	// Client/Server message types
 	ClientMessage,
 	ServerMessage,
 	SendMessagePayload,
@@ -79,25 +69,20 @@ export type {
 	MessageUpdatedMessage,
 	ErrorMessage,
 	ToolErrorMessage,
-	// Usage types
 	TokenUsage,
 } from "./chat-messages";
 
 export {
-	// Tool definition helper
 	defineTool,
-	// Parsing helpers
 	parseClientMessage,
 	safeParseClientMessage,
 	parseServerMessage,
 	safeParseServerMessage,
-	// Type guards
 	isClientMessage,
 	isServerMessage,
 	isUserMessage,
 	isAssistantMessage,
 	isToolMessage,
 	hasToolCalls,
-	// Helper functions
 	parseToolArguments,
 } from "./chat-messages";
