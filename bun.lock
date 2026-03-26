@@ -96,7 +96,7 @@
     },
     "packages/drizzle-durable-sqlite": {
       "name": "@firtoz/drizzle-durable-sqlite",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
@@ -119,7 +119,7 @@
     },
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
-      "version": "3.0.0",
+      "version": "3.0.1",
       "bin": {
         "drizzle-indexeddb-generate": "./src/bin/generate-migrations.ts",
       },
@@ -149,7 +149,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "0.2.16",
+      "version": "0.2.17",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
@@ -296,7 +296,7 @@
     },
     "tests/drizzle-durable-sqlite-test": {
       "name": "drizzle-durable-sqlite-test",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "dependencies": {
         "@firtoz/drizzle-durable-sqlite": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",

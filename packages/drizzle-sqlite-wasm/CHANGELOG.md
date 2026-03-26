@@ -1,5 +1,11 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 0.2.17
+
+### Patch Changes
+
+- [`8b839f2`](https://github.com/firtoz/fullstack-toolkit/commit/8b839f2227f50409af649aab87178e039aad55dc) Thanks [@firtoz](https://github.com/firtoz)! - Export collection helper types for Drizzle-backed TanStack DB collections so users can declare collection variables with preserved select and insert inference from table schemas.
+
 ## 0.2.16
 
 ### Patch Changes
