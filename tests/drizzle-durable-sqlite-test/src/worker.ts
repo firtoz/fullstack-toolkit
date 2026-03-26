@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { SqliteSyncTestDO } from "./SqliteSyncTestDO";
 import { honoDoFetcherWithName } from "@firtoz/hono-fetcher";
+import { SqliteSyncTestDO } from "./SqliteSyncTestDO";
 
 export default {
 	async fetch() {
