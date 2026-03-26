@@ -79,6 +79,8 @@ Use `durableSqliteCollectionOptions` with tables built via `syncableTable` from 
 
 If something else must finish before sync runs (e.g. a migration promise), pass `readyPromise`. When omitted, the collection treats storage as ready immediately (same as `Promise.resolve()`).
 
+For explicit collection type annotations, use `DurableSqliteCollection<TTable>`. It preserves select output typing and insert input typing from your Drizzle table schema.
+
 Example `schema.ts`:
 
 ```typescript
@@ -107,13 +109,16 @@ import { createCollection } from "@tanstack/db";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
+import {
+	durableSqliteCollectionOptions,
+	type DurableSqliteCollection,
+} from "@firtoz/drizzle-durable-sqlite";
 import { Hono } from "hono";
 import { z } from "zod";
-import { durableSqliteCollectionOptions } from "@firtoz/drizzle-durable-sqlite";
 import migrations from "../drizzle/migrations.js";
 import * as schema from "./schema";
 
-type TodosCollection = ReturnType<typeof createCollection>;
+type TodosCollection = DurableSqliteCollection<typeof schema.todosTable>;
 
 export class TodosDurableObject extends DurableObject<Env> {
 	private db!: DrizzleSqliteDODatabase<typeof schema>;

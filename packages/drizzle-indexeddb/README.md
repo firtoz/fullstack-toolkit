@@ -100,15 +100,22 @@ Create reactive collections backed by IndexedDB:
 
 ```typescript
 import { createCollection } from "@tanstack/db";
-import { indexedDBCollectionOptions } from "@firtoz/drizzle-indexeddb";
+import {
+	drizzleIndexedDBCollectionOptions,
+	type DrizzleIndexedDBCollection,
+} from "@firtoz/drizzle-indexeddb";
+import * as schema from "./schema";
 
 const todosCollection = createCollection(
-  indexedDBCollectionOptions({
-    db,
-    tableName: "todos",
+  drizzleIndexedDBCollectionOptions({
+    indexedDBRef: { current: db },
+    table: schema.todoTable,
+    storeName: "todos",
     syncMode: "on-demand", // or "realtime"
   })
 );
+
+type TodosCollection = DrizzleIndexedDBCollection<typeof schema.todoTable>;
 
 // Subscribe to changes
 const unsubscribe = todosCollection.subscribe((todos) => {

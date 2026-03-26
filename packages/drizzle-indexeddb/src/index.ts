@@ -35,6 +35,8 @@ export { createInstrumentedDbCreator } from "./instrumented-idb-database";
 export {
 	drizzleIndexedDBCollectionOptions,
 	type DrizzleIndexedDBCollectionConfig,
+	type DrizzleIndexedDBCollectionConfigResult,
+	type DrizzleIndexedDBCollection,
 	type DrizzleIndexedDBSyncItem,
 } from "./collections/drizzle-indexeddb-collection";
 

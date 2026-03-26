@@ -1,4 +1,10 @@
-import type { InferSchemaOutput, SyncMode } from "@tanstack/db";
+import type {
+	Collection,
+	CollectionConfig,
+	InferSchemaInput,
+	InferSchemaOutput,
+	SyncMode,
+} from "@tanstack/db";
 import type { IR } from "@tanstack/db";
 import { parseOrderByExpression } from "@tanstack/db";
 import type { Table } from "drizzle-orm";
@@ -6,6 +12,8 @@ import type { Table } from "drizzle-orm";
 import {
 	type IdOf,
 	type SelectSchema,
+	type InsertToSelectSchema,
+	type TableWithRequiredFields,
 	type BaseSyncConfig,
 	type SyncBackend,
 	createSyncFunction,
@@ -13,7 +21,7 @@ import {
 	createGetKeyFunction,
 	createCollectionConfig,
 } from "@firtoz/drizzle-utils";
-import { evaluateExpression } from "@firtoz/db-helpers";
+import { evaluateExpression, type CollectionUtils } from "@firtoz/db-helpers";
 import { tryExtractIndexedQuery } from "@firtoz/idb-collections";
 
 import type { IDBDatabaseLike } from "../idb-types";
@@ -59,6 +67,28 @@ export interface DrizzleIndexedDBCollectionConfig<TTable extends Table> {
 	debug?: boolean;
 }
 
+export type DrizzleIndexedDBCollectionConfigResult<TTable extends Table> = Omit<
+	CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		IdOf<TTable>,
+		InsertToSelectSchema<TTable>,
+		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>
+	>,
+	"utils"
+> & {
+	schema: InsertToSelectSchema<TTable>;
+	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
+};
+
+export type DrizzleIndexedDBCollection<TTable extends TableWithRequiredFields> =
+	Collection<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		IdOf<TTable>,
+		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
+		InsertToSelectSchema<TTable>,
+		InferSchemaInput<InsertToSelectSchema<TTable>>
+	>;
+
 /**
  * Auto-discovers indexes from the IndexedDB store.
  * Returns a map of field names to index names for single-column indexes.
@@ -84,7 +114,7 @@ function discoverIndexes(
  */
 export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 	config: DrizzleIndexedDBCollectionConfig<TTable>,
-) {
+): DrizzleIndexedDBCollectionConfigResult<TTable> {
 	let discoveredIndexes: Record<string, string> = {};
 	let indexesDiscovered = false;
 

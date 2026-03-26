@@ -4,6 +4,7 @@ export {
 	type DurableDrizzleSchema,
 	type DurableSqliteCollectionConfig,
 	type DurableSqliteCollectionConfigResult,
+	type DurableSqliteCollection,
 	type ValidTableNames,
 	type SQLOperation,
 	type SQLInterceptor,

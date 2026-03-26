@@ -332,8 +332,8 @@ export function createGenericCollectionConfig<
 	CollectionConfig<
 		TItem,
 		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
+		TSchema,
+		CollectionUtils<InferSchemaOutput<TSchema>>
 	>,
 	"utils"
 > & {

@@ -1,4 +1,6 @@
 import type {
+	Collection,
+	InferSchemaInput,
 	InferSchemaOutput,
 	SyncMode,
 	CollectionConfig,
@@ -11,6 +13,7 @@ import type {
 	InsertToSelectSchema,
 	TableWithRequiredFields,
 	BaseSyncConfig,
+	IdOf,
 } from "@firtoz/drizzle-utils";
 import {
 	createSyncFunction,
@@ -67,14 +70,24 @@ export type ValidTableNames<TSchema extends Record<string, unknown>> = {
 export type SqliteCollectionConfig<TTable extends Table> = Omit<
 	CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
-		string,
-		InsertToSelectSchema<TTable>
+		IdOf<TTable>,
+		InsertToSelectSchema<TTable>,
+		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>
 	>,
 	"utils"
 > & {
 	schema: InsertToSelectSchema<TTable>;
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 };
+
+export type DrizzleSqliteCollection<TTable extends TableWithRequiredFields> =
+	Collection<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		IdOf<TTable>,
+		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
+		InsertToSelectSchema<TTable>,
+		InferSchemaInput<InsertToSelectSchema<TTable>>
+	>;
 
 export function sqliteCollectionOptions<
 	const TDrizzle extends AnyDrizzleDatabase,

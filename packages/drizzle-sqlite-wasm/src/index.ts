@@ -1,6 +1,8 @@
 export { drizzleSqliteWasm } from "./drizzle/direct";
 export {
 	sqliteCollectionOptions as drizzleCollectionOptions,
+	type DrizzleSqliteCollection,
+	type SqliteCollectionConfig,
 	type SQLOperation,
 	type SQLInterceptor,
 } from "./collections/sqlite-collection";

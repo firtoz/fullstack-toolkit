@@ -270,14 +270,22 @@ export function createCollectionConfig<
 	>["onDelete"];
 	syncMode?: SyncMode;
 }): Omit<
-	CollectionConfig<InferSchemaOutput<SelectSchema<TTable>>, string, TSchema>,
+	CollectionConfig<
+		InferSchemaOutput<SelectSchema<TTable>>,
+		IdOf<TTable>,
+		TSchema,
+		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>
+	>,
 	"utils"
 > & {
 	schema: TSchema;
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 } {
 	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
-	type ReturnType = Omit<CollectionConfig<TItem, string, TSchema>, "utils"> & {
+	type ReturnType = Omit<
+		CollectionConfig<TItem, IdOf<TTable>, TSchema, CollectionUtils<TItem>>,
+		"utils"
+	> & {
 		schema: TSchema;
 		utils: CollectionUtils<TItem>;
 	};
