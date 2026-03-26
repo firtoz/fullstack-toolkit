@@ -1,0 +1,50 @@
+{
+	"$schema": "../../node_modules/turbo/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"typegen": {
+			"inputs": [
+				"wrangler.jsonc",
+				"wrangler.toml",
+				".env",
+				".env.local",
+				".dev.vars",
+				"package.json"
+			],
+			"outputs": ["worker-configuration.d.ts"]
+		},
+		"typecheck": {
+			"dependsOn": ["typegen"],
+			"inputs": [
+				"src/**",
+				"tsconfig.json",
+				"package.json",
+				"worker-configuration.d.ts"
+			]
+		},
+		"lint": {
+			"dependsOn": ["typegen"],
+			"inputs": ["src/**", "biome.json"]
+		},
+		"lint:ci": {
+			"dependsOn": ["typegen"],
+			"inputs": ["src/**", "biome.json"]
+		},
+		"test": {
+			"dependsOn": ["typegen"],
+			"inputs": [
+				"src/**",
+				"vitest.config.ts",
+				"wrangler.jsonc",
+				"tsconfig.json",
+				"package.json",
+				"drizzle/**",
+				"worker-configuration.d.ts"
+			]
+		},
+		"test:watch": {
+			"cache": false,
+			"persistent": true
+		}
+	}
+}

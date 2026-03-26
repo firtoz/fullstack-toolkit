@@ -1,0 +1,35 @@
+{
+	"name": "drizzle-durable-sqlite-test",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Integration tests for @firtoz/drizzle-durable-sqlite (vitest-pool-workers)",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest watch",
+		"typecheck": "tsc --noEmit -p ./tsconfig.json",
+		"db:generate": "drizzle-kit generate",
+		"typegen": "bun run cf-typegen",
+		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)",
+		"lint": "biome check --write src",
+		"lint:ci": "biome ci src"
+	},
+	"dependencies": {
+		"@firtoz/drizzle-durable-sqlite": "workspace:*",
+		"@firtoz/drizzle-utils": "workspace:*",
+		"@firtoz/hono-fetcher": "workspace:*",
+		"@hono/zod-validator": "^0.7.6",
+		"@tanstack/db": "catalog:",
+		"drizzle-orm": "catalog:",
+		"hono": "^4.12.9",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"drizzle-kit": "^0.31.10",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

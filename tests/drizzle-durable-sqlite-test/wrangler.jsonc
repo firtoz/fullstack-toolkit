@@ -1,0 +1,31 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "drizzle-durable-sqlite-test",
+	"main": "src/worker.ts",
+	"compatibility_date": "2025-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "SQLITE_SYNC_TEST",
+				"class_name": "SqliteSyncTestDO"
+			}
+		]
+	},
+
+	"rules": [
+		{
+			"type": "Text",
+			"globs": ["**/*.sql"],
+			"fallthrough": true
+		}
+	],
+
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["SqliteSyncTestDO"]
+		}
+	]
+}

@@ -67,6 +67,15 @@ export type InsertSchema<TTable extends Table> = BuildSchema<
 >;
 
 /**
+ * Schema type with insert input (optionals for defaults) and select output (all fields present).
+ * Represents the standard input/output pair for collection schemas.
+ */
+export type InsertToSelectSchema<TTable extends Table> = v.GenericSchema<
+	v.InferInput<InsertSchema<TTable>>,
+	v.InferOutput<SelectSchema<TTable>>
+>;
+
+/**
  * Helper type to get the table from schema by name
  */
 export type GetTableFromSchema<
@@ -82,7 +91,7 @@ export type InferCollectionFromTable<TTable extends Table> = Collection<
 	TTable["$inferSelect"],
 	IdOf<TTable>,
 	UtilsRecord,
-	SelectSchema<TTable>,
+	InsertToSelectSchema<TTable>,
 	Omit<
 		TTable["$inferInsert"],
 		"id"
@@ -135,7 +144,7 @@ export function createSyncFunction<TTable extends Table>(
  */
 export function createInsertSchemaWithDefaults<TTable extends Table>(
 	table: TTable,
-): v.GenericSchema<unknown> {
+): InsertToSelectSchema<TTable> {
 	const insertSchema = createInsertSchema(table);
 	const columns = getTableColumns(table);
 
@@ -194,7 +203,7 @@ export function createInsertSchemaWithDefaults<TTable extends Table>(
 
 			return result;
 		}),
-	) as v.GenericSchema<unknown>;
+	) as InsertToSelectSchema<TTable>;
 }
 
 /**
@@ -203,7 +212,7 @@ export function createInsertSchemaWithDefaults<TTable extends Table>(
  */
 export function createInsertSchemaWithIdDefault<TTable extends Table>(
 	table: TTable,
-): v.GenericSchema<unknown> {
+): InsertToSelectSchema<TTable> {
 	const insertSchema = createInsertSchema(table);
 	const columns = getTableColumns(table);
 	const idColumn = columns.id;
@@ -220,7 +229,7 @@ export function createInsertSchemaWithIdDefault<TTable extends Table>(
 
 			return result;
 		}),
-	) as v.GenericSchema<unknown>;
+	) as InsertToSelectSchema<TTable>;
 }
 
 /**
@@ -247,44 +256,28 @@ export function createCollectionConfig<
 	onInsert?: CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
 		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
+		TSchema
 	>["onInsert"];
 	onUpdate?: CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
 		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
+		TSchema
 	>["onUpdate"];
 	onDelete?: CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
 		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
+		TSchema
 	>["onDelete"];
 	syncMode?: SyncMode;
 }): Omit<
-	CollectionConfig<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		string,
-		// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-		any
-	>,
+	CollectionConfig<InferSchemaOutput<SelectSchema<TTable>>, string, TSchema>,
 	"utils"
 > & {
 	schema: TSchema;
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 } {
 	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
-	type ReturnType = Omit<
-		CollectionConfig<
-			TItem,
-			string,
-			// biome-ignore lint/suspicious/noExplicitAny: Schema type parameter needs to be flexible
-			any
-		>,
-		"utils"
-	> & {
+	type ReturnType = Omit<CollectionConfig<TItem, string, TSchema>, "utils"> & {
 		schema: TSchema;
 		utils: CollectionUtils<TItem>;
 	};

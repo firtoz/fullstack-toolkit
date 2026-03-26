@@ -111,21 +111,25 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 			// Check if collection already exists in cache
 			if (!collections.has(cacheKey)) {
 				// Create new collection and cache it with ref count 0
-				const collection = createCollection(
-					sqliteCollectionOptions({
-						drizzle,
-						tableName: tableName as string &
-							ValidTableNames<DrizzleSchema<AnyDrizzleDatabase>>,
-						readyPromise,
-						syncMode,
-						checkpoint:
-							enableCheckpoint && sqliteClient
-								? () => sqliteClient.checkpoint()
-								: undefined,
-						interceptor,
-						debug,
-					}),
-				) as Collection<Record<string, unknown>, string, UtilsRecord>;
+				const options = sqliteCollectionOptions({
+					drizzle,
+					tableName: tableName as string &
+						ValidTableNames<DrizzleSchema<AnyDrizzleDatabase>>,
+					readyPromise,
+					syncMode,
+					checkpoint:
+						enableCheckpoint && sqliteClient
+							? () => sqliteClient.checkpoint()
+							: undefined,
+					interceptor,
+					debug,
+				});
+				// biome-ignore lint/suspicious/noExplicitAny: Table type degenerates through AnyDrizzleDatabase; collection is re-typed on cache retrieval
+				const collection = createCollection(options as any) as Collection<
+					Record<string, unknown>,
+					string,
+					UtilsRecord
+				>;
 				collections.set(cacheKey, {
 					collection,
 					refCount: 0,

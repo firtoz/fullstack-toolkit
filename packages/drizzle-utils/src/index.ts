@@ -22,6 +22,7 @@ export type {
 	IdOf,
 	SelectSchema,
 	InsertSchema,
+	InsertToSelectSchema,
 	GetTableFromSchema,
 	InferCollectionFromTable,
 	BaseSyncConfig,
@@ -47,3 +48,15 @@ export {
 } from "./syncableTable";
 
 export type { TableWithRequiredFields } from "./syncableTable";
+
+export type {
+	SQLOperation,
+	SQLInterceptor,
+	SqliteDriverMode,
+	SqliteTableSyncBackendConfig,
+} from "./sqlite-table-sync";
+export {
+	convertBasicExpressionToDrizzle,
+	convertOrderByToDrizzle,
+	createSqliteTableSyncBackend,
+} from "./sqlite-table-sync";

@@ -9,7 +9,12 @@ import {
 } from "@tanstack/db";
 import type { Table } from "drizzle-orm";
 import type { CollectionUtils } from "@firtoz/db-helpers";
-import type { IdOf, InsertSchema, SelectSchema } from "@firtoz/drizzle-utils";
+import type {
+	IdOf,
+	InsertSchema,
+	InsertToSelectSchema,
+	SelectSchema,
+} from "@firtoz/drizzle-utils";
 import {
 	drizzleIndexedDBCollectionOptions,
 	type DrizzleIndexedDBCollectionConfig,
@@ -62,7 +67,7 @@ type InternalCollection<TTable extends Table> = Collection<
 	InferSchemaOutput<SelectSchema<TTable>>,
 	IdOf<TTable>,
 	CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
-	SelectSchema<TTable>,
+	InsertToSelectSchema<TTable>,
 	InferSchemaInput<InsertSchema<TTable>>
 >;
 
@@ -271,9 +276,9 @@ export function createStandaloneCollection<TTable extends Table>(
 		syncMode,
 	} as DrizzleIndexedDBCollectionConfig<TTable>);
 
-	// Create the collection
+	// biome-ignore lint/suspicious/noExplicitAny: createCollection overloads can't resolve InsertToSelectSchema for generic TTable; collection is re-typed below
 	const collection = createCollection(
-		collectionConfig,
+		collectionConfig as any,
 	) as unknown as InternalCollection<TTable>;
 
 	// Wait for collection to be ready
