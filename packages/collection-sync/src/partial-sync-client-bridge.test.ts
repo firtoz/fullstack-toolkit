@@ -1,0 +1,196 @@
+import { describe, expect, it } from "bun:test";
+import { PartialSyncClientBridge } from "./partial-sync-client-bridge";
+
+type Item = { id: string; name: string; age: number };
+
+describe("PartialSyncClientBridge", () => {
+	it("requests range and resolves after final chunk", async () => {
+		const sent: unknown[] = [];
+		const received: unknown[] = [];
+		const states: string[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+			onStateChange: (state) => states.push(state.status),
+		});
+
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			2,
+			null,
+		);
+		expect(sent.length).toBe(1);
+		expect((sent[0] as { type: string }).type).toBe("queryRange");
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			requestId: (sent[0] as { requestId: string }).requestId,
+			rows: [{ id: "1", name: "aaaaa", age: 20 }],
+			totalCount: 3,
+			lastCursor: "aaaaa",
+			hasMore: true,
+			chunkIndex: 0,
+			done: false,
+		});
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			requestId: (sent[0] as { requestId: string }).requestId,
+			rows: [{ id: "2", name: "aaaab", age: 21 }],
+			totalCount: 3,
+			lastCursor: "aaaab",
+			hasMore: true,
+			chunkIndex: 1,
+			done: true,
+		});
+
+		const result = await rangePromise;
+		expect(result.rows.length).toBe(2);
+		expect(result.totalCount).toBe(3);
+		expect(bridge.cachedCount).toBe(2);
+		expect(received.length).toBe(2);
+		expect(states.includes("fetching")).toBe(true);
+		expect(states.includes("realtime")).toBe(true);
+	});
+
+	it("skips receiveSync insert for row ids already tracked (overlap / re-fetch)", async () => {
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p1 = bridge.requestRange({ column: "name", direction: "asc" }, 2, null);
+		const id1 = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			requestId: id1,
+			rows: [
+				{ id: "1", name: "a", age: 1 },
+				{ id: "2", name: "b", age: 2 },
+			],
+			totalCount: 10,
+			lastCursor: "b",
+			hasMore: true,
+			chunkIndex: 0,
+			done: true,
+		});
+		await p1;
+
+		const p2 = bridge.requestRange({ column: "name", direction: "asc" }, 2, "b");
+		const id2 = (sent[1] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			requestId: id2,
+			rows: [
+				{ id: "2", name: "b", age: 2 },
+				{ id: "3", name: "c", age: 3 },
+			],
+			totalCount: 10,
+			lastCursor: "c",
+			hasMore: true,
+			chunkIndex: 0,
+			done: true,
+		});
+		await p2;
+
+		const insertedIds = received.flatMap((batch) =>
+			batch.filter((m) => m.type === "insert").map((m) => m.value.id),
+		);
+		expect(insertedIds).toEqual(["1", "2", "3"]);
+	});
+
+	it("requestByOffset sends queryByOffset and resolves after final chunk", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestByOffset(
+			{ column: "name", direction: "asc" },
+			2,
+			100,
+		);
+		expect(sent.length).toBe(1);
+		expect((sent[0] as { type: string }).type).toBe("queryByOffset");
+		expect((sent[0] as { offset: number }).offset).toBe(100);
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			requestId: (sent[0] as { requestId: string }).requestId,
+			rows: [
+				{ id: "1", name: "aaaaa", age: 20 },
+				{ id: "2", name: "aaaab", age: 21 },
+			],
+			totalCount: 500,
+			lastCursor: "aaaab",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+
+		const result = await rangePromise;
+		expect(result.rows.length).toBe(2);
+		expect(result.totalCount).toBe(500);
+		expect(result.lastCursor).toBe("aaaab");
+	});
+
+	it("applies range patches to local cache", async () => {
+		const received: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: {
+				type: "insert",
+				value: { id: "1", name: "aaaaa", age: 20 },
+			},
+		});
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: {
+				type: "delete",
+				key: "1",
+			},
+		});
+
+		expect(received).toEqual([
+			[{ type: "insert", value: { id: "1", name: "aaaaa", age: 20 } }],
+			[{ type: "delete", key: "1" }],
+		]);
+		expect(bridge.cachedCount).toBe(0);
+	});
+});

@@ -43,6 +43,15 @@ export class SyncClientBridge<
 	#pendingTruncateMutationId: string | null = null;
 	#lastAckedServerVersion = 0;
 	#connected = false;
+	#activeBackfill:
+		| {
+				mode: "snapshot" | "delta";
+				serverVersion: number;
+				totalChunks: number;
+				receivedChunks: number;
+				snapshotTruncateApplied: boolean;
+		  }
+		| undefined;
 
 	constructor(private readonly options: SyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId;
@@ -141,12 +150,44 @@ export class SyncClientBridge<
 				const incomingChanges = this.#filterIncomingChanges(
 					message.changes as SyncMessage<TItem>[],
 				);
-				const backfillChanges =
-					message.mode === "snapshot"
-						? ([{ type: "truncate" }, ...incomingChanges] as SyncMessage<TItem>[])
-						: incomingChanges;
-				await this.options.collection.utils.receiveSync(backfillChanges);
-				this.#sendPendingIntents();
+				const totalChunks = message.totalChunks ?? 1;
+				const chunkIndex = message.chunkIndex ?? 0;
+				const isChunked = totalChunks > 1 || message.chunkIndex !== undefined;
+				if (
+					!this.#activeBackfill ||
+					chunkIndex === 0 ||
+					this.#activeBackfill.serverVersion !== message.serverVersion ||
+					this.#activeBackfill.mode !== message.mode
+				) {
+					this.#activeBackfill = {
+						mode: message.mode,
+						serverVersion: message.serverVersion,
+						totalChunks,
+						receivedChunks: 0,
+						snapshotTruncateApplied: false,
+					};
+				}
+
+				const active = this.#activeBackfill;
+				const outgoingChanges: SyncMessage<TItem>[] = [];
+				if (active.mode === "snapshot" && !active.snapshotTruncateApplied) {
+					outgoingChanges.push({ type: "truncate" });
+					active.snapshotTruncateApplied = true;
+				}
+				outgoingChanges.push(...incomingChanges);
+
+				if (outgoingChanges.length > 0) {
+					await this.options.collection.utils.receiveSync(outgoingChanges);
+				}
+
+				active.receivedChunks += 1;
+				const isFinalChunk = isChunked
+					? chunkIndex >= totalChunks - 1
+					: active.receivedChunks >= 1;
+				if (isFinalChunk) {
+					this.#activeBackfill = undefined;
+					this.#sendPendingIntents();
+				}
 				return;
 			}
 			case "reject": {
@@ -163,6 +204,10 @@ export class SyncClientBridge<
 				return;
 			}
 			case "pong":
+				return;
+			case "queryRangeChunk":
+			case "rangePatch":
+				// Not supported by the full-sync bridge; partial sync uses PartialSyncClientBridge.
 				return;
 			default:
 				exhaustiveGuard(message);

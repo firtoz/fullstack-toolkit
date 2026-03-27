@@ -6,6 +6,21 @@ import {
 } from "./sync-protocol";
 
 describe("sync protocol schemas", () => {
+	it("parses queryByOffset messages", () => {
+		const parsed = clientMessageSchema.parse({
+			type: "queryByOffset",
+			clientId: "client-1",
+			requestId: "r1",
+			sort: { column: "name", direction: "asc" },
+			limit: 50,
+			offset: 90000,
+		});
+		expect(parsed.type).toBe("queryByOffset");
+		if (parsed.type === "queryByOffset") {
+			expect(parsed.offset).toBe(90000);
+		}
+	});
+
 	it("parses mutate batch messages", () => {
 		const parsed = clientMessageSchema.parse({
 			type: "mutateBatch",

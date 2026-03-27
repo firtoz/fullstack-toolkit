@@ -73,6 +73,8 @@ describe("SyncServerBridge", () => {
 				mode: "snapshot",
 				serverVersion: 0,
 				changes: snapshotChanges,
+				chunkIndex: 0,
+				totalChunks: 1,
 			},
 		]);
 	});
@@ -106,6 +108,8 @@ describe("SyncServerBridge", () => {
 				mode: "snapshot",
 				serverVersion: 0,
 				changes: snapshotChanges,
+				chunkIndex: 0,
+				totalChunks: 1,
 			},
 		]);
 	});
@@ -165,6 +169,54 @@ describe("SyncServerBridge", () => {
 						value: { id: "2", title: "second", updatedAt: 2 },
 					},
 				],
+				chunkIndex: 0,
+				totalChunks: 1,
+			},
+		]);
+	});
+
+	it("chunks large snapshot backfills across multiple frames", async () => {
+		const sentToClient: unknown[] = [];
+		const snapshotChanges = [
+			{ type: "insert" as const, value: { id: "1", title: "a", updatedAt: 1 } },
+			{ type: "insert" as const, value: { id: "2", title: "b", updatedAt: 2 } },
+			{ type: "insert" as const, value: { id: "3", title: "c", updatedAt: 3 } },
+		];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async () => {},
+				getSnapshotMessages: async () => snapshotChanges,
+				getRow: () => undefined,
+			},
+			sendToClient: (_clientId, message) => {
+				sentToClient.push(message);
+			},
+			broadcastExcept: () => {},
+			backfillChunkSize: 2,
+		});
+
+		await bridge.handleClientMessage({
+			type: "syncHello",
+			clientId: "c1",
+			lastAckedServerVersion: 0,
+		});
+
+		expect(sentToClient).toEqual([
+			{
+				type: "syncBackfill",
+				mode: "snapshot",
+				serverVersion: 0,
+				changes: snapshotChanges.slice(0, 2),
+				chunkIndex: 0,
+				totalChunks: 2,
+			},
+			{
+				type: "syncBackfill",
+				mode: "snapshot",
+				serverVersion: 0,
+				changes: snapshotChanges.slice(2),
+				chunkIndex: 1,
+				totalChunks: 2,
 			},
 		]);
 	});

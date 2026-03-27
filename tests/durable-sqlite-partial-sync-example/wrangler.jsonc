@@ -1,0 +1,27 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "durable-sqlite-partial-sync-example-worker",
+	"main": "src/worker.ts",
+	"compatibility_date": "2025-10-01",
+	"rules": [
+		{
+			"type": "Text",
+			"globs": ["**/*.sql"],
+			"fallthrough": true
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "PEOPLE_SYNC",
+				"class_name": "PeopleSyncDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["PeopleSyncDO"]
+		}
+	]
+}

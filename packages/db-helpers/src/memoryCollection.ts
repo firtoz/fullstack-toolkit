@@ -46,10 +46,16 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 	type TItem = InferSchemaOutput<TSchema>;
 	type TKey = string | number;
 	let syncParams: Parameters<SyncConfig<TItem>["sync"]>[0] | null = null;
+	/** Batches from `receiveSync` that arrived before TanStack called `sync`. */
+	const pendingReceiveSyncBatches: SyncMessage<TItem, TKey>[][] = [];
 
 	const sync: SyncConfig<TItem>["sync"] = (params) => {
 		syncParams = params;
 		params.markReady();
+		for (const batch of pendingReceiveSyncBatches) {
+			writeChanges(batch);
+		}
+		pendingReceiveSyncBatches.length = 0;
 		return () => {};
 	};
 
@@ -116,7 +122,9 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 
 	const truncate = async () => {
 		if (!syncParams) {
-			throw new Error("Sync parameters not initialized");
+			// TanStack may not have invoked `sync` yet (e.g. first paint / effect). Nothing to clear.
+			pendingReceiveSyncBatches.length = 0;
+			return;
 		}
 		syncParams.begin();
 		syncParams.truncate();
@@ -125,6 +133,10 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 
 	const receiveSync = async (messages: SyncMessage<TItem, TKey>[]) => {
 		if (messages.length === 0) return;
+		if (!syncParams) {
+			pendingReceiveSyncBatches.push(messages);
+			return;
+		}
 		writeChanges(messages);
 	};
 

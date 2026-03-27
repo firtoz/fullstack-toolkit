@@ -26,6 +26,53 @@ See [.cursor/skills/exhaustive-switches/SKILL.md](.cursor/skills/exhaustive-swit
 
 ---
 
+# Cloudflare / Wrangler Typegen
+
+When working on Cloudflare Workers apps (including test fixtures), **always use the Cloudflare typegen workflow skill**:
+
+- [.cursor/skills/cloudflare-wrangler-typegen/SKILL.md](.cursor/skills/cloudflare-wrangler-typegen/SKILL.md)
+
+Use it whenever you touch:
+
+- `wrangler.jsonc` / `wrangler.app.jsonc`
+- Durable Object or service bindings
+- Worker entrypoints and `Env`-typed code
+- New Workers fixtures/apps
+
+**Never manually create or edit `worker-configuration.d.ts` (or generated worker env `.d.ts`) files.**  
+Always regenerate via app scripts (typically `bun run typegen` / `bun run cf-typegen`).
+
+---
+
+# Type Safety: No Escape Hatches
+
+When writing or modifying TypeScript, **always use the strict typing skill**:
+
+- [.cursor/skills/strict-types-no-escape-hatches/SKILL.md](.cursor/skills/strict-types-no-escape-hatches/SKILL.md)
+
+## Mandatory Restrictions
+
+- Never use `any`
+- Never use `as any`
+- Never use `as never`
+- Never use double-casts like `as unknown as T`
+- Never use `@ts-ignore` / `@ts-expect-error` to bypass type errors
+
+If typing is difficult, improve the types/interfaces/generics instead of bypassing the compiler.
+
+---
+
+# Execution Discipline: Punch Lists
+
+For large or multi-phase implementation tasks, use:
+
+- [.cursor/skills/punch-list-execution/SKILL.md](.cursor/skills/punch-list-execution/SKILL.md)
+
+This skill enforces a persistent punch-list workflow stored in the OS temp directory (not the repo) so the agent repeatedly:
+read -> execute next unchecked item -> mark complete -> continue.
+
+---
+
 # Changeset Generation Guide
 
 **Always add or update a changeset when you change a published package.** Any change to a package that is published (has `publishConfig` or is released) must be reflected in a changeset so the next release has an accurate changelog and version bump. Do not add changesets for internal or unpublished packages (e.g. test apps, e2e, or workspace-only tooling).

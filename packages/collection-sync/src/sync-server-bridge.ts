@@ -23,6 +23,8 @@ export interface SyncServerBridgeOptions<TItem> {
 	) => void;
 	/** Deliver a server message to every connected client (e.g. {@link SyncServerBridge.pushServerChanges}). */
 	broadcastAll?: (message: SyncServerMessage<TItem>) => void;
+	/** Maximum number of changes per `syncBackfill` frame. Defaults to 500. */
+	backfillChunkSize?: number;
 }
 
 export class SyncServerBridge<
@@ -50,16 +52,26 @@ export class SyncServerBridge<
 				const { mode, changes } = await this.#resolveBackfill(
 					message.lastAckedServerVersion,
 				);
-				this.options.sendToClient(message.clientId, {
-					type: "syncBackfill",
-					mode,
-					serverVersion: this.#serverVersion,
-					changes,
-				});
+				const chunks = this.#chunkBackfillChanges(changes);
+				const totalChunks = chunks.length;
+				for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+					this.options.sendToClient(message.clientId, {
+						type: "syncBackfill",
+						mode,
+						serverVersion: this.#serverVersion,
+						changes: chunks[chunkIndex],
+						chunkIndex,
+						totalChunks,
+					});
+				}
 				return;
 			}
 			case "mutateBatch":
 				await this.#handleMutateBatch(message);
+				return;
+			case "queryRange":
+			case "queryByOffset":
+				// Not supported by the full-sync bridge; partial sync uses PartialSyncServerBridge.
 				return;
 			default:
 				exhaustiveGuard(message);
@@ -178,6 +190,16 @@ export class SyncServerBridge<
 			}
 		}
 		return { mode: "delta", changes };
+	}
+
+	#chunkBackfillChanges(changes: SyncMessage<TItem>[]): SyncMessage<TItem>[][] {
+		const chunkSize = Math.max(1, this.options.backfillChunkSize ?? 500);
+		if (changes.length === 0) return [[]];
+		const chunks: SyncMessage<TItem>[][] = [];
+		for (let i = 0; i < changes.length; i += chunkSize) {
+			chunks.push(changes.slice(i, i + chunkSize));
+		}
+		return chunks;
 	}
 
 	/**

@@ -14,6 +14,12 @@ export const mutationIntentSchema = z.object({
 
 export type MutationIntent = z.infer<typeof mutationIntentSchema>;
 
+export type SyncSortDirection = "asc" | "desc";
+export type SyncRangeSort = {
+	column: string;
+	direction: SyncSortDirection;
+};
+
 export type SyncClientMessage =
 	| {
 			type: "mutateBatch";
@@ -29,6 +35,22 @@ export type SyncClientMessage =
 			type: "ping";
 			clientId: string;
 			timestamp: number;
+	  }
+	| {
+			type: "queryRange";
+			clientId: string;
+			requestId: string;
+			sort: SyncRangeSort;
+			limit: number;
+			afterCursor: unknown | null;
+	  }
+	| {
+			type: "queryByOffset";
+			clientId: string;
+			requestId: string;
+			sort: SyncRangeSort;
+			limit: number;
+			offset: number;
 	  };
 
 export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
@@ -47,6 +69,28 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 			type: z.literal("ping"),
 			clientId: z.string().min(1),
 			timestamp: z.number(),
+		}),
+		z.object({
+			type: z.literal("queryRange"),
+			clientId: z.string().min(1),
+			requestId: z.string().min(1),
+			sort: z.object({
+				column: z.string().min(1),
+				direction: z.enum(["asc", "desc"]),
+			}),
+			limit: z.number().int().positive(),
+			afterCursor: z.unknown().nullable(),
+		}),
+		z.object({
+			type: z.literal("queryByOffset"),
+			clientId: z.string().min(1),
+			requestId: z.string().min(1),
+			sort: z.object({
+				column: z.string().min(1),
+				direction: z.enum(["asc", "desc"]),
+			}),
+			limit: z.number().int().positive(),
+			offset: z.number().int().nonnegative(),
 		}),
 	]);
 }
@@ -78,6 +122,8 @@ export type SyncServerMessage<
 			mode: SyncBackfillMode;
 			serverVersion: number;
 			changes: SyncMessage<TItem, TKey>[];
+			chunkIndex?: number;
+			totalChunks?: number;
 	  }
 	| {
 			type: "reject";
@@ -89,6 +135,20 @@ export type SyncServerMessage<
 	| {
 			type: "pong";
 			timestamp: number;
+	  }
+	| {
+			type: "queryRangeChunk";
+			requestId: string;
+			rows: TItem[];
+			totalCount: number;
+			lastCursor: unknown | null;
+			hasMore: boolean;
+			chunkIndex: number;
+			done: boolean;
+	  }
+	| {
+			type: "rangePatch";
+			change: SyncMessage<TItem, TKey>;
 	  };
 
 export function createServerMessageSchema<
@@ -114,6 +174,8 @@ export function createServerMessageSchema<
 			mode: z.enum(["snapshot", "delta"]),
 			serverVersion: z.number().int().nonnegative(),
 			changes: z.array(syncMessageSchema),
+			chunkIndex: z.number().int().nonnegative().optional(),
+			totalChunks: z.number().int().positive().optional(),
 		}),
 		z.object({
 			type: z.literal("reject"),
@@ -125,6 +187,20 @@ export function createServerMessageSchema<
 		z.object({
 			type: z.literal("pong"),
 			timestamp: z.number(),
+		}),
+		z.object({
+			type: z.literal("queryRangeChunk"),
+			requestId: z.string().min(1),
+			rows: z.array(z.custom<TItem>()),
+			totalCount: z.number().int().nonnegative(),
+			lastCursor: z.unknown().nullable(),
+			hasMore: z.boolean(),
+			chunkIndex: z.number().int().nonnegative(),
+			done: z.boolean(),
+		}),
+		z.object({
+			type: z.literal("rangePatch"),
+			change: syncMessageSchema,
 		}),
 	]);
 }

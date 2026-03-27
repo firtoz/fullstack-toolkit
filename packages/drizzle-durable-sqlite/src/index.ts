@@ -18,3 +18,8 @@ export {
 	SyncableDurableObject,
 	type SyncableDurableObjectConfig,
 } from "./syncable-durable-object";
+
+export {
+	QueryableDurableObject,
+	type QueryableDurableObjectConfig,
+} from "./queryable-durable-object";

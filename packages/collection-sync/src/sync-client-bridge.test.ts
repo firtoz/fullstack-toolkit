@@ -67,6 +67,8 @@ describe("SyncClientBridge", () => {
 			changes: [
 				{ type: "insert", value: { id: "1", title: "only", updatedAt: 1 } },
 			],
+			chunkIndex: 0,
+			totalChunks: 1,
 		});
 
 		expect(received).toEqual([
@@ -99,6 +101,8 @@ describe("SyncClientBridge", () => {
 			changes: [
 				{ type: "insert", value: { id: "2", title: "x", updatedAt: 2 } },
 			],
+			chunkIndex: 0,
+			totalChunks: 1,
 		});
 
 		expect(received).toEqual([
@@ -126,8 +130,58 @@ describe("SyncClientBridge", () => {
 			mode: "snapshot",
 			serverVersion: 3,
 			changes: [],
+			chunkIndex: 0,
+			totalChunks: 1,
 		});
 
 		expect(received).toEqual([[{ type: "truncate" }]]);
+	});
+
+	it("applies chunked snapshot with single truncate and pending replay at end", async () => {
+		const sent: unknown[] = [];
+		const received: unknown[] = [];
+		const bridge = new SyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		bridge.sendInsert({ id: "local", title: "pending", updatedAt: 10 });
+
+		await bridge.handleServerMessage({
+			type: "syncBackfill",
+			mode: "snapshot",
+			serverVersion: 5,
+			changes: [{ type: "insert", value: { id: "1", title: "a", updatedAt: 1 } }],
+			chunkIndex: 0,
+			totalChunks: 2,
+		});
+		await bridge.handleServerMessage({
+			type: "syncBackfill",
+			mode: "snapshot",
+			serverVersion: 5,
+			changes: [{ type: "insert", value: { id: "2", title: "b", updatedAt: 2 } }],
+			chunkIndex: 1,
+			totalChunks: 2,
+		});
+
+		expect(received).toEqual([
+			[
+				{ type: "truncate" },
+				{ type: "insert", value: { id: "1", title: "a", updatedAt: 1 } },
+			],
+			[{ type: "insert", value: { id: "2", title: "b", updatedAt: 2 } }],
+		]);
+
+		const mutateBatchMessages = sent.filter(
+			(msg) => typeof msg === "object" && msg !== null && (msg as { type?: string }).type === "mutateBatch",
+		);
+		expect(mutateBatchMessages.length).toBe(2);
 	});
 });
