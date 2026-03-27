@@ -15,9 +15,12 @@ bun add -d drizzle-kit @cloudflare/workers-types
 bun add hono zod @hono/zod-validator @firtoz/hono-fetcher
 ```
 
-## Drizzle Kit
+## Drizzle Kit (Required)
 
-Use the durable-sqlite driver so generated migrations match DO storage:
+Drizzle Kit migrations are mandatory for Durable Object SQLite setups in this toolkit.
+Do not skip migrations and do not rely on ad-hoc runtime table creation.
+
+Use this exact durable-sqlite driver config so generated migrations match DO storage:
 
 ```typescript
 import { defineConfig } from "drizzle-kit";
@@ -29,6 +32,15 @@ export default defineConfig({
 	driver: "durable-sqlite",
 });
 ```
+
+Then generate migrations:
+
+```bash
+bun run db:generate
+```
+
+`db:generate` should run `drizzle-kit generate` and write SQL files under `./drizzle`.
+Keep `drizzle/migrations.js` and `drizzle/migrations.d.ts` in sync with the generated SQL files.
 
 ## Wrangler
 
@@ -44,9 +56,9 @@ export default defineConfig({
 }
 ```
 
-## Durable Object initialization
+## Durable Object initialization (migrate first)
 
-**Recommended for generic DOs:** run migrations inside `ctx.blockConcurrencyWhile` so the schema is ready before `fetch` or alarms. Example:
+Run migrations in `ctx.blockConcurrencyWhile` before handling requests so schema is ready before `fetch` or alarms. Example:
 
 ```typescript
 import { DurableObject } from "cloudflare:workers";
@@ -77,9 +89,9 @@ Use `durableSqliteCollectionOptions` with tables built via `syncableTable` from 
 
 `tableName` must be the **property name** on your Drizzle schema object (e.g. `export const schema = { todosTable }` → `tableName: "todosTable"`), not the SQLite table name string.
 
-If something else must finish before sync runs (e.g. a migration promise), pass `readyPromise`. When omitted, the collection treats storage as ready immediately (same as `Promise.resolve()`).
+If something else must finish before sync runs, pass `readyPromise`. This is not a replacement for Drizzle migrations; run `migrate(db, migrations)` first in your DO initialization.
 
-For explicit collection type annotations, use `DurableSqliteCollection<TTable>`. It preserves select output typing and insert input typing from your Drizzle table schema.
+For explicit collection type annotations, use `DrizzleSqliteTableCollection<TTable>` from `@firtoz/drizzle-utils` (same shape as WASM SQLite collections).
 
 Example `schema.ts`:
 
@@ -109,16 +121,14 @@ import { createCollection } from "@tanstack/db";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
-import {
-	durableSqliteCollectionOptions,
-	type DurableSqliteCollection,
-} from "@firtoz/drizzle-durable-sqlite";
+import { durableSqliteCollectionOptions } from "@firtoz/drizzle-durable-sqlite";
+import type { DrizzleSqliteTableCollection } from "@firtoz/drizzle-utils";
 import { Hono } from "hono";
 import { z } from "zod";
 import migrations from "../drizzle/migrations.js";
 import * as schema from "./schema";
 
-type TodosCollection = DurableSqliteCollection<typeof schema.todosTable>;
+type TodosCollection = DrizzleSqliteTableCollection<typeof schema.todosTable>;
 
 export class TodosDurableObject extends DurableObject<Env> {
 	private db!: DrizzleSqliteDODatabase<typeof schema>;

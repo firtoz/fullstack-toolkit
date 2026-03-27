@@ -1,6 +1,4 @@
 import type {
-	Collection,
-	InferSchemaInput,
 	InferSchemaOutput,
 	SyncMode,
 	CollectionConfig,
@@ -79,15 +77,6 @@ export type SqliteCollectionConfig<TTable extends Table> = Omit<
 	schema: InsertToSelectSchema<TTable>;
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 };
-
-export type DrizzleSqliteCollection<TTable extends TableWithRequiredFields> =
-	Collection<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		IdOf<TTable>,
-		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
-		InsertToSelectSchema<TTable>,
-		InferSchemaInput<InsertToSelectSchema<TTable>>
-	>;
 
 export function sqliteCollectionOptions<
 	const TDrizzle extends AnyDrizzleDatabase,

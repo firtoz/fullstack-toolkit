@@ -1,0 +1,16 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "durable-sqlite-sync-example-app",
+	"main": "workers/app.ts",
+	"compatibility_date": "2025-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": "./build/client"
+	},
+	"services": [
+		{
+			"binding": "SYNC_WORKER",
+			"service": "durable-sqlite-sync-example-worker"
+		}
+	]
+}

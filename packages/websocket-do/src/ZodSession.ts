@@ -6,6 +6,8 @@ import { zodMsgpack } from "./zodMsgpack";
 export type ZodSessionOptions<TClientMessage, TServerMessage> = {
 	clientSchema: ZodType<TClientMessage>;
 	serverSchema: ZodType<TServerMessage>;
+	serializeJson?: (value: unknown) => string;
+	deserializeJson?: (raw: string) => unknown;
 	enableBufferMessages?: boolean;
 	sendProtocolError?: (
 		websocket: WebSocket,
@@ -68,6 +70,28 @@ export class ZodSession<
 		this.clientCodec = zodMsgpack(options.clientSchema);
 		this.serverCodec = zodMsgpack(options.serverSchema);
 		this.enableBufferMessages = options.enableBufferMessages ?? false;
+	}
+
+	public async handleRawMessage(rawMessage: string): Promise<void> {
+		// If buffer messages are enabled, reject string messages
+		if (this.enableBufferMessages) {
+			console.error(
+				"String messages not allowed when buffer messages are enabled",
+			);
+			await this.sendProtocolError(
+				"String messages are not allowed. Please use buffer messages.",
+			);
+			return;
+		}
+
+		try {
+			const parsed = this.deserializeJson(rawMessage);
+			const validatedMessage = this.options.clientSchema.parse(parsed);
+			await this.zodHandlers.handleValidatedMessage(validatedMessage);
+		} catch (error) {
+			console.error("Invalid client message received:", error);
+			await this._internalHandleValidationError(error, rawMessage);
+		}
 	}
 
 	// Internal method used by the base class handlers
@@ -152,7 +176,7 @@ export class ZodSession<
 
 			if (this.websocket.readyState !== WebSocket.OPEN) return;
 
-			this.websocket.send(JSON.stringify(validatedMessage));
+			this.websocket.send(this.serializeJson(validatedMessage));
 		} catch (error) {
 			console.error("Invalid server message to send:", error);
 		}
@@ -180,11 +204,23 @@ export class ZodSession<
 			} else {
 				// Default implementation: send a simple error object - no schema validation needed
 				if (this.websocket.readyState !== WebSocket.OPEN) return;
-				this.websocket.send(JSON.stringify({ error: errorMessage }));
+				this.websocket.send(this.serializeJson({ error: errorMessage }));
 			}
 		} catch (error) {
 			console.error("Failed to send protocol error:", error);
 		}
+	}
+
+	private serializeJson(value: unknown): string {
+		return this.options.serializeJson
+			? this.options.serializeJson(value)
+			: JSON.stringify(value);
+	}
+
+	private deserializeJson(raw: string): unknown {
+		return this.options.deserializeJson
+			? this.options.deserializeJson(raw)
+			: JSON.parse(raw);
 	}
 
 	// Type-safe broadcast that validates server messages

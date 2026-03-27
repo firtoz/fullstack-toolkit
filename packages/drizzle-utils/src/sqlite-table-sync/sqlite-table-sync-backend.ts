@@ -355,6 +355,25 @@ export function createSqliteTableSyncBackend<
 				}
 			});
 		},
+		handleTruncate: async () => {
+			await queueTransaction(async () => {
+				if (driverMode === "sync") {
+					config.drizzle.transaction((tx: typeof config.drizzle) => {
+						tx.delete(table).run();
+					});
+				} else {
+					await config.drizzle.transaction(
+						async (tx: typeof config.drizzle) => {
+							await tx.delete(table);
+						},
+					);
+				}
+
+				if (config.checkpoint) {
+					await config.checkpoint();
+				}
+			});
+		},
 	};
 
 	return backend;

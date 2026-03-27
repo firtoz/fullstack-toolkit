@@ -75,14 +75,12 @@ export const syncableTable = <
 	for (const columnName in tableColumns) {
 		const column = tableColumns[columnName];
 
-		let defaultValue: unknown | undefined;
+		// Avoid executing defaultFn at module initialization time.
+		// In Cloudflare Workers this can trigger disallowed global-scope APIs.
 		if (column.defaultFn) {
-			defaultValue = column.defaultFn();
-		} else if (column.default !== undefined) {
-			defaultValue = column.default;
+			continue;
 		}
-
-		if (defaultValue instanceof SQL) {
+		if (column.default instanceof SQL) {
 			throw new Error(
 				`Default value for column ${tableName}.${columnName} is a SQL expression, which is not supported for IndexedDB.\n\nYou can use a default value or a default function instead.`,
 			);

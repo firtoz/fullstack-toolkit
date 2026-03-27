@@ -101,6 +101,8 @@ export function createGenericSyncFunction<TItem extends object>(
 		| null = null;
 	let syncCommit: (() => void) | null = null;
 	let syncTruncate: (() => void) | null = null;
+	/** Resolves when eager `initialSync` has finished (or immediately in on-demand mode). Used so `receiveSync` cannot interleave with initial inserts. */
+	let initialSyncDone: Promise<void> | null = null;
 
 	const syncFn: SyncConfig<TItem, string>["sync"] = (params) => {
 		const { begin, write, commit, markReady, truncate } = params;
@@ -132,9 +134,10 @@ export function createGenericSyncFunction<TItem extends object>(
 		};
 
 		if (config.syncMode === "eager" || !config.syncMode) {
-			initialSync();
+			initialSyncDone = initialSync();
 		} else {
 			markReady();
+			initialSyncDone = Promise.resolve();
 		}
 
 		insertListener = async (params) => {
@@ -215,6 +218,9 @@ export function createGenericSyncFunction<TItem extends object>(
 
 	const receiveSync = async (messages: SyncMessage<TItem>[]) => {
 		if (messages.length === 0) return;
+		if (initialSyncDone) {
+			await initialSyncDone;
+		}
 		if (!syncBegin || !syncWrite || !syncCommit || !syncTruncate) {
 			if (config.debug) {
 				console.warn(

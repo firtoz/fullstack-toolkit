@@ -35,9 +35,10 @@ async function startServer(): Promise<void> {
 	}
 
 	console.log("Starting wrangler dev server...");
+	const port = process.env.CHAT_AGENT_E2E_PORT ?? "8791";
 
 	// Build wrangler command with --var flags for env vars  
-	const wranglerArgs = ["run", "wrangler", "dev", "--local"];
+	const wranglerArgs = ["run", "wrangler", "dev", "--local", "--port", port];
 	
 	if (process.env.OPENROUTER_API_KEY) {
 		wranglerArgs.push("--var", `OPENROUTER_API_KEY:${process.env.OPENROUTER_API_KEY}`);

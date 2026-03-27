@@ -236,10 +236,9 @@ export function createInsertSchemaWithIdDefault<TTable extends Table>(
  * Standard getKey function for collections
  */
 export function createGetKeyFunction<TTable extends Table>() {
-	return (item: InferSchemaOutput<SelectSchema<TTable>>) => {
-		const id = (item as { id: string }).id;
-		return id;
-	};
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	type TKey = IdOf<TTable>;
+	return (item: TItem): TKey => (item as { id: TKey }).id;
 }
 
 /**

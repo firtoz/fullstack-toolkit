@@ -1,8 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
-import {
-	type DurableSqliteCollection,
-	durableSqliteCollectionOptions,
-} from "@firtoz/drizzle-durable-sqlite";
+import { durableSqliteCollectionOptions } from "@firtoz/drizzle-durable-sqlite";
+import type { DrizzleSqliteTableCollection } from "@firtoz/drizzle-utils";
 import { zValidator } from "@hono/zod-validator";
 import { createCollection } from "@tanstack/db";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
@@ -20,7 +18,7 @@ type InsertTestItem = (typeof schema.testItemsTable)["$inferInsert"];
  */
 export class SqliteSyncTestDO extends DurableObject<Env> {
 	private db!: DrizzleSqliteDODatabase<typeof schema>;
-	private collection!: DurableSqliteCollection<typeof schema.testItemsTable>;
+	private collection!: DrizzleSqliteTableCollection<typeof schema.testItemsTable>;
 	app = new Hono<{ Bindings: Env }>()
 		.post(
 			"/insert-via-collection",

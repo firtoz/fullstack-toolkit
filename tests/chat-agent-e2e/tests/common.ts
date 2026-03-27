@@ -5,8 +5,10 @@
  * Import this in test files to access constants and utilities.
  */
 
-export const BASE_URL = "ws://localhost:8787";
-export const HTTP_BASE_URL = "http://localhost:8787";
+const CHAT_AGENT_E2E_PORT = process.env.CHAT_AGENT_E2E_PORT ?? "8791";
+
+export const BASE_URL = `ws://localhost:${CHAT_AGENT_E2E_PORT}`;
+export const HTTP_BASE_URL = `http://localhost:${CHAT_AGENT_E2E_PORT}`;
 
 /**
  * Wait for the wrangler dev server to be ready

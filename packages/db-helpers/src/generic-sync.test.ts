@@ -337,6 +337,41 @@ describe("createGenericSyncFunction", () => {
 			expect(insertWrites[0].type).toBe("insert");
 		});
 
+		it("waits for eager initialSync before receiveSync so remote snapshot cannot race initial inserts", async () => {
+			const local: Item = { id: "local-1", name: "local", value: 1 };
+			const remote: Item = { id: "remote-1", name: "remote", value: 2 };
+			const backend: GenericSyncBackend<Item> = {
+				...createMockBackend([local]),
+				initialLoad: async () => {
+					await new Promise((r) => setTimeout(r, 40));
+					return [local];
+				},
+			};
+			const result = createGenericSyncFunction(baseConfig, backend);
+
+			const writes: Array<{ type: string; value?: Item }> = [];
+			result.sync(
+				mockSyncParams({
+					write: (op) => writes.push(op),
+				}),
+			);
+
+			const receivePromise = result.utils.receiveSync([
+				{ type: "insert", value: remote },
+			]);
+			await receivePromise;
+
+			const localIdx = writes.findIndex(
+				(w) => w.value?.id === "local-1" && w.type === "insert",
+			);
+			const remoteIdx = writes.findIndex(
+				(w) => w.value?.id === "remote-1" && w.type === "insert",
+			);
+			expect(localIdx).toBeGreaterThanOrEqual(0);
+			expect(remoteIdx).toBeGreaterThanOrEqual(0);
+			expect(localIdx).toBeLessThan(remoteIdx);
+		});
+
 		it("applies update messages via sync write", async () => {
 			const backend = createMockBackend();
 			const result = createGenericSyncFunction(baseConfig, backend);

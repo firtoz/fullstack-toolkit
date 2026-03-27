@@ -63,7 +63,7 @@
 	},
 	"devDependencies": {
 		"@hono/node-server": "^1.19.11",
-		"@hono/zod-validator": "^0.7.6",
+		"@hono/zod-validator": "catalog:",
 		"bun-types": "catalog:",
 		"zod": "catalog:"
 	}

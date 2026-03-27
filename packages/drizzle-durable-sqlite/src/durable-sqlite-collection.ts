@@ -1,6 +1,4 @@
 import type {
-	Collection,
-	InferSchemaInput,
 	InferSchemaOutput,
 	SyncMode,
 	CollectionConfig,
@@ -71,15 +69,6 @@ export type DurableSqliteCollectionConfigResult<TTable extends Table> = Omit<
 	schema: InsertToSelectSchema<TTable>;
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 };
-
-export type DurableSqliteCollection<TTable extends TableWithRequiredFields> =
-	Collection<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		IdOf<TTable>,
-		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
-		InsertToSelectSchema<TTable>,
-		InferSchemaInput<InsertToSelectSchema<TTable>>
-	>;
 
 /**
  * TanStack DB collection configuration for a table stored in Durable Object SQLite via Drizzle.

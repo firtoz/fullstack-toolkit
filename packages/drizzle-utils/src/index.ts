@@ -49,6 +49,8 @@ export {
 
 export type { TableWithRequiredFields } from "./syncableTable";
 
+export type { DrizzleSqliteTableCollection } from "./drizzle-sqlite-table-collection";
+
 export type {
 	SQLOperation,
 	SQLInterceptor,

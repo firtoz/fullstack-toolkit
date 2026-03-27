@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const testPlaygroundPort = process.env.TEST_PLAYGROUND_PORT ?? "5174";
+const testPlaygroundHost = "127.0.0.1";
+const testPlaygroundBaseUrl = `http://${testPlaygroundHost}:${testPlaygroundPort}`;
+
 export default defineConfig({
 	testDir: "./e2e",
 	fullyParallel: true,
@@ -8,7 +12,7 @@ export default defineConfig({
 	workers: process.env.CI ? 1 : undefined,
 	reporter: [["list"], ["html", { open: "never" }]],
 	use: {
-		baseURL: "http://localhost:5173",
+		baseURL: testPlaygroundBaseUrl,
 		trace: "on-first-retry",
 		video: "retain-on-failure",
 	},
@@ -21,8 +25,9 @@ export default defineConfig({
 	],
 
 	webServer: {
-		command: "bun run dev",
-		url: "http://localhost:5173",
+		command: `react-router dev --port ${testPlaygroundPort} --host ${testPlaygroundHost}`,
+		url: testPlaygroundBaseUrl,
+		timeout: 120_000,
 		reuseExistingServer: !process.env.CI,
 	},
 });

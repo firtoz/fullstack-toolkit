@@ -227,10 +227,8 @@ Create TanStack DB collections backed by SQLite:
 
 ```typescript
 import { createCollection } from "@tanstack/db";
-import {
-	drizzleCollectionOptions,
-	type DrizzleSqliteCollection,
-} from "@firtoz/drizzle-sqlite-wasm";
+import type { DrizzleSqliteTableCollection } from "@firtoz/drizzle-utils";
+import { drizzleCollectionOptions } from "@firtoz/drizzle-sqlite-wasm";
 import * as schema from "./schema";
 
 const collection = createCollection(
@@ -253,7 +251,7 @@ const completed = await collection.find({
   orderBy: { createdAt: "desc" },
 });
 
-type TodosCollection = DrizzleSqliteCollection<typeof schema.todoTable>;
+type TodosCollection = DrizzleSqliteTableCollection<typeof schema.todoTable>;
 
 // Subscribe to changes
 collection.subscribe((todos) => {
@@ -261,7 +259,7 @@ collection.subscribe((todos) => {
 });
 ```
 
-Use `DrizzleSqliteCollection<TTable>` when you want a reusable collection type alias that keeps inferred select/insert types from your table.
+Use `DrizzleSqliteTableCollection<TTable>` from `@firtoz/drizzle-utils` when you want a reusable collection type alias (shared with `@firtoz/drizzle-durable-sqlite`).
 
 ### Collection Options
 
