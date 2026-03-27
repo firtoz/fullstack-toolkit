@@ -20,6 +20,111 @@ export type SyncRangeSort = {
 	direction: SyncSortDirection;
 };
 
+/** Fixed operator set for predicate-based range queries (e.g. spatial filters). */
+export type RangeConditionOp =
+	| "gt"
+	| "gte"
+	| "lt"
+	| "lte"
+	| "eq"
+	| "neq"
+	| "between";
+
+export type RangeCondition = {
+	column: string;
+	op: RangeConditionOp;
+	value: unknown;
+	/** Required when `op` is `"between"`. */
+	valueTo?: unknown;
+};
+
+export type IndexRangeCursor = {
+	kind: "index";
+	mode: "cursor";
+	sort: SyncRangeSort;
+	limit: number;
+	afterCursor: unknown | null;
+};
+
+export type IndexRangeOffset = {
+	kind: "index";
+	mode: "offset";
+	sort: SyncRangeSort;
+	limit: number;
+	offset: number;
+};
+
+export type PredicateRange = {
+	kind: "predicate";
+	conditions: RangeCondition[];
+	sort?: SyncRangeSort;
+	limit?: number;
+};
+
+export type SyncRange = IndexRangeCursor | IndexRangeOffset | PredicateRange;
+
+/** Client watermark for reconciliation (max row version in range + count). */
+export type RangeFingerprint = {
+	version: number;
+	count: number;
+};
+
+const syncRangeSortSchema = z.object({
+	column: z.string().min(1),
+	direction: z.enum(["asc", "desc"]),
+});
+
+const rangeConditionOpSchema = z.enum([
+	"gt",
+	"gte",
+	"lt",
+	"lte",
+	"eq",
+	"neq",
+	"between",
+]);
+
+const rangeConditionSchema = z.object({
+	column: z.string().min(1),
+	op: rangeConditionOpSchema,
+	value: z.unknown(),
+	valueTo: z.unknown().optional(),
+});
+
+const indexRangeCursorSchema = z.object({
+	kind: z.literal("index"),
+	mode: z.literal("cursor"),
+	sort: syncRangeSortSchema,
+	limit: z.number().int().positive(),
+	afterCursor: z.unknown().nullable(),
+});
+
+const indexRangeOffsetSchema = z.object({
+	kind: z.literal("index"),
+	mode: z.literal("offset"),
+	sort: syncRangeSortSchema,
+	limit: z.number().int().positive(),
+	offset: z.number().int().nonnegative(),
+});
+
+const predicateRangeSchema = z.object({
+	kind: z.literal("predicate"),
+	conditions: z.array(rangeConditionSchema).min(1),
+	sort: syncRangeSortSchema.optional(),
+	limit: z.number().int().positive().optional(),
+});
+
+export const syncRangeSchema: z.ZodType<SyncRange> = z.union([
+	indexRangeCursorSchema,
+	indexRangeOffsetSchema,
+	predicateRangeSchema,
+]);
+
+const rangeFingerprintSchema = z.object({
+	version: z.number().int().nonnegative(),
+	count: z.number().int().nonnegative(),
+});
+
 export type SyncClientMessage =
 	| {
 			type: "mutateBatch";
@@ -51,6 +156,13 @@ export type SyncClientMessage =
 			sort: SyncRangeSort;
 			limit: number;
 			offset: number;
+	  }
+	| {
+			type: "rangeQuery";
+			clientId: string;
+			requestId: string;
+			range: SyncRange;
+			fingerprint?: RangeFingerprint;
 	  };
 
 export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
@@ -91,6 +203,13 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 			}),
 			limit: z.number().int().positive(),
 			offset: z.number().int().nonnegative(),
+		}),
+		z.object({
+			type: z.literal("rangeQuery"),
+			clientId: z.string().min(1),
+			requestId: z.string().min(1),
+			range: syncRangeSchema,
+			fingerprint: rangeFingerprintSchema.optional(),
 		}),
 	]);
 }
@@ -149,6 +268,18 @@ export type SyncServerMessage<
 	| {
 			type: "rangePatch";
 			change: SyncMessage<TItem, TKey>;
+	  }
+	| {
+			type: "rangeUpToDate";
+			requestId: string;
+			totalCount: number;
+	  }
+	| {
+			type: "rangeDelta";
+			requestId: string;
+			totalCount: number;
+			changes: SyncMessage<TItem, TKey>[];
+			lastCursor?: unknown;
 	  };
 
 export function createServerMessageSchema<
@@ -201,6 +332,18 @@ export function createServerMessageSchema<
 		z.object({
 			type: z.literal("rangePatch"),
 			change: syncMessageSchema,
+		}),
+		z.object({
+			type: z.literal("rangeUpToDate"),
+			requestId: z.string().min(1),
+			totalCount: z.number().int().nonnegative(),
+		}),
+		z.object({
+			type: z.literal("rangeDelta"),
+			requestId: z.string().min(1),
+			totalCount: z.number().int().nonnegative(),
+			changes: z.array(syncMessageSchema),
+			lastCursor: z.unknown().optional(),
 		}),
 	]);
 }

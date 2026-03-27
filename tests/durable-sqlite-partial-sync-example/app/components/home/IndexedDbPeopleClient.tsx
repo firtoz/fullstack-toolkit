@@ -35,7 +35,7 @@ export function IndexedDbPeopleClient({ roomId, wsTransport }: Props) {
 
 	return (
 		<PeoplePartialSyncClient
-			collection={collection as never}
+			collection={collection}
 			roomId={roomId}
 			wsTransport={wsTransport}
 			label="indexeddb"

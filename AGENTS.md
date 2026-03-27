@@ -68,8 +68,9 @@ For large or multi-phase implementation tasks, use:
 
 - [.cursor/skills/punch-list-execution/SKILL.md](.cursor/skills/punch-list-execution/SKILL.md)
 
-This skill enforces a persistent punch-list workflow stored in the OS temp directory (not the repo) so the agent repeatedly:
-read -> execute next unchecked item -> mark complete -> continue.
+**Planning:** Multi-phase plans should reference that skill and require a temp-directory punch list with **tests and a test run at the end of each phase** (not a single testing phase at the end).
+
+**Execution:** Persistent checklist in the OS temp directory (not the repo); the agent repeatedly reads the list, completes the next unchecked item, marks it immediately, **runs that phase’s tests before moving on**, and marks each **phase** complete as soon as its items are done—not all phases in one batch at the end.
 
 ---
 

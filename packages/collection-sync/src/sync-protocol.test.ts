@@ -69,4 +69,70 @@ describe("sync protocol schemas", () => {
 			expect(parsed.mode).toBe("snapshot");
 		}
 	});
+
+	it("parses rangeQuery index offset with optional fingerprint", () => {
+		const parsed = clientMessageSchema.parse({
+			type: "rangeQuery",
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 50,
+				offset: 90000,
+			},
+			fingerprint: { version: 1_700_000_000_000, count: 50 },
+		});
+		expect(parsed.type).toBe("rangeQuery");
+		if (parsed.type === "rangeQuery") {
+			expect(parsed.range.kind).toBe("index");
+			if (parsed.range.kind === "index") {
+				expect(parsed.range.mode).toBe("offset");
+				if (parsed.range.mode === "offset") {
+					expect(parsed.range.offset).toBe(90000);
+				}
+			}
+			expect(parsed.fingerprint?.count).toBe(50);
+		}
+	});
+
+	it("parses rangeQuery predicate range", () => {
+		const parsed = clientMessageSchema.parse({
+			type: "rangeQuery",
+			clientId: "c1",
+			requestId: "r2",
+			range: {
+				kind: "predicate",
+				conditions: [{ column: "age", op: "gte", value: 18 }],
+				sort: { column: "age", direction: "desc" },
+				limit: 20,
+			},
+		});
+		expect(parsed.type).toBe("rangeQuery");
+		if (parsed.type === "rangeQuery" && parsed.range.kind === "predicate") {
+			expect(parsed.range.conditions[0]?.op).toBe("gte");
+		}
+	});
+
+	it("parses rangeUpToDate and rangeDelta server messages", () => {
+		const up = serverMessageSchema.parse({
+			type: "rangeUpToDate",
+			requestId: "r1",
+			totalCount: 100_000,
+		});
+		expect(up.type).toBe("rangeUpToDate");
+
+		const delta = serverMessageSchema.parse({
+			type: "rangeDelta",
+			requestId: "r2",
+			totalCount: 100_000,
+			changes: [{ type: "delete", key: "abc" }],
+			lastCursor: null,
+		});
+		expect(delta.type).toBe("rangeDelta");
+		if (delta.type === "rangeDelta") {
+			expect(delta.changes.length).toBe(1);
+		}
+	});
 });

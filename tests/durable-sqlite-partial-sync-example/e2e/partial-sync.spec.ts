@@ -26,6 +26,28 @@ test("scrolling requests additional ranges", async ({ page }) => {
 	await expect(page.getByText(/Fetching|Connected|Live|Cached rows/)).toBeVisible();
 });
 
+test("scroll down then back up keeps list and cache status visible", async ({
+	page,
+}) => {
+	const room = uniqueRoom();
+	await page.goto(`/?backend=memory&room=${room}`);
+	const cachedRows = page.getByText(/Cached rows:/);
+	await expect(cachedRows).toBeVisible();
+	const scrollArea = page.locator("div[style*='overflow: auto']").first();
+	await scrollArea.evaluate((el) => {
+		el.scrollTop = el.scrollHeight;
+	});
+	await page.waitForTimeout(900);
+	await scrollArea.evaluate((el) => {
+		el.scrollTop = 0;
+	});
+	await page.waitForTimeout(900);
+	await expect(cachedRows).toBeVisible();
+	await expect(
+		page.getByText(/Fetching|Connected|Live|Partial|Offline/),
+	).toBeVisible();
+});
+
 test("sort toggle resets and fetches sorted range", async ({ page }) => {
 	const room = uniqueRoom();
 	await page.goto(`/?backend=memory&room=${room}`);

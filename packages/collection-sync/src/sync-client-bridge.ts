@@ -207,6 +207,8 @@ export class SyncClientBridge<
 				return;
 			case "queryRangeChunk":
 			case "rangePatch":
+			case "rangeUpToDate":
+			case "rangeDelta":
 				// Not supported by the full-sync bridge; partial sync uses PartialSyncClientBridge.
 				return;
 			default:

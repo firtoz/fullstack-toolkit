@@ -1,7 +1,9 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type {
+	RangeCondition,
 	SyncClientMessage,
+	SyncRange,
 	SyncRangeSort,
 	SyncServerMessage,
 } from "./sync-protocol";
@@ -35,6 +37,26 @@ export interface PartialSyncServerBridgeStore<TItem> {
 	}) => AsyncIterable<TItem[]>;
 	getTotalCount: () => Promise<number>;
 	getSortValue: (row: TItem, column: string) => unknown;
+
+	/** Predicate-based range (optional). */
+	queryByPredicate?: (options: {
+		conditions: RangeCondition[];
+		sort?: SyncRangeSort;
+		limit?: number;
+		chunkSize: number;
+	}) => AsyncIterable<TItem[]>;
+
+	getPredicateCount?: (conditions: RangeCondition[]) => Promise<number>;
+
+	/**
+	 * Changes since `sinceVersion` within `range`. `null` if changelog cannot answer
+	 * (caller should full-fetch).
+	 */
+	changesSince?: (options: {
+		range: SyncRange;
+		sinceVersion: number;
+		chunkSize: number;
+	}) => Promise<{ changes: SyncMessage<TItem>[]; totalCount: number } | null>;
 }
 
 export interface PartialSyncServerBridgeOptions<TItem> {
@@ -61,6 +83,9 @@ export class PartialSyncServerBridge<TItem> {
 				return;
 			case "queryByOffset":
 				await this.#handleQueryByOffset(message);
+				return;
+			case "rangeQuery":
+				await this.#handleRangeQuery(message);
 				return;
 			case "syncHello":
 			case "mutateBatch":
@@ -89,6 +114,189 @@ export class PartialSyncServerBridge<TItem> {
 
 	getClientState(clientId: string): ClientQueryState<TItem> | undefined {
 		return this.#clientStates.get(clientId);
+	}
+
+	async #handleRangeQuery(
+		message: Extract<SyncClientMessage, { type: "rangeQuery" }>,
+	): Promise<void> {
+		const { range, clientId, requestId, fingerprint } = message;
+		const rangeLimit =
+			range.kind === "index" ? range.limit : (range.limit ?? 200);
+
+		if (fingerprint !== undefined && this.options.store.changesSince) {
+			const delta = await this.options.store.changesSince({
+				range,
+				sinceVersion: fingerprint.version,
+				chunkSize: Math.max(1, this.options.queryChunkSize ?? 200),
+			});
+			if (delta !== null) {
+				if (delta.changes.length === 0) {
+					this.options.sendToClient(clientId, {
+						type: "rangeUpToDate",
+						requestId,
+						totalCount: delta.totalCount,
+					});
+					this.#mergeDeliveredRangesFromChanges(
+						this.#getOrCreateClientState(clientId),
+						range,
+						delta.changes,
+					);
+					return;
+				}
+				const maxDelta = Math.max(1, Math.ceil(rangeLimit * 0.5));
+				if (delta.changes.length <= maxDelta) {
+					this.options.sendToClient(clientId, {
+						type: "rangeDelta",
+						requestId,
+						totalCount: delta.totalCount,
+						changes: delta.changes,
+					});
+					this.#mergeDeliveredRangesFromChanges(
+						this.#getOrCreateClientState(clientId),
+						range,
+						delta.changes,
+					);
+					return;
+				}
+			}
+		}
+
+		if (range.kind === "index" && range.mode === "cursor") {
+			await this.#handleQueryRange({
+				type: "queryRange",
+				clientId,
+				requestId,
+				sort: range.sort,
+				limit: range.limit,
+				afterCursor: range.afterCursor,
+			});
+			return;
+		}
+		if (range.kind === "index" && range.mode === "offset") {
+			await this.#handleQueryByOffset({
+				type: "queryByOffset",
+				clientId,
+				requestId,
+				sort: range.sort,
+				limit: range.limit,
+				offset: range.offset,
+			});
+			return;
+		}
+		if (range.kind === "predicate") {
+			await this.#handleQueryPredicate(message, range);
+			return;
+		}
+		exhaustiveGuard(range);
+	}
+
+	async #handleQueryPredicate(
+		message: Extract<SyncClientMessage, { type: "rangeQuery" }>,
+		range: Extract<SyncRange, { kind: "predicate" }>,
+	): Promise<void> {
+		const queryByPredicate = this.options.store.queryByPredicate;
+		if (!queryByPredicate) {
+			const totalCount = await this.options.store.getTotalCount();
+			this.options.sendToClient(message.clientId, {
+				type: "queryRangeChunk",
+				requestId: message.requestId,
+				rows: [],
+				totalCount,
+				lastCursor: null,
+				hasMore: false,
+				chunkIndex: 0,
+				done: true,
+			});
+			return;
+		}
+
+		const state = this.#getOrCreateClientState(message.clientId);
+		state.streaming = true;
+		const chunkSize = Math.max(1, this.options.queryChunkSize ?? 200);
+		const limit = range.limit ?? chunkSize;
+		const totalCount = this.options.store.getPredicateCount
+			? await this.options.store.getPredicateCount(range.conditions)
+			: await this.options.store.getTotalCount();
+
+		const iterable = queryByPredicate({
+			conditions: range.conditions,
+			sort: range.sort,
+			limit,
+			chunkSize,
+		});
+
+		let chunkIndex = 0;
+		let totalDelivered = 0;
+		let emittedAny = false;
+		const sortForTrack = range.sort;
+		for await (const rows of iterable) {
+			emittedAny = true;
+			totalDelivered += rows.length;
+			const reachedLimit = totalDelivered >= limit;
+			const likelyFinalChunk = rows.length < chunkSize || reachedLimit;
+			const isFinalChunk = likelyFinalChunk;
+			const lastRow = rows[rows.length - 1];
+			const lastCursor =
+				lastRow === undefined || sortForTrack === undefined
+					? null
+					: this.options.store.getSortValue(lastRow, sortForTrack.column);
+			const hasMoreForClient = isFinalChunk
+				? totalDelivered === limit && totalDelivered < totalCount
+				: true;
+			this.options.sendToClient(message.clientId, {
+				type: "queryRangeChunk",
+				requestId: message.requestId,
+				rows,
+				totalCount,
+				lastCursor,
+				hasMore: hasMoreForClient,
+				chunkIndex,
+				done: isFinalChunk,
+			});
+			if (sortForTrack !== undefined) {
+				this.#trackDeliveredRange(state, sortForTrack, null, rows);
+			}
+			chunkIndex += 1;
+			if (isFinalChunk) break;
+		}
+
+		if (!emittedAny) {
+			this.options.sendToClient(message.clientId, {
+				type: "queryRangeChunk",
+				requestId: message.requestId,
+				rows: [],
+				totalCount,
+				lastCursor: null,
+				hasMore: false,
+				chunkIndex,
+				done: true,
+			});
+		}
+
+		state.streaming = false;
+		this.#flushPendingPatches(state);
+	}
+
+	#mergeDeliveredRangesFromChanges(
+		state: ClientQueryState<TItem>,
+		range: SyncRange,
+		changes: SyncMessage<TItem>[],
+	): void {
+		const sort =
+			range.kind === "index"
+				? range.sort
+				: range.kind === "predicate"
+					? range.sort
+					: undefined;
+		if (sort === undefined) return;
+		const rows: TItem[] = [];
+		for (const change of changes) {
+			if (change.type === "insert" || change.type === "update") {
+				rows.push(change.value);
+			}
+		}
+		if (rows.length === 0) return;
+		this.#trackDeliveredRange(state, sort, null, rows);
 	}
 
 	async #handleQueryRange(

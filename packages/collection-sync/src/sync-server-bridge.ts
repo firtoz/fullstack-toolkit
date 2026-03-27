@@ -71,6 +71,7 @@ export class SyncServerBridge<
 				return;
 			case "queryRange":
 			case "queryByOffset":
+			case "rangeQuery":
 				// Not supported by the full-sync bridge; partial sync uses PartialSyncServerBridge.
 				return;
 			default:

@@ -3,7 +3,10 @@ import {
 	createClientMessageSchema,
 	createServerMessageSchema,
 	type PartialSyncServerBridgeStore,
+	type RangeCondition,
 	type SyncClientMessage,
+	type SyncRange,
+	type SyncRangeSort,
 	type SyncServerMessage,
 } from "@firtoz/collection-sync";
 import type { SyncMessage } from "@firtoz/db-helpers";
@@ -138,11 +141,40 @@ export abstract class QueryableDurableObject<
 			migrate(db, config.migrations);
 			this.db = db;
 
+			const queryByPredicate = this.queryByPredicate;
+			const getPredicateCount = this.getPredicateCount;
+			const changesSince = this.changesSince;
+
 			const store: PartialSyncServerBridgeStore<TRow> = {
 				queryRange: (options) => this.queryRange(options),
 				queryByOffset: (options) => this.queryByOffset(options),
 				getTotalCount: async () => this.getTotalCount(),
 				getSortValue: (row, column) => this.getSortValue(row, column),
+				...(queryByPredicate !== undefined
+					? {
+							queryByPredicate: (opts: {
+								conditions: RangeCondition[];
+								sort?: SyncRangeSort;
+								limit?: number;
+								chunkSize: number;
+							}) => queryByPredicate.call(this, opts),
+						}
+					: {}),
+				...(getPredicateCount !== undefined
+					? {
+							getPredicateCount: (conditions: RangeCondition[]) =>
+								getPredicateCount.call(this, conditions),
+						}
+					: {}),
+				...(changesSince !== undefined
+					? {
+							changesSince: (opts: {
+								range: SyncRange;
+								sinceVersion: number;
+								chunkSize: number;
+							}) => changesSince.call(this, opts),
+						}
+					: {}),
 			};
 			bridgeRef = new PartialSyncServerBridge<TRow>({
 				store,
@@ -180,6 +212,21 @@ export abstract class QueryableDurableObject<
 	}): AsyncIterable<TRow[]>;
 
 	protected abstract getTotalCount(): Promise<number>;
+
+	protected queryByPredicate?(_options: {
+		conditions: RangeCondition[];
+		sort?: SyncRangeSort;
+		limit?: number;
+		chunkSize: number;
+	}): AsyncIterable<TRow[]>;
+
+	protected getPredicateCount?(_conditions: RangeCondition[]): Promise<number>;
+
+	protected changesSince?(_options: {
+		range: SyncRange;
+		sinceVersion: number;
+		chunkSize: number;
+	}): Promise<{ changes: SyncMessage<TRow>[]; totalCount: number } | null>;
 
 	protected getSortValue(row: TRow, column: string): unknown {
 		return (row as Record<string, unknown>)[column];

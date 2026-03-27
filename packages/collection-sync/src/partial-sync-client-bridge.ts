@@ -1,6 +1,12 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
-import type { SyncClientMessage, SyncRangeSort, SyncServerMessage } from "./sync-protocol";
+import type {
+	RangeFingerprint,
+	SyncClientMessage,
+	SyncRange,
+	SyncRangeSort,
+	SyncServerMessage,
+} from "./sync-protocol";
 import { createClientMutationId } from "./sync-protocol";
 
 type CollectionWithReceiveSync<TItem> = {
@@ -37,6 +43,10 @@ export type PartialSyncRangeResult<TItem> = {
 	totalCount: number;
 	lastCursor: unknown | null;
 	hasMore: boolean;
+	/** Server applied a small delta; caller may need to refetch the window without fingerprint. */
+	invalidateWindow?: boolean;
+	/** Server confirmed fingerprint; no new rows on the wire. */
+	upToDate?: boolean;
 };
 
 export interface PartialSyncClientBridgeOptions<
@@ -239,10 +249,48 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 		});
 	}
 
+	requestRangeQuery(
+		range: SyncRange,
+		fingerprint?: RangeFingerprint,
+	): Promise<PartialSyncRangeResult<TItem>> {
+		const requestId = createClientMutationId("rq");
+		this.#setState({
+			status: "fetching",
+			requestId,
+			chunksReceived: 0,
+		});
+
+		return new Promise<PartialSyncRangeResult<TItem>>((resolve, reject) => {
+			this.#inFlightRequests.set(requestId, {
+				requestId,
+				rows: [],
+				totalCount: 0,
+				lastCursor: null,
+				hasMore: false,
+				chunksReceived: 0,
+				resolve,
+				reject,
+			});
+			this.#sendFn({
+				type: "rangeQuery",
+				clientId: this.clientId,
+				requestId,
+				range,
+				...(fingerprint !== undefined ? { fingerprint } : {}),
+			});
+		});
+	}
+
 	async handleServerMessage(message: SyncServerMessage<TItem>): Promise<void> {
 		switch (message.type) {
 			case "queryRangeChunk":
 				await this.#handleQueryRangeChunk(message);
+				return;
+			case "rangeUpToDate":
+				this.#handleRangeUpToDate(message);
+				return;
+			case "rangeDelta":
+				await this.#handleRangeDelta(message);
 				return;
 			case "rangePatch":
 				await this.#applyAndTrack([message.change]);
@@ -307,6 +355,51 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 			hasMore: inFlight.hasMore,
 		};
 		inFlight.resolve(result);
+		this.#setState({
+			status: this.#connected ? "realtime" : "partial",
+			cachedCount: this.cachedCount,
+			totalCount: this.#totalCount,
+			cacheUtilization: this.#cacheUtilization,
+		});
+	}
+
+	#handleRangeUpToDate(
+		message: Extract<SyncServerMessage<TItem>, { type: "rangeUpToDate" }>,
+	): void {
+		const inFlight = this.#inFlightRequests.get(message.requestId);
+		if (!inFlight) return;
+		this.#inFlightRequests.delete(message.requestId);
+		this.#totalCount = message.totalCount;
+		inFlight.resolve({
+			rows: [],
+			totalCount: message.totalCount,
+			lastCursor: null,
+			hasMore: false,
+			upToDate: true,
+		});
+		this.#setState({
+			status: this.#connected ? "realtime" : "partial",
+			cachedCount: this.cachedCount,
+			totalCount: this.#totalCount,
+			cacheUtilization: this.#cacheUtilization,
+		});
+	}
+
+	async #handleRangeDelta(
+		message: Extract<SyncServerMessage<TItem>, { type: "rangeDelta" }>,
+	): Promise<void> {
+		const inFlight = this.#inFlightRequests.get(message.requestId);
+		if (!inFlight) return;
+		await this.#applyAndTrack(message.changes as SyncMessage<TItem>[]);
+		this.#inFlightRequests.delete(message.requestId);
+		this.#totalCount = message.totalCount;
+		inFlight.resolve({
+			rows: [],
+			totalCount: message.totalCount,
+			lastCursor: message.lastCursor ?? null,
+			hasMore: false,
+			invalidateWindow: true,
+		});
 		this.#setState({
 			status: this.#connected ? "realtime" : "partial",
 			cachedCount: this.cachedCount,

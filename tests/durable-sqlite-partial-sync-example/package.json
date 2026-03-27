@@ -11,6 +11,7 @@
 		"typecheck": "react-router typegen && tsc --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write app src",
 		"lint:ci": "biome ci app src",
+		"test": "bun test app",
 		"test:e2e": "playwright test"
 	},
 	"dependencies": {

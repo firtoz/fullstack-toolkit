@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import type { SyncMessage } from "@firtoz/db-helpers";
 import { PartialSyncClientBridge } from "./partial-sync-client-bridge";
 
 type Item = { id: string; name: string; age: number };
@@ -192,5 +193,121 @@ describe("PartialSyncClientBridge", () => {
 			[{ type: "delete", key: "1" }],
 		]);
 		expect(bridge.cachedCount).toBe(0);
+	});
+
+	it("requestRangeQuery resolves on rangeUpToDate without receiveSync", async () => {
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p = bridge.requestRangeQuery(
+			{
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 5,
+				offset: 0,
+			},
+			{ version: 1, count: 5 },
+		);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "rangeUpToDate",
+			requestId,
+			totalCount: 99,
+		});
+		const result = await p;
+		expect(result.upToDate).toBe(true);
+		expect(result.totalCount).toBe(99);
+		expect(received.length).toBe(0);
+	});
+
+	it("requestRangeQuery applies rangeDelta via receiveSync", async () => {
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 5,
+			offset: 0,
+		});
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "rangeDelta",
+			requestId,
+			totalCount: 10,
+			changes: [{ type: "insert", value: { id: "9", name: "z", age: 9 } }],
+			lastCursor: null,
+		});
+		const result = await p;
+		expect(result.invalidateWindow).toBe(true);
+		expect(received).toEqual([
+			[{ type: "insert", value: { id: "9", name: "z", age: 9 } }],
+		]);
+	});
+
+	it("requestRangeQuery full fetch uses queryRangeChunk path", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 2,
+			offset: 0,
+		});
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		expect((sent[0] as { type: string }).type).toBe("rangeQuery");
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			requestId,
+			rows: [
+				{ id: "1", name: "a", age: 1 },
+				{ id: "2", name: "b", age: 2 },
+			],
+			totalCount: 5,
+			lastCursor: "b",
+			hasMore: true,
+			chunkIndex: 0,
+			done: true,
+		});
+		const result = await p;
+		expect(result.rows.length).toBe(2);
+		expect(result.totalCount).toBe(5);
 	});
 });

@@ -185,4 +185,181 @@ describe("PartialSyncServerBridge", () => {
 			},
 		]);
 	});
+
+	it("rangeQuery with fingerprint and empty changesSince sends rangeUpToDate", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 10,
+				getSortValue: (row, column) =>
+					column === "age" ? row.age : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				changesSince: async () => ({ changes: [], totalCount: 10 }),
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 4,
+				offset: 0,
+			},
+			fingerprint: { version: 100, count: 4 },
+		});
+
+		expect(sent).toEqual([
+			{ type: "rangeUpToDate", requestId: "r1", totalCount: 10 },
+		]);
+	});
+
+	it("rangeQuery with fingerprint and small delta sends rangeDelta", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 11,
+				getSortValue: (row, column) =>
+					column === "age" ? row.age : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				changesSince: async () => ({
+					changes: [
+						{
+							type: "insert",
+							value: { id: "x", name: "zzzzz", age: 1 },
+						},
+					] satisfies SyncMessage<Item>[],
+					totalCount: 11,
+				}),
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 10,
+				offset: 0,
+			},
+			fingerprint: { version: 1, count: 10 },
+		});
+
+		expect(sent).toEqual([
+			{
+				type: "rangeDelta",
+				requestId: "r1",
+				totalCount: 11,
+				changes: [
+					{ type: "insert", value: { id: "x", name: "zzzzz", age: 1 } },
+				],
+			},
+		]);
+	});
+
+	it("rangeQuery with fingerprint and oversized delta falls back to full offset fetch", async () => {
+		const sent: unknown[] = [];
+		const manyChanges = Array.from({ length: 10 }, (_, i) => ({
+			type: "insert" as const,
+			value: { id: `n${i}`, name: `n${i}`, age: i },
+		})) satisfies SyncMessage<Item>[];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 100,
+				getSortValue: (row, column) =>
+					column === "age" ? row.age : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [{ id: "1", name: "a", age: 1 }];
+				},
+				changesSince: async () => ({
+					changes: manyChanges,
+					totalCount: 100,
+				}),
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 10,
+				offset: 0,
+			},
+			fingerprint: { version: 1, count: 10 },
+		});
+
+		expect(
+			sent.some((m) => (m as { type?: string }).type === "queryRangeChunk"),
+		).toBe(true);
+		expect(
+			sent.some((m) => (m as { type?: string }).type === "rangeDelta"),
+		).toBe(false);
+	});
+
+	it("rangeQuery with changesSince null falls back to full fetch", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 3,
+				getSortValue: (row, column) =>
+					column === "age" ? row.age : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [{ id: "1", name: "a", age: 1 }];
+				},
+				changesSince: async () => null,
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 2,
+				offset: 0,
+			},
+			fingerprint: { version: 1, count: 2 },
+		});
+
+		expect(
+			sent.some((m) => (m as { type?: string }).type === "queryRangeChunk"),
+		).toBe(true);
+	});
 });
