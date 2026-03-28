@@ -14,7 +14,7 @@ describe("SyncServerBridge", () => {
 					applied.push(messages);
 				},
 				getSnapshotMessages: async () => [],
-				getRow: () => undefined,
+				getRow: async () => undefined,
 			},
 			sendToClient: (_clientId, message) => {
 				sentToClient.push(message);
@@ -53,7 +53,7 @@ describe("SyncServerBridge", () => {
 			store: {
 				applySyncMessages: async () => {},
 				getSnapshotMessages: async () => snapshotChanges,
-				getRow: () => undefined,
+				getRow: async () => undefined,
 			},
 			sendToClient: (_clientId, message) => {
 				sentToClient.push(message);
@@ -88,7 +88,7 @@ describe("SyncServerBridge", () => {
 			store: {
 				applySyncMessages: async () => {},
 				getSnapshotMessages: async () => snapshotChanges,
-				getRow: () => undefined,
+				getRow: async () => undefined,
 			},
 			sendToClient: (_clientId, message) => {
 				sentToClient.push(message);
@@ -120,7 +120,7 @@ describe("SyncServerBridge", () => {
 			store: {
 				applySyncMessages: async () => {},
 				getSnapshotMessages: async () => [],
-				getRow: () => undefined,
+				getRow: async () => undefined,
 			},
 			sendToClient: (_clientId, message) => {
 				sentToClient.push(message);
@@ -186,7 +186,7 @@ describe("SyncServerBridge", () => {
 			store: {
 				applySyncMessages: async () => {},
 				getSnapshotMessages: async () => snapshotChanges,
-				getRow: () => undefined,
+				getRow: async () => undefined,
 			},
 			sendToClient: (_clientId, message) => {
 				sentToClient.push(message);
@@ -227,7 +227,7 @@ describe("SyncServerBridge", () => {
 			store: {
 				applySyncMessages: async () => {},
 				getSnapshotMessages: async () => [],
-				getRow: () => undefined,
+				getRow: async () => undefined,
 			},
 			sendToClient: () => {},
 			broadcastExcept: () => {},

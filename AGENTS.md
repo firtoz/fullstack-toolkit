@@ -64,13 +64,22 @@ If typing is difficult, improve the types/interfaces/generics instead of bypassi
 
 # Execution Discipline: Punch Lists
 
-For large or multi-phase implementation tasks, use:
+Two skills—**planning** vs **execution**—so phased work does not collapse into “vibes” or IDE todos alone:
 
-- [.cursor/skills/punch-list-execution/SKILL.md](.cursor/skills/punch-list-execution/SKILL.md)
+| Role | Skill | When |
+|------|--------|------|
+| **Plan author** (CreatePlan, `.cursor/plans/`, handoff to another turn) | [.cursor/skills/punch-list-planning/SKILL.md](.cursor/skills/punch-list-planning/SKILL.md) | While writing or updating the implementation plan |
+| **Implementing agent** (first line of code onward) | [.cursor/skills/punch-list-execution/SKILL.md](.cursor/skills/punch-list-execution/SKILL.md) | **Before** the first implementation action, every time |
 
-**Planning:** Multi-phase plans should reference that skill and require a temp-directory punch list with **tests and a test run at the end of each phase** (not a single testing phase at the end).
+**Planning (before you finalize a plan):**
 
-**Execution:** Persistent checklist in the OS temp directory (not the repo); the agent repeatedly reads the list, completes the next unchecked item, marks it immediately, **runs that phase’s tests before moving on**, and marks each **phase** complete as soon as its items are done—not all phases in one batch at the end.
+1. **Read** [punch-list-planning](.cursor/skills/punch-list-planning/SKILL.md) in the same session (do not rely on memory from past chats).
+2. Every **implementation plan** must include an **Execution** section whose **first numbered item** tells the **executor** to: **read** [punch-list-execution](.cursor/skills/punch-list-execution/SKILL.md), then **create or open** `$TMPDIR/router-toolkit-punchlists/<task-slug>.md` (Linux: `/tmp/router-toolkit-punchlists/<task-slug>.md`), **seed** it with phased `- [ ]` items derived from the plan, and use **only that file** as the authoritative checklist: re-read → first unchecked → execute → mark `[x]` immediately with a one-line note → repeat. Prose in the plan describes *what*; the temp file is the *order of operations* during implementation.
+3. **Executor builds the file:** The planner’s job is to **require** this in writing; the implementing agent’s **first implementation step** is punch-list I/O (create/open/seed), not skipping straight to code.
+4. **Cursor todos vs punch list:** If the workflow uses Cursor’s todo list, it is for **optional high-level milestones** only. The **temp punch list** is mandatory for step-by-step execution and **per-phase** test runs. Do not treat “all todos checked” as done unless the punch-list phases (including tests) are complete.
+5. Each phase in the plan and on the punch list must end with **tests + a test run** (narrowest `bun test` / `typecheck` as appropriate)—**not** one big testing phase at the end.
+
+**Execution:** Follow [punch-list-execution](.cursor/skills/punch-list-execution/SKILL.md): temp directory only (never commit punch lists); one unchecked item in flight at a time; mark each **phase** complete only after that phase’s test run passes.
 
 ---
 

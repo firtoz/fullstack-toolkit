@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { BackendSelector } from "./BackendSelector";
 import { IndexedDbPeopleClient } from "./IndexedDbPeopleClient";
 import { MemoryPeopleClient } from "./MemoryPeopleClient";
@@ -48,6 +48,13 @@ export function HomePage() {
 			</p>
 			<p style={{ fontSize: 13, color: "#444" }}>
 				WebSocket transport: <code>{wsTransport}</code>
+			</p>
+			<p style={{ marginBottom: 12 }}>
+				<Link
+					to={`/grid?room=${encodeURIComponent(roomId)}&transport=${wsTransport}&backend=${backendMode}`}
+				>
+					Emoji grid (2D partial sync) →
+				</Link>
 			</p>
 			<BackendSelector
 				backendMode={backendMode}

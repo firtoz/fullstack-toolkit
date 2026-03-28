@@ -3,6 +3,7 @@ import {
 	assertSyncUtils,
 	computeFingerprintForIndexWindow,
 	defaultPartialSyncVersionMs,
+	getPartialSyncRowByMapId,
 	matchesPredicate,
 	tryIdsForIndexWindow,
 } from "./partial-sync-utils";
@@ -47,6 +48,20 @@ describe("partial-sync-utils", () => {
 		expect(tryIdsForIndexWindow(m, 0, 2, 10)).toEqual(["a", "b"]);
 		expect(tryIdsForIndexWindow(m, 0, 3, 10)).toBe(null);
 		expect(tryIdsForIndexWindow(m, 0, 0, 10)).toEqual([]);
+	});
+
+	it("getPartialSyncRowByMapId falls back to entries when get misses string/number id", () => {
+		const row = person("x");
+		const collection = {
+			get: (key: string | number) =>
+				typeof key === "number" && key === 1 ? row : undefined,
+			subscribeChanges: () => ({ unsubscribe: () => {} }),
+			entries: function* () {
+				yield [1, row] as const;
+			},
+			utils: { truncate: async () => {}, receiveSync: async () => {} },
+		} satisfies PartialSyncCollection<TestRow>;
+		expect(getPartialSyncRowByMapId(collection, "1")).toEqual(row);
 	});
 
 	it("computeFingerprintForIndexWindow aggregates max version and count", () => {

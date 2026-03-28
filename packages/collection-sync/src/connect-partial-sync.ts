@@ -1,5 +1,9 @@
+import { exhaustiveGuard } from "@firtoz/maybe-error";
+import type { SyncMessage } from "@firtoz/db-helpers";
 import { ZodWebSocketClient } from "@firtoz/websocket-do/zod-client";
 import type { PartialSyncClientBridge } from "./partial-sync-client-bridge";
+import type { SyncClientBridge } from "./sync-client-bridge";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
 import {
 	createClientMessageSchema,
 	createServerMessageSchema,
@@ -9,7 +13,14 @@ import {
 
 export type ConnectPartialSyncTransport = "json" | "msgpack";
 
-export type ConnectPartialSyncOptions<TItem = unknown> = {
+export type PartialSyncMutationItem = {
+	id: PartialSyncRowId;
+	updatedAt?: number | Date | null;
+};
+
+export type ConnectPartialSyncOptions<
+	TItem extends { id: PartialSyncRowId } = { id: PartialSyncRowId },
+> = {
 	url: string;
 	transport?: ConnectPartialSyncTransport;
 	/** Prefer a module-level function or `useCallback`; a new inline function each render can churn effects. */
@@ -18,15 +29,65 @@ export type ConnectPartialSyncOptions<TItem = unknown> = {
 	deserializeJson?: (raw: string) => unknown;
 	setTransportSend: (send: (msg: SyncClientMessage) => void) => void;
 	onServerMessage?: (msg: SyncServerMessage<TItem>) => void;
+	/**
+	 * When set, inbound messages are split: range traffic → `bridge`, ack/reject/syncBackfill → mutation bridge;
+	 * `syncBatch` applies via mutation bridge then updates partial cache ids (no double `receiveSync`).
+	 */
+	mutationBridge?: SyncClientBridge<TItem & PartialSyncMutationItem>;
 };
 
-export function connectPartialSync<TItem extends { id: string | number }>(
+/** @internal Exported for unit tests; prefer {@link connectPartialSync} in apps. */
+export async function dispatchPartialSyncServerMessage<
+	TItem extends { id: PartialSyncRowId },
+>(
+	msg: SyncServerMessage<TItem>,
+	partialBridge: PartialSyncClientBridge<TItem>,
+	mutationBridge: SyncClientBridge<TItem & PartialSyncMutationItem> | undefined,
+): Promise<void> {
+	if (mutationBridge === undefined) {
+		await partialBridge.handleServerMessage(msg);
+		return;
+	}
+
+	switch (msg.type) {
+		case "queryRangeChunk":
+		case "rangeUpToDate":
+		case "rangeDelta":
+		case "rangePatch":
+		case "pong":
+			await partialBridge.handleServerMessage(msg);
+			return;
+		case "ack":
+		case "reject":
+		case "syncBackfill":
+			await mutationBridge.handleServerMessage(
+				msg as SyncServerMessage<TItem & PartialSyncMutationItem>,
+			);
+			return;
+		case "syncBatch": {
+			await mutationBridge.handleServerMessage(
+				msg as SyncServerMessage<TItem & PartialSyncMutationItem>,
+			);
+			partialBridge.syncTrackedIdsFromMessages(
+				msg.changes as SyncMessage<TItem>[],
+			);
+			return;
+		}
+		default:
+			exhaustiveGuard(msg);
+	}
+}
+
+export function connectPartialSync<
+	TItem extends { id: PartialSyncRowId } = { id: PartialSyncRowId },
+>(
 	bridge: PartialSyncClientBridge<TItem>,
 	options: ConnectPartialSyncOptions<TItem>,
 ): () => void {
 	const clientSchema = createClientMessageSchema();
 	const serverSchema = createServerMessageSchema<TItem>();
 	const useMsgpack = options.transport === "msgpack";
+	const mutationBridge = options.mutationBridge;
 	const zodClient = new ZodWebSocketClient({
 		url: options.url,
 		clientSchema,
@@ -40,7 +101,11 @@ export function connectPartialSync<TItem extends { id: string | number }>(
 				}),
 		onMessage: (msg) => {
 			options.onServerMessage?.(msg);
-			void bridge.handleServerMessage(msg);
+			void dispatchPartialSyncServerMessage(
+				msg,
+				bridge,
+				mutationBridge,
+			);
 		},
 	});
 
@@ -72,10 +137,12 @@ export function connectPartialSync<TItem extends { id: string | number }>(
 	const onOpen = () => {
 		flushPendingOutbound();
 		bridge.setConnected(true);
+		mutationBridge?.setConnected(true);
 	};
 	const onClose = () => {
 		pendingOutbound.length = 0;
 		bridge.setConnected(false);
+		mutationBridge?.setConnected(false);
 	};
 
 	zodClient.socket.addEventListener("open", onOpen);
@@ -90,6 +157,7 @@ export function connectPartialSync<TItem extends { id: string | number }>(
 		zodClient.socket.removeEventListener("close", onClose);
 		pendingOutbound.length = 0;
 		bridge.setConnected(false);
+		mutationBridge?.setConnected(false);
 		options.setTransportSend(() => {});
 		zodClient.close();
 	};

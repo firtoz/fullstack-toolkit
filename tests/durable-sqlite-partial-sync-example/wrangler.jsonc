@@ -15,6 +15,10 @@
 			{
 				"name": "PEOPLE_SYNC",
 				"class_name": "PeopleSyncDO"
+			},
+			{
+				"name": "EMOJI_GRID_SYNC",
+				"class_name": "EmojiGridSyncDO"
 			}
 		]
 	},
@@ -22,6 +26,10 @@
 		{
 			"tag": "v1",
 			"new_sqlite_classes": ["PeopleSyncDO"]
+		},
+		{
+			"tag": "v2",
+			"new_sqlite_classes": ["EmojiGridSyncDO"]
 		}
 	]
 }

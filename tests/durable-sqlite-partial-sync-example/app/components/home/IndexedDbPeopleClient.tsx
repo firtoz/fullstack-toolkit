@@ -1,5 +1,5 @@
+import { createPartialSyncedCollection } from "@firtoz/collection-sync";
 import { keyvalCollectionOptions } from "@firtoz/idb-collections";
-import { createCollection } from "@tanstack/db";
 import { useMemo } from "react";
 import { z } from "zod";
 import { createIndexedDbAdapter } from "./indexeddb-adapter";
@@ -21,21 +21,24 @@ type Props = {
 };
 
 export function IndexedDbPeopleClient({ roomId, wsTransport }: Props) {
-	const collection = useMemo(() => {
+	const { collection, bridge, setTransportSend } = useMemo(() => {
 		const { adapter, readyPromise } = createIndexedDbAdapter(roomId);
-		return createCollection(
+		return createPartialSyncedCollection(
 			keyvalCollectionOptions({
 				schema: personSchema,
 				adapter,
 				readyPromise,
 				getKey: (item) => item.id,
 			}),
+			{ syncStateKey: `partial-sync-idb-people-${roomId}` },
 		);
 	}, [roomId]);
 
 	return (
 		<PeoplePartialSyncClient
 			collection={collection}
+			mutationBridge={bridge}
+			setTransportSend={setTransportSend}
 			roomId={roomId}
 			wsTransport={wsTransport}
 			label="indexeddb"

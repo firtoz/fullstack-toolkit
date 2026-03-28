@@ -35,6 +35,24 @@ export function defaultPartialSyncVersionMs<TItem extends PartialSyncItem>(
 }
 
 /**
+ * Resolve a row for an id stored in the partial-sync index map. Uses {@link PartialSyncCollection.get}
+ * first; if that misses (e.g. key type / boxed string mismatch vs TanStack’s internal map), scans
+ * {@link PartialSyncCollection.entries} by `String(key)`.
+ */
+export function getPartialSyncRowByMapId<TItem extends PartialSyncItem>(
+	collection: PartialSyncCollection<TItem>,
+	id: string | number,
+): TItem | undefined {
+	const direct = collection.get(id);
+	if (direct !== undefined) return direct;
+	const sid = String(id);
+	for (const [k, row] of collection.entries()) {
+		if (String(k) === sid) return row;
+	}
+	return undefined;
+}
+
+/**
  * Returns consecutive row ids for `[offset, offset + want)` if all present in the map; else null.
  */
 export function tryIdsForIndexWindow<TKey extends string | number>(
@@ -61,7 +79,7 @@ export function tryIdsForIndexWindow<TKey extends string | number>(
  */
 export function computeFingerprintForIndexWindow<TItem extends PartialSyncItem>(
 	collection: PartialSyncCollection<TItem>,
-	map: Map<number, TItem["id"]>,
+	map: Map<number, string | number>,
 	offset: number,
 	want: number,
 	getVersionMs: (row: TItem) => number = defaultPartialSyncVersionMs,
@@ -72,7 +90,7 @@ export function computeFingerprintForIndexWindow<TItem extends PartialSyncItem>(
 	for (let i = 0; i < want; i += 1) {
 		const id = map.get(offset + i);
 		if (id === undefined) return undefined;
-		const row = collection.get(id);
+		const row = getPartialSyncRowByMapId(collection, id);
 		if (row === undefined) return undefined;
 		count += 1;
 		const ms = getVersionMs(row);

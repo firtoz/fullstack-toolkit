@@ -5,6 +5,7 @@
 	"scripts": {
 		"build": "react-router build",
 		"db:generate": "drizzle-kit generate",
+		"db:generate:emoji": "drizzle-kit generate --config=drizzle-emoji.config.ts",
 		"dev": "react-router dev --port 5199 --host 127.0.0.1",
 		"typegen": "react-router typegen && bun run cf-typegen",
 		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)",

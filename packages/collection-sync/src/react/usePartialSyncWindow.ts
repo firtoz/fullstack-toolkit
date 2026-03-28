@@ -15,10 +15,12 @@ import {
 	DEFAULT_PAGE_LIMIT,
 	DEFAULT_SEEK_COOLDOWN_MS,
 } from "./constants";
+import { partialSyncRowKey } from "../partial-sync-row-key";
 import {
 	assertSyncUtils,
 	computeFingerprintForIndexWindow,
 	defaultPartialSyncVersionMs,
+	getPartialSyncRowByMapId,
 	tryIdsForIndexWindow,
 } from "./partial-sync-utils";
 import type {
@@ -50,6 +52,9 @@ export function usePartialSyncWindow<
 	getSortPositions,
 	pageLimit = DEFAULT_PAGE_LIMIT,
 	seekCooldownMs = DEFAULT_SEEK_COOLDOWN_MS,
+	partialWindowResetKey,
+	mutationBridge,
+	mergeTransportSend,
 }: UsePartialSyncWindowOptions<
 	TItem,
 	TSortColumn
@@ -78,7 +83,7 @@ export function usePartialSyncWindow<
 	const [collectionVersion, setCollectionVersion] = useState(0);
 	const [indexMapVersion, setIndexMapVersion] = useState(0);
 
-	const globalIndexMapRef = useRef(new Map<number, TItem["id"]>());
+	const globalIndexMapRef = useRef(new Map<number, string | number>());
 	const denseRowsRef = useRef<TItem[]>([]);
 	const windowStartRef = useRef(windowStartIndex);
 	windowStartRef.current = windowStartIndex;
@@ -139,9 +144,19 @@ export function usePartialSyncWindow<
 					};
 				},
 				deleteRows: async (keys) => {
-					const keySet = new Set(keys);
+					const keySet = new Set<string | number>();
+					for (const k of keys) {
+						keySet.add(k);
+						keySet.add(String(k));
+					}
 					for (const [idx, id] of globalIndexMapRef.current) {
-						if (keySet.has(id)) {
+						if (
+							keySet.has(id) ||
+							keySet.has(String(id)) ||
+							(typeof id === "string" &&
+								/^-?\d+$/.test(id) &&
+								keySet.has(Number(id)))
+						) {
 							globalIndexMapRef.current.delete(idx);
 						}
 					}
@@ -161,10 +176,14 @@ export function usePartialSyncWindow<
 	// calls `setConnecting` / `setConnected`, which updates React state. If `bridge`
 	// were recreated whenever `collection` (hence syncUtils/cacheManager) changed,
 	// that effect would re-run every render → infinite updates.
+	const partialClientId = mutationBridge?.clientId;
+
 	const bridge = useMemo(
 		() =>
 			new PartialSyncClientBridge<TItem>({
-				clientId: crypto.randomUUID(),
+				...(partialClientId !== undefined
+					? { clientId: partialClientId }
+					: {}),
 				collection: {
 					utils: {
 						receiveSync: (messages) =>
@@ -211,36 +230,35 @@ export function usePartialSyncWindow<
 					});
 				},
 			}),
-		[],
+		[partialClientId],
 	);
 
 	// Do not list serializeJson / deserializeJson as effect deps: callers often pass
 	// inline lambdas (new reference every render). That would re-run this layout effect
 	// every time → cleanup calls setConnected(false) and the next run calls setConnecting,
 	// each firing onStateChange → maximum update depth exceeded.
+	const mutationBridgeRef = useRef(mutationBridge);
+	mutationBridgeRef.current = mutationBridge;
+
+	const mergeTransportSendRef = useRef(mergeTransportSend);
+	mergeTransportSendRef.current = mergeTransportSend;
+
 	useLayoutEffect(() => {
 		const disconnect = connectPartialSync(bridge, {
 			url: wsUrl,
 			transport: wsTransport,
 			setTransportSend: (send) => {
 				bridge.setSend((message: SyncClientMessage) => send(message));
+				mergeTransportSendRef.current?.(send);
 			},
 			serializeJson: (value: unknown) => serializeJsonRef.current(value),
 			deserializeJson: (raw: string) => deserializeJsonRef.current(raw),
+			mutationBridge: mutationBridgeRef.current,
 		});
 		return () => {
 			disconnect();
 		};
 	}, [bridge, wsTransport, wsUrl]);
-
-	useEffect(() => {
-		const sub = collection.subscribeChanges(() => {
-			setCollectionVersion((v) => v + 1);
-		});
-		return () => {
-			sub.unsubscribe();
-		};
-	}, [collection]);
 
 	const indexRows = useMemo(() => {
 		void collectionVersion;
@@ -250,8 +268,8 @@ export function usePartialSyncWindow<
 		for (let i = 0; ; i += 1) {
 			const id = globalIndexMapRef.current.get(start + i);
 			if (id === undefined) break;
-			const row = collection.get(id);
-			if (row === undefined) break;
+			const row = getPartialSyncRowByMapId(collection, id);
+			if (row === undefined) continue;
 			out.push(row);
 		}
 		return out;
@@ -268,7 +286,8 @@ export function usePartialSyncWindow<
 			void collectionVersion;
 			void indexMapVersion;
 			const id = globalIndexMapRef.current.get(globalIndex);
-			const row = id !== undefined ? collection.get(id) : undefined;
+			const row =
+				id !== undefined ? getPartialSyncRowByMapId(collection, id) : undefined;
 			if (row !== undefined) {
 				const ws = windowStartIndex;
 				const denseEnd = ws + rows.length;
@@ -305,7 +324,10 @@ export function usePartialSyncWindow<
 	const recordIdsAtOffset = useCallback(
 		(offset: number, fetchedRows: TItem[]) => {
 			for (let i = 0; i < fetchedRows.length; i += 1) {
-				globalIndexMapRef.current.set(offset + i, fetchedRows[i].id);
+				globalIndexMapRef.current.set(
+					offset + i,
+					partialSyncRowKey(fetchedRows[i].id),
+				);
 			}
 			bumpIndexMap();
 		},
@@ -387,7 +409,11 @@ export function usePartialSyncWindow<
 	const seekToViewport = useCallback(
 		(
 			firstVisibleIndex: number,
-			options?: { scrollSettled?: boolean; lastVisibleIndex?: number },
+			options?: {
+				scrollSettled?: boolean;
+				lastVisibleIndex?: number;
+				force?: boolean;
+			},
 		) => {
 			const offset = Math.max(0, firstVisibleIndex);
 			const loadedEndExclusive =
@@ -405,11 +431,14 @@ export function usePartialSyncWindow<
 				firstVisibleIndex >= windowStartRef.current &&
 				lastForDense < loadedEndExclusive;
 
-			if (options?.scrollSettled === true && inDenseWindow) {
+			if (options?.scrollSettled === true && inDenseWindow && !options?.force) {
 				return;
 			}
 
 			const now = Date.now();
+			if (!options?.force && now < seekCooldownUntilRef.current) {
+				return;
+			}
 			if (!options?.scrollSettled) {
 				// Live scroll: virtualizer updates indices before `windowStartIndex` catches up (seek was
 				// scrollSettled-only). If the first visible row is outside [windowStart, loadedEnd), reconcile
@@ -420,8 +449,7 @@ export function usePartialSyncWindow<
 					denseRowsRef.current.length > 0 &&
 					f >= ws &&
 					f < loadedEndExclusive;
-				if (firstInsideDense) return;
-				if (now < seekCooldownUntilRef.current) return;
+				if (firstInsideDense && !options?.force) return;
 			}
 			seekCooldownUntilRef.current = now + seekCooldownMs;
 
@@ -458,7 +486,9 @@ export function usePartialSyncWindow<
 				const lastId = ids[ids.length - 1];
 				const gsv = getSortValueRef.current;
 				const lastRow =
-					lastId !== undefined ? collection.get(lastId) : undefined;
+					lastId !== undefined
+						? getPartialSyncRowByMapId(collection, lastId)
+						: undefined;
 				setNextCursor(
 					lastRow !== undefined ? gsv(lastRow, sortRef.current.column) : null,
 				);
@@ -514,7 +544,9 @@ export function usePartialSyncWindow<
 							globalIndexMapRef.current.get(offset + want - 1) ??
 							globalIndexMapRef.current.get(offset + pageLimit - 1);
 						const lastRow =
-							lastId !== undefined ? collection.get(lastId) : undefined;
+							lastId !== undefined
+								? getPartialSyncRowByMapId(collection, lastId)
+								: undefined;
 						setNextCursor(
 							lastRow !== undefined
 								? gsv(lastRow, sortRef.current.column)
@@ -569,6 +601,43 @@ export function usePartialSyncWindow<
 		],
 	);
 
+	useEffect(() => {
+		const sub = collection.subscribeChanges(() => {
+			// Remove individual stale map entries (row deleted from collection, but map still
+			// references it). This is lightweight: no wholesale clear, no force-seek, no abort.
+			// `indexRows` already skips stale entries so the UI stays populated.
+			let removedStaleMapEntry = false;
+			if (globalIndexMapRef.current.size > 0) {
+				for (const [idx, id] of globalIndexMapRef.current) {
+					if (getPartialSyncRowByMapId(collection, id) === undefined) {
+						globalIndexMapRef.current.delete(idx);
+						removedStaleMapEntry = true;
+					}
+				}
+			}
+			if (removedStaleMapEntry) {
+				bumpIndexMap();
+			}
+
+			setCollectionVersion((v) => v + 1);
+			const sortNow = sortRef.current;
+			const sortPos = getSortPositionsRef.current;
+			const gsv = getSortValueRef.current;
+			cacheManagerRef.current.resyncSortPositionsForTrackedRows(
+				(key) => getPartialSyncRowByMapId(collection, key),
+				(row) =>
+					sortPos !== undefined
+						? sortPos(row)
+						: {
+								[sortNow.column]: gsv(row, sortNow.column),
+							},
+			);
+		});
+		return () => {
+			sub.unsubscribe();
+		};
+	}, [bumpIndexMap, collection]);
+
 	const seekAfterScrollSettled = useCallback(
 		(firstVisibleIndex: number, lastVisibleIndex?: number) => {
 			seekToViewport(firstVisibleIndex, {
@@ -579,8 +648,8 @@ export function usePartialSyncWindow<
 		[seekToViewport],
 	);
 
-	// Re-run when `collection` or `sort` identity changes (new backend / sort column).
-	// biome-ignore lint/correctness/useExhaustiveDependencies: collection + sort intentionally reset the window
+	// Re-run when sort or logical collection identity changes — not on TanStack `collection` ref churn.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional narrow deps; truncate uses syncUtilsRef
 	useEffect(() => {
 		fetchGenRef.current += 1;
 		bridge.abortRangeRequests();
@@ -594,9 +663,16 @@ export function usePartialSyncWindow<
 		setPendingServerRange(null);
 		globalIndexMapRef.current.clear();
 		bumpIndexMap();
-		void syncUtils.truncate();
+		void syncUtilsRef.current.truncate();
 		cacheManager.clear();
-	}, [bridge, bumpIndexMap, cacheManager, collection, sort, syncUtils]);
+	}, [
+		bridge,
+		bumpIndexMap,
+		cacheManager,
+		sort.column,
+		sort.direction,
+		partialWindowResetKey ?? "",
+	]);
 
 	useEffect(() => {
 		if (rows.length === 0 && !rangeRequestInFlight && hasMore) {

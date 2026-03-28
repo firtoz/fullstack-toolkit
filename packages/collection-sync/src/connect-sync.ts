@@ -1,5 +1,6 @@
 import { ZodWebSocketClient } from "@firtoz/websocket-do/zod-client";
 import type { SyncClientBridge } from "./sync-client-bridge";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
 import {
 	createClientMessageSchema,
 	createServerMessageSchema,
@@ -27,7 +28,7 @@ export type ConnectSyncOptions<TItem = unknown> = {
  * Connects a {@link SyncClientBridge} to a WebSocket using the same codec as {@link ZodSession} on the server.
  */
 export function connectSync<
-	TItem extends { id: string | number; updatedAt?: number | Date | null },
+	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
 >(
 	bridge: SyncClientBridge<TItem>,
 	options: ConnectSyncOptions<TItem>,

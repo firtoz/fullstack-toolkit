@@ -7,11 +7,13 @@ import type {
 	SyncServerMessage,
 } from "./sync-protocol";
 import { toSyncMessage } from "./sync-protocol";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
+import { partialSyncRowKey } from "./partial-sync-row-key";
 
 export interface SyncServerBridgeStore<TItem> {
 	applySyncMessages: (messages: SyncMessage<TItem>[]) => Promise<void>;
 	getSnapshotMessages: () => Promise<SyncMessage<TItem>[]>;
-	getRow: (key: string | number) => TItem | undefined;
+	getRow: (key: string | number) => Promise<TItem | undefined>;
 }
 
 export interface SyncServerBridgeOptions<TItem> {
@@ -28,7 +30,7 @@ export interface SyncServerBridgeOptions<TItem> {
 }
 
 export class SyncServerBridge<
-	TItem extends { id: string | number; updatedAt?: number | Date | null },
+	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
 > {
 	#serverVersion = 0;
 	#changeLog: Array<{ serverVersion: number; changes: SyncMessage<TItem>[] }> =
@@ -87,7 +89,7 @@ export class SyncServerBridge<
 
 		for (const mutation of message.mutations) {
 			try {
-				const change = this.#intentToMessageLww(mutation);
+				const change = await this.#intentToMessageLww(mutation);
 				if (!change) {
 					continue;
 				}
@@ -128,13 +130,15 @@ export class SyncServerBridge<
 		});
 	}
 
-	#intentToMessageLww(intent: MutationIntent): SyncMessage<TItem> | null {
+	async #intentToMessageLww(
+		intent: MutationIntent,
+	): Promise<SyncMessage<TItem> | null> {
 		const base = toSyncMessage(intent) as SyncMessage<TItem>;
 		if (base.type !== "update") {
 			return base;
 		}
-		const key = intent.key ?? base.value.id;
-		const existing = this.options.store.getRow(key);
+		const key = partialSyncRowKey(intent.key ?? base.value.id);
+		const existing = await this.options.store.getRow(key);
 		if (!existing) {
 			return base;
 		}

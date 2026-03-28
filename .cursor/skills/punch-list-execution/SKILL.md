@@ -1,97 +1,87 @@
 ---
 name: punch-list-execution
-description: Drive multi-step implementation with a persistent checklist file, per-phase tests and test runs, and incremental phase completion. Use when planning or executing long, multi-phase work.
+description: Read when implementing multi-phase work after a plan exists. Mandatory—create/open/seed temp punch list, one item at a time, per-phase tests. Complements punch-list-planning for authors.
 ---
 
-# Punch-List Execution
+# Punch-List Execution (for implementing agents)
 
-## When to Use
+## When to read this (mandatory)
 
-Use this skill when:
+**Read this file at the start of implementation** (same session, use the Read tool)—when you are about to **write or change code** under a **multi-phase** or **multi-package** plan.
 
-- The task spans many files or packages
-- Work has multiple ordered phases
-- The agent might lose track of completed vs pending steps
-- The user asks for strict execution discipline
+- If you **authored** the plan, you still follow this skill for the implementation phase.
+- If a **planner** handed you a plan, they should have told you to read this skill—**do it before the first code change**.
 
-**Planning:** When writing or updating a plan for another agent (or future you), mention this skill in the plan’s execution section and require a temp-directory punch list that mirrors the plan’s phases—each phase must include testing and a test run (see below).
+**Planning** (what to put in the plan document) lives in **[punch-list-planning](../punch-list-planning/SKILL.md)** (repo: `.cursor/skills/punch-list-planning/SKILL.md`). This file is **only** execution discipline.
 
-**Execution:** Follow this skill for the full loop: punch list → implement → test → mark progress → repeat.
+## Step 1 — Build and own the punch list (first implementation action)
 
-## Planning stage (plan authors)
+**Your first implementation action** is not “start coding the feature”—it is **punch list I/O**:
 
-Plans that imply multi-phase implementation should:
+1. Ensure the directory exists: `$TMPDIR/router-toolkit-punchlists/` (Linux: `/tmp/router-toolkit-punchlists/`).
+2. **Create or open** `<task-slug>.md` for this task (reuse if it already exists from an earlier session).
+3. **Seed** the file with phased headings (`## Phase 1: …`) and `- [ ]` items that mirror the **written plan** (and tests/typecheck per phase). If the plan is thin, expand it into **atomic** checklist items here—this file becomes authoritative.
+4. Only after the list exists and reflects the work: start the **re-read → first unchecked → execute → mark `[x]`** loop.
 
-1. Reference this skill explicitly (path: `.cursor/skills/punch-list-execution/SKILL.md`).
-2. State that the implementer must create or reuse a punch list under `$TMPDIR/router-toolkit-punchlists/<task-slug>.md` (Linux: `/tmp/router-toolkit-punchlists/<task-slug>.md`), not in the repo.
-3. Break work into phases where **each phase ends with verification**: add automated tests scoped to that phase’s behavior, then **run** those tests (or the narrowest command that covers them) before starting the next phase. Avoid deferring all testing to a final “testing” phase—errors compound and rework explodes.
-4. Call out which test commands apply after each phase (e.g. `bun test packages/foo`, `bun test path/to/file.test.ts`, package `typecheck`).
+**Never** commit punch-list files to the repository.
 
-## Execution stage (implementing agents)
+## Cursor todos vs this checklist
 
-1. **Create or open** the punch-list file in the OS temp directory (not the repo).
-   - Preferred: `$TMPDIR/router-toolkit-punchlists/<task-slug>.md`
-   - Linux fallback: `/tmp/router-toolkit-punchlists/<task-slug>.md`
-   - Reuse the same file for the current task if it already exists.
-2. **Write** an ordered checklist of atomic steps **grouped by phase**. Within each phase, order items so that **tests and a test run come last for that phase** (implement → add/update tests → run tests → then phase wrap-up).
-3. **Loop** for each unchecked item:
-   - Re-read the punch list
-   - Find the first unchecked item
-   - Execute it
-   - Mark that item `[x]` immediately, with a one-line note (what was done or command output summary)
-   - **Do not** defer marking items until “the end”
-4. **After every phase** (when all items in that phase are checked):
-   - Add or confirm a short **phase completion line** for that phase only (e.g. under the phase heading: `**Phase status:** complete — <date or note>`), or check a dedicated `- [x] Phase N complete` item if you included one in the list
-   - **Do not** mark all phases complete in one batch at the end of the whole task; mark each phase as soon as its items (including its tests and test run) are done
-5. **Keep at most one active checklist item** in progress at a time (one unchecked item you are working on).
-6. **If blocked:** add a short blocker note under the item; only move to the next safe, independent item if the user or constraints allow it.
-7. **At the very end of the task:** re-read the punch list, confirm all required items and phases are complete, and record any known residual issues explicitly.
+- **Temp punch list** = **source of truth** for what to do next and when phases complete (including test runs).
+- **Cursor todos** (if present) = optional **milestone** visibility. You may mark a Cursor todo when the **matching punch-list phase** is done, but **do not** skip creating/updating the temp file or **do not** close out work on Cursor todos alone while punch-list items remain unchecked.
+
+If instructions conflict, prefer: **temp punch list + this skill** over ad-hoc todo ordering.
+
+## Execution loop
+
+1. **Re-read** the punch-list file.
+2. Take the **first unchecked** `- [ ]` item.
+3. **Execute** it (one primary item in flight).
+4. Mark it **`[x]` immediately** with a **one-line note** (what changed or command summary). Do not batch marks at the end.
+5. Repeat until the file is complete.
+
+## Phases
+
+- Group items under **phase headings**. Within each phase, order so **implement → tests → run tests/typecheck** appears in the list, then phase wrap-up.
+- Mark a **phase** complete **only after** that phase’s test run item is checked and passing.
+- Do not mark all phases in one shot at the very end of the project; complete phases incrementally.
 
 ## Per-phase testing (required)
 
-- **Every phase** that changes behavior should include at least:
-  - Items to **add or update** automated tests covering that phase (unit, integration, or e2e—whatever fits the smallest useful scope).
-  - An item to **run** tests: the narrowest command that validates the phase (package-scoped `bun test`, single test file, etc.). Include **typecheck** for that package when types changed.
-- **Run tests before leaving the phase.** Fixing failures in the same phase is cheaper than stacking multiple phases of untested code.
-- If a phase is documentation-only or trivial, the checklist can say so and use a minimal verification item (e.g. “N/A — doc-only; run `bun test` on touched package if any code paths changed”).
+- Each phase that changes behavior should include checklist items to **add/update tests** and **run** the narrowest validating command (`bun test …`, `bun run typecheck` in the right package).
+- **Run before leaving the phase.**
 
-## Format guidelines
+## Blockers
 
-- Prefer short, concrete items: `- [ ] ...`
-- Group under clear phase headings (`## Phase 1: ...`).
-- Optional but useful: end each phase with `- [ ] Phase N complete` (verification that tests passed and phase goals met)—check it **only after** the phase’s test run item is checked.
-- Include **verification commands** as explicit checklist items (tests, typecheck).
-- Avoid vague items like “finish implementation” or “do tests at the end.”
-- **Never** commit punch-list files to the repository.
+- Note blockers under the item. Move to the next item only if it is **independent** and policy allows; otherwise stop and surface the blocker.
+
+## End of task
+
+- Re-read the punch list; confirm all items and phases are done; note any known follow-ups explicitly.
+
+## Format hints
+
+- Short concrete items: `- [ ] …`
+- Optional: `- [ ] Phase N complete` checked only after that phase’s test run passes.
 
 ## Example
 
 ```markdown
 # Feature X punch list
 
-Read → first unchecked → execute → mark [x] with one-line note → repeat.
-Re-read before each new item. Run this phase’s tests before starting the next phase.
+Re-read → first unchecked → execute → mark [x] with one-line note → repeat.
 
 ## Phase 1: Protocol
 
 - [ ] Add protocol types and Zod schemas
-- [ ] Add protocol unit tests (`sync-protocol.test.ts`)
+- [ ] Add protocol unit tests
 - [ ] Run `bun test packages/foo/src/sync-protocol.test.ts`
 - [ ] Run `bun run typecheck` in `packages/foo`
-- [x] Phase 1 complete — schemas + tests green
+- [x] Phase 1 complete — tests green
 
-## Phase 2: Server bridge
+## Phase 2: Bridge
 
-- [ ] Implement bridge dispatch for new message type
+- [ ] Implement dispatch
 - [ ] Add bridge tests
 - [ ] Run `bun test packages/foo/src/bridge.test.ts`
-- [ ] Phase 2 complete — (check after test run passes)
-
-## Phase 3: Client + E2E
-
-- [ ] Implement client handling
-- [ ] Add client tests
-- [ ] Run client package tests
-- [ ] Extend e2e if needed; run `bun run test:e2e` in app (if applicable)
-- [ ] Phase 3 complete
 ```

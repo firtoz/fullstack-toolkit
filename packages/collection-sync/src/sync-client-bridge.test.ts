@@ -4,6 +4,22 @@ import { SyncClientBridge } from "./sync-client-bridge";
 type Item = { id: string; title: string; updatedAt: number };
 
 describe("SyncClientBridge", () => {
+	it("does not send syncHello when sendSyncHelloOnConnect is false", () => {
+		const sent: unknown[] = [];
+		const bridge = new SyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			sendSyncHelloOnConnect: false,
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		expect(sent.length).toBe(0);
+	});
+
 	it("sends update and clears pending on ack", async () => {
 		const sent: unknown[] = [];
 		const received: unknown[] = [];

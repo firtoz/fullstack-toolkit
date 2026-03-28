@@ -8,6 +8,10 @@ import type {
 	SyncServerMessage,
 } from "./sync-protocol";
 import { createClientMutationId } from "./sync-protocol";
+import {
+	partialSyncRowKey,
+	type PartialSyncRowId,
+} from "./partial-sync-row-key";
 
 type CollectionWithReceiveSync<TItem> = {
 	utils: {
@@ -50,9 +54,10 @@ export type PartialSyncRangeResult<TItem> = {
 };
 
 export interface PartialSyncClientBridgeOptions<
-	TItem extends { id: string | number },
+	TItem extends { id: PartialSyncRowId },
 > {
-	clientId: string;
+	/** Defaults to a random UUID when omitted (must match {@link SyncClientBridge} when using mutations). */
+	clientId?: string;
 	collection: CollectionWithReceiveSync<TItem>;
 	send: SendFn;
 	onStateChange?: (state: PartialSyncState) => void;
@@ -70,7 +75,7 @@ type InFlightRequest<TItem> = {
 	reject: (error: unknown) => void;
 };
 
-export class PartialSyncClientBridge<TItem extends { id: string | number }> {
+export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 	readonly clientId: string;
 	#connected = false;
 	#state: PartialSyncState = { status: "offline" };
@@ -81,7 +86,7 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 	#sendFn: SendFn;
 
 	constructor(private readonly options: PartialSyncClientBridgeOptions<TItem>) {
-		this.clientId = options.clientId;
+		this.clientId = options.clientId ?? crypto.randomUUID();
 		this.#sendFn = options.send;
 	}
 
@@ -335,7 +340,7 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 		if (message.rows.length > 0) {
 			await this.options.beforeApplyRows?.(message.rows);
 			const rowsToInsert = message.rows.filter(
-				(row) => !this.#cachedIds.has(row.id),
+				(row) => !this.#cachedIds.has(partialSyncRowKey(row.id)),
 			);
 			if (rowsToInsert.length > 0) {
 				const changes = rowsToInsert.map(
@@ -412,16 +417,18 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 		});
 	}
 
-	async #applyAndTrack(changes: SyncMessage<TItem>[]): Promise<void> {
-		if (changes.length === 0) return;
-		await this.options.collection.utils.receiveSync(changes);
+	/**
+	 * Updates `#cachedIds` after {@link SyncClientBridge} has already applied the same messages via `receiveSync`
+	 * (e.g. `syncBatch`) so we do not double-apply.
+	 */
+	syncTrackedIdsFromMessages(changes: SyncMessage<TItem>[]): void {
 		for (const change of changes) {
 			switch (change.type) {
 				case "insert":
-					this.#cachedIds.add(change.value.id);
+					this.#cachedIds.add(partialSyncRowKey(change.value.id));
 					break;
 				case "update":
-					this.#cachedIds.add(change.value.id);
+					this.#cachedIds.add(partialSyncRowKey(change.value.id));
 					break;
 				case "delete":
 					this.#cachedIds.delete(change.key);
@@ -433,6 +440,12 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 					exhaustiveGuard(change);
 			}
 		}
+	}
+
+	async #applyAndTrack(changes: SyncMessage<TItem>[]): Promise<void> {
+		if (changes.length === 0) return;
+		await this.options.collection.utils.receiveSync(changes);
+		this.syncTrackedIdsFromMessages(changes);
 	}
 
 	#setState(state: PartialSyncState): void {

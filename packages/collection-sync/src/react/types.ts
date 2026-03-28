@@ -5,11 +5,13 @@ import type {
 	PartialSyncState,
 } from "../partial-sync-client-bridge";
 import type { ConnectPartialSyncTransport } from "../connect-partial-sync";
-import type { RangeCondition } from "../sync-protocol";
+import type { SyncClientBridge } from "../sync-client-bridge";
+import type { PartialSyncRowId } from "../partial-sync-row-key";
+import type { RangeCondition, SyncClientMessage } from "../sync-protocol";
 
 /** Row shape expected for version-watermark fingerprints (default: `updatedAt` → ms). */
 export type PartialSyncItem = {
-	id: string | number;
+	id: PartialSyncRowId;
 	updatedAt?: number | Date | null;
 };
 
@@ -66,6 +68,22 @@ export type UsePartialSyncWindowOptions<
 
 	pageLimit?: number;
 	seekCooldownMs?: number;
+	/**
+	 * Stable id for the **logical** collection instance (e.g. `${backend}-${roomId}`). The partial
+	 * window resets (truncate + index map) when this or {@link sort} changes — **not** when the
+	 * TanStack `collection` reference churns. Omit only if the collection instance is stable for the
+	 * hook lifetime; otherwise local edits can spuriously reset the window.
+	 */
+	partialWindowResetKey?: string;
+	/**
+	 * When set, `mutateBatch` / ack / `syncBatch` route through this bridge; `clientId` matches
+	 * {@link PartialSyncClientBridge}. Use with {@link createPartialSyncedCollection} / {@link withSync}.
+	 */
+	mutationBridge?: SyncClientBridge<TItem>;
+	/**
+	 * Called once when the WebSocket transport `send` is ready (same function {@link withSync} / mutation bridge use).
+	 */
+	mergeTransportSend?: (send: (msg: SyncClientMessage) => void) => void;
 };
 
 export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {
@@ -84,7 +102,12 @@ export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {
 	fetchNext: () => Promise<void>;
 	seekToViewport: (
 		firstVisibleIndex: number,
-		opts?: { scrollSettled?: boolean; lastVisibleIndex?: number },
+		opts?: {
+			scrollSettled?: boolean;
+			lastVisibleIndex?: number;
+			/** Skip density/cooldown short-circuits (e.g. index map out of sync with collection). */
+			force?: boolean;
+		},
 	) => void;
 	seekAfterScrollSettled: (
 		firstVisibleIndex: number,

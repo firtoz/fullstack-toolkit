@@ -1,5 +1,5 @@
+import { createPartialSyncedCollection } from "@firtoz/collection-sync";
 import { memoryCollectionOptions } from "@firtoz/db-helpers";
-import { createCollection } from "@tanstack/db";
 import { useMemo } from "react";
 import { z } from "zod";
 import { PeoplePartialSyncClient } from "./PeoplePartialSyncClient";
@@ -20,9 +20,9 @@ type Props = {
 };
 
 export function MemoryPeopleClient({ roomId, wsTransport }: Props) {
-	const collection = useMemo(
+	const { collection, bridge, setTransportSend } = useMemo(
 		() =>
-			createCollection(
+			createPartialSyncedCollection(
 				memoryCollectionOptions({
 					id: `partial-sync-memory-${roomId}`,
 					schema: personSchema,
@@ -35,6 +35,8 @@ export function MemoryPeopleClient({ roomId, wsTransport }: Props) {
 	return (
 		<PeoplePartialSyncClient
 			collection={collection}
+			mutationBridge={bridge}
+			setTransportSend={setTransportSend}
 			roomId={roomId}
 			wsTransport={wsTransport}
 			label="memory"

@@ -69,6 +69,8 @@ export {
 
 export { createSyncedCollection } from "./create-synced-collection";
 
+export { createPartialSyncedCollection } from "./create-partial-synced-collection";
+
 export {
 	connectSync,
 	type ConnectSyncOptions,
@@ -80,3 +82,8 @@ export {
 	type ConnectPartialSyncOptions,
 	type ConnectPartialSyncTransport,
 } from "./connect-partial-sync";
+
+export {
+	partialSyncRowKey,
+	type PartialSyncRowId,
+} from "./partial-sync-row-key";

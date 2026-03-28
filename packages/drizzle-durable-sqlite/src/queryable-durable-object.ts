@@ -1,5 +1,6 @@
 import {
 	PartialSyncServerBridge,
+	SyncServerBridge,
 	createClientMessageSchema,
 	createServerMessageSchema,
 	type PartialSyncServerBridgeStore,
@@ -7,6 +8,7 @@ import {
 	type SyncClientMessage,
 	type SyncRange,
 	type SyncRangeSort,
+	type SyncServerBridgeStore,
 	type SyncServerMessage,
 } from "@firtoz/collection-sync";
 import type { SyncMessage } from "@firtoz/db-helpers";
@@ -21,8 +23,18 @@ import type { Context } from "hono";
 
 type SessionData = { clientId: string };
 
-type BridgeSlot<TRow> = {
-	bridge?: PartialSyncServerBridge<TRow>;
+type MutationSyncRow = {
+	id: string | number;
+	updatedAt?: number | Date | null;
+};
+
+type SessionDispatch<TRow extends MutationSyncRow> = {
+	partialBridge: PartialSyncServerBridge<TRow>;
+	mutationBridge?: SyncServerBridge<TRow>;
+};
+
+type SessionSlot<TRow extends MutationSyncRow> = {
+	dispatch?: SessionDispatch<TRow>;
 	pending: SyncClientMessage[];
 };
 
@@ -50,6 +62,22 @@ function createSessionCodecOptions<TItem extends { id: string | number }>(
 	};
 }
 
+async function routeQueryableClientMessage<TRow extends MutationSyncRow>(
+	message: SyncClientMessage,
+	dispatch: SessionDispatch<TRow>,
+): Promise<void> {
+	switch (message.type) {
+		case "mutateBatch":
+		case "syncHello":
+			if (dispatch.mutationBridge !== undefined) {
+				await dispatch.mutationBridge.handleClientMessage(message);
+			}
+			return;
+		default:
+			await dispatch.partialBridge.handleClientMessage(message);
+	}
+}
+
 class QueryableSession<
 	TItem extends { id: string | number },
 	TEnv extends Cloudflare.Env,
@@ -65,19 +93,19 @@ class QueryableSession<
 		websocket: WebSocket,
 		sessions: Map<WebSocket, QueryableSession<TItem, TEnv>>,
 		options: ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>>,
-		private readonly bridgeSlot: BridgeSlot<TItem>,
+		private readonly sessionSlot: SessionSlot<TItem>,
 	) {
 		const generatedClientId = crypto.randomUUID();
 		super(websocket, sessions, options, {
 			createData: () => ({ clientId: generatedClientId }),
 			handleValidatedMessage: async (message: SyncClientMessage) => {
 				this.clientId = message.clientId;
-				const bridge = this.bridgeSlot.bridge;
-				if (bridge === undefined) {
-					this.bridgeSlot.pending.push(message);
+				const dispatch = this.sessionSlot.dispatch;
+				if (dispatch === undefined) {
+					this.sessionSlot.pending.push(message);
 					return;
 				}
-				await bridge.handleClientMessage(message);
+				await routeQueryableClientMessage(message, dispatch);
 			},
 			handleClose: async () => {},
 		});
@@ -97,7 +125,10 @@ export type QueryableDurableObjectConfig<
 };
 
 export abstract class QueryableDurableObject<
-	TRow extends { id: string | number },
+	TRow extends {
+		id: string | number;
+		updatedAt?: number | Date | null;
+	},
 	TSchema extends Record<string, unknown>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
 	// biome-ignore lint/suspicious/noExplicitAny: session generic is not exposed in subclass APIs.
@@ -109,6 +140,7 @@ export abstract class QueryableDurableObject<
 > {
 	protected db!: ReturnType<typeof drizzle>;
 	protected bridge!: PartialSyncServerBridge<TRow>;
+	protected mutationSyncBridge?: SyncServerBridge<TRow>;
 
 	readonly app = this.getBaseApp().get("/health", (c: Context) => c.text("ok"));
 
@@ -118,7 +150,7 @@ export abstract class QueryableDurableObject<
 		config: QueryableDurableObjectConfig<TSchema>,
 	) {
 		let bridgeRef!: PartialSyncServerBridge<TRow>;
-		const bridgeSlot: BridgeSlot<TRow> = { pending: [] };
+		const sessionSlot: SessionSlot<TRow> = { pending: [] };
 		super(ctx, env, {
 			zodSessionOptions: (
 				sessionCtx: Context<{ Bindings: TEnv }> | undefined,
@@ -148,7 +180,7 @@ export abstract class QueryableDurableObject<
 						SyncClientMessage,
 						SyncServerMessage<TRow>
 					>,
-					bridgeSlot,
+					sessionSlot,
 				),
 		});
 
@@ -199,11 +231,28 @@ export abstract class QueryableDurableObject<
 				queryChunkSize: config.queryChunkSize,
 			});
 			this.bridge = bridgeRef;
-			bridgeSlot.bridge = bridgeRef;
-			for (const message of bridgeSlot.pending) {
-				await bridgeRef.handleClientMessage(message);
+
+			const mutationStore = this.createClientMutationSyncStore();
+			let mutationBridge: SyncServerBridge<TRow> | undefined;
+			if (mutationStore !== undefined) {
+				mutationBridge = new SyncServerBridge<TRow>({
+					store: mutationStore,
+					sendToClient: (clientId, message) =>
+						this.sendToClient(clientId, message),
+					broadcastExcept: (excludeClientId, message) =>
+						this.broadcastExcept(excludeClientId, message),
+				});
+				this.mutationSyncBridge = mutationBridge;
 			}
-			bridgeSlot.pending.length = 0;
+
+			sessionSlot.dispatch = {
+				partialBridge: bridgeRef,
+				mutationBridge,
+			};
+			for (const message of sessionSlot.pending) {
+				await routeQueryableClientMessage(message, sessionSlot.dispatch);
+			}
+			sessionSlot.pending.length = 0;
 			if (config.seedInBackground) {
 				void this.seedData().catch((error: unknown) => {
 					console.error("Background seedData failed", error);
@@ -249,6 +298,16 @@ export abstract class QueryableDurableObject<
 		return (row as Record<string, unknown>)[column];
 	}
 
+	/**
+	 * When overridden to return a store, `mutateBatch` / `syncHello` are handled by {@link SyncServerBridge};
+	 * range traffic stays on {@link PartialSyncServerBridge}.
+	 */
+	protected createClientMutationSyncStore():
+		| SyncServerBridgeStore<TRow>
+		| undefined {
+		return undefined;
+	}
+
 	protected async seedData(): Promise<void> {}
 
 	async pushServerChanges(changes: SyncMessage<TRow>[]): Promise<void> {
@@ -262,6 +321,17 @@ export abstract class QueryableDurableObject<
 		for (const session of this.sessions.values()) {
 			const typedSession = session as QueryableSession<TRow, TEnv>;
 			if (typedSession.clientId !== clientId) continue;
+			typedSession.send(message);
+		}
+	}
+
+	protected broadcastExcept(
+		excludeClientId: string,
+		message: SyncServerMessage<TRow>,
+	): void {
+		for (const session of this.sessions.values()) {
+			const typedSession = session as QueryableSession<TRow, TEnv>;
+			if (typedSession.clientId === excludeClientId) continue;
 			typedSession.send(message);
 		}
 	}

@@ -1,5 +1,9 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import {
+	partialSyncRowKey,
+	type PartialSyncRowId,
+} from "./partial-sync-row-key";
 import type {
 	MutationIntent,
 	SyncClientMessage,
@@ -23,7 +27,7 @@ type PendingMutation = {
 };
 
 export interface SyncClientBridgeOptions<
-	TItem extends { id: string | number; updatedAt?: number | Date | null },
+	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
 > {
 	clientId: string;
 	collection: CollectionWithReceiveSync<TItem>;
@@ -31,10 +35,15 @@ export interface SyncClientBridgeOptions<
 	initialLastAckedServerVersion?: number;
 	onLastAckedServerVersionChange?: (version: number) => void;
 	onRejectedMutation?: (reason: string, mutationId: string) => void;
+	/**
+	 * When `false`, `setConnected(true)` does not send `syncHello` (partial-sync + `mutateBatch` only).
+	 * Default `true` for full sync.
+	 */
+	sendSyncHelloOnConnect?: boolean;
 }
 
 export class SyncClientBridge<
-	TItem extends { id: string | number; updatedAt?: number | Date | null },
+	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
 > {
 	readonly clientId: string;
 	#pendingMutations = new Map<string, PendingMutation>();
@@ -52,9 +61,11 @@ export class SyncClientBridge<
 				snapshotTruncateApplied: boolean;
 		  }
 		| undefined;
+	readonly #sendSyncHelloOnConnect: boolean;
 
 	constructor(private readonly options: SyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId;
+		this.#sendSyncHelloOnConnect = options.sendSyncHelloOnConnect ?? true;
 		this.#lastAckedServerVersion = Math.max(
 			0,
 			options.initialLastAckedServerVersion ?? 0,
@@ -67,7 +78,7 @@ export class SyncClientBridge<
 
 	setConnected(connected: boolean): void {
 		this.#connected = connected;
-		if (connected) {
+		if (connected && this.#sendSyncHelloOnConnect) {
 			this.sendHello();
 		}
 	}
@@ -107,7 +118,7 @@ export class SyncClientBridge<
 		const intent: MutationIntent = {
 			clientMutationId: mutationId,
 			type: "update",
-			key: updated.id,
+			key: partialSyncRowKey(updated.id),
 			value: updated as Record<string, unknown>,
 			previousValue: previousValue as Record<string, unknown>,
 		};
@@ -232,7 +243,7 @@ export class SyncClientBridge<
 					intents.push({
 						clientMutationId,
 						type: "update",
-						key: change.value.id,
+						key: partialSyncRowKey(change.value.id),
 						value: change.value as Record<string, unknown>,
 						previousValue: change.previousValue as Record<string, unknown>,
 					});
@@ -317,7 +328,9 @@ export class SyncClientBridge<
 			if (change.type !== "update") {
 				return true;
 			}
-			const pendingMutationId = this.#pendingMutationByKey.get(change.value.id);
+			const pendingMutationId = this.#pendingMutationByKey.get(
+				partialSyncRowKey(change.value.id),
+			);
 			if (!pendingMutationId) return true;
 			const pending = this.#pendingMutations.get(pendingMutationId);
 			if (!pending) return true;
@@ -327,8 +340,10 @@ export class SyncClientBridge<
 
 	#intentKey(intent: MutationIntent): string | number | null {
 		switch (intent.type) {
-			case "insert":
-				return String((intent.value as { id?: string | number }).id ?? "");
+			case "insert": {
+				const raw = (intent.value as { id?: PartialSyncRowId }).id;
+				return raw === undefined ? "" : partialSyncRowKey(raw);
+			}
 			case "update":
 				return intent.key ?? null;
 			case "delete":
@@ -336,7 +351,7 @@ export class SyncClientBridge<
 			case "truncate":
 				return null;
 			default:
-				return null;
+				exhaustiveGuard(intent.type);
 		}
 	}
 

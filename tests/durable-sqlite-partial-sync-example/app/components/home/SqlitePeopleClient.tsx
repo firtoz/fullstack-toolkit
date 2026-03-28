@@ -1,15 +1,14 @@
+import { createPartialSyncedCollection } from "@firtoz/collection-sync";
 import {
 	drizzleCollectionOptions,
 	useDrizzleSqliteDb,
 } from "@firtoz/drizzle-sqlite-wasm";
 import SqliteWorker from "@firtoz/drizzle-sqlite-wasm/worker/sqlite.worker?worker";
-import { createCollection } from "@tanstack/db";
 import { useMemo } from "react";
 import migrations from "../../../drizzle/migrations";
 import * as schema from "../../../src/schema";
-import type { PartialSyncCollection } from "@firtoz/collection-sync/react";
 import { PeoplePartialSyncClient } from "./PeoplePartialSyncClient";
-import type { PersonRow, WsTransport } from "./types";
+import type { WsTransport } from "./types";
 
 type Props = {
 	roomId: string;
@@ -24,21 +23,24 @@ export function SqlitePeopleClient({ roomId, wsTransport }: Props) {
 		migrations,
 	);
 
-	const collection = useMemo(
+	const { collection, bridge, setTransportSend } = useMemo(
 		() =>
-			createCollection(
+			createPartialSyncedCollection(
 				drizzleCollectionOptions({
 					drizzle,
 					tableName: "peopleTable",
 					readyPromise,
 				}),
+				{ syncStateKey: `partial-sync-sqlite-people-${roomId}` },
 			),
-		[drizzle, readyPromise],
+		[drizzle, readyPromise, roomId],
 	);
 
 	return (
 		<PeoplePartialSyncClient
-			collection={collection as PartialSyncCollection<PersonRow>}
+			collection={collection}
+			mutationBridge={bridge}
+			setTransportSend={setTransportSend}
 			roomId={roomId}
 			wsTransport={wsTransport}
 			label="sqlite-wasm"

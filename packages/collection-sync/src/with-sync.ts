@@ -6,6 +6,7 @@ import type {
 	UtilsRecord,
 } from "@tanstack/db";
 import { SyncClientBridge } from "./sync-client-bridge";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
 import type { SyncClientMessage } from "./sync-protocol";
 
 /**
@@ -25,7 +26,7 @@ import type { SyncClientMessage } from "./sync-protocol";
 
 /** Row shape required for sync (matches {@link SyncClientBridge}). */
 export type SyncableCollectionItem = {
-	id: string | number;
+	id: PartialSyncRowId;
 	updatedAt?: number | Date | null;
 };
 
@@ -56,6 +57,18 @@ export type WithSyncOptions = {
 	 */
 	persistLastAckedServerVersion?: boolean;
 	onRejectedMutation?: (reason: string, mutationId: string) => void;
+	/**
+	 * When `false`, the bridge does not send `syncHello` on connect (use with partial sync + `mutateBatch`).
+	 * Default `true`.
+	 */
+	sendSyncHelloOnConnect?: boolean;
+	/**
+	 * When `false`, local {@link CollectionConfig.utils.truncate} clears storage only — it does **not**
+	 * enqueue a `truncate` for the next `mutateBatch`. Partial sync calls truncate on window reset; forwarding
+	 * it would batch with unrelated user edits and make the server apply `truncate` + `update`, wiping data.
+	 * Default `true` (full sync). {@link createPartialSyncedCollection} sets this to `false`.
+	 */
+	forwardTruncateToMutations?: boolean;
 };
 
 /** Returns `globalThis.localStorage` when it looks usable; otherwise `null`. */
@@ -214,6 +227,9 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 
 	let transportSend: (msg: SyncClientMessage) => void = () => {};
 
+	const forwardTruncateToMutations =
+		syncOptions?.forwardTruncateToMutations ?? true;
+
 	const originalReceiveSync = baseOptions.utils.receiveSync.bind(
 		baseOptions.utils,
 	);
@@ -238,6 +254,7 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 			}
 		},
 		onRejectedMutation: syncOptions?.onRejectedMutation,
+		sendSyncHelloOnConnect: syncOptions?.sendSyncHelloOnConnect,
 	});
 
 	const onInsert = baseOptions.onInsert
@@ -284,7 +301,9 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 		...baseOptions.utils,
 		truncate: async () => {
 			await originalTruncate();
-			bridge.onLocalMutation([{ type: "truncate" } as SyncMessage<TItem>]);
+			if (forwardTruncateToMutations) {
+				bridge.onLocalMutation([{ type: "truncate" } as SyncMessage<TItem>]);
+			}
 		},
 	};
 

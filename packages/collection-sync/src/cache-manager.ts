@@ -12,7 +12,10 @@ export type CacheEntry = {
 	estimatedSizeBytes: number;
 };
 
-export interface CacheManagerOptions<TItem extends { id: string | number }> {
+import type { PartialSyncRowId } from "./partial-sync-row-key";
+import { partialSyncRowKey } from "./partial-sync-row-key";
+
+export interface CacheManagerOptions<TItem extends { id: PartialSyncRowId }> {
 	evictionThreshold?: number;
 	evictionTarget?: number;
 	estimateRowSize?: (row: TItem) => number;
@@ -27,7 +30,7 @@ export type CacheViewport = {
 	toValue: unknown;
 };
 
-export class CacheManager<TItem extends { id: string | number }> {
+export class CacheManager<TItem extends { id: PartialSyncRowId }> {
 	#entries = new Map<string | number, CacheEntry>();
 	readonly evictionThreshold: number;
 	readonly evictionTarget: number;
@@ -41,20 +44,41 @@ export class CacheManager<TItem extends { id: string | number }> {
 		return this.#entries.size;
 	}
 
+	/**
+	 * Recompute `sortPositions` for rows already tracked (e.g. after a local edit changes sort keys).
+	 * Does not add new entries; skips keys missing from `getRow`.
+	 */
+	resyncSortPositionsForTrackedRows(
+		getRow: (key: string | number) => TItem | undefined,
+		getSortPositions: (row: TItem) => Record<string, unknown>,
+	): void {
+		for (const key of this.#entries.keys()) {
+			const row = getRow(key);
+			if (row === undefined) continue;
+			const entry = this.#entries.get(key);
+			if (entry === undefined) continue;
+			const sortPositionsObject = getSortPositions(row);
+			entry.sortPositions = new Map<string, unknown>(
+				Object.entries(sortPositionsObject),
+			);
+		}
+	}
+
 	recordFetchedRows(
 		rows: TItem[],
 		getSortPositions: (row: TItem) => Record<string, unknown>,
 	): void {
 		const now = Date.now();
 		for (const row of rows) {
-			const existing = this.#entries.get(row.id);
+			const rowKey = partialSyncRowKey(row.id);
+			const existing = this.#entries.get(rowKey);
 			const sortPositionsObject = getSortPositions(row);
 			const sortPositions = new Map<string, unknown>(
 				Object.entries(sortPositionsObject),
 			);
 			const estimatedSizeBytes = this.options.estimateRowSize?.(row) ?? 256;
-			this.#entries.set(row.id, {
-				key: row.id,
+			this.#entries.set(rowKey, {
+				key: rowKey,
 				lastAccessedAt: existing?.lastAccessedAt ?? now,
 				fetchedAt: now,
 				sortPositions,
@@ -141,8 +165,19 @@ export class CacheManager<TItem extends { id: string | number }> {
 	#distanceFromViewport(entry: CacheEntry, viewport: CacheViewport): number {
 		const value = entry.sortPositions.get(viewport.sortColumn);
 		if (value === undefined || value === null) return 1;
-		const lowerCompare = this.#compareValues(value, viewport.fromValue);
-		const upperCompare = this.#compareValues(value, viewport.toValue);
+		// `fromValue` / `toValue` come from first/last *visible* rows. After a local sort-key edit,
+		// the first row can temporarily sort *after* the last row, so from > to. Treat the band as
+		// [min, max] so rows between them stay protected; otherwise every entry looks "outside" and
+		// eviction can wipe the visible window (empty list, no throw).
+		let low = viewport.fromValue;
+		let high = viewport.toValue;
+		if (this.#compareValues(low, high) > 0) {
+			const t = low;
+			low = high;
+			high = t;
+		}
+		const lowerCompare = this.#compareValues(value, low);
+		const upperCompare = this.#compareValues(value, high);
 		if (lowerCompare >= 0 && upperCompare <= 0) return 0;
 		const lowerDistance = Math.abs(lowerCompare);
 		const upperDistance = Math.abs(upperCompare);

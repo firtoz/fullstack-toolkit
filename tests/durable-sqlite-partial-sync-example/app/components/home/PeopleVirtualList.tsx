@@ -3,43 +3,56 @@ import type {
 	PartialSyncRowSlotView,
 } from "@firtoz/collection-sync/react";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import type { Collection } from "@tanstack/db";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useEffect, useRef } from "react";
-import type { PersonRow } from "./types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PeoplePartialSyncRow } from "./types";
 
 export type ViewportInfo = {
 	firstVisibleIndex: number;
 	lastVisibleIndex: number;
 };
 
-type Props = {
-	rows: PersonRow[];
-	/** Global sort index of `rows[0]` (dense window into the list). */
+type Props<TItem extends PeoplePartialSyncRow> = {
+	collection: Collection<TItem>;
+	rows: TItem[];
 	windowStartIndex: number;
 	totalCount: number;
-	/** Server range query in flight — not set for instant cache-only window alignment. */
 	rangeRequestInFlight: boolean;
-	/** Per global row index: collection row + slot (not tied to dense `rows` window only). */
-	getRowSlot: (globalIndex: number) => PartialSyncRowSlotView<PersonRow>;
+	getRowSlot: (globalIndex: number) => PartialSyncRowSlotView<TItem>;
 	onNearEnd: () => void;
-	/** Fired on scroll with current visible global row indices (for debug UI). */
 	onViewportChange?: (info: ViewportInfo) => void;
-	/**
-	 * When scrolling settles (`scrollend` or scroll-idle debounce).
-	 * Combines `scrollTop` with virtual items: near scroll edges we trust geometry (sudden jump to top
-	 * can leave a high virtual first index until the next scroll event).
-	 */
 	onScrollSettled?: (info: ViewportInfo) => void;
 };
 
-/** Fallback when `scrollend` is missing: treat scroll as settled after this idle period. */
 const SCROLL_SETTLE_DEBOUNCE_MS = 180;
-
-/** Must match `estimateSize` below; used to map scroll position → row index without overscan noise. */
 const ROW_ESTIMATE_PX = 34;
-
-/** Pixels from scroll min/max where we trust `scrollTop` over a stale high `getVirtualItems()[0].index`. */
 const NEAR_SCROLL_EDGE_PX = ROW_ESTIMATE_PX * 4;
+
+function formatTs(value: Date | number | null | undefined): string {
+	if (value === null || value === undefined) return "—";
+	const d = value instanceof Date ? value : new Date(value);
+	return d.toISOString().slice(0, 19).replace("T", " ");
+}
+
+function extractTouchIds(changes: unknown[]): string[] {
+	const s = new Set<string>();
+	const visit = (v: unknown) => {
+		if (v === null || typeof v !== "object") return;
+		const o = v as Record<string, unknown>;
+		if (typeof o.id === "string") s.add(o.id);
+		if (typeof o.key === "string" || typeof o.key === "number") {
+			s.add(String(o.key));
+		}
+	};
+	for (const c of changes) {
+		visit(c);
+		if (c !== null && typeof c === "object" && "modified" in c) {
+			visit((c as { modified: unknown }).modified);
+		}
+	}
+	return [...s];
+}
 
 function rowSlotLabel(slot: PartialSyncRowSlot): string {
 	switch (slot) {
@@ -74,7 +87,8 @@ function emptyRowCaption(slot: PartialSyncRowSlot): string {
 	}
 }
 
-export function PeopleVirtualList({
+export function PeopleVirtualList<TItem extends PeoplePartialSyncRow>({
+	collection,
 	rows,
 	windowStartIndex,
 	totalCount,
@@ -83,16 +97,49 @@ export function PeopleVirtualList({
 	onNearEnd,
 	onViewportChange,
 	onScrollSettled,
-}: Props) {
+}: Props<TItem>) {
 	const parentRef = useRef<HTMLDivElement | null>(null);
 	const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
 		undefined,
 	);
-	/** Last visible range from scroll; `scrollend` may fire before virtualizer catches up. */
 	const latestViewportRef = useRef<ViewportInfo>({
 		firstVisibleIndex: 0,
 		lastVisibleIndex: 0,
 	});
+	const [editing, setEditing] = useState<
+		| {
+				id: TItem["id"];
+				field: "name" | "age";
+				draft: string;
+		  }
+		| undefined
+	>(undefined);
+	const [flashIds, setFlashIds] = useState(() => new Set<string>());
+
+	useEffect(() => {
+		const sub = collection.subscribeChanges((changes) => {
+			const ids = extractTouchIds(changes);
+			if (ids.length === 0) return;
+			setFlashIds((prev) => {
+				const n = new Set(prev);
+				for (const id of ids) n.add(id);
+				return n;
+			});
+			for (const id of ids) {
+				window.setTimeout(() => {
+					setFlashIds((prev) => {
+						const n = new Set(prev);
+						n.delete(id);
+						return n;
+					});
+				}, 1150);
+			}
+		});
+		return () => {
+			sub.unsubscribe();
+		};
+	}, [collection]);
+
 	const rowVirtualizer = useVirtualizer({
 		count: Math.max(totalCount, rows.length),
 		getScrollElement: () => parentRef.current,
@@ -122,8 +169,6 @@ export function PeopleVirtualList({
 				);
 				const vFirstIdx = vf?.index ?? geoFirst;
 				const nearTop = scrollTop <= NEAR_SCROLL_EDGE_PX;
-				// Jump to top: scrollTop≈0 but vFirst can stay ~900+ until another scroll (sudden jump).
-				// Elsewhere vFirst can lag low vs scrollTop — use max(geo, vFirst).
 				if (nearTop) {
 					firstIdx = geoFirst;
 				} else {
@@ -212,6 +257,35 @@ export function PeopleVirtualList({
 		};
 	}, [emitScrollSettled, onScrollSettled]);
 
+	const commitEdit = useCallback(async () => {
+		if (editing === undefined) return;
+		const { id, field, draft } = editing;
+		if (field === "name") {
+			const trimmed = draft.trim();
+			if (trimmed.length === 0) {
+				setEditing(undefined);
+				return;
+			}
+			const tx = collection.update(id, (d) => {
+				d.name = trimmed;
+				d.updatedAt = new Date();
+			});
+			await tx.isPersisted.promise;
+		} else {
+			const n = Number(draft);
+			if (!Number.isFinite(n) || n < 0 || n > 150) {
+				setEditing(undefined);
+				return;
+			}
+			const tx = collection.update(id, (d) => {
+				d.age = Math.floor(n);
+				d.updatedAt = new Date();
+			});
+			await tx.isPersisted.promise;
+		}
+		setEditing(undefined);
+	}, [collection, editing]);
+
 	return (
 		<div
 			ref={parentRef}
@@ -223,6 +297,11 @@ export function PeopleVirtualList({
 				marginTop: 12,
 			}}
 		>
+			<style>
+				{
+					"@keyframes psv-row-highlight { from { background-color: rgba(40, 200, 90, 0.3); } to { background-color: transparent; } }"
+				}
+			</style>
 			<div
 				style={{
 					height: `${rowVirtualizer.getTotalSize()}px`,
@@ -231,6 +310,7 @@ export function PeopleVirtualList({
 			>
 				{rowVirtualizer.getVirtualItems().map((virtualItem) => {
 					const { row, slot } = getRowSlot(virtualItem.index);
+					const flash = row !== undefined && flashIds.has(String(row.id ?? ""));
 					return (
 						<div
 							key={virtualItem.key}
@@ -242,18 +322,25 @@ export function PeopleVirtualList({
 								height: `${virtualItem.size}px`,
 								transform: `translateY(${virtualItem.start}px)`,
 								display: "grid",
-								gridTemplateColumns: "52px 72px 1fr 40px",
-								gap: 8,
+								gridTemplateColumns:
+									"44px 56px minmax(72px,1fr) 36px 100px 100px",
+								gap: 6,
 								alignItems: "center",
-								padding: "0 8px",
+								padding: "0 6px",
 								borderBottom: "1px solid #eee",
 								fontFamily: "monospace",
+								fontSize: 12,
+								...(flash
+									? {
+											animation: "psv-row-highlight 1.15s ease-out",
+										}
+									: {}),
 							}}
 						>
 							<div>{virtualItem.index + 1}</div>
 							<div
 								style={{
-									fontSize: 10,
+									fontSize: 9,
 									color:
 										slot === "server"
 											? "#06c"
@@ -272,11 +359,100 @@ export function PeopleVirtualList({
 							</div>
 							{row !== undefined ? (
 								<>
-									<div>{row.name}</div>
-									<div>{row.age}</div>
+									{editing?.id === row.id && editing.field === "name" ? (
+										<input
+											autoFocus
+											value={editing.draft}
+											onChange={(e) =>
+												setEditing({
+													id: row.id,
+													field: "name",
+													draft: e.target.value,
+												})
+											}
+											onBlur={() => {
+												void commitEdit();
+											}}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") void commitEdit();
+												if (e.key === "Escape") setEditing(undefined);
+											}}
+											style={{ width: "100%", font: "inherit" }}
+										/>
+									) : (
+										<button
+											type="button"
+											onClick={() =>
+												setEditing({
+													id: row.id,
+													field: "name",
+													draft: row.name,
+												})
+											}
+											style={{
+												textAlign: "left",
+												border: "none",
+												background: "transparent",
+												cursor: "pointer",
+												font: "inherit",
+												padding: 0,
+											}}
+										>
+											{row.name}
+										</button>
+									)}
+									{editing?.id === row.id && editing.field === "age" ? (
+										<input
+											autoFocus
+											type="number"
+											value={editing.draft}
+											onChange={(e) =>
+												setEditing({
+													id: row.id,
+													field: "age",
+													draft: e.target.value,
+												})
+											}
+											onBlur={() => {
+												void commitEdit();
+											}}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") void commitEdit();
+												if (e.key === "Escape") setEditing(undefined);
+											}}
+											style={{ width: "100%", font: "inherit" }}
+										/>
+									) : (
+										<button
+											type="button"
+											onClick={() =>
+												setEditing({
+													id: row.id,
+													field: "age",
+													draft: String(row.age),
+												})
+											}
+											style={{
+												textAlign: "left",
+												border: "none",
+												background: "transparent",
+												cursor: "pointer",
+												font: "inherit",
+												padding: 0,
+											}}
+										>
+											{row.age}
+										</button>
+									)}
+									<div style={{ fontSize: 10, color: "#444" }}>
+										{formatTs(row.createdAt)}
+									</div>
+									<div style={{ fontSize: 10, color: "#444" }}>
+										{formatTs(row.updatedAt)}
+									</div>
 								</>
 							) : (
-								<div style={{ gridColumn: "3 / 5", color: "#777" }}>
+								<div style={{ gridColumn: "3 / 7", color: "#777" }}>
 									{emptyRowCaption(slot)}
 								</div>
 							)}

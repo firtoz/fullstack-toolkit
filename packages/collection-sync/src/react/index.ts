@@ -18,6 +18,7 @@ export {
 	computeFingerprintForIndexWindow,
 	defaultPartialSyncVersionMs,
 	defaultPredicateColumnValue,
+	getPartialSyncRowByMapId,
 	matchesPredicate,
 	tryIdsForIndexWindow,
 } from "./partial-sync-utils";

@@ -242,7 +242,7 @@ export abstract class SyncableDurableObject<
 							value: row,
 						}));
 					},
-					getRow: (key: string | number) => {
+					getRow: async (key: string | number) => {
 						return col.state.get(key) as TBridgeRow | undefined;
 					},
 				},
