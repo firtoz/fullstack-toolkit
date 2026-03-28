@@ -12,7 +12,9 @@ export type ConnectPartialSyncTransport = "json" | "msgpack";
 export type ConnectPartialSyncOptions<TItem = unknown> = {
 	url: string;
 	transport?: ConnectPartialSyncTransport;
+	/** Prefer a module-level function or `useCallback`; a new inline function each render can churn effects. */
 	serializeJson?: (value: unknown) => string;
+	/** Prefer a module-level function or `useCallback`; a new inline function each render can churn effects. */
 	deserializeJson?: (raw: string) => unknown;
 	setTransportSend: (send: (msg: SyncClientMessage) => void) => void;
 	onServerMessage?: (msg: SyncServerMessage<TItem>) => void;

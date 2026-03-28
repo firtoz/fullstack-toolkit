@@ -9,6 +9,11 @@ import { useCallback, useEffect, useState } from "react";
 import superjson from "superjson";
 import type { TodoId, TodoRow } from "./types";
 
+const superjsonSerializeJson = (value: unknown): string =>
+	superjson.stringify(value);
+const superjsonDeserializeJson = (raw: string): unknown =>
+	superjson.parse(raw);
+
 export type WsTransport = "json" | "msgpack";
 
 type Props = {
@@ -76,8 +81,8 @@ export function TodoSyncClient({
 					send(msg);
 				});
 			},
-			serializeJson: (value: unknown) => superjson.stringify(value),
-			deserializeJson: (raw: string) => superjson.parse(raw),
+			serializeJson: superjsonSerializeJson,
+			deserializeJson: superjsonDeserializeJson,
 			onServerMessage: (msg) => {
 				setFrames((prev) => [...prev.slice(-19), `<- ${JSON.stringify(msg)}`]);
 			},

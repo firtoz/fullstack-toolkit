@@ -6,6 +6,8 @@ export {
 export type {
 	PartialSyncCollection,
 	PartialSyncItem,
+	PartialSyncRowSlot,
+	PartialSyncRowSlotView,
 	UsePartialSyncWindowOptions,
 	UsePartialSyncWindowResult,
 	UsePredicateFilteredRowsOptions,

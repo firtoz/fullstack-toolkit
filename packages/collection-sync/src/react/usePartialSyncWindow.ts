@@ -14,7 +14,6 @@ import type { RangeFingerprint, SyncClientMessage } from "../sync-protocol";
 import {
 	DEFAULT_PAGE_LIMIT,
 	DEFAULT_SEEK_COOLDOWN_MS,
-	DEFAULT_SEEK_ROW_GAP,
 } from "./constants";
 import {
 	assertSyncUtils,
@@ -24,6 +23,7 @@ import {
 } from "./partial-sync-utils";
 import type {
 	PartialSyncItem,
+	PartialSyncRowSlotView,
 	UsePartialSyncWindowOptions,
 	UsePartialSyncWindowResult,
 	ViewportInfo,
@@ -49,7 +49,6 @@ export function usePartialSyncWindow<
 	getVersionMs = defaultPartialSyncVersionMs,
 	getSortPositions,
 	pageLimit = DEFAULT_PAGE_LIMIT,
-	seekRowGap = DEFAULT_SEEK_ROW_GAP,
 	seekCooldownMs = DEFAULT_SEEK_COOLDOWN_MS,
 }: UsePartialSyncWindowOptions<
 	TItem,
@@ -59,7 +58,12 @@ export function usePartialSyncWindow<
 	const [totalCount, setTotalCount] = useState(0);
 	const [nextCursor, setNextCursor] = useState<unknown | null>(null);
 	const [hasMore, setHasMore] = useState(true);
-	const [loading, setLoading] = useState(false);
+	/** True only while `requestRangeQuery` is in flight (server). Not set for cache-only window moves. */
+	const [rangeRequestInFlight, setRangeRequestInFlight] = useState(false);
+	const [pendingServerRange, setPendingServerRange] = useState<{
+		start: number;
+		endExclusive: number;
+	} | null>(null);
 	const [bridgeState, setBridgeState] = useState<PartialSyncState>({
 		status: "offline",
 	});
@@ -92,6 +96,11 @@ export function usePartialSyncWindow<
 	const getVersionMsRef = useRef(getVersionMs);
 	getVersionMsRef.current = getVersionMs;
 
+	const serializeJsonRef = useRef(serializeJson);
+	serializeJsonRef.current = serializeJson;
+	const deserializeJsonRef = useRef(deserializeJson);
+	deserializeJsonRef.current = deserializeJson;
+
 	const bumpIndexMap = useCallback(() => {
 		setIndexMapVersion((v) => v + 1);
 	}, []);
@@ -100,6 +109,9 @@ export function usePartialSyncWindow<
 		() => assertSyncUtils<TItem>(collection.utils),
 		[collection],
 	);
+
+	const syncUtilsRef = useRef(syncUtils);
+	syncUtilsRef.current = syncUtils;
 
 	const cacheManager = useMemo(
 		() =>
@@ -134,21 +146,29 @@ export function usePartialSyncWindow<
 						}
 					}
 					bumpIndexMap();
-					await syncUtils.receiveSync(
+					await syncUtilsRef.current.receiveSync(
 						keys.map((key) => ({ type: "delete", key }) as const),
 					);
 				},
 			}),
-		[syncUtils, bumpIndexMap],
+		[bumpIndexMap],
 	);
 
+	const cacheManagerRef = useRef(cacheManager);
+	cacheManagerRef.current = cacheManager;
+
+	// Bridge identity must stay stable: `connectPartialSync` runs in layout effect and
+	// calls `setConnecting` / `setConnected`, which updates React state. If `bridge`
+	// were recreated whenever `collection` (hence syncUtils/cacheManager) changed,
+	// that effect would re-run every render → infinite updates.
 	const bridge = useMemo(
 		() =>
 			new PartialSyncClientBridge<TItem>({
 				clientId: crypto.randomUUID(),
 				collection: {
 					utils: {
-						receiveSync: (messages) => syncUtils.receiveSync(messages),
+						receiveSync: (messages) =>
+							syncUtilsRef.current.receiveSync(messages),
 					},
 				},
 				send: () => {},
@@ -158,7 +178,8 @@ export function usePartialSyncWindow<
 					const rowsNow = denseRowsRef.current;
 					const sortPos = getSortPositionsRef.current;
 					const gsv = getSortValueRef.current;
-					cacheManager.recordFetchedRows(incomingRows, (row) =>
+					const cm = cacheManagerRef.current;
+					cm.recordFetchedRows(incomingRows, (row) =>
 						sortPos !== undefined
 							? sortPos(row)
 							: {
@@ -169,7 +190,7 @@ export function usePartialSyncWindow<
 					const lastRow =
 						rowsNow[rowsNow.length - 1] ??
 						incomingRows[incomingRows.length - 1];
-					const result = await cacheManager.evictIfNeeded({
+					const result = await cm.evictIfNeeded({
 						sortColumn: sortNow.column as string,
 						sortDirection: sortNow.direction,
 						fromValue:
@@ -190,9 +211,13 @@ export function usePartialSyncWindow<
 					});
 				},
 			}),
-		[cacheManager, syncUtils],
+		[],
 	);
 
+	// Do not list serializeJson / deserializeJson as effect deps: callers often pass
+	// inline lambdas (new reference every render). That would re-run this layout effect
+	// every time → cleanup calls setConnected(false) and the next run calls setConnecting,
+	// each firing onStateChange → maximum update depth exceeded.
 	useLayoutEffect(() => {
 		const disconnect = connectPartialSync(bridge, {
 			url: wsUrl,
@@ -200,13 +225,13 @@ export function usePartialSyncWindow<
 			setTransportSend: (send) => {
 				bridge.setSend((message: SyncClientMessage) => send(message));
 			},
-			serializeJson,
-			deserializeJson,
+			serializeJson: (value: unknown) => serializeJsonRef.current(value),
+			deserializeJson: (raw: string) => deserializeJsonRef.current(raw),
 		});
 		return () => {
 			disconnect();
 		};
-	}, [bridge, deserializeJson, serializeJson, wsTransport, wsUrl]);
+	}, [bridge, wsTransport, wsUrl]);
 
 	useEffect(() => {
 		const sub = collection.subscribeChanges(() => {
@@ -238,6 +263,45 @@ export function usePartialSyncWindow<
 		denseRowsRef.current = rows;
 	}, [rows]);
 
+	const getRowSlot = useCallback(
+		(globalIndex: number): PartialSyncRowSlotView<TItem> => {
+			void collectionVersion;
+			void indexMapVersion;
+			const id = globalIndexMapRef.current.get(globalIndex);
+			const row = id !== undefined ? collection.get(id) : undefined;
+			if (row !== undefined) {
+				const ws = windowStartIndex;
+				const denseEnd = ws + rows.length;
+				const inDense = globalIndex >= ws && globalIndex < denseEnd;
+				return {
+					row,
+					slot: inDense ? "ready" : "ready_global",
+				};
+			}
+			if (id !== undefined) {
+				return { row: undefined, slot: "stale_map" };
+			}
+			if (
+				rangeRequestInFlight &&
+				pendingServerRange !== null &&
+				globalIndex >= pendingServerRange.start &&
+				globalIndex < pendingServerRange.endExclusive
+			) {
+				return { row: undefined, slot: "server" };
+			}
+			return { row: undefined, slot: "none" };
+		},
+		[
+			collection,
+			collectionVersion,
+			indexMapVersion,
+			windowStartIndex,
+			rows.length,
+			rangeRequestInFlight,
+			pendingServerRange,
+		],
+	);
+
 	const recordIdsAtOffset = useCallback(
 		(offset: number, fetchedRows: TItem[]) => {
 			for (let i = 0; i < fetchedRows.length; i += 1) {
@@ -249,9 +313,15 @@ export function usePartialSyncWindow<
 	);
 
 	const fetchNext = useCallback(async () => {
-		if (loading || !hasMore) return;
+		if (rangeRequestInFlight || !hasMore) return;
 		const gen = fetchGenRef.current;
-		setLoading(true);
+		const fetchStart =
+			windowStartRef.current + denseRowsRef.current.length;
+		setPendingServerRange({
+			start: fetchStart,
+			endExclusive: fetchStart + pageLimit,
+		});
+		setRangeRequestInFlight(true);
 		try {
 			const result = await bridge.requestRangeQuery({
 				kind: "index",
@@ -308,20 +378,32 @@ export function usePartialSyncWindow<
 			throw error;
 		} finally {
 			if (gen === fetchGenRef.current) {
-				setLoading(false);
+				setPendingServerRange(null);
+				setRangeRequestInFlight(false);
 			}
 		}
-	}, [bridge, hasMore, loading, nextCursor, pageLimit, recordIdsAtOffset]);
+	}, [bridge, hasMore, rangeRequestInFlight, nextCursor, pageLimit, recordIdsAtOffset]);
 
 	const seekToViewport = useCallback(
-		(firstVisibleIndex: number, options?: { scrollSettled?: boolean }) => {
+		(
+			firstVisibleIndex: number,
+			options?: { scrollSettled?: boolean; lastVisibleIndex?: number },
+		) => {
 			const offset = Math.max(0, firstVisibleIndex);
 			const loadedEndExclusive =
 				windowStartRef.current + denseRowsRef.current.length;
+			// For scrollSettled, `lastVisibleIndex` comes from scroll geometry (viewport height), not
+			// TanStack overscan — safe to require the whole visible span to fit in the dense window.
+			// Without last, keep first-only (e.g. non-settled callers).
+			const lastForDense =
+				options?.scrollSettled === true &&
+				typeof options.lastVisibleIndex === "number"
+					? options.lastVisibleIndex
+					: firstVisibleIndex;
 			const inDenseWindow =
 				denseRowsRef.current.length > 0 &&
 				firstVisibleIndex >= windowStartRef.current &&
-				firstVisibleIndex < loadedEndExclusive;
+				lastForDense < loadedEndExclusive;
 
 			if (options?.scrollSettled === true && inDenseWindow) {
 				return;
@@ -329,9 +411,17 @@ export function usePartialSyncWindow<
 
 			const now = Date.now();
 			if (!options?.scrollSettled) {
-				const needsCatchUpSeek =
-					firstVisibleIndex > loadedEndExclusive + seekRowGap;
-				if (!needsCatchUpSeek && now < seekCooldownUntilRef.current) return;
+				// Live scroll: virtualizer updates indices before `windowStartIndex` catches up (seek was
+				// scrollSettled-only). If the first visible row is outside [windowStart, loadedEnd), reconcile
+				// immediately (throttled) so we do not paint "not cached yet" until scrollend.
+				const ws = windowStartRef.current;
+				const f = firstVisibleIndex;
+				const firstInsideDense =
+					denseRowsRef.current.length > 0 &&
+					f >= ws &&
+					f < loadedEndExclusive;
+				if (firstInsideDense) return;
+				if (now < seekCooldownUntilRef.current) return;
 			}
 			seekCooldownUntilRef.current = now + seekCooldownMs;
 
@@ -349,9 +439,11 @@ export function usePartialSyncWindow<
 			);
 			if (totalCountRef.current > 0 && want === 0) {
 				setWindowStartIndex(offset);
+				windowStartRef.current = offset;
 				setNextCursor(null);
 				setHasMore(false);
-				setLoading(false);
+				setPendingServerRange(null);
+				setRangeRequestInFlight(false);
 				return;
 			}
 
@@ -371,8 +463,9 @@ export function usePartialSyncWindow<
 					lastRow !== undefined ? gsv(lastRow, sortRef.current.column) : null,
 				);
 				setHasMore(offset + ids.length < totalCountRef.current);
-				setLoading(false);
+				setPendingServerRange(null);
 				bumpIndexMap();
+				windowStartRef.current = offset;
 				return;
 			}
 
@@ -391,9 +484,11 @@ export function usePartialSyncWindow<
 			}
 
 			setWindowStartIndex(offset);
+			windowStartRef.current = offset;
 			setNextCursor(null);
 			setHasMore(true);
-			setLoading(true);
+			setPendingServerRange({ start: offset, endExclusive: offset + want });
+			setRangeRequestInFlight(true);
 			void (async () => {
 				try {
 					let result = await bridge.requestRangeQuery(
@@ -458,7 +553,8 @@ export function usePartialSyncWindow<
 					throw error;
 				} finally {
 					if (gen === fetchGenRef.current) {
-						setLoading(false);
+						setPendingServerRange(null);
+						setRangeRequestInFlight(false);
 					}
 				}
 			})();
@@ -470,13 +566,15 @@ export function usePartialSyncWindow<
 			pageLimit,
 			recordIdsAtOffset,
 			seekCooldownMs,
-			seekRowGap,
 		],
 	);
 
 	const seekAfterScrollSettled = useCallback(
-		(firstVisibleIndex: number) => {
-			seekToViewport(firstVisibleIndex, { scrollSettled: true });
+		(firstVisibleIndex: number, lastVisibleIndex?: number) => {
+			seekToViewport(firstVisibleIndex, {
+				scrollSettled: true,
+				lastVisibleIndex,
+			});
 		},
 		[seekToViewport],
 	);
@@ -492,6 +590,8 @@ export function usePartialSyncWindow<
 		setNextCursor(null);
 		setHasMore(true);
 		setLastSeekMeta(null);
+		setRangeRequestInFlight(false);
+		setPendingServerRange(null);
 		globalIndexMapRef.current.clear();
 		bumpIndexMap();
 		void syncUtils.truncate();
@@ -499,10 +599,10 @@ export function usePartialSyncWindow<
 	}, [bridge, bumpIndexMap, cacheManager, collection, sort, syncUtils]);
 
 	useEffect(() => {
-		if (rows.length === 0 && !loading && hasMore) {
+		if (rows.length === 0 && !rangeRequestInFlight && hasMore) {
 			void fetchNext();
 		}
-	}, [fetchNext, hasMore, loading, rows.length]);
+	}, [fetchNext, hasMore, rangeRequestInFlight, rows.length]);
 
 	return {
 		bridge,
@@ -510,7 +610,7 @@ export function usePartialSyncWindow<
 		rows,
 		windowStartIndex,
 		totalCount,
-		loading,
+		rangeRequestInFlight,
 		hasMore,
 		fetchNext,
 		seekToViewport,
@@ -519,5 +619,6 @@ export function usePartialSyncWindow<
 		viewportInfo,
 		setViewportInfo,
 		lastSeekMeta,
+		getRowSlot,
 	};
 }

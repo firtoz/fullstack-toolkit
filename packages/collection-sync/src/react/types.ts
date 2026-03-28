@@ -33,6 +33,19 @@ export type ViewportInfo = {
 	lastVisibleIndex: number;
 };
 
+/** Per global row index: where the cell’s data comes from (for UI / debugging). */
+export type PartialSyncRowSlot =
+	| "ready"
+	| "ready_global"
+	| "stale_map"
+	| "server"
+	| "none";
+
+export type PartialSyncRowSlotView<TItem extends PartialSyncItem> = {
+	row: TItem | undefined;
+	slot: PartialSyncRowSlot;
+};
+
 export type UsePartialSyncWindowOptions<
 	TItem extends PartialSyncItem,
 	TSortColumn extends keyof TItem & string = keyof TItem & string,
@@ -43,14 +56,15 @@ export type UsePartialSyncWindowOptions<
 
 	wsUrl: string;
 	wsTransport?: ConnectPartialSyncTransport;
+	/** Use a module-level function or `useCallback`; inline arrows are a new reference every render. */
 	serializeJson?: (value: unknown) => string;
+	/** Use a module-level function or `useCallback`; inline arrows are a new reference every render. */
 	deserializeJson?: (raw: string) => unknown;
 
 	getVersionMs?: (row: TItem) => number;
 	getSortPositions?: (row: TItem) => Record<string, unknown>;
 
 	pageLimit?: number;
-	seekRowGap?: number;
 	seekCooldownMs?: number;
 };
 
@@ -58,7 +72,11 @@ export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {
 	rows: TItem[];
 	windowStartIndex: number;
 	totalCount: number;
-	loading: boolean;
+	/**
+	 * True while a server `requestRangeQuery` is in flight (cursor append or offset seek).
+	 * False for cache-only window moves (`tryIds` / fingerprint `upToDate` without a round-trip).
+	 */
+	rangeRequestInFlight: boolean;
 	hasMore: boolean;
 	bridgeState: PartialSyncState;
 	bridge: PartialSyncClientBridge<TItem>;
@@ -66,15 +84,23 @@ export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {
 	fetchNext: () => Promise<void>;
 	seekToViewport: (
 		firstVisibleIndex: number,
-		opts?: { scrollSettled?: boolean },
+		opts?: { scrollSettled?: boolean; lastVisibleIndex?: number },
 	) => void;
-	seekAfterScrollSettled: (firstVisibleIndex: number) => void;
+	seekAfterScrollSettled: (
+		firstVisibleIndex: number,
+		lastVisibleIndex?: number,
+	) => void;
 	viewportInfo: ViewportInfo;
 	setViewportInfo: (info: ViewportInfo) => void;
 	lastSeekMeta: {
 		offset: number;
 		reason: "scroll" | "scrollSettled";
 	} | null;
+	/**
+	 * Resolve one global index via index map + collection, and classify the cell.
+	 * Use this for row UI so cached rows still render when the dense `rows` window has not caught up.
+	 */
+	getRowSlot: (globalIndex: number) => PartialSyncRowSlotView<TItem>;
 };
 
 export type UsePredicateFilteredRowsOptions<

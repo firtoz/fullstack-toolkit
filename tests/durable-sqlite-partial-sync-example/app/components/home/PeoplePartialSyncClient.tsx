@@ -1,10 +1,23 @@
-import type { PartialSyncCollection } from "@firtoz/collection-sync/react";
+import type {
+	PartialSyncCollection,
+	ViewportInfo,
+} from "@firtoz/collection-sync/react";
 import { usePartialSyncWindow } from "@firtoz/collection-sync/react";
 import { useCallback, useMemo, useState } from "react";
 import superjson from "superjson";
 import { PeopleVirtualList } from "./PeopleVirtualList";
 import { SyncStatusBar } from "./SyncStatusBar";
 import type { PersonRow, SortState, WsTransport } from "./types";
+
+const superjsonSerializeJson = (value: unknown): string =>
+	superjson.stringify(value);
+const superjsonDeserializeJson = (raw: string): unknown =>
+	superjson.parse(raw);
+
+const getPersonSortValue = (
+	row: PersonRow,
+	col: SortState["column"],
+): unknown => row[col];
 
 const DEFAULT_SORT: SortState = {
 	column: "name",
@@ -42,7 +55,8 @@ export function PeoplePartialSyncClient({
 		rows,
 		windowStartIndex,
 		totalCount,
-		loading,
+		rangeRequestInFlight,
+		getRowSlot,
 		fetchNext,
 		seekToViewport,
 		bridgeState,
@@ -52,11 +66,11 @@ export function PeoplePartialSyncClient({
 	} = usePartialSyncWindow({
 		collection,
 		sort,
-		getSortValue: (row, col) => row[col],
+		getSortValue: getPersonSortValue,
 		wsUrl,
 		wsTransport,
-		serializeJson: (value: unknown) => superjson.stringify(value),
-		deserializeJson: (raw: string) => superjson.parse(raw),
+		serializeJson: superjsonSerializeJson,
+		deserializeJson: superjsonDeserializeJson,
 	});
 
 	const toggleSort = useCallback((column: "name" | "age") => {
@@ -66,6 +80,31 @@ export function PeoplePartialSyncClient({
 				prev.column === column && prev.direction === "asc" ? "desc" : "asc",
 		}));
 	}, []);
+
+	const handleNearEnd = useCallback(() => {
+		void fetchNext();
+	}, [fetchNext]);
+
+	const handleViewportChange = useCallback(
+		(info: ViewportInfo) => {
+			setViewportInfo(info);
+			seekToViewport(info.firstVisibleIndex, {
+				scrollSettled: false,
+				lastVisibleIndex: info.lastVisibleIndex,
+			});
+		},
+		[seekToViewport, setViewportInfo],
+	);
+
+	const handleScrollSettled = useCallback(
+		(info: ViewportInfo) => {
+			seekToViewport(info.firstVisibleIndex, {
+				scrollSettled: true,
+				lastVisibleIndex: info.lastVisibleIndex,
+			});
+		},
+		[seekToViewport],
+	);
 
 	return (
 		<section style={{ marginTop: 16 }}>
@@ -99,6 +138,11 @@ export function PeoplePartialSyncClient({
 					{totalCount.toLocaleString()}
 				</div>
 				<div>
+					server range:{" "}
+					{rangeRequestInFlight ? "in flight" : "idle"} (instant cache seeks do
+					not set this)
+				</div>
+				<div>
 					last seek: offset {lastSeekMeta?.offset ?? "—"} (
 					{lastSeekMeta?.reason ?? "—"}) — rows are derived from the TanStack
 					collection; index map + rangeQuery reconcile when possible.
@@ -108,14 +152,11 @@ export function PeoplePartialSyncClient({
 				rows={rows}
 				windowStartIndex={windowStartIndex}
 				totalCount={totalCount}
-				loading={loading}
-				onViewportChange={setViewportInfo}
-				onNearEnd={() => {
-					void fetchNext();
-				}}
-				onScrollSettled={(firstVisibleIndex) => {
-					seekToViewport(firstVisibleIndex, { scrollSettled: true });
-				}}
+				rangeRequestInFlight={rangeRequestInFlight}
+				getRowSlot={getRowSlot}
+				onViewportChange={handleViewportChange}
+				onNearEnd={handleNearEnd}
+				onScrollSettled={handleScrollSettled}
 			/>
 		</section>
 	);

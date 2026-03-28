@@ -13,7 +13,9 @@ export type ConnectSyncOptions<TItem = unknown> = {
 	/** WebSocket URL (e.g. `wss://host/room/x/websocket`). */
 	url: string;
 	transport?: ConnectSyncTransport;
+	/** Prefer a module-level function or `useCallback`; a new inline function each render can churn effects. */
 	serializeJson?: (value: unknown) => string;
+	/** Prefer a module-level function or `useCallback`; a new inline function each render can churn effects. */
 	deserializeJson?: (raw: string) => unknown;
 	/** Wire transport after {@link SyncClientBridge} is created (from {@link withSync}). */
 	setTransportSend: (send: (msg: SyncClientMessage) => void) => void;
