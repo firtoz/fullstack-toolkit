@@ -5,6 +5,7 @@ import { emojiGridRowSchema } from "./emoji-grid-row-schema";
 import { EmojiGridPartialSyncClient } from "./EmojiGridPartialSyncClient";
 import { createEmojiGridIndexedDbAdapter } from "./indexeddb-emoji-adapter";
 import type { WsTransport } from "../home/types";
+import { EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID } from "./types";
 
 type Props = {
 	roomId: string;
@@ -21,7 +22,10 @@ export function IndexedDbEmojiGridClient({ roomId, wsTransport }: Props) {
 				readyPromise,
 				getKey: (item) => item.id,
 			}),
-			{ syncStateKey: `partial-sync-idb-emoji-grid-${roomId}` },
+			{
+				syncStateKey: `partial-sync-idb-emoji-grid-${roomId}`,
+				collectionId: EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID,
+			},
 		);
 	}, [roomId]);
 

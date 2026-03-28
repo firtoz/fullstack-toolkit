@@ -1,4 +1,5 @@
 export {
+	DEFAULT_SYNC_COLLECTION_ID,
 	createClientMessageSchema,
 	createServerMessageSchema,
 	clientMessageSchema,
@@ -16,9 +17,11 @@ export {
 	type RangeFingerprint,
 	type SyncBackfillMode,
 	type SyncClientMessage,
+	type SyncClientMessageBody,
 	type SyncRange,
 	type SyncRangeSort,
 	type SyncServerMessage,
+	type SyncServerMessageBody,
 	type SyncSortDirection,
 } from "./sync-protocol";
 

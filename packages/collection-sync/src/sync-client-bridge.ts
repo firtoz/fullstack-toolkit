@@ -4,12 +4,14 @@ import {
 	partialSyncRowKey,
 	type PartialSyncRowId,
 } from "./partial-sync-row-key";
-import type {
-	MutationIntent,
-	SyncClientMessage,
-	SyncServerMessage,
+import {
+	createClientMutationId,
+	DEFAULT_SYNC_COLLECTION_ID,
+	type MutationIntent,
+	type SyncClientMessage,
+	type SyncClientMessageBody,
+	type SyncServerMessage,
 } from "./sync-protocol";
-import { createClientMutationId } from "./sync-protocol";
 
 type CollectionWithReceiveSync<TItem> = {
 	utils: {
@@ -30,6 +32,8 @@ export interface SyncClientBridgeOptions<
 	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
 > {
 	clientId: string;
+	/** Must match the server's {@link SyncServerBridgeOptions.collectionId}. */
+	collectionId?: string;
 	collection: CollectionWithReceiveSync<TItem>;
 	send: SendFn;
 	initialLastAckedServerVersion?: number;
@@ -46,6 +50,7 @@ export class SyncClientBridge<
 	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
 > {
 	readonly clientId: string;
+	readonly collectionId: string;
 	#pendingMutations = new Map<string, PendingMutation>();
 	#pendingMutationByKey = new Map<string | number, string>();
 	/** Truncate has no row key; track at most one pending truncate mutation. */
@@ -65,6 +70,8 @@ export class SyncClientBridge<
 
 	constructor(private readonly options: SyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId;
+		this.collectionId =
+			options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 		this.#sendSyncHelloOnConnect = options.sendSyncHelloOnConnect ?? true;
 		this.#lastAckedServerVersion = Math.max(
 			0,
@@ -84,11 +91,18 @@ export class SyncClientBridge<
 	}
 
 	sendHello(): void {
-		this.options.send({
+		this.#out({
 			type: "syncHello",
 			clientId: this.clientId,
 			lastAckedServerVersion: this.#lastAckedServerVersion,
 		});
+	}
+
+	#out(msg: SyncClientMessageBody): void {
+		this.options.send({
+			...msg,
+			collectionId: this.collectionId,
+		} as SyncClientMessage);
 	}
 
 	onLocalMutation(changes: SyncMessage<TItem>[]): void {
@@ -140,6 +154,8 @@ export class SyncClientBridge<
 	}
 
 	async handleServerMessage(message: SyncServerMessage<TItem>): Promise<void> {
+		const mid = message.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+		if (mid !== this.collectionId) return;
 		switch (message.type) {
 			case "ack":
 				this.#updateLastAckedServerVersion(message.serverVersion);
@@ -316,7 +332,7 @@ export class SyncClientBridge<
 		const intents = Array.from(this.#pendingMutations.values()).map(
 			(p) => p.intent,
 		);
-		this.options.send({
+		this.#out({
 			type: "mutateBatch",
 			clientId: this.clientId,
 			mutations: intents,

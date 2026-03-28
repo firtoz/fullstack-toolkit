@@ -55,6 +55,7 @@ export function usePartialSyncWindow<
 	partialWindowResetKey,
 	mutationBridge,
 	mergeTransportSend,
+	collectionId,
 }: UsePartialSyncWindowOptions<
 	TItem,
 	TSortColumn
@@ -184,6 +185,7 @@ export function usePartialSyncWindow<
 				...(partialClientId !== undefined
 					? { clientId: partialClientId }
 					: {}),
+				...(collectionId !== undefined ? { collectionId } : {}),
 				collection: {
 					utils: {
 						receiveSync: (messages) =>
@@ -230,7 +232,7 @@ export function usePartialSyncWindow<
 					});
 				},
 			}),
-		[partialClientId],
+		[partialClientId, collectionId],
 	);
 
 	// Do not list serializeJson / deserializeJson as effect deps: callers often pass

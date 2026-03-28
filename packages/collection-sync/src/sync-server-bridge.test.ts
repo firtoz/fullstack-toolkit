@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { SyncServerBridge } from "./sync-server-bridge";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 
 type Item = { id: string; title: string; updatedAt: number };
 
@@ -70,6 +71,7 @@ describe("SyncServerBridge", () => {
 		expect(sentToClient).toEqual([
 			{
 				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				mode: "snapshot",
 				serverVersion: 0,
 				changes: snapshotChanges,
@@ -105,6 +107,7 @@ describe("SyncServerBridge", () => {
 		expect(sentToClient).toEqual([
 			{
 				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				mode: "snapshot",
 				serverVersion: 0,
 				changes: snapshotChanges,
@@ -161,6 +164,7 @@ describe("SyncServerBridge", () => {
 		expect(sentToClient).toEqual([
 			{
 				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				mode: "delta",
 				serverVersion: 2,
 				changes: [
@@ -204,6 +208,7 @@ describe("SyncServerBridge", () => {
 		expect(sentToClient).toEqual([
 			{
 				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				mode: "snapshot",
 				serverVersion: 0,
 				changes: snapshotChanges.slice(0, 2),
@@ -212,6 +217,7 @@ describe("SyncServerBridge", () => {
 			},
 			{
 				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				mode: "snapshot",
 				serverVersion: 0,
 				changes: snapshotChanges.slice(2),
@@ -243,6 +249,7 @@ describe("SyncServerBridge", () => {
 		expect(broadcastAll).toEqual([
 			{
 				type: "syncBatch",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				serverVersion: 1,
 				changes: [
 					{ type: "insert", value: { id: "x", title: "srv", updatedAt: 1 } },

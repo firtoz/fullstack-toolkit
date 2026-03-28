@@ -84,6 +84,11 @@ export type UsePartialSyncWindowOptions<
 	 * Called once when the WebSocket transport `send` is ready (same function {@link withSync} / mutation bridge use).
 	 */
 	mergeTransportSend?: (send: (msg: SyncClientMessage) => void) => void;
+	/**
+	 * Must match the server's partial-sync {@link PartialSyncServerBridgeOptions.collectionId} and align with
+	 * {@link SyncClientBridgeOptions.collectionId} on {@link mutationBridge}.
+	 */
+	collectionId?: string;
 };
 
 export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {

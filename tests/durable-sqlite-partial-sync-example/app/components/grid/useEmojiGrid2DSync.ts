@@ -17,6 +17,7 @@ import type { Collection } from "@tanstack/db";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import superjson from "superjson";
 import {
+	EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID,
 	EMOJI_GRID_PREDICATE_LIMIT,
 	EMOJI_GRID_PREFETCH_UNITS,
 	EMOJI_GRID_WORLD_SIZE,
@@ -47,6 +48,8 @@ export type UseEmojiGrid2DSyncOptions<TItem extends EmojiGridPartialSyncRow> = {
 	roomId: string;
 	wsTransport: WsTransport;
 	viewport: Viewport2D;
+	/** Defaults to `EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID` (must match the emoji grid DO). */
+	collectionId?: string;
 };
 
 export type UseEmojiGrid2DSyncResult<TItem extends EmojiGridPartialSyncRow> = {
@@ -63,6 +66,7 @@ export function useEmojiGrid2DSync<TItem extends EmojiGridPartialSyncRow>({
 	roomId,
 	wsTransport,
 	viewport,
+	collectionId = EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID,
 }: UseEmojiGrid2DSyncOptions<TItem>): UseEmojiGrid2DSyncResult<TItem> {
 	const [bridgeState, setBridgeState] = useState<PartialSyncState>({
 		status: "offline",
@@ -92,6 +96,7 @@ export function useEmojiGrid2DSync<TItem extends EmojiGridPartialSyncRow>({
 		() =>
 			new PartialSyncClientBridge<TItem>({
 				clientId: partialClientId,
+				collectionId,
 				collection: {
 					utils: {
 						receiveSync: (messages) =>
@@ -103,7 +108,7 @@ export function useEmojiGrid2DSync<TItem extends EmojiGridPartialSyncRow>({
 					setBridgeState(state);
 				},
 			}),
-		[partialClientId],
+		[collectionId, partialClientId],
 	);
 
 	const serializeJsonRef = useRef(superjsonSerializeJson);

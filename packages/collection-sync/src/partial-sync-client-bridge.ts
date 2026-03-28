@@ -3,10 +3,12 @@ import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type {
 	RangeFingerprint,
 	SyncClientMessage,
+	SyncClientMessageBody,
 	SyncRange,
 	SyncRangeSort,
 	SyncServerMessage,
 } from "./sync-protocol";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 import { createClientMutationId } from "./sync-protocol";
 import {
 	partialSyncRowKey,
@@ -58,6 +60,8 @@ export interface PartialSyncClientBridgeOptions<
 > {
 	/** Defaults to a random UUID when omitted (must match {@link SyncClientBridge} when using mutations). */
 	clientId?: string;
+	/** Must match the server's partial-sync {@link PartialSyncServerBridgeOptions.collectionId}. */
+	collectionId?: string;
 	collection: CollectionWithReceiveSync<TItem>;
 	send: SendFn;
 	onStateChange?: (state: PartialSyncState) => void;
@@ -77,6 +81,7 @@ type InFlightRequest<TItem> = {
 
 export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 	readonly clientId: string;
+	readonly collectionId: string;
 	#connected = false;
 	#state: PartialSyncState = { status: "offline" };
 	#inFlightRequests = new Map<string, InFlightRequest<TItem>>();
@@ -87,7 +92,16 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 
 	constructor(private readonly options: PartialSyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId ?? crypto.randomUUID();
+		this.collectionId =
+			options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 		this.#sendFn = options.send;
+	}
+
+	#out(msg: SyncClientMessageBody): void {
+		this.#sendFn({
+			...msg,
+			collectionId: this.collectionId,
+		} as SyncClientMessage);
 	}
 
 	get state(): PartialSyncState {
@@ -211,7 +225,7 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 				resolve,
 				reject,
 			});
-			this.#sendFn({
+			this.#out({
 				type: "queryRange",
 				clientId: this.clientId,
 				requestId,
@@ -245,7 +259,7 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 				resolve,
 				reject,
 			});
-			this.#sendFn({
+			this.#out({
 				type: "queryByOffset",
 				clientId: this.clientId,
 				requestId,
@@ -278,7 +292,7 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 				resolve,
 				reject,
 			});
-			this.#sendFn({
+			this.#out({
 				type: "rangeQuery",
 				clientId: this.clientId,
 				requestId,
@@ -289,6 +303,8 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 	}
 
 	async handleServerMessage(message: SyncServerMessage<TItem>): Promise<void> {
+		const mid = message.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+		if (mid !== this.collectionId) return;
 		switch (message.type) {
 			case "queryRangeChunk":
 				await this.#handleQueryRangeChunk(message);

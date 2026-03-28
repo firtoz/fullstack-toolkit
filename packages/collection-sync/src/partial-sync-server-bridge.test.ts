@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { PartialSyncServerBridge } from "./partial-sync-server-bridge";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 
 type Item = { id: string; name: string; age: number };
 
@@ -38,6 +39,7 @@ describe("PartialSyncServerBridge", () => {
 		expect(sent).toEqual([
 			{
 				type: "queryRangeChunk",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				rows: [
 					{ id: "1", name: "aaaaa", age: 20 },
@@ -51,6 +53,7 @@ describe("PartialSyncServerBridge", () => {
 			},
 			{
 				type: "queryRangeChunk",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				rows: [{ id: "3", name: "aaaac", age: 22 }],
 				totalCount: 3,
@@ -160,6 +163,7 @@ describe("PartialSyncServerBridge", () => {
 		expect(sent).toEqual([
 			{
 				type: "queryRangeChunk",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				rows: [
 					{ id: "1", name: "aaaaa", age: 20 },
@@ -173,6 +177,7 @@ describe("PartialSyncServerBridge", () => {
 			},
 			{
 				type: "queryRangeChunk",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				rows: [{ id: "3", name: "aaaac", age: 22 }],
 				totalCount: 100,
@@ -217,7 +222,12 @@ describe("PartialSyncServerBridge", () => {
 		});
 
 		expect(sent).toEqual([
-			{ type: "rangeUpToDate", requestId: "r1", totalCount: 10 },
+			{
+				type: "rangeUpToDate",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				requestId: "r1",
+				totalCount: 10,
+			},
 		]);
 	});
 
@@ -264,6 +274,7 @@ describe("PartialSyncServerBridge", () => {
 		expect(sent).toEqual([
 			{
 				type: "rangeDelta",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				totalCount: 11,
 				changes: [

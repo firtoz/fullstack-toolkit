@@ -4,7 +4,11 @@ import { useMemo } from "react";
 import { z } from "zod";
 import { createIndexedDbAdapter } from "./indexeddb-adapter";
 import { PeoplePartialSyncClient } from "./PeoplePartialSyncClient";
-import type { PersonId, WsTransport } from "./types";
+import {
+	type PersonId,
+	PEOPLE_PARTIAL_SYNC_COLLECTION_ID,
+	type WsTransport,
+} from "./types";
 
 const personSchema = z.object({
 	id: z.custom<PersonId>((value) => typeof value === "string"),
@@ -30,7 +34,10 @@ export function IndexedDbPeopleClient({ roomId, wsTransport }: Props) {
 				readyPromise,
 				getKey: (item) => item.id,
 			}),
-			{ syncStateKey: `partial-sync-idb-people-${roomId}` },
+			{
+				syncStateKey: `partial-sync-idb-people-${roomId}`,
+				collectionId: PEOPLE_PARTIAL_SYNC_COLLECTION_ID,
+			},
 		);
 	}, [roomId]);
 

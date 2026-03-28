@@ -3,6 +3,8 @@ import type { WsTransport } from "../home/types";
 
 export type { WsTransport };
 
+export { EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID } from "../../../src/partial-sync-collection-ids";
+
 /** World spans [0, WORLD_SIZE) in x and y (integer cell coordinates). */
 export const EMOJI_GRID_WORLD_SIZE = 1000;
 

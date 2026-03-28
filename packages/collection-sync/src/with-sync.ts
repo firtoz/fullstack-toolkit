@@ -69,6 +69,10 @@ export type WithSyncOptions = {
 	 * Default `true` (full sync). {@link createPartialSyncedCollection} sets this to `false`.
 	 */
 	forwardTruncateToMutations?: boolean;
+	/**
+	 * Must match the server's {@link SyncServerBridgeOptions.collectionId} on the same WebSocket.
+	 */
+	collectionId?: string;
 };
 
 /** Returns `globalThis.localStorage` when it looks usable; otherwise `null`. */
@@ -237,6 +241,9 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 
 	const bridge = new SyncClientBridge<TItem>({
 		clientId,
+		...(syncOptions?.collectionId !== undefined
+			? { collectionId: syncOptions.collectionId }
+			: {}),
 		collection: {
 			utils: {
 				receiveSync: originalReceiveSync,

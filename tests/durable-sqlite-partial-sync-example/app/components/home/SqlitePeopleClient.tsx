@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import migrations from "../../../drizzle/migrations";
 import * as schema from "../../../src/schema";
 import { PeoplePartialSyncClient } from "./PeoplePartialSyncClient";
-import type { WsTransport } from "./types";
+import { PEOPLE_PARTIAL_SYNC_COLLECTION_ID, type WsTransport } from "./types";
 
 type Props = {
 	roomId: string;
@@ -31,7 +31,10 @@ export function SqlitePeopleClient({ roomId, wsTransport }: Props) {
 					tableName: "peopleTable",
 					readyPromise,
 				}),
-				{ syncStateKey: `partial-sync-sqlite-people-${roomId}` },
+				{
+					syncStateKey: `partial-sync-sqlite-people-${roomId}`,
+					collectionId: PEOPLE_PARTIAL_SYNC_COLLECTION_ID,
+				},
 			),
 		[drizzle, readyPromise, roomId],
 	);

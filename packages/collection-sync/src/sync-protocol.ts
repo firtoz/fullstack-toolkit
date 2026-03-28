@@ -2,6 +2,11 @@ import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import { z } from "zod";
 
+/** Default {@link SyncClientMessage} / {@link SyncServerMessage} `collectionId` when omitted on the wire. */
+export const DEFAULT_SYNC_COLLECTION_ID = "default" as const;
+
+const collectionIdSchema = z.string().min(1).default(DEFAULT_SYNC_COLLECTION_ID);
+
 const mutationTypeSchema = z.enum(["insert", "update", "delete", "truncate"]);
 
 export const mutationIntentSchema = z.object({
@@ -128,21 +133,25 @@ const rangeFingerprintSchema = z.object({
 export type SyncClientMessage =
 	| {
 			type: "mutateBatch";
+			collectionId: string;
 			clientId: string;
 			mutations: MutationIntent[];
 	  }
 	| {
 			type: "syncHello";
+			collectionId: string;
 			clientId: string;
 			lastAckedServerVersion: number;
 	  }
 	| {
 			type: "ping";
+			collectionId: string;
 			clientId: string;
 			timestamp: number;
 	  }
 	| {
 			type: "queryRange";
+			collectionId: string;
 			clientId: string;
 			requestId: string;
 			sort: SyncRangeSort;
@@ -151,6 +160,7 @@ export type SyncClientMessage =
 	  }
 	| {
 			type: "queryByOffset";
+			collectionId: string;
 			clientId: string;
 			requestId: string;
 			sort: SyncRangeSort;
@@ -159,6 +169,7 @@ export type SyncClientMessage =
 	  }
 	| {
 			type: "rangeQuery";
+			collectionId: string;
 			clientId: string;
 			requestId: string;
 			range: SyncRange;
@@ -169,21 +180,25 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 	return z.discriminatedUnion("type", [
 		z.object({
 			type: z.literal("mutateBatch"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			mutations: z.array(mutationIntentSchema).min(1),
 		}),
 		z.object({
 			type: z.literal("syncHello"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			lastAckedServerVersion: z.number().int().nonnegative(),
 		}),
 		z.object({
 			type: z.literal("ping"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			timestamp: z.number(),
 		}),
 		z.object({
 			type: z.literal("queryRange"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			requestId: z.string().min(1),
 			sort: z.object({
@@ -195,6 +210,7 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 		}),
 		z.object({
 			type: z.literal("queryByOffset"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			requestId: z.string().min(1),
 			sort: z.object({
@@ -206,6 +222,7 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 		}),
 		z.object({
 			type: z.literal("rangeQuery"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			requestId: z.string().min(1),
 			range: syncRangeSchema,
@@ -225,6 +242,7 @@ export type SyncServerMessage<
 > =
 	| {
 			type: "ack";
+			collectionId: string;
 			clientId: string;
 			clientMutationIds: string[];
 			serverVersion: number;
@@ -232,11 +250,13 @@ export type SyncServerMessage<
 	  }
 	| {
 			type: "syncBatch";
+			collectionId: string;
 			serverVersion: number;
 			changes: SyncMessage<TItem, TKey>[];
 	  }
 	| {
 			type: "syncBackfill";
+			collectionId: string;
 			/** `snapshot`: replace local collection state, then apply `changes`. `delta`: apply incrementally only. */
 			mode: SyncBackfillMode;
 			serverVersion: number;
@@ -246,6 +266,7 @@ export type SyncServerMessage<
 	  }
 	| {
 			type: "reject";
+			collectionId: string;
 			clientId: string;
 			clientMutationId: string;
 			reason: string;
@@ -253,10 +274,12 @@ export type SyncServerMessage<
 	  }
 	| {
 			type: "pong";
+			collectionId: string;
 			timestamp: number;
 	  }
 	| {
 			type: "queryRangeChunk";
+			collectionId: string;
 			requestId: string;
 			rows: TItem[];
 			totalCount: number;
@@ -267,20 +290,39 @@ export type SyncServerMessage<
 	  }
 	| {
 			type: "rangePatch";
+			collectionId: string;
 			change: SyncMessage<TItem, TKey>;
 	  }
 	| {
 			type: "rangeUpToDate";
+			collectionId: string;
 			requestId: string;
 			totalCount: number;
 	  }
 	| {
 			type: "rangeDelta";
+			collectionId: string;
 			requestId: string;
 			totalCount: number;
 			changes: SyncMessage<TItem, TKey>[];
 			lastCursor?: unknown;
 	  };
+
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+	? Omit<T, K>
+	: never;
+
+/** Client payload before `collectionId` is attached (bridge outbox helpers). */
+export type SyncClientMessageBody = DistributiveOmit<
+	SyncClientMessage,
+	"collectionId"
+>;
+
+/** Server payload before `collectionId` is attached (bridge outbox helpers). */
+export type SyncServerMessageBody<
+	TItem = unknown,
+	TKey extends string | number = string | number,
+> = DistributiveOmit<SyncServerMessage<TItem, TKey>, "collectionId">;
 
 export function createServerMessageSchema<
 	TItem = unknown,
@@ -290,6 +332,7 @@ export function createServerMessageSchema<
 	return z.discriminatedUnion("type", [
 		z.object({
 			type: z.literal("ack"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			clientMutationIds: z.array(z.string().min(1)),
 			serverVersion: z.number().int().nonnegative(),
@@ -297,11 +340,13 @@ export function createServerMessageSchema<
 		}),
 		z.object({
 			type: z.literal("syncBatch"),
+			collectionId: collectionIdSchema,
 			serverVersion: z.number().int().nonnegative(),
 			changes: z.array(syncMessageSchema),
 		}),
 		z.object({
 			type: z.literal("syncBackfill"),
+			collectionId: collectionIdSchema,
 			mode: z.enum(["snapshot", "delta"]),
 			serverVersion: z.number().int().nonnegative(),
 			changes: z.array(syncMessageSchema),
@@ -310,6 +355,7 @@ export function createServerMessageSchema<
 		}),
 		z.object({
 			type: z.literal("reject"),
+			collectionId: collectionIdSchema,
 			clientId: z.string().min(1),
 			clientMutationId: z.string().min(1),
 			reason: z.string().min(1),
@@ -317,10 +363,12 @@ export function createServerMessageSchema<
 		}),
 		z.object({
 			type: z.literal("pong"),
+			collectionId: collectionIdSchema,
 			timestamp: z.number(),
 		}),
 		z.object({
 			type: z.literal("queryRangeChunk"),
+			collectionId: collectionIdSchema,
 			requestId: z.string().min(1),
 			rows: z.array(z.custom<TItem>()),
 			totalCount: z.number().int().nonnegative(),
@@ -331,21 +379,32 @@ export function createServerMessageSchema<
 		}),
 		z.object({
 			type: z.literal("rangePatch"),
+			collectionId: collectionIdSchema,
 			change: syncMessageSchema,
 		}),
 		z.object({
 			type: z.literal("rangeUpToDate"),
+			collectionId: collectionIdSchema,
 			requestId: z.string().min(1),
 			totalCount: z.number().int().nonnegative(),
 		}),
 		z.object({
 			type: z.literal("rangeDelta"),
+			collectionId: collectionIdSchema,
 			requestId: z.string().min(1),
 			totalCount: z.number().int().nonnegative(),
 			changes: z.array(syncMessageSchema),
 			lastCursor: z.unknown().optional(),
 		}),
 	]);
+}
+
+/** Attach `collectionId` to an outbound server message (single-collection servers). */
+export function withServerCollectionId<TItem, TKey extends string | number>(
+	collectionId: string,
+	message: SyncServerMessage<TItem, TKey>,
+): SyncServerMessage<TItem, TKey> {
+	return { ...message, collectionId };
 }
 
 export const serverMessageSchema = createServerMessageSchema();

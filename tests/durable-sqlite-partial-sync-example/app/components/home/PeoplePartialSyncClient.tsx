@@ -12,7 +12,12 @@ import { useCallback, useMemo, useState } from "react";
 import superjson from "superjson";
 import { PeopleVirtualList } from "./PeopleVirtualList";
 import { SyncStatusBar } from "./SyncStatusBar";
-import type { PeoplePartialSyncRow, SortState, WsTransport } from "./types";
+import {
+	type PeoplePartialSyncRow,
+	PEOPLE_PARTIAL_SYNC_COLLECTION_ID,
+	type SortState,
+	type WsTransport,
+} from "./types";
 
 const superjsonSerializeJson = (value: unknown): string =>
 	superjson.stringify(value);
@@ -83,6 +88,7 @@ export function PeoplePartialSyncClient<TItem extends PeoplePartialSyncRow>({
 		partialWindowResetKey: `${label}-${roomId}`,
 		mutationBridge,
 		mergeTransportSend: setTransportSend,
+		collectionId: PEOPLE_PARTIAL_SYNC_COLLECTION_ID,
 	});
 
 	const toggleSort = useCallback((column: "name" | "age") => {

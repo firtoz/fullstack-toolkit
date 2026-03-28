@@ -5,7 +5,9 @@ import type {
 	SyncBackfillMode,
 	SyncClientMessage,
 	SyncServerMessage,
+	SyncServerMessageBody,
 } from "./sync-protocol";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 import { toSyncMessage } from "./sync-protocol";
 import type { PartialSyncRowId } from "./partial-sync-row-key";
 import { partialSyncRowKey } from "./partial-sync-row-key";
@@ -27,6 +29,8 @@ export interface SyncServerBridgeOptions<TItem> {
 	broadcastAll?: (message: SyncServerMessage<TItem>) => void;
 	/** Maximum number of changes per `syncBackfill` frame. Defaults to 500. */
 	backfillChunkSize?: number;
+	/** Multiplex key for sync messages. Default {@link DEFAULT_SYNC_COLLECTION_ID}. */
+	collectionId?: string;
 }
 
 export class SyncServerBridge<
@@ -35,17 +39,50 @@ export class SyncServerBridge<
 	#serverVersion = 0;
 	#changeLog: Array<{ serverVersion: number; changes: SyncMessage<TItem>[] }> =
 		[];
+	readonly #cid: string;
 
-	constructor(private readonly options: SyncServerBridgeOptions<TItem>) {}
+	constructor(private readonly options: SyncServerBridgeOptions<TItem>) {
+		this.#cid = options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+	}
+
+	get collectionId(): string {
+		return this.#cid;
+	}
+
+	#emit(clientId: string, body: SyncServerMessageBody<TItem>): void {
+		this.options.sendToClient(clientId, {
+			...body,
+			collectionId: this.#cid,
+		} as SyncServerMessage<TItem>);
+	}
+
+	#broadcastExcept(
+		excludeClientId: string,
+		body: SyncServerMessageBody<TItem>,
+	): void {
+		this.options.broadcastExcept(excludeClientId, {
+			...body,
+			collectionId: this.#cid,
+		} as SyncServerMessage<TItem>);
+	}
+
+	#broadcastAll(body: SyncServerMessageBody<TItem>): void {
+		this.options.broadcastAll?.({
+			...body,
+			collectionId: this.#cid,
+		} as SyncServerMessage<TItem>);
+	}
 
 	get serverVersion(): number {
 		return this.#serverVersion;
 	}
 
 	async handleClientMessage(message: SyncClientMessage): Promise<void> {
+		const mid = message.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+		if (mid !== this.#cid) return;
 		switch (message.type) {
 			case "ping":
-				this.options.sendToClient(message.clientId, {
+				this.#emit(message.clientId, {
 					type: "pong",
 					timestamp: message.timestamp,
 				});
@@ -57,7 +94,7 @@ export class SyncServerBridge<
 				const chunks = this.#chunkBackfillChanges(changes);
 				const totalChunks = chunks.length;
 				for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
-					this.options.sendToClient(message.clientId, {
+					this.#emit(message.clientId, {
 						type: "syncBackfill",
 						mode,
 						serverVersion: this.#serverVersion,
@@ -96,7 +133,7 @@ export class SyncServerBridge<
 				resolvedChanges.push(change);
 				acceptedMutationIds.push(mutation.clientMutationId);
 			} catch (error) {
-				this.options.sendToClient(message.clientId, {
+				this.#emit(message.clientId, {
 					type: "reject",
 					clientId: message.clientId,
 					clientMutationId: mutation.clientMutationId,
@@ -115,7 +152,7 @@ export class SyncServerBridge<
 			changes: resolvedChanges,
 		});
 
-		this.options.sendToClient(message.clientId, {
+		this.#emit(message.clientId, {
 			type: "ack",
 			clientId: message.clientId,
 			clientMutationIds: acceptedMutationIds,
@@ -123,7 +160,7 @@ export class SyncServerBridge<
 			changes: resolvedChanges,
 		});
 
-		this.options.broadcastExcept(message.clientId, {
+		this.#broadcastExcept(message.clientId, {
 			type: "syncBatch",
 			serverVersion: this.#serverVersion,
 			changes: resolvedChanges,
@@ -218,7 +255,7 @@ export class SyncServerBridge<
 			serverVersion: this.#serverVersion,
 			changes,
 		});
-		this.options.broadcastAll?.({
+		this.#broadcastAll({
 			type: "syncBatch",
 			serverVersion: this.#serverVersion,
 			changes,

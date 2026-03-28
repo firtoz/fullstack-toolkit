@@ -9,6 +9,7 @@ import emojiMigrations from "../../../drizzle-emoji/migrations.js";
 import * as emojiSchema from "../../../src/emoji-grid-schema";
 import { EmojiGridPartialSyncClient } from "./EmojiGridPartialSyncClient";
 import type { WsTransport } from "../home/types";
+import { EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID } from "./types";
 
 type Props = {
 	roomId: string;
@@ -31,7 +32,10 @@ export function SqliteEmojiGridClient({ roomId, wsTransport }: Props) {
 					tableName: "emojiGridTable",
 					readyPromise,
 				}),
-				{ syncStateKey: `partial-sync-sqlite-emoji-grid-${roomId}` },
+				{
+					syncStateKey: `partial-sync-sqlite-emoji-grid-${roomId}`,
+					collectionId: EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID,
+				},
 			),
 		[drizzle, readyPromise, roomId],
 	);

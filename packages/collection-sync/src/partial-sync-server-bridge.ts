@@ -1,28 +1,35 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import {
+	classifyPartialSyncRangePatch,
+	type DeliveredRange,
+} from "./partial-sync-interest";
+import { defaultPredicateColumnValue } from "./partial-sync-predicate-match";
 import type {
 	RangeCondition,
 	SyncClientMessage,
 	SyncRange,
 	SyncRangeSort,
 	SyncServerMessage,
+	SyncServerMessageBody,
 } from "./sync-protocol";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
 
-export type DeliveredRange = {
-	sortColumn: string;
-	sortDirection: "asc" | "desc";
-	fromValue: unknown;
-	toValue: unknown;
-};
+export type { DeliveredRange } from "./partial-sync-interest";
 
 export type ClientQueryState<TItem = unknown> = {
 	clientId: string;
 	deliveredRanges: DeliveredRange[];
+	/** Each entry is one predicate query's `conditions` (AND); OR across entries. */
+	predicateGroups: RangeCondition[][];
 	pendingPatches: SyncMessage<TItem>[];
 	streaming: boolean;
 };
 
-export interface PartialSyncServerBridgeStore<TItem> {
+export interface PartialSyncServerBridgeStore<
+	TItem extends { id: PartialSyncRowId },
+> {
 	queryRange: (options: {
 		sort: SyncRangeSort;
 		limit: number;
@@ -59,23 +66,43 @@ export interface PartialSyncServerBridgeStore<TItem> {
 	}) => Promise<{ changes: SyncMessage<TItem>[]; totalCount: number } | null>;
 }
 
-export interface PartialSyncServerBridgeOptions<TItem> {
+export interface PartialSyncServerBridgeOptions<
+	TItem extends { id: PartialSyncRowId },
+> {
 	store: PartialSyncServerBridgeStore<TItem>;
 	sendToClient: (clientId: string, message: SyncServerMessage<TItem>) => void;
 	queryChunkSize?: number;
+	/** Multiplex key for sync messages. Default {@link DEFAULT_SYNC_COLLECTION_ID}. */
+	collectionId?: string;
 }
 
-export class PartialSyncServerBridge<TItem> {
+export class PartialSyncServerBridge<TItem extends { id: PartialSyncRowId }> {
 	#clientStates = new Map<string, ClientQueryState<TItem>>();
+	readonly #cid: string;
 
 	constructor(
 		private readonly options: PartialSyncServerBridgeOptions<TItem>,
-	) {}
+	) {
+		this.#cid = options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+	}
+
+	get collectionId(): string {
+		return this.#cid;
+	}
+
+	#emit(clientId: string, body: SyncServerMessageBody<TItem>): void {
+		this.options.sendToClient(clientId, {
+			...body,
+			collectionId: this.#cid,
+		} as SyncServerMessage<TItem>);
+	}
 
 	async handleClientMessage(message: SyncClientMessage): Promise<void> {
+		const mid = message.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+		if (mid !== this.#cid) return;
 		switch (message.type) {
 			case "ping":
-				this.options.sendToClient(message.clientId, {
+				this.#emit(message.clientId, {
 					type: "pong",
 					timestamp: message.timestamp,
 				});
@@ -101,15 +128,21 @@ export class PartialSyncServerBridge<TItem> {
 	async pushServerChanges(changes: SyncMessage<TItem>[]): Promise<void> {
 		for (const state of this.#clientStates.values()) {
 			for (const change of changes) {
-				if (!this.#isChangeInDeliveredRanges(state.deliveredRanges, change))
-					continue;
+				const patch = classifyPartialSyncRangePatch(
+					state.deliveredRanges,
+					state.predicateGroups,
+					change,
+					(row, column) => this.options.store.getSortValue(row, column),
+					(row, column) => defaultPredicateColumnValue(row, column),
+				);
+				if (patch === null) continue;
 				if (state.streaming) {
-					state.pendingPatches.push(change);
+					state.pendingPatches.push(patch);
 					continue;
 				}
-				this.options.sendToClient(state.clientId, {
+				this.#emit(state.clientId, {
 					type: "rangePatch",
-					change,
+					change: patch,
 				});
 			}
 		}
@@ -134,7 +167,7 @@ export class PartialSyncServerBridge<TItem> {
 			});
 			if (delta !== null) {
 				if (delta.changes.length === 0) {
-					this.options.sendToClient(clientId, {
+					this.#emit(clientId, {
 						type: "rangeUpToDate",
 						requestId,
 						totalCount: delta.totalCount,
@@ -148,7 +181,7 @@ export class PartialSyncServerBridge<TItem> {
 				}
 				const maxDelta = Math.max(1, Math.ceil(rangeLimit * 0.5));
 				if (delta.changes.length <= maxDelta) {
-					this.options.sendToClient(clientId, {
+					this.#emit(clientId, {
 						type: "rangeDelta",
 						requestId,
 						totalCount: delta.totalCount,
@@ -167,6 +200,7 @@ export class PartialSyncServerBridge<TItem> {
 		if (range.kind === "index" && range.mode === "cursor") {
 			await this.#handleQueryRange({
 				type: "queryRange",
+				collectionId: this.#cid,
 				clientId,
 				requestId,
 				sort: range.sort,
@@ -178,6 +212,7 @@ export class PartialSyncServerBridge<TItem> {
 		if (range.kind === "index" && range.mode === "offset") {
 			await this.#handleQueryByOffset({
 				type: "queryByOffset",
+				collectionId: this.#cid,
 				clientId,
 				requestId,
 				sort: range.sort,
@@ -200,7 +235,7 @@ export class PartialSyncServerBridge<TItem> {
 		const queryByPredicate = this.options.store.queryByPredicate;
 		if (!queryByPredicate) {
 			const totalCount = await this.options.store.getTotalCount();
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows: [],
@@ -214,6 +249,7 @@ export class PartialSyncServerBridge<TItem> {
 		}
 
 		const state = this.#getOrCreateClientState(message.clientId);
+		state.predicateGroups.push([...range.conditions]);
 		state.streaming = true;
 		const chunkSize = Math.max(1, this.options.queryChunkSize ?? 200);
 		const limit = range.limit ?? chunkSize;
@@ -246,7 +282,7 @@ export class PartialSyncServerBridge<TItem> {
 			const hasMoreForClient = isFinalChunk
 				? totalDelivered === limit && totalDelivered < totalCount
 				: true;
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows,
@@ -264,7 +300,7 @@ export class PartialSyncServerBridge<TItem> {
 		}
 
 		if (!emittedAny) {
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows: [],
@@ -336,7 +372,7 @@ export class PartialSyncServerBridge<TItem> {
 			const hasMoreForClient = isFinalChunk
 				? totalDelivered === message.limit && totalDelivered < totalCount
 				: true;
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows,
@@ -354,7 +390,7 @@ export class PartialSyncServerBridge<TItem> {
 		}
 
 		if (!emittedAny) {
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows: [],
@@ -401,7 +437,7 @@ export class PartialSyncServerBridge<TItem> {
 				? totalDelivered === message.limit &&
 					message.offset + totalDelivered < totalCount
 				: true;
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows,
@@ -419,7 +455,7 @@ export class PartialSyncServerBridge<TItem> {
 		}
 
 		if (!emittedAny) {
-			this.options.sendToClient(message.clientId, {
+			this.#emit(message.clientId, {
 				type: "queryRangeChunk",
 				requestId: message.requestId,
 				rows: [],
@@ -441,6 +477,7 @@ export class PartialSyncServerBridge<TItem> {
 			state = {
 				clientId,
 				deliveredRanges: [],
+				predicateGroups: [],
 				pendingPatches: [],
 				streaming: false,
 			};
@@ -475,51 +512,11 @@ export class PartialSyncServerBridge<TItem> {
 	#flushPendingPatches(state: ClientQueryState<TItem>): void {
 		if (state.pendingPatches.length === 0) return;
 		for (const change of state.pendingPatches) {
-			this.options.sendToClient(state.clientId, {
+			this.#emit(state.clientId, {
 				type: "rangePatch",
 				change,
 			});
 		}
 		state.pendingPatches.length = 0;
-	}
-
-	#isChangeInDeliveredRanges(
-		ranges: DeliveredRange[],
-		change: SyncMessage<TItem>,
-	): boolean {
-		if (ranges.length === 0) return false;
-		if (change.type === "truncate") return true;
-		if (change.type === "delete") return true;
-		if (change.type === "insert" || change.type === "update") {
-			return ranges.some((range) => {
-				const sortValue = this.options.store.getSortValue(
-					change.value,
-					range.sortColumn,
-				);
-				return this.#isWithinRange(sortValue, range);
-			});
-		}
-		exhaustiveGuard(change);
-	}
-
-	#isWithinRange(value: unknown, range: DeliveredRange): boolean {
-		if (value === undefined || value === null) return false;
-		const compareFrom = this.#compareValues(value, range.fromValue);
-		const compareTo = this.#compareValues(value, range.toValue);
-		if (range.sortDirection === "asc") {
-			return compareFrom >= 0 && compareTo <= 0;
-		}
-		return compareFrom <= 0 && compareTo >= 0;
-	}
-
-	#compareValues(left: unknown, right: unknown): number {
-		const leftValue = left instanceof Date ? left.getTime() : left;
-		const rightValue = right instanceof Date ? right.getTime() : right;
-		if (typeof leftValue === "number" && typeof rightValue === "number") {
-			return leftValue === rightValue ? 0 : leftValue < rightValue ? -1 : 1;
-		}
-		const leftString = String(leftValue);
-		const rightString = String(rightValue);
-		return leftString.localeCompare(rightString);
 	}
 }

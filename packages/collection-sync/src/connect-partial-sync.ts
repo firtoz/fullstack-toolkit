@@ -7,6 +7,7 @@ import type { PartialSyncRowId } from "./partial-sync-row-key";
 import {
 	createClientMessageSchema,
 	createServerMessageSchema,
+	DEFAULT_SYNC_COLLECTION_ID,
 	type SyncClientMessage,
 	type SyncServerMessage,
 } from "./sync-protocol";
@@ -44,7 +45,10 @@ export async function dispatchPartialSyncServerMessage<
 	partialBridge: PartialSyncClientBridge<TItem>,
 	mutationBridge: SyncClientBridge<TItem & PartialSyncMutationItem> | undefined,
 ): Promise<void> {
+	const mid = msg.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+
 	if (mutationBridge === undefined) {
+		if (mid !== partialBridge.collectionId) return;
 		await partialBridge.handleServerMessage(msg);
 		return;
 	}
@@ -55,22 +59,27 @@ export async function dispatchPartialSyncServerMessage<
 		case "rangeDelta":
 		case "rangePatch":
 		case "pong":
+			if (mid !== partialBridge.collectionId) return;
 			await partialBridge.handleServerMessage(msg);
 			return;
 		case "ack":
 		case "reject":
 		case "syncBackfill":
+			if (mid !== mutationBridge.collectionId) return;
 			await mutationBridge.handleServerMessage(
 				msg as SyncServerMessage<TItem & PartialSyncMutationItem>,
 			);
 			return;
 		case "syncBatch": {
+			if (mid !== mutationBridge.collectionId) return;
 			await mutationBridge.handleServerMessage(
 				msg as SyncServerMessage<TItem & PartialSyncMutationItem>,
 			);
-			partialBridge.syncTrackedIdsFromMessages(
-				msg.changes as SyncMessage<TItem>[],
-			);
+			if (mid === partialBridge.collectionId) {
+				partialBridge.syncTrackedIdsFromMessages(
+					msg.changes as SyncMessage<TItem>[],
+				);
+			}
 			return;
 		}
 		default:

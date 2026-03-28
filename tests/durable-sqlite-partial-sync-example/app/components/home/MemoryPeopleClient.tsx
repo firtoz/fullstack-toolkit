@@ -3,7 +3,11 @@ import { memoryCollectionOptions } from "@firtoz/db-helpers";
 import { useMemo } from "react";
 import { z } from "zod";
 import { PeoplePartialSyncClient } from "./PeoplePartialSyncClient";
-import type { PersonId, WsTransport } from "./types";
+import {
+	type PersonId,
+	PEOPLE_PARTIAL_SYNC_COLLECTION_ID,
+	type WsTransport,
+} from "./types";
 
 const personSchema = z.object({
 	id: z.custom<PersonId>((value) => typeof value === "string"),
@@ -28,6 +32,7 @@ export function MemoryPeopleClient({ roomId, wsTransport }: Props) {
 					schema: personSchema,
 					getKey: (item) => item.id,
 				}),
+				{ collectionId: PEOPLE_PARTIAL_SYNC_COLLECTION_ID },
 			),
 		[roomId],
 	);

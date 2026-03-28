@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { emojiGridRowSchema } from "./emoji-grid-row-schema";
 import { EmojiGridPartialSyncClient } from "./EmojiGridPartialSyncClient";
 import type { WsTransport } from "../home/types";
+import { EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID } from "./types";
 
 type Props = {
 	roomId: string;
@@ -19,6 +20,7 @@ export function MemoryEmojiGridClient({ roomId, wsTransport }: Props) {
 					schema: emojiGridRowSchema,
 					getKey: (item) => item.id,
 				}),
+				{ collectionId: EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID },
 			),
 		[roomId],
 	);

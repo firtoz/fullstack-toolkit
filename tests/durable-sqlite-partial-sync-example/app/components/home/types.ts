@@ -22,6 +22,8 @@ export type BackendMode = (typeof BACKEND_MODES)[number];
 
 export type WsTransport = "json" | "msgpack";
 
+export { PEOPLE_PARTIAL_SYNC_COLLECTION_ID } from "../../../src/partial-sync-collection-ids";
+
 export type SortState = {
 	column: "name" | "age";
 	direction: "asc" | "desc";

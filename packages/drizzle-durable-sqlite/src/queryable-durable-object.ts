@@ -3,6 +3,7 @@ import {
 	SyncServerBridge,
 	createClientMessageSchema,
 	createServerMessageSchema,
+	DEFAULT_SYNC_COLLECTION_ID,
 	type PartialSyncServerBridgeStore,
 	type RangeCondition,
 	type SyncClientMessage,
@@ -17,6 +18,7 @@ import {
 	ZodWebSocketDO,
 	type ZodSessionOptions,
 } from "@firtoz/websocket-do";
+import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import type { Context } from "hono";
@@ -66,15 +68,21 @@ async function routeQueryableClientMessage<TRow extends MutationSyncRow>(
 	message: SyncClientMessage,
 	dispatch: SessionDispatch<TRow>,
 ): Promise<void> {
+	const mid = message.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 	switch (message.type) {
 		case "mutateBatch":
 		case "syncHello":
-			if (dispatch.mutationBridge !== undefined) {
+			if (
+				dispatch.mutationBridge !== undefined &&
+				mid === dispatch.mutationBridge.collectionId
+			) {
 				await dispatch.mutationBridge.handleClientMessage(message);
 			}
 			return;
 		default:
-			await dispatch.partialBridge.handleClientMessage(message);
+			if (mid === dispatch.partialBridge.collectionId) {
+				await dispatch.partialBridge.handleClientMessage(message);
+			}
 	}
 }
 
@@ -115,6 +123,7 @@ class QueryableSession<
 
 export type QueryableDurableObjectConfig<
 	TSchema extends Record<string, unknown>,
+	TRow extends MutationSyncRow = MutationSyncRow,
 > = {
 	schema: TSchema;
 	migrations: Parameters<typeof migrate>[1];
@@ -122,6 +131,19 @@ export type QueryableDurableObjectConfig<
 	seedInBackground?: boolean;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
+	/**
+	 * When set, used as the partial-sync store instead of overriding
+	 * {@link QueryableDurableObject.queryRange}, {@link QueryableDurableObject.queryByOffset},
+	 * and {@link QueryableDurableObject.getTotalCount}.
+	 */
+	createPartialSyncStore?: (
+		db: DrizzleSqliteDODatabase<TSchema>,
+	) => PartialSyncServerBridgeStore<TRow>;
+	/**
+	 * Multiplex key for partial-sync WebSocket messages.
+	 * When using a {@link SyncServerBridge} on the same socket, set the mutation store's id to the same value unless you multiplex multiple collections.
+	 */
+	collectionId?: string;
 };
 
 export abstract class QueryableDurableObject<
@@ -147,7 +169,7 @@ export abstract class QueryableDurableObject<
 	constructor(
 		ctx: DurableObjectState,
 		env: TEnv,
-		config: QueryableDurableObjectConfig<TSchema>,
+		config: QueryableDurableObjectConfig<TSchema, TRow>,
 	) {
 		let bridgeRef!: PartialSyncServerBridge<TRow>;
 		const sessionSlot: SessionSlot<TRow> = { pending: [] };
@@ -193,42 +215,48 @@ export abstract class QueryableDurableObject<
 			const getPredicateCount = this.getPredicateCount;
 			const changesSince = this.changesSince;
 
-			const store: PartialSyncServerBridgeStore<TRow> = {
-				queryRange: (options) => this.queryRange(options),
-				queryByOffset: (options) => this.queryByOffset(options),
-				getTotalCount: async () => this.getTotalCount(),
-				getSortValue: (row, column) => this.getSortValue(row, column),
-				...(queryByPredicate !== undefined
-					? {
-							queryByPredicate: (opts: {
-								conditions: RangeCondition[];
-								sort?: SyncRangeSort;
-								limit?: number;
-								chunkSize: number;
-							}) => queryByPredicate.call(this, opts),
-						}
-					: {}),
-				...(getPredicateCount !== undefined
-					? {
-							getPredicateCount: (conditions: RangeCondition[]) =>
-								getPredicateCount.call(this, conditions),
-						}
-					: {}),
-				...(changesSince !== undefined
-					? {
-							changesSince: (opts: {
-								range: SyncRange;
-								sinceVersion: number;
-								chunkSize: number;
-							}) => changesSince.call(this, opts),
-						}
-					: {}),
-			};
+			const store: PartialSyncServerBridgeStore<TRow> =
+				config.createPartialSyncStore !== undefined
+					? config.createPartialSyncStore(db)
+					: {
+							queryRange: (options) => this.queryRange(options),
+							queryByOffset: (options) => this.queryByOffset(options),
+							getTotalCount: async () => this.getTotalCount(),
+							getSortValue: (row, column) => this.getSortValue(row, column),
+							...(queryByPredicate !== undefined
+								? {
+										queryByPredicate: (opts: {
+											conditions: RangeCondition[];
+											sort?: SyncRangeSort;
+											limit?: number;
+											chunkSize: number;
+										}) => queryByPredicate.call(this, opts),
+									}
+								: {}),
+							...(getPredicateCount !== undefined
+								? {
+										getPredicateCount: (conditions: RangeCondition[]) =>
+											getPredicateCount.call(this, conditions),
+									}
+								: {}),
+							...(changesSince !== undefined
+								? {
+										changesSince: (opts: {
+											range: SyncRange;
+											sinceVersion: number;
+											chunkSize: number;
+										}) => changesSince.call(this, opts),
+									}
+								: {}),
+						};
+			const collectionId =
+				config.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 			bridgeRef = new PartialSyncServerBridge<TRow>({
 				store,
 				sendToClient: (clientId, message) =>
 					this.sendToClient(clientId, message),
 				queryChunkSize: config.queryChunkSize,
+				collectionId,
 			});
 			this.bridge = bridgeRef;
 
@@ -241,6 +269,7 @@ export abstract class QueryableDurableObject<
 						this.sendToClient(clientId, message),
 					broadcastExcept: (excludeClientId, message) =>
 						this.broadcastExcept(excludeClientId, message),
+					collectionId,
 				});
 				this.mutationSyncBridge = mutationBridge;
 			}
@@ -263,21 +292,33 @@ export abstract class QueryableDurableObject<
 		});
 	}
 
-	protected abstract queryRange(options: {
+	protected async *queryRange(_options: {
 		sort: { column: string; direction: "asc" | "desc" };
 		limit: number;
 		afterCursor: unknown | null;
 		chunkSize: number;
-	}): AsyncIterable<TRow[]>;
+	}): AsyncIterable<TRow[]> {
+		throw new Error(
+			"QueryableDurableObject: override queryRange() or pass createPartialSyncStore in config",
+		);
+	}
 
-	protected abstract queryByOffset(options: {
+	protected async *queryByOffset(_options: {
 		sort: { column: string; direction: "asc" | "desc" };
 		limit: number;
 		offset: number;
 		chunkSize: number;
-	}): AsyncIterable<TRow[]>;
+	}): AsyncIterable<TRow[]> {
+		throw new Error(
+			"QueryableDurableObject: override queryByOffset() or pass createPartialSyncStore in config",
+		);
+	}
 
-	protected abstract getTotalCount(): Promise<number>;
+	protected async getTotalCount(): Promise<number> {
+		throw new Error(
+			"QueryableDurableObject: override getTotalCount() or pass createPartialSyncStore in config",
+		);
+	}
 
 	protected queryByPredicate?(_options: {
 		conditions: RangeCondition[];
