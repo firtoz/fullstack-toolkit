@@ -3,6 +3,7 @@ import { exhaustiveGuard } from "@firtoz/maybe-error";
 import {
 	classifyPartialSyncRangePatch,
 	type DeliveredRange,
+	type PartialSyncPatchResult,
 } from "./partial-sync-interest";
 import { defaultPredicateColumnValue } from "./partial-sync-predicate-match";
 import type {
@@ -18,12 +19,14 @@ import type { PartialSyncRowId } from "./partial-sync-row-key";
 
 export type { DeliveredRange } from "./partial-sync-interest";
 
-export type ClientQueryState<TItem = unknown> = {
+export type ClientQueryState<
+	TItem extends { id: PartialSyncRowId } = { id: string },
+> = {
 	clientId: string;
 	deliveredRanges: DeliveredRange[];
 	/** Each entry is one predicate query's `conditions` (AND); OR across entries. */
 	predicateGroups: RangeCondition[][];
-	pendingPatches: SyncMessage<TItem>[];
+	pendingPatches: PartialSyncPatchResult<TItem>[];
 	streaming: boolean;
 };
 
@@ -140,7 +143,10 @@ export class PartialSyncServerBridge<TItem extends { id: PartialSyncRowId }> {
 				}
 				this.#emit(state.clientId, {
 					type: "rangePatch",
-					change: patch,
+					change: patch.change,
+					...(patch.viewTransition !== undefined
+						? { viewTransition: patch.viewTransition }
+						: {}),
 				});
 			}
 		}
@@ -509,10 +515,13 @@ export class PartialSyncServerBridge<TItem extends { id: PartialSyncRowId }> {
 
 	#flushPendingPatches(state: ClientQueryState<TItem>): void {
 		if (state.pendingPatches.length === 0) return;
-		for (const change of state.pendingPatches) {
+		for (const patch of state.pendingPatches) {
 			this.#emit(state.clientId, {
 				type: "rangePatch",
-				change,
+				change: patch.change,
+				...(patch.viewTransition !== undefined
+					? { viewTransition: patch.viewTransition }
+					: {}),
 			});
 		}
 		state.pendingPatches.length = 0;

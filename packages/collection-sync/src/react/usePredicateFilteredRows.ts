@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-	defaultPredicateColumnValue,
-	matchesPredicate,
-} from "./partial-sync-utils";
+import { inArray } from "@tanstack/db";
+import { useLiveQuery } from "@tanstack/react-db";
+import { useMemo } from "react";
 import { DEFAULT_PAGE_LIMIT } from "./constants";
+import {
+	buildRangeConditionsAndExpression,
+	type PredicateRowRef,
+} from "./range-conditions-expression";
 import type { PartialSyncItem, UsePredicateFilteredRowsOptions } from "./types";
 
+/**
+ * Reactive predicate filter + sort + limit via TanStack DB `useLiveQuery` (IVM), instead of
+ * scanning the whole collection on each change.
+ */
 export function usePredicateFilteredRows<
 	TItem extends PartialSyncItem,
 	TSortColumn extends keyof TItem & string,
@@ -13,48 +19,62 @@ export function usePredicateFilteredRows<
 	collection,
 	conditions,
 	sort,
-	getSortValue,
-	getColumnValue = defaultPredicateColumnValue,
+	getSortValue: _getSortValue,
+	getColumnValue: _getColumnValue,
 	limit = DEFAULT_PAGE_LIMIT,
+	cacheDisplayMode = "immediate",
+	confirmedRowKeys,
+	confirmedKeysRevision = 0,
 }: UsePredicateFilteredRowsOptions<TItem, TSortColumn>): TItem[] {
-	const [collectionVersion, setCollectionVersion] = useState(0);
-	useEffect(() => {
-		const sub = collection.subscribeChanges(() => {
-			setCollectionVersion((v) => v + 1);
-		});
-		return () => {
-			sub.unsubscribe();
-		};
-	}, [collection]);
-	return useMemo(() => {
-		void collectionVersion;
-		const out: TItem[] = [];
-		for (const [, row] of collection.entries()) {
-			if (matchesPredicate(row, conditions, getColumnValue)) {
-				out.push(row);
+	void _getSortValue;
+	void _getColumnValue;
+
+	const conditionsKey = useMemo(() => JSON.stringify(conditions), [conditions]);
+
+	const { data } = useLiveQuery(
+		(q) => {
+			if (
+				cacheDisplayMode === "confirmed" &&
+				(confirmedRowKeys === undefined || confirmedRowKeys.size === 0)
+			) {
+				return null;
 			}
-		}
-		out.sort((a, b) => {
-			const av = getSortValue(a, sort.column);
-			const bv = getSortValue(b, sort.column);
-			const cmp =
-				typeof av === "number" && typeof bv === "number"
-					? av === bv
-						? 0
-						: av < bv
-							? -1
-							: 1
-					: String(av).localeCompare(String(bv));
-			return sort.direction === "asc" ? cmp : -cmp;
-		});
-		return out.slice(0, limit);
-	}, [
-		collection,
-		collectionVersion,
-		conditions,
-		getColumnValue,
-		getSortValue,
-		limit,
-		sort,
-	]);
+
+			let query = q.from({ items: collection });
+
+			if (conditions.length > 0) {
+				query = query.where((refs) =>
+					buildRangeConditionsAndExpression(
+						refs.items as PredicateRowRef,
+						conditions,
+					),
+				);
+			}
+
+			if (cacheDisplayMode === "confirmed" && confirmedRowKeys !== undefined) {
+				const keys = [...confirmedRowKeys];
+				query = query.where((refs) =>
+					inArray((refs.items as PredicateRowRef).id, keys),
+				);
+			}
+
+			query = query.orderBy(
+				(refs) => (refs.items as PredicateRowRef)[sort.column],
+				sort.direction,
+			);
+			return query.limit(limit);
+		},
+		[
+			collection,
+			conditionsKey,
+			sort.column,
+			sort.direction,
+			limit,
+			cacheDisplayMode,
+			confirmedKeysRevision,
+			confirmedRowKeys,
+		],
+	);
+
+	return (data ?? []) as TItem[];
 }

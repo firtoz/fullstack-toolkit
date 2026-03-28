@@ -135,4 +135,20 @@ describe("sync protocol schemas", () => {
 			expect(delta.changes.length).toBe(1);
 		}
 	});
+
+	it("parses rangePatch with optional viewTransition", () => {
+		const patch = serverMessageSchema.parse({
+			type: "rangePatch",
+			change: {
+				type: "update",
+				value: { id: "1", x: 2 },
+				previousValue: { id: "1", x: 1 },
+			},
+			viewTransition: "exitView",
+		});
+		expect(patch.type).toBe("rangePatch");
+		if (patch.type === "rangePatch") {
+			expect(patch.viewTransition).toBe("exitView");
+		}
+	});
 });

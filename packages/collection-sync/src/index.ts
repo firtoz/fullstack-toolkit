@@ -33,8 +33,10 @@ export {
 export {
 	PartialSyncClientBridge,
 	type PartialSyncClientBridgeOptions,
+	type PartialSyncRangePatchAppliedEvent,
 	type PartialSyncRangeResult,
 	type PartialSyncState,
+	type PartialSyncViewTransitionEvent,
 } from "./partial-sync-client-bridge";
 
 export {
@@ -90,3 +92,8 @@ export {
 	partialSyncRowKey,
 	type PartialSyncRowId,
 } from "./partial-sync-row-key";
+
+export type {
+	PartialSyncPatchResult,
+	PartialSyncViewTransition,
+} from "./partial-sync-interest";

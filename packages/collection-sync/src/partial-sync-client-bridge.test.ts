@@ -56,6 +56,8 @@ describe("PartialSyncClientBridge", () => {
 		expect(result.rows.length).toBe(2);
 		expect(result.totalCount).toBe(3);
 		expect(bridge.cachedCount).toBe(2);
+		expect([...bridge.serverConfirmedKeys].sort()).toEqual(["1", "2"]);
+		expect(bridge.serverConfirmedKeysRevision).toBeGreaterThan(0);
 		expect(received.length).toBe(2);
 		expect(states.includes("fetching")).toBe(true);
 		expect(states.includes("realtime")).toBe(true);
@@ -165,6 +167,111 @@ describe("PartialSyncClientBridge", () => {
 		expect(result.rows.length).toBe(2);
 		expect(result.totalCount).toBe(500);
 		expect(result.lastCursor).toBe("aaaab");
+	});
+
+	it("enterView rangePatch inserts when row not cached", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: { id: "1", name: "new", age: 30 },
+			previousValue: { id: "1", name: "old", age: 20 },
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: update,
+			viewTransition: "enterView",
+		});
+
+		expect(received).toEqual([
+			[{ type: "insert", value: { id: "1", name: "new", age: 30 } }],
+		]);
+		expect(bridge.cachedCount).toBe(1);
+	});
+
+	it("enterView rangePatch updates when row already cached", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: {
+				type: "insert",
+				value: { id: "1", name: "a", age: 1 },
+			},
+		});
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: { id: "1", name: "b", age: 2 },
+			previousValue: { id: "1", name: "a", age: 1 },
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: update,
+			viewTransition: "enterView",
+		});
+
+		expect(received[1]).toEqual([update]);
+	});
+
+	it("exitView rangePatch applies update and invokes onViewTransition", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const transitions: { type: string; change: SyncMessage<Item> }[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+			onViewTransition: (e) => transitions.push(e),
+		});
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: {
+				type: "insert",
+				value: { id: "1", name: "a", age: 1 },
+			},
+		});
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: { id: "1", name: "z", age: 99 },
+			previousValue: { id: "1", name: "a", age: 1 },
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			change: update,
+			viewTransition: "exitView",
+		});
+
+		expect(transitions).toEqual([{ type: "exitView", change: update }]);
+		expect(received[1]).toEqual([update]);
+		expect(bridge.cachedCount).toBe(1);
 	});
 
 	it("applies range patches to local cache", async () => {

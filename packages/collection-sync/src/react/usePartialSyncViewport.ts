@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { SyncRange } from "../sync-protocol";
 import {
 	DEFAULT_VIEWPORT_RANGE_MAX_WAIT_MS,
@@ -31,6 +31,7 @@ export function usePartialSyncViewport<
 	maxWaitMs = DEFAULT_VIEWPORT_RANGE_MAX_WAIT_MS,
 	totalCountFallback = 0,
 	getColumnValue,
+	cacheDisplayMode = "immediate",
 }: UsePartialSyncViewportOptions<
 	TItem,
 	TViewport,
@@ -41,6 +42,12 @@ export function usePartialSyncViewport<
 		[adapter, viewport],
 	);
 
+	const confirmedKeysRevision = useSyncExternalStore(
+		(onStoreChange) => bridge.subscribeConfirmedKeysRevision(onStoreChange),
+		() => bridge.serverConfirmedKeysRevision,
+		() => 0,
+	);
+
 	const viewportRows = usePredicateFilteredRows({
 		collection,
 		conditions,
@@ -48,6 +55,13 @@ export function usePartialSyncViewport<
 		getSortValue: adapter.getSortValue,
 		...(getColumnValue !== undefined ? { getColumnValue } : {}),
 		limit: predicateLimit,
+		cacheDisplayMode,
+		...(cacheDisplayMode === "confirmed"
+			? {
+					confirmedRowKeys: bridge.serverConfirmedKeys,
+					confirmedKeysRevision,
+				}
+			: {}),
 	});
 
 	const fetchViewport = useMemo(

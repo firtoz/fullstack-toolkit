@@ -6,8 +6,10 @@ export {
 	DEFAULT_VIEWPORT_RANGE_QUIET_MS,
 } from "./constants";
 export type {
+	CacheDisplayMode,
 	PartialSyncCollection,
 	PartialSyncItem,
+	PartialSyncLiveCollection,
 	PartialSyncRowSlot,
 	PartialSyncRowSlotView,
 	UsePartialSyncCollectionOptions,

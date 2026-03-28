@@ -14,6 +14,21 @@ import {
 	partialSyncRowKey,
 	type PartialSyncRowId,
 } from "./partial-sync-row-key";
+import type { PartialSyncViewTransition } from "./partial-sync-interest";
+
+export type PartialSyncViewTransitionEvent<
+	TItem extends { id: PartialSyncRowId },
+> = {
+	type: PartialSyncViewTransition;
+	change: SyncMessage<TItem>;
+};
+
+export type PartialSyncRangePatchAppliedEvent<
+	TItem extends { id: PartialSyncRowId },
+> = {
+	change: SyncMessage<TItem>;
+	viewTransition?: PartialSyncViewTransition;
+};
 
 type CollectionWithReceiveSync<TItem> = {
 	utils: {
@@ -66,6 +81,12 @@ export interface PartialSyncClientBridgeOptions<
 	send: SendFn;
 	onStateChange?: (state: PartialSyncState) => void;
 	beforeApplyRows?: (rows: TItem[]) => Promise<void>;
+	/** Fired when a `rangePatch` carries `viewTransition` (row crossed client interest). */
+	onViewTransition?: (event: PartialSyncViewTransitionEvent<TItem>) => void;
+	/** Fired after any `rangePatch` is applied (including view transitions). */
+	onRangePatchApplied?: (
+		event: PartialSyncRangePatchAppliedEvent<TItem>,
+	) => void;
 }
 
 type InFlightRequest<TItem> = {
@@ -89,6 +110,10 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 	#cacheUtilization = 0;
 	#totalCount = 0;
 	#sendFn: SendFn;
+	/** Row keys last delivered by a completed server range response (see viewport `cacheDisplayMode`). */
+	#serverConfirmedKeys = new Set<string | number>();
+	#serverConfirmedKeysRevision = 0;
+	#confirmedRevisionListeners = new Set<() => void>();
 
 	constructor(private readonly options: PartialSyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId ?? crypto.randomUUID();
@@ -189,8 +214,41 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 	 * Clear tracked row ids (e.g. after a local `truncate()` on the collection). Local truncate
 	 * does not flow through `receiveSync`, so the bridge must be reset to match.
 	 */
+	clearServerConfirmedKeys(): void {
+		this.#serverConfirmedKeys.clear();
+		this.#serverConfirmedKeysRevision += 1;
+		this.#notifyConfirmedKeysRevision();
+	}
+
+	/** Keys from the latest completed `rangeQuery` / chunk response. */
+	get serverConfirmedKeys(): ReadonlySet<string | number> {
+		return this.#serverConfirmedKeys;
+	}
+
+	/** Bumps when {@link serverConfirmedKeys} changes; pass into predicate hooks as a dependency. */
+	get serverConfirmedKeysRevision(): number {
+		return this.#serverConfirmedKeysRevision;
+	}
+
+	/** Subscribe to {@link serverConfirmedKeysRevision} changes (for `useSyncExternalStore`). */
+	subscribeConfirmedKeysRevision(listener: () => void): () => void {
+		this.#confirmedRevisionListeners.add(listener);
+		return () => {
+			this.#confirmedRevisionListeners.delete(listener);
+		};
+	}
+
+	#notifyConfirmedKeysRevision(): void {
+		for (const listener of this.#confirmedRevisionListeners) {
+			listener();
+		}
+	}
+
 	clearTrackedRowIds(): void {
 		this.#cachedIds.clear();
+		this.#serverConfirmedKeys.clear();
+		this.#serverConfirmedKeysRevision += 1;
+		this.#notifyConfirmedKeysRevision();
 		const s = this.#state;
 		if (s.status === "partial" || s.status === "realtime") {
 			this.#setState({ ...s, cachedCount: 0 });
@@ -315,7 +373,7 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 				await this.#handleRangeDelta(message);
 				return;
 			case "rangePatch":
-				await this.#applyAndTrack([message.change]);
+				await this.#handleRangePatch(message);
 				return;
 			case "syncBatch":
 				await this.#applyAndTrack(message.changes as SyncMessage<TItem>[]);
@@ -334,6 +392,69 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 			default:
 				exhaustiveGuard(message);
 		}
+	}
+
+	async #handleRangePatch(
+		message: Extract<SyncServerMessage<TItem>, { type: "rangePatch" }>,
+	): Promise<void> {
+		const { change, viewTransition } = message;
+		if (viewTransition === "exitView") {
+			if (change.type === "update") {
+				this.options.onViewTransition?.({ type: "exitView", change });
+			}
+			await this.#applyAndTrack([change]);
+			this.options.onRangePatchApplied?.({ change, viewTransition });
+			return;
+		}
+		if (viewTransition === "enterView") {
+			if (change.type === "update") {
+				this.options.onViewTransition?.({ type: "enterView", change });
+				const key = partialSyncRowKey(change.value.id);
+				const toApply: SyncMessage<TItem>[] = this.#cachedIds.has(key)
+					? [change]
+					: [{ type: "insert", value: change.value }];
+				await this.#applyAndTrack(toApply);
+				this.options.onRangePatchApplied?.({ change, viewTransition });
+				return;
+			}
+			await this.#applyAndTrack([change]);
+			this.options.onRangePatchApplied?.({ change, viewTransition });
+			return;
+		}
+		await this.#applyAndTrack([change]);
+		this.#mergeServerConfirmedKeysFromMessages([change]);
+		this.options.onRangePatchApplied?.({ change, viewTransition });
+	}
+
+	#replaceServerConfirmedKeysFromRows(rows: readonly TItem[]): void {
+		this.#serverConfirmedKeys.clear();
+		for (const row of rows) {
+			this.#serverConfirmedKeys.add(partialSyncRowKey(row.id));
+		}
+		this.#serverConfirmedKeysRevision += 1;
+		this.#notifyConfirmedKeysRevision();
+	}
+
+	#mergeServerConfirmedKeysFromMessages(changes: SyncMessage<TItem>[]): void {
+		if (changes.length === 0) return;
+		for (const change of changes) {
+			switch (change.type) {
+				case "insert":
+				case "update":
+					this.#serverConfirmedKeys.add(partialSyncRowKey(change.value.id));
+					break;
+				case "delete":
+					this.#serverConfirmedKeys.delete(change.key);
+					break;
+				case "truncate":
+					this.#serverConfirmedKeys.clear();
+					break;
+				default:
+					exhaustiveGuard(change);
+			}
+		}
+		this.#serverConfirmedKeysRevision += 1;
+		this.#notifyConfirmedKeysRevision();
 	}
 
 	async #handleQueryRangeChunk(
@@ -371,6 +492,7 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 		}
 
 		if (!message.done) return;
+		this.#replaceServerConfirmedKeysFromRows(inFlight.rows);
 		this.#inFlightRequests.delete(message.requestId);
 		const result: PartialSyncRangeResult<TItem> = {
 			rows: inFlight.rows,
@@ -414,7 +536,9 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 	): Promise<void> {
 		const inFlight = this.#inFlightRequests.get(message.requestId);
 		if (!inFlight) return;
-		await this.#applyAndTrack(message.changes as SyncMessage<TItem>[]);
+		const delta = message.changes as SyncMessage<TItem>[];
+		await this.#applyAndTrack(delta);
+		this.#mergeServerConfirmedKeysFromMessages(delta);
 		this.#inFlightRequests.delete(message.requestId);
 		this.#totalCount = message.totalCount;
 		inFlight.resolve({

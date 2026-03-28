@@ -1,4 +1,4 @@
-import type { UtilsRecord } from "@tanstack/db";
+import type { Collection, UtilsRecord } from "@tanstack/db";
 import type { CacheManager } from "../cache-manager";
 import type {
 	PartialSyncClientBridge,
@@ -90,6 +90,11 @@ export type UsePartialSyncWindowOptions<
 	 * {@link SyncClientBridgeOptions.collectionId} on {@link mutationBridge}.
 	 */
 	collectionId?: string;
+	/**
+	 * `confirmed` filters dense `rows` to {@link PartialSyncClientBridge.serverConfirmedKeys} only
+	 * (same semantics as {@link UsePartialSyncViewportOptions.cacheDisplayMode}).
+	 */
+	cacheDisplayMode?: CacheDisplayMode;
 };
 
 export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {
@@ -132,17 +137,36 @@ export type UsePartialSyncWindowResult<TItem extends PartialSyncItem> = {
 	getRowSlot: (globalIndex: number) => PartialSyncRowSlotView<TItem>;
 };
 
+/** Collection usable with {@link useLiveQuery} and partial-sync helpers. */
+export type PartialSyncLiveCollection<TItem extends PartialSyncItem> =
+	PartialSyncCollection<TItem> &
+		Collection<TItem, string | number, UtilsRecord>;
+
+export type CacheDisplayMode = "immediate" | "confirmed";
+
 export type UsePredicateFilteredRowsOptions<
 	TItem extends PartialSyncItem,
 	TSortColumn extends keyof TItem & string = keyof TItem & string,
 > = {
-	collection: PartialSyncCollection<TItem>;
+	collection: PartialSyncLiveCollection<TItem>;
 	conditions: RangeCondition[];
 	sort: { column: TSortColumn; direction: "asc" | "desc" };
 	getSortValue: (row: TItem, column: TSortColumn) => unknown;
-	/** For predicate `column` strings; defaults to property read when present on the row object. */
+	/**
+	 * For predicate `column` strings when using a custom row shape; the live-query path reads
+	 * properties named in {@link RangeCondition.column} on each row (same as default column read).
+	 */
 	getColumnValue?: (row: TItem, column: string) => unknown;
 	limit?: number;
+	/**
+	 * `immediate`: show all rows matching the predicate (including cache-only).
+	 * `confirmed`: only rows whose keys appear in {@link confirmedRowKeys} (from the bridge).
+	 */
+	cacheDisplayMode?: CacheDisplayMode;
+	/** Required when `cacheDisplayMode` is `"confirmed"`; typically `bridge.serverConfirmedKeys`. */
+	confirmedRowKeys?: ReadonlySet<string | number>;
+	/** Pass `bridge.serverConfirmedKeysRevision` so React re-runs the query when the set mutates. */
+	confirmedKeysRevision?: number;
 };
 
 export type UsePartialSyncCollectionOptions<TItem extends PartialSyncItem> = {
@@ -170,7 +194,7 @@ export type UsePartialSyncViewportOptions<
 	bridge: PartialSyncClientBridge<TItem>;
 	/** From {@link usePartialSyncCollection}; drives {@link UsePartialSyncViewportResult.totalCount}. */
 	bridgeState: PartialSyncState;
-	collection: PartialSyncCollection<TItem>;
+	collection: PartialSyncLiveCollection<TItem>;
 	adapter: PartialSyncViewportAdapter<TItem, TViewport, TSortColumn>;
 	viewport: TViewport;
 	predicateLimit: number;
@@ -182,6 +206,7 @@ export type UsePartialSyncViewportOptions<
 	 */
 	totalCountFallback?: number;
 	getColumnValue?: (row: TItem, column: string) => unknown;
+	cacheDisplayMode?: CacheDisplayMode;
 };
 
 export type UsePartialSyncViewportResult<TItem extends PartialSyncItem> = {

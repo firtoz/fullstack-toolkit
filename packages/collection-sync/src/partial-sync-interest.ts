@@ -1,11 +1,16 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type { RangeCondition } from "./sync-protocol";
-import {
-	partialSyncRowKey,
-	type PartialSyncRowId,
-} from "./partial-sync-row-key";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
 import { matchesPredicate } from "./partial-sync-predicate-match";
+
+/** Metadata on `rangePatch` when an update crosses client interest boundaries. */
+export type PartialSyncViewTransition = "enterView" | "exitView";
+
+export type PartialSyncPatchResult<TItem extends { id: PartialSyncRowId }> = {
+	change: SyncMessage<TItem>;
+	viewTransition?: PartialSyncViewTransition;
+};
 
 /** Tracked 1D sort interval delivered to a client (index / cursor queries). */
 export type DeliveredRange = {
@@ -79,8 +84,9 @@ export function rowMatchesClientInterest<TItem>(
 }
 
 /**
- * Maps a server-side change to the {@link SyncMessage} that should be sent as a `rangePatch`,
- * or `null` if this client should not receive a patch.
+ * Maps a server-side change to a `rangePatch` payload, or `null` if this client should not
+ * receive a patch. View enter/exit keeps the real `update` on the wire so clients can cache
+ * rows and filter locally instead of fake delete/insert.
  */
 export function classifyPartialSyncRangePatch<
 	TItem extends { id: PartialSyncRowId },
@@ -90,12 +96,12 @@ export function classifyPartialSyncRangePatch<
 	change: SyncMessage<TItem>,
 	getSortValue: (row: TItem, column: string) => unknown,
 	getColumnValue: (row: TItem, column: string) => unknown,
-): SyncMessage<TItem> | null {
+): PartialSyncPatchResult<TItem> | null {
 	const hasInterest = sortRanges.length > 0 || predicateGroups.length > 0;
 	if (!hasInterest) return null;
 
-	if (change.type === "truncate") return change;
-	if (change.type === "delete") return change;
+	if (change.type === "truncate") return { change };
+	if (change.type === "delete") return { change };
 
 	if (change.type === "insert") {
 		return rowMatchesClientInterest(
@@ -105,7 +111,7 @@ export function classifyPartialSyncRangePatch<
 			getSortValue,
 			getColumnValue,
 		)
-			? change
+			? { change }
 			: null;
 	}
 
@@ -127,14 +133,9 @@ export function classifyPartialSyncRangePatch<
 						getColumnValue,
 					)
 				: false;
-		if (newIn && oldIn) return change;
-		if (newIn && !oldIn) return { type: "insert", value: change.value };
-		if (!newIn && oldIn) {
-			return {
-				type: "delete",
-				key: partialSyncRowKey(change.value.id),
-			};
-		}
+		if (newIn && oldIn) return { change };
+		if (newIn && !oldIn) return { change, viewTransition: "enterView" };
+		if (!newIn && oldIn) return { change, viewTransition: "exitView" };
 		return null;
 	}
 

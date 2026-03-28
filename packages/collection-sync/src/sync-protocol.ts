@@ -295,6 +295,8 @@ export type SyncServerMessage<
 			type: "rangePatch";
 			collectionId: string;
 			change: SyncMessage<TItem, TKey>;
+			/** When set, client should apply `change` without treating it as a real DB delete/insert. */
+			viewTransition?: "enterView" | "exitView";
 	  }
 	| {
 			type: "rangeUpToDate";
@@ -384,6 +386,7 @@ export function createServerMessageSchema<
 			type: z.literal("rangePatch"),
 			collectionId: collectionIdSchema,
 			change: syncMessageSchema,
+			viewTransition: z.enum(["enterView", "exitView"]).optional(),
 		}),
 		z.object({
 			type: z.literal("rangeUpToDate"),

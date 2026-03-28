@@ -19,7 +19,7 @@ describe("classifyPartialSyncRangePatch", () => {
 	const getSort = (r: Row, c: string) => (c === "age" ? r.age : 0);
 	const getCol = defaultPredicateColumnValue<Row>;
 
-	it("update leaving sort range becomes delete patch", () => {
+	it("update leaving sort range keeps update with exitView", () => {
 		const ranges: DeliveredRange[] = [ascAgeRange(50, 60)];
 		const change = {
 			type: "update" as const,
@@ -33,10 +33,10 @@ describe("classifyPartialSyncRangePatch", () => {
 			getSort,
 			getCol,
 		);
-		expect(patch).toEqual({ type: "delete", key: "a" });
+		expect(patch).toEqual({ change, viewTransition: "exitView" });
 	});
 
-	it("update entering sort range becomes insert patch", () => {
+	it("update entering sort range keeps update with enterView", () => {
 		const ranges: DeliveredRange[] = [ascAgeRange(50, 60)];
 		const change = {
 			type: "update" as const,
@@ -50,7 +50,7 @@ describe("classifyPartialSyncRangePatch", () => {
 			getSort,
 			getCol,
 		);
-		expect(patch).toEqual({ type: "insert", value: change.value });
+		expect(patch).toEqual({ change, viewTransition: "enterView" });
 	});
 
 	it("update staying in range stays update", () => {
@@ -67,7 +67,7 @@ describe("classifyPartialSyncRangePatch", () => {
 			getSort,
 			getCol,
 		);
-		expect(patch).toEqual(change);
+		expect(patch).toEqual({ change });
 	});
 
 	it("matches predicate-only interest for insert", () => {
@@ -88,6 +88,6 @@ describe("classifyPartialSyncRangePatch", () => {
 			getSort,
 			getCol,
 		);
-		expect(patch).toEqual(change);
+		expect(patch).toEqual({ change });
 	});
 });

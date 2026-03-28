@@ -5,11 +5,15 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	useSyncExternalStore,
 } from "react";
 import { CacheManager } from "../cache-manager";
 import { connectPartialSync } from "../connect-partial-sync";
-import { PartialSyncClientBridge } from "../partial-sync-client-bridge";
-import type { PartialSyncState } from "../partial-sync-client-bridge";
+import {
+	PartialSyncClientBridge,
+	type PartialSyncRangePatchAppliedEvent,
+	type PartialSyncState,
+} from "../partial-sync-client-bridge";
 import type { RangeFingerprint, SyncClientMessage } from "../sync-protocol";
 import { DEFAULT_PAGE_LIMIT, DEFAULT_SEEK_COOLDOWN_MS } from "./constants";
 import { partialSyncRowKey } from "../partial-sync-row-key";
@@ -55,6 +59,7 @@ export function usePartialSyncWindow<
 	mutationBridge,
 	mergeTransportSend,
 	collectionId,
+	cacheDisplayMode = "immediate",
 }: UsePartialSyncWindowOptions<
 	TItem,
 	TSortColumn
@@ -76,6 +81,8 @@ export function usePartialSyncWindow<
 		firstVisibleIndex: 0,
 		lastVisibleIndex: 0,
 	});
+	const viewportInfoRef = useRef(viewportInfo);
+	viewportInfoRef.current = viewportInfo;
 	const [lastSeekMeta, setLastSeekMeta] = useState<{
 		offset: number;
 		reason: "scroll" | "scrollSettled";
@@ -93,6 +100,19 @@ export function usePartialSyncWindow<
 	totalCountRef.current = totalCount;
 	const fetchGenRef = useRef(0);
 	const seekCooldownUntilRef = useRef(0);
+	const seekToViewportRef = useRef<
+		(
+			firstVisibleIndex: number,
+			opts?: {
+				scrollSettled?: boolean;
+				lastVisibleIndex?: number;
+				force?: boolean;
+			},
+		) => void
+	>(() => {});
+	const invalidateSeekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
 
 	const getSortValueRef = useRef(getSortValue);
 	getSortValueRef.current = getSortValue;
@@ -228,8 +248,58 @@ export function usePartialSyncWindow<
 						return previous;
 					});
 				},
+				onViewTransition: (e) => {
+					if (e.type === "exitView" && e.change.type === "update") {
+						const key = partialSyncRowKey(e.change.value.id);
+						let removed = false;
+						for (const [idx, mappedId] of [
+							...globalIndexMapRef.current.entries(),
+						]) {
+							if (mappedId === key) {
+								globalIndexMapRef.current.delete(idx);
+								removed = true;
+							}
+						}
+						if (removed) {
+							bumpIndexMap();
+						}
+					}
+				},
+				onRangePatchApplied: ({
+					change,
+					viewTransition,
+				}: PartialSyncRangePatchAppliedEvent<TItem>) => {
+					if (change.type !== "update" || viewTransition !== undefined) {
+						return;
+					}
+					if (change.previousValue === undefined) return;
+					const col = sortRef.current.column;
+					const gsv = getSortValueRef.current;
+					if (
+						gsv(change.previousValue as TItem, col) === gsv(change.value, col)
+					) {
+						return;
+					}
+					const rowKey = partialSyncRowKey(change.value.id);
+					const inDense = denseRowsRef.current.some(
+						(r) => partialSyncRowKey(r.id) === rowKey,
+					);
+					if (!inDense) return;
+					if (invalidateSeekTimerRef.current !== null) {
+						clearTimeout(invalidateSeekTimerRef.current);
+					}
+					invalidateSeekTimerRef.current = setTimeout(() => {
+						invalidateSeekTimerRef.current = null;
+						seekToViewportRef.current(
+							viewportInfoRef.current.firstVisibleIndex,
+							{
+								force: true,
+							},
+						);
+					}, 80);
+				},
 			}),
-		[partialClientId, collectionId],
+		[partialClientId, collectionId, bumpIndexMap],
 	);
 
 	// Do not list serializeJson / deserializeJson as effect deps: callers often pass
@@ -259,9 +329,16 @@ export function usePartialSyncWindow<
 		};
 	}, [bridge, wsTransport, wsUrl]);
 
+	const confirmedKeysRevision = useSyncExternalStore(
+		(onStoreChange) => bridge.subscribeConfirmedKeysRevision(onStoreChange),
+		() => bridge.serverConfirmedKeysRevision,
+		() => 0,
+	);
+
 	const indexRows = useMemo(() => {
 		void collectionVersion;
 		void indexMapVersion;
+		void confirmedKeysRevision;
 		const start = windowStartIndex;
 		const out: TItem[] = [];
 		for (let i = 0; ; i += 1) {
@@ -271,8 +348,21 @@ export function usePartialSyncWindow<
 			if (row === undefined) continue;
 			out.push(row);
 		}
+		if (cacheDisplayMode === "confirmed") {
+			return out.filter((row) =>
+				bridge.serverConfirmedKeys.has(partialSyncRowKey(row.id)),
+			);
+		}
 		return out;
-	}, [collection, collectionVersion, indexMapVersion, windowStartIndex]);
+	}, [
+		bridge,
+		cacheDisplayMode,
+		collection,
+		collectionVersion,
+		confirmedKeysRevision,
+		indexMapVersion,
+		windowStartIndex,
+	]);
 
 	const rows = indexRows;
 
@@ -603,6 +693,16 @@ export function usePartialSyncWindow<
 			seekCooldownMs,
 		],
 	);
+
+	seekToViewportRef.current = seekToViewport;
+
+	useEffect(() => {
+		return () => {
+			if (invalidateSeekTimerRef.current !== null) {
+				clearTimeout(invalidateSeekTimerRef.current);
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		const sub = collection.subscribeChanges(() => {
