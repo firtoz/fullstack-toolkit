@@ -52,7 +52,9 @@ export function createIndexedDbAdapter(roomId: string): {
 			const store = tx.objectStore(INDEXEDDB_STORE_NAME);
 			const keys = await requestToPromise(store.getAllKeys());
 			const values = await requestToPromise(store.getAll());
-			return keys.map((key, index) => [String(key), values[index]] as [string, Todo]);
+			return keys.map(
+				(key, index) => [String(key), values[index]] as [string, Todo],
+			);
 		},
 		clear: async () => {
 			const db = await dbPromise;

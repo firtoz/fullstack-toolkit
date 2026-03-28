@@ -1,10 +1,10 @@
-import { connectPartialSync, type SyncClientMessage } from "@firtoz/collection-sync";
-import { useCallback, useLayoutEffect, useState } from "react";
+import type { PartialSyncCollection } from "@firtoz/collection-sync/react";
+import { usePartialSyncWindow } from "@firtoz/collection-sync/react";
+import { useCallback, useMemo, useState } from "react";
 import superjson from "superjson";
 import { PeopleVirtualList } from "./PeopleVirtualList";
 import { SyncStatusBar } from "./SyncStatusBar";
-import type { PeoplePartialSyncCollection, SortState, WsTransport } from "./types";
-import { usePartialSyncWindow } from "./usePartialSyncWindow";
+import type { PersonRow, SortState, WsTransport } from "./types";
 
 const DEFAULT_SORT: SortState = {
 	column: "name",
@@ -12,7 +12,7 @@ const DEFAULT_SORT: SortState = {
 };
 
 type Props = {
-	collection: PeoplePartialSyncCollection;
+	collection: PartialSyncCollection<PersonRow>;
 	roomId: string;
 	wsTransport: WsTransport;
 	label: string;
@@ -26,6 +26,17 @@ export function PeoplePartialSyncClient({
 }: Props) {
 	const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
 
+	const wsUrl = useMemo(() => {
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const url = new URL(
+			`${protocol}//${window.location.host}/room/${roomId}/websocket`,
+		);
+		if (wsTransport === "msgpack") {
+			url.searchParams.set("transport", "msgpack");
+		}
+		return url.toString();
+	}, [roomId, wsTransport]);
+
 	const {
 		bridge,
 		rows,
@@ -38,44 +49,23 @@ export function PeoplePartialSyncClient({
 		viewportInfo,
 		setViewportInfo,
 		lastSeekMeta,
-	} = usePartialSyncWindow({ collection, sort });
+	} = usePartialSyncWindow({
+		collection,
+		sort,
+		getSortValue: (row, col) => row[col],
+		wsUrl,
+		wsTransport,
+		serializeJson: (value: unknown) => superjson.stringify(value),
+		deserializeJson: (raw: string) => superjson.parse(raw),
+	});
 
-	// Must run before any useEffect in usePartialSyncWindow (e.g. initial fetchNext).
-	// Otherwise the bridge still has the constructor noop `send` and rangeQuery is dropped.
-	useLayoutEffect(() => {
-		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-		const wsUrl = new URL(
-			`${protocol}//${window.location.host}/room/${roomId}/websocket`,
-		);
-		if (wsTransport === "msgpack") {
-			wsUrl.searchParams.set("transport", "msgpack");
-		}
-
-		const disconnect = connectPartialSync(bridge, {
-			url: wsUrl.toString(),
-			transport: wsTransport === "msgpack" ? "msgpack" : "json",
-			setTransportSend: (send) => {
-				bridge.setSend((message: SyncClientMessage) => send(message));
-			},
-			serializeJson: (value: unknown) => superjson.stringify(value),
-			deserializeJson: (raw: string) => superjson.parse(raw),
-		});
-
-		return () => {
-			disconnect();
-		};
-	}, [bridge, roomId, wsTransport]);
-
-	const toggleSort = useCallback(
-		(column: "name" | "age") => {
-			setSort((prev) => ({
-				column,
-				direction:
-					prev.column === column && prev.direction === "asc" ? "desc" : "asc",
-			}));
-		},
-		[],
-	);
+	const toggleSort = useCallback((column: "name" | "age") => {
+		setSort((prev) => ({
+			column,
+			direction:
+				prev.column === column && prev.direction === "asc" ? "desc" : "asc",
+		}));
+	}, []);
 
 	return (
 		<section style={{ marginTop: 16 }}>
@@ -105,7 +95,8 @@ export function PeoplePartialSyncClient({
 				<div>
 					viewport rows (global): [{viewportInfo.firstVisibleIndex},{" "}
 					{viewportInfo.lastVisibleIndex}] · dense window: [{windowStartIndex},{" "}
-					{windowStartIndex + rows.length}) · total {totalCount.toLocaleString()}
+					{windowStartIndex + rows.length}) · total{" "}
+					{totalCount.toLocaleString()}
 				</div>
 				<div>
 					last seek: offset {lastSeekMeta?.offset ?? "—"} (

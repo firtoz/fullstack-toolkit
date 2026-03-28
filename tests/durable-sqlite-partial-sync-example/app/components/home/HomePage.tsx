@@ -28,7 +28,9 @@ export function HomePage() {
 
 	if (!isMounted) {
 		return (
-			<div style={{ maxWidth: 960, margin: "24px auto", fontFamily: "sans-serif" }}>
+			<div
+				style={{ maxWidth: 960, margin: "24px auto", fontFamily: "sans-serif" }}
+			>
 				<h1>Durable SQLite Partial Sync</h1>
 				<p>Loading partial sync client...</p>
 			</div>
@@ -36,11 +38,13 @@ export function HomePage() {
 	}
 
 	return (
-		<div style={{ maxWidth: 960, margin: "24px auto", fontFamily: "sans-serif" }}>
+		<div
+			style={{ maxWidth: 960, margin: "24px auto", fontFamily: "sans-serif" }}
+		>
 			<h1>Durable SQLite Partial Sync</h1>
 			<p>
-				Server is authoritative. Client fetches visible ranges only and caches as much
-				as possible.
+				Server is authoritative. Client fetches visible ranges only and caches
+				as much as possible.
 			</p>
 			<p style={{ fontSize: 13, color: "#444" }}>
 				WebSocket transport: <code>{wsTransport}</code>

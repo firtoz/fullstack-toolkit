@@ -863,10 +863,19 @@ const SqliteSyncModeTestContent = ({
 	);
 };
 
+function sqliteDbNameFromSearchParams(searchParams: URLSearchParams): string {
+	const w = searchParams.get("e2eWorker");
+	return w !== null && /^\d+$/.test(w)
+		? `test-sqlite-sync-mode-w${w}.db`
+		: "test-sqlite-sync-mode.db";
+}
+
 export default function SqliteSyncModeTest() {
 	const [searchParams] = useSearchParams();
 	const syncMode =
 		(searchParams.get("mode") as "eager" | "on-demand") || "on-demand";
+	const e2eWorker = searchParams.get("e2eWorker");
+	const dbName = sqliteDbNameFromSearchParams(searchParams);
 
 	// Track SQL operations
 	const [operations, setOperations] = useState<SQLOperation[]>([]);
@@ -887,8 +896,13 @@ export default function SqliteSyncModeTest() {
 	// Compute toggle URL
 	const toggleUrl = useMemo(() => {
 		const newMode = syncMode === "eager" ? "on-demand" : "eager";
-		return `${href("/collections/sqlite-sync-mode-test")}?mode=${newMode}`;
-	}, [syncMode]);
+		const base = `${href("/collections/sqlite-sync-mode-test")}?mode=${newMode}`;
+		const workerSuffix =
+			e2eWorker !== null && /^\d+$/.test(e2eWorker)
+				? `&e2eWorker=${e2eWorker}`
+				: "";
+		return base + workerSuffix;
+	}, [syncMode, e2eWorker]);
 
 	const toggleLabel = useMemo(
 		() => (syncMode === "eager" ? "On-Demand" : "Eager"),
@@ -935,7 +949,7 @@ export default function SqliteSyncModeTest() {
 			</div>
 			<DrizzleSqliteProvider
 				worker={SqliteWorker}
-				dbName="test-sqlite-sync-mode.db"
+				dbName={dbName}
 				schema={schema}
 				migrations={migrations}
 				syncMode={syncMode}

@@ -9,7 +9,9 @@ export default defineConfig({
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	workers: process.env.CI ? 1 : undefined,
+	// Multiple workers share one origin: global OPFS clear and IndexedDB would race
+	// without per-worker DB names. SQLite tests still clear all OPFS, so stay serial.
+	workers: 1,
 	reporter: [["list"], ["html", { open: "never" }]],
 	use: {
 		baseURL: testPlaygroundBaseUrl,

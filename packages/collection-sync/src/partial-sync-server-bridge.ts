@@ -68,7 +68,9 @@ export interface PartialSyncServerBridgeOptions<TItem> {
 export class PartialSyncServerBridge<TItem> {
 	#clientStates = new Map<string, ClientQueryState<TItem>>();
 
-	constructor(private readonly options: PartialSyncServerBridgeOptions<TItem>) {}
+	constructor(
+		private readonly options: PartialSyncServerBridgeOptions<TItem>,
+	) {}
 
 	async handleClientMessage(message: SyncClientMessage): Promise<void> {
 		switch (message.type) {
@@ -99,7 +101,8 @@ export class PartialSyncServerBridge<TItem> {
 	async pushServerChanges(changes: SyncMessage<TItem>[]): Promise<void> {
 		for (const state of this.#clientStates.values()) {
 			for (const change of changes) {
-				if (!this.#isChangeInDeliveredRanges(state.deliveredRanges, change)) continue;
+				if (!this.#isChangeInDeliveredRanges(state.deliveredRanges, change))
+					continue;
 				if (state.streaming) {
 					state.pendingPatches.push(change);
 					continue;
@@ -395,7 +398,8 @@ export class PartialSyncServerBridge<TItem> {
 					? null
 					: this.options.store.getSortValue(lastRow, message.sort.column);
 			const hasMoreForClient = isFinalChunk
-				? totalDelivered === message.limit && message.offset + totalDelivered < totalCount
+				? totalDelivered === message.limit &&
+					message.offset + totalDelivered < totalCount
 				: true;
 			this.options.sendToClient(message.clientId, {
 				type: "queryRangeChunk",

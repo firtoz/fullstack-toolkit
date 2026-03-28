@@ -159,7 +159,9 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 	abortRangeRequests(): void {
 		for (const inflight of this.#inFlightRequests.values()) {
 			inflight.reject(
-				Object.assign(new Error("Range request aborted"), { name: "AbortError" }),
+				Object.assign(new Error("Range request aborted"), {
+					name: "AbortError",
+				}),
 			);
 		}
 		this.#inFlightRequests.clear();
@@ -332,7 +334,9 @@ export class PartialSyncClientBridge<TItem extends { id: string | number }> {
 
 		if (message.rows.length > 0) {
 			await this.options.beforeApplyRows?.(message.rows);
-			const rowsToInsert = message.rows.filter((row) => !this.#cachedIds.has(row.id));
+			const rowsToInsert = message.rows.filter(
+				(row) => !this.#cachedIds.has(row.id),
+			);
 			if (rowsToInsert.length > 0) {
 				const changes = rowsToInsert.map(
 					(row) =>

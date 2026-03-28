@@ -89,9 +89,10 @@ export class CacheManager<TItem extends { id: string | number }> {
 		};
 	}
 
-	async evictIfNeeded(
-		viewport: CacheViewport,
-	): Promise<{ evictedKeys: Array<string | number>; estimate: CacheStorageEstimate }> {
+	async evictIfNeeded(viewport: CacheViewport): Promise<{
+		evictedKeys: Array<string | number>;
+		estimate: CacheStorageEstimate;
+	}> {
 		const estimate = await this.estimateStoragePressure();
 		if (estimate.utilizationRatio < this.evictionThreshold) {
 			return { evictedKeys: [], estimate };
@@ -99,7 +100,9 @@ export class CacheManager<TItem extends { id: string | number }> {
 
 		const candidates = Array.from(this.#entries.values())
 			.filter((entry) => !this.#isEntryProtectedByViewport(entry, viewport))
-			.sort((a, b) => this.#scoreEntry(b, viewport) - this.#scoreEntry(a, viewport));
+			.sort(
+				(a, b) => this.#scoreEntry(b, viewport) - this.#scoreEntry(a, viewport),
+			);
 
 		const evictedKeys: Array<string | number> = [];
 		let currentEstimate = estimate;
@@ -109,10 +112,15 @@ export class CacheManager<TItem extends { id: string | number }> {
 			this.#entries.delete(candidate.key);
 			currentEstimate = {
 				...currentEstimate,
-				usageBytes: Math.max(0, currentEstimate.usageBytes - candidate.estimatedSizeBytes),
+				usageBytes: Math.max(
+					0,
+					currentEstimate.usageBytes - candidate.estimatedSizeBytes,
+				),
 				utilizationRatio:
-					Math.max(0, currentEstimate.usageBytes - candidate.estimatedSizeBytes) /
-					currentEstimate.quotaBytes,
+					Math.max(
+						0,
+						currentEstimate.usageBytes - candidate.estimatedSizeBytes,
+					) / currentEstimate.quotaBytes,
 			};
 		}
 
@@ -141,14 +149,20 @@ export class CacheManager<TItem extends { id: string | number }> {
 		return Math.min(lowerDistance, upperDistance);
 	}
 
-	#isEntryProtectedByViewport(entry: CacheEntry, viewport: CacheViewport): boolean {
+	#isEntryProtectedByViewport(
+		entry: CacheEntry,
+		viewport: CacheViewport,
+	): boolean {
 		return this.#distanceFromViewport(entry, viewport) === 0;
 	}
 
 	#compareValues(left: unknown, right: unknown): number {
 		const normalizedLeft = left instanceof Date ? left.getTime() : left;
 		const normalizedRight = right instanceof Date ? right.getTime() : right;
-		if (typeof normalizedLeft === "number" && typeof normalizedRight === "number") {
+		if (
+			typeof normalizedLeft === "number" &&
+			typeof normalizedRight === "number"
+		) {
 			if (normalizedLeft === normalizedRight) return 0;
 			return normalizedLeft < normalizedRight ? -1 : 1;
 		}

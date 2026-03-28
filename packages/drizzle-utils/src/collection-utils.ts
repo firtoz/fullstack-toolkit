@@ -250,7 +250,7 @@ export function createCollectionConfig<
 	TSchema extends v.GenericSchema<unknown>,
 >(config: {
 	schema: TSchema;
-	getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => string;
+	getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => IdOf<TTable>;
 	syncResult: SyncFunctionResult<TTable>;
 	onInsert?: CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
@@ -289,5 +289,10 @@ export function createCollectionConfig<
 		utils: CollectionUtils<TItem>;
 	};
 
-	return createGenericCollectionConfig<TItem, TSchema>(config) as ReturnType;
+	const { getKey: getId, ...rest } = config;
+	return createGenericCollectionConfig<TItem, TSchema>({
+		...rest,
+		// Generic sync is typed with string keys; runtime id may be number — same value as Drizzle row id.
+		getKey: (item: TItem) => getId(item) as string,
+	}) as ReturnType;
 }

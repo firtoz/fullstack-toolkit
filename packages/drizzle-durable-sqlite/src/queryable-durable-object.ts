@@ -10,7 +10,11 @@ import {
 	type SyncServerMessage,
 } from "@firtoz/collection-sync";
 import type { SyncMessage } from "@firtoz/db-helpers";
-import { ZodSession, ZodWebSocketDO, type ZodSessionOptions } from "@firtoz/websocket-do";
+import {
+	ZodSession,
+	ZodWebSocketDO,
+	type ZodSessionOptions,
+} from "@firtoz/websocket-do";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import type { Context } from "hono";
@@ -81,7 +85,9 @@ class QueryableSession<
 	}
 }
 
-export type QueryableDurableObjectConfig<TSchema extends Record<string, unknown>> = {
+export type QueryableDurableObjectConfig<
+	TSchema extends Record<string, unknown>,
+> = {
 	schema: TSchema;
 	migrations: Parameters<typeof migrate>[1];
 	queryChunkSize?: number;
@@ -95,7 +101,12 @@ export abstract class QueryableDurableObject<
 	TSchema extends Record<string, unknown>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
 	// biome-ignore lint/suspicious/noExplicitAny: session generic is not exposed in subclass APIs.
-> extends ZodWebSocketDO<any, SyncClientMessage, SyncServerMessage<TRow>, TEnv> {
+> extends ZodWebSocketDO<
+	any,
+	SyncClientMessage,
+	SyncServerMessage<TRow>,
+	TEnv
+> {
 	protected db!: ReturnType<typeof drizzle>;
 	protected bridge!: PartialSyncServerBridge<TRow>;
 
@@ -109,7 +120,9 @@ export abstract class QueryableDurableObject<
 		let bridgeRef!: PartialSyncServerBridge<TRow>;
 		const bridgeSlot: BridgeSlot<TRow> = { pending: [] };
 		super(ctx, env, {
-			zodSessionOptions: (sessionCtx: Context<{ Bindings: TEnv }> | undefined) => {
+			zodSessionOptions: (
+				sessionCtx: Context<{ Bindings: TEnv }> | undefined,
+			) => {
 				const useMsgpack =
 					sessionCtx !== undefined &&
 					new URL(sessionCtx.req.url).searchParams.get("transport") ===
@@ -131,7 +144,10 @@ export abstract class QueryableDurableObject<
 				new QueryableSession<TRow, TEnv>(
 					websocket,
 					this.sessions as Map<WebSocket, QueryableSession<TRow, TEnv>>,
-					options as ZodSessionOptions<SyncClientMessage, SyncServerMessage<TRow>>,
+					options as ZodSessionOptions<
+						SyncClientMessage,
+						SyncServerMessage<TRow>
+					>,
 					bridgeSlot,
 				),
 		});
@@ -178,7 +194,8 @@ export abstract class QueryableDurableObject<
 			};
 			bridgeRef = new PartialSyncServerBridge<TRow>({
 				store,
-				sendToClient: (clientId, message) => this.sendToClient(clientId, message),
+				sendToClient: (clientId, message) =>
+					this.sendToClient(clientId, message),
 				queryChunkSize: config.queryChunkSize,
 			});
 			this.bridge = bridgeRef;
@@ -238,7 +255,10 @@ export abstract class QueryableDurableObject<
 		await this.bridge.pushServerChanges(changes);
 	}
 
-	protected sendToClient(clientId: string, message: SyncServerMessage<TRow>): void {
+	protected sendToClient(
+		clientId: string,
+		message: SyncServerMessage<TRow>,
+	): void {
 		for (const session of this.sessions.values()) {
 			const typedSession = session as QueryableSession<TRow, TEnv>;
 			if (typedSession.clientId !== clientId) continue;

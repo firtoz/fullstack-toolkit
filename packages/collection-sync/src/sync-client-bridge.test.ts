@@ -158,7 +158,9 @@ describe("SyncClientBridge", () => {
 			type: "syncBackfill",
 			mode: "snapshot",
 			serverVersion: 5,
-			changes: [{ type: "insert", value: { id: "1", title: "a", updatedAt: 1 } }],
+			changes: [
+				{ type: "insert", value: { id: "1", title: "a", updatedAt: 1 } },
+			],
 			chunkIndex: 0,
 			totalChunks: 2,
 		});
@@ -166,7 +168,9 @@ describe("SyncClientBridge", () => {
 			type: "syncBackfill",
 			mode: "snapshot",
 			serverVersion: 5,
-			changes: [{ type: "insert", value: { id: "2", title: "b", updatedAt: 2 } }],
+			changes: [
+				{ type: "insert", value: { id: "2", title: "b", updatedAt: 2 } },
+			],
 			chunkIndex: 1,
 			totalChunks: 2,
 		});
@@ -180,7 +184,10 @@ describe("SyncClientBridge", () => {
 		]);
 
 		const mutateBatchMessages = sent.filter(
-			(msg) => typeof msg === "object" && msg !== null && (msg as { type?: string }).type === "mutateBatch",
+			(msg) =>
+				typeof msg === "object" &&
+				msg !== null &&
+				(msg as { type?: string }).type === "mutateBatch",
 		);
 		expect(mutateBatchMessages.length).toBe(2);
 	});

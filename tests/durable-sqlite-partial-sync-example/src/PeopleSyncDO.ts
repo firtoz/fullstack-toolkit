@@ -140,19 +140,40 @@ export class PeopleSyncDO extends QueryableDurableObject<
 		const col = this.#columnRef(condition.column);
 		switch (condition.op) {
 			case "eq":
-				return eq(col, this.#coercePredicateScalar(condition.column, condition.value));
+				return eq(
+					col,
+					this.#coercePredicateScalar(condition.column, condition.value),
+				);
 			case "neq":
-				return ne(col, this.#coercePredicateScalar(condition.column, condition.value));
+				return ne(
+					col,
+					this.#coercePredicateScalar(condition.column, condition.value),
+				);
 			case "gt":
-				return gt(col, this.#coercePredicateScalar(condition.column, condition.value));
+				return gt(
+					col,
+					this.#coercePredicateScalar(condition.column, condition.value),
+				);
 			case "gte":
-				return gte(col, this.#coercePredicateScalar(condition.column, condition.value));
+				return gte(
+					col,
+					this.#coercePredicateScalar(condition.column, condition.value),
+				);
 			case "lt":
-				return lt(col, this.#coercePredicateScalar(condition.column, condition.value));
+				return lt(
+					col,
+					this.#coercePredicateScalar(condition.column, condition.value),
+				);
 			case "lte":
-				return lte(col, this.#coercePredicateScalar(condition.column, condition.value));
+				return lte(
+					col,
+					this.#coercePredicateScalar(condition.column, condition.value),
+				);
 			case "between": {
-				const from = this.#coercePredicateScalar(condition.column, condition.value);
+				const from = this.#coercePredicateScalar(
+					condition.column,
+					condition.value,
+				);
 				const to = this.#coercePredicateScalar(
 					condition.column,
 					condition.valueTo,
@@ -218,7 +239,10 @@ export class PeopleSyncDO extends QueryableDurableObject<
 		range: SyncRange;
 		sinceVersion: number;
 		chunkSize: number;
-	}): Promise<{ changes: SyncMessage<PersonRow>[]; totalCount: number } | null> {
+	}): Promise<{
+		changes: SyncMessage<PersonRow>[];
+		totalCount: number;
+	} | null> {
 		void options.range;
 		const totalCount = await this.getTotalCount();
 		const maxRow = await this.db

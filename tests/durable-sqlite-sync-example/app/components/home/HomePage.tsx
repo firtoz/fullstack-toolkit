@@ -34,7 +34,9 @@ export function HomePage() {
 
 	if (!isMounted) {
 		return (
-			<div style={{ maxWidth: 900, margin: "24px auto", fontFamily: "sans-serif" }}>
+			<div
+				style={{ maxWidth: 900, margin: "24px auto", fontFamily: "sans-serif" }}
+			>
 				<h1>Durable SQLite Sync TodoMVC</h1>
 				<p>Loading client sync view...</p>
 			</div>
@@ -42,13 +44,14 @@ export function HomePage() {
 	}
 
 	return (
-		<div style={{ maxWidth: 900, margin: "24px auto", fontFamily: "sans-serif" }}>
+		<div
+			style={{ maxWidth: 900, margin: "24px auto", fontFamily: "sans-serif" }}
+		>
 			<h1>Durable SQLite Sync TodoMVC</h1>
 			<p>Client writes are optimistic; server sends canonical sync changes.</p>
 			<p style={{ fontSize: 13, color: "#444" }}>
-				WebSocket transport:{" "}
-				<code>{wsTransport}</code> (use <code>?transport=msgpack</code> for binary
-				msgpack)
+				WebSocket transport: <code>{wsTransport}</code> (use{" "}
+				<code>?transport=msgpack</code> for binary msgpack)
 			</p>
 			<BackendSelector
 				backendMode={backendMode}

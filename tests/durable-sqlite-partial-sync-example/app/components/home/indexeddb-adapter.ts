@@ -36,7 +36,9 @@ export function createIndexedDbAdapter(roomId: string): {
 		set: async (key, value) => {
 			const db = await dbPromise;
 			const tx = db.transaction(INDEXEDDB_STORE_NAME, "readwrite");
-			await requestToPromise(tx.objectStore(INDEXEDDB_STORE_NAME).put(value, key));
+			await requestToPromise(
+				tx.objectStore(INDEXEDDB_STORE_NAME).put(value, key),
+			);
 		},
 		del: async (key) => {
 			const db = await dbPromise;

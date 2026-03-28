@@ -18,7 +18,9 @@ type InsertTestItem = (typeof schema.testItemsTable)["$inferInsert"];
  */
 export class SqliteSyncTestDO extends DurableObject<Env> {
 	private db!: DrizzleSqliteDODatabase<typeof schema>;
-	private collection!: DrizzleSqliteTableCollection<typeof schema.testItemsTable>;
+	private collection!: DrizzleSqliteTableCollection<
+		typeof schema.testItemsTable
+	>;
 	app = new Hono<{ Bindings: Env }>()
 		.post(
 			"/insert-via-collection",

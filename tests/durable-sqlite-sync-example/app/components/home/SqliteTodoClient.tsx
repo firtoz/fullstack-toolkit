@@ -1,4 +1,7 @@
-import { createSyncedSqliteCollection, useDrizzleSqliteDb } from "@firtoz/drizzle-sqlite-wasm";
+import {
+	createSyncedSqliteCollection,
+	useDrizzleSqliteDb,
+} from "@firtoz/drizzle-sqlite-wasm";
 import SqliteWorker from "@firtoz/drizzle-sqlite-wasm/worker/sqlite.worker?worker";
 import { useMemo } from "react";
 import migrations from "../../../drizzle/migrations";

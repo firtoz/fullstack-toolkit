@@ -37,7 +37,9 @@ export function PeopleVirtualList({
 	onScrollSettled,
 }: Props) {
 	const parentRef = useRef<HTMLDivElement | null>(null);
-	const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+		undefined,
+	);
 	const rowVirtualizer = useVirtualizer({
 		count: Math.max(totalCount, rows.length),
 		getScrollElement: () => parentRef.current,
@@ -107,7 +109,12 @@ export function PeopleVirtualList({
 		<div
 			ref={parentRef}
 			onScroll={maybeLoadMore}
-			style={{ height: 520, overflow: "auto", border: "1px solid #ddd", marginTop: 12 }}
+			style={{
+				height: 520,
+				overflow: "auto",
+				border: "1px solid #ddd",
+				marginTop: 12,
+			}}
 		>
 			<div
 				style={{

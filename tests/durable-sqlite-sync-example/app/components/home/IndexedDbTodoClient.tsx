@@ -21,7 +21,11 @@ type Props = {
 	wsTransport: WsTransport;
 };
 
-export function IndexedDbTodoClient({ roomId, showDeleted, wsTransport }: Props) {
+export function IndexedDbTodoClient({
+	roomId,
+	showDeleted,
+	wsTransport,
+}: Props) {
 	const { collection, bridge, setTransportSend } = useMemo(() => {
 		const { adapter, readyPromise } = createIndexedDbAdapter(roomId);
 		return createSyncedCollection(

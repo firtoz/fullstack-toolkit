@@ -1,12 +1,4 @@
 import {
-	CacheManager,
-	PartialSyncClientBridge,
-	type PartialSyncState,
-	type RangeCondition,
-	type RangeFingerprint,
-} from "@firtoz/collection-sync";
-import type { SyncMessage } from "@firtoz/db-helpers";
-import {
 	useCallback,
 	useEffect,
 	useLayoutEffect,
@@ -14,39 +6,55 @@ import {
 	useRef,
 	useState,
 } from "react";
-import type { ViewportInfo } from "./PeopleVirtualList";
-import type { PeoplePartialSyncCollection, PersonRow, SortState } from "./types";
+import { CacheManager } from "../cache-manager";
+import { connectPartialSync } from "../connect-partial-sync";
+import { PartialSyncClientBridge } from "../partial-sync-client-bridge";
+import type { PartialSyncState } from "../partial-sync-client-bridge";
+import type { RangeFingerprint, SyncClientMessage } from "../sync-protocol";
 import {
+	DEFAULT_PAGE_LIMIT,
+	DEFAULT_SEEK_COOLDOWN_MS,
+	DEFAULT_SEEK_ROW_GAP,
+} from "./constants";
+import {
+	assertSyncUtils,
 	computeFingerprintForIndexWindow,
-	matchesPredicate,
-	parsePersonRow,
+	defaultPartialSyncVersionMs,
 	tryIdsForIndexWindow,
-} from "./partial-sync-window-utils";
+} from "./partial-sync-utils";
+import type {
+	PartialSyncItem,
+	UsePartialSyncWindowOptions,
+	UsePartialSyncWindowResult,
+	ViewportInfo,
+} from "./types";
 
-const PAGE_LIMIT = 50;
-export const SEEK_ROW_GAP = 80;
-export const SEEK_COOLDOWN_MS = 200;
+export {
+	DEFAULT_PAGE_LIMIT,
+	DEFAULT_SEEK_COOLDOWN_MS,
+	DEFAULT_SEEK_ROW_GAP,
+} from "./constants";
 
-type UsePartialSyncWindowOptions = {
-	collection: PeoplePartialSyncCollection;
-	sort: SortState;
-};
-
-function peopleSyncUtils(collection: PeoplePartialSyncCollection) {
-	return collection.utils as {
-		receiveSync: (messages: SyncMessage<PersonRow>[]) => Promise<void>;
-		truncate: () => Promise<void>;
-	};
-}
-
-function cursorFromRow(row: PersonRow, sort: SortState): unknown {
-	return sort.column === "age" ? row.age : row.name;
-}
-
-export function usePartialSyncWindow({
+export function usePartialSyncWindow<
+	TItem extends PartialSyncItem,
+	TSortColumn extends keyof TItem & string,
+>({
 	collection,
 	sort,
-}: UsePartialSyncWindowOptions) {
+	getSortValue,
+	wsUrl,
+	wsTransport = "json",
+	serializeJson = JSON.stringify,
+	deserializeJson = JSON.parse,
+	getVersionMs = defaultPartialSyncVersionMs,
+	getSortPositions,
+	pageLimit = DEFAULT_PAGE_LIMIT,
+	seekRowGap = DEFAULT_SEEK_ROW_GAP,
+	seekCooldownMs = DEFAULT_SEEK_COOLDOWN_MS,
+}: UsePartialSyncWindowOptions<
+	TItem,
+	TSortColumn
+>): UsePartialSyncWindowResult<TItem> {
 	const [windowStartIndex, setWindowStartIndex] = useState(0);
 	const [totalCount, setTotalCount] = useState(0);
 	const [nextCursor, setNextCursor] = useState<unknown | null>(null);
@@ -66,8 +74,8 @@ export function usePartialSyncWindow({
 	const [collectionVersion, setCollectionVersion] = useState(0);
 	const [indexMapVersion, setIndexMapVersion] = useState(0);
 
-	const globalIndexMapRef = useRef<Map<number, PersonRow["id"]>>(new Map());
-	const denseRowsRef = useRef<PersonRow[]>([]);
+	const globalIndexMapRef = useRef(new Map<number, TItem["id"]>());
+	const denseRowsRef = useRef<TItem[]>([]);
 	const windowStartRef = useRef(windowStartIndex);
 	windowStartRef.current = windowStartIndex;
 	const sortRef = useRef(sort);
@@ -77,15 +85,30 @@ export function usePartialSyncWindow({
 	const fetchGenRef = useRef(0);
 	const seekCooldownUntilRef = useRef(0);
 
+	const getSortValueRef = useRef(getSortValue);
+	getSortValueRef.current = getSortValue;
+	const getSortPositionsRef = useRef(getSortPositions);
+	getSortPositionsRef.current = getSortPositions;
+	const getVersionMsRef = useRef(getVersionMs);
+	getVersionMsRef.current = getVersionMs;
+
 	const bumpIndexMap = useCallback(() => {
 		setIndexMapVersion((v) => v + 1);
 	}, []);
 
+	const syncUtils = useMemo(
+		() => assertSyncUtils<TItem>(collection.utils),
+		[collection],
+	);
+
 	const cacheManager = useMemo(
 		() =>
-			new CacheManager<PersonRow>({
+			new CacheManager<TItem>({
 				getStorageEstimate: async () => {
-					if (typeof navigator === "undefined" || !navigator.storage?.estimate) {
+					if (
+						typeof navigator === "undefined" ||
+						!navigator.storage?.estimate
+					) {
 						const usageBytes = 0;
 						const quotaBytes = 50 * 1024 * 1024;
 						return {
@@ -111,22 +134,21 @@ export function usePartialSyncWindow({
 						}
 					}
 					bumpIndexMap();
-					await peopleSyncUtils(collection).receiveSync(
+					await syncUtils.receiveSync(
 						keys.map((key) => ({ type: "delete", key }) as const),
 					);
 				},
 			}),
-		[collection, bumpIndexMap],
+		[syncUtils, bumpIndexMap],
 	);
 
 	const bridge = useMemo(
 		() =>
-			new PartialSyncClientBridge<PersonRow>({
+			new PartialSyncClientBridge<TItem>({
 				clientId: crypto.randomUUID(),
 				collection: {
 					utils: {
-						receiveSync: (messages) =>
-							peopleSyncUtils(collection).receiveSync(messages),
+						receiveSync: (messages) => syncUtils.receiveSync(messages),
 					},
 				},
 				send: () => {},
@@ -134,24 +156,31 @@ export function usePartialSyncWindow({
 				beforeApplyRows: async (incomingRows) => {
 					const sortNow = sortRef.current;
 					const rowsNow = denseRowsRef.current;
-					cacheManager.recordFetchedRows(incomingRows, (row) => ({
-						name: row.name,
-						age: row.age,
-					}));
+					const sortPos = getSortPositionsRef.current;
+					const gsv = getSortValueRef.current;
+					cacheManager.recordFetchedRows(incomingRows, (row) =>
+						sortPos !== undefined
+							? sortPos(row)
+							: {
+									[sortNow.column]: gsv(row, sortNow.column),
+								},
+					);
+					const firstRow = rowsNow[0] ?? incomingRows[0];
+					const lastRow =
+						rowsNow[rowsNow.length - 1] ??
+						incomingRows[incomingRows.length - 1];
 					const result = await cacheManager.evictIfNeeded({
-						sortColumn: sortNow.column,
+						sortColumn: sortNow.column as string,
 						sortDirection: sortNow.direction,
 						fromValue:
-							rowsNow[0]?.[sortNow.column] ??
-							incomingRows[0]?.[sortNow.column] ??
-							"",
-						toValue:
-							rowsNow[rowsNow.length - 1]?.[sortNow.column] ??
-							incomingRows[incomingRows.length - 1]?.[sortNow.column] ??
-							"",
+							firstRow !== undefined ? gsv(firstRow, sortNow.column) : "",
+						toValue: lastRow !== undefined ? gsv(lastRow, sortNow.column) : "",
 					});
 					setBridgeState((previous) => {
-						if (previous.status === "partial" || previous.status === "realtime") {
+						if (
+							previous.status === "partial" ||
+							previous.status === "realtime"
+						) {
 							return {
 								...previous,
 								cacheUtilization: result.estimate.utilizationRatio,
@@ -161,8 +190,23 @@ export function usePartialSyncWindow({
 					});
 				},
 			}),
-		[cacheManager, collection],
+		[cacheManager, syncUtils],
 	);
+
+	useLayoutEffect(() => {
+		const disconnect = connectPartialSync(bridge, {
+			url: wsUrl,
+			transport: wsTransport,
+			setTransportSend: (send) => {
+				bridge.setSend((message: SyncClientMessage) => send(message));
+			},
+			serializeJson,
+			deserializeJson,
+		});
+		return () => {
+			disconnect();
+		};
+	}, [bridge, deserializeJson, serializeJson, wsTransport, wsUrl]);
 
 	useEffect(() => {
 		const sub = collection.subscribeChanges(() => {
@@ -177,11 +221,11 @@ export function usePartialSyncWindow({
 		void collectionVersion;
 		void indexMapVersion;
 		const start = windowStartIndex;
-		const out: PersonRow[] = [];
+		const out: TItem[] = [];
 		for (let i = 0; ; i += 1) {
 			const id = globalIndexMapRef.current.get(start + i);
 			if (id === undefined) break;
-			const row = parsePersonRow(collection.get(id));
+			const row = collection.get(id);
 			if (row === undefined) break;
 			out.push(row);
 		}
@@ -195,7 +239,7 @@ export function usePartialSyncWindow({
 	}, [rows]);
 
 	const recordIdsAtOffset = useCallback(
-		(offset: number, fetchedRows: PersonRow[]) => {
+		(offset: number, fetchedRows: TItem[]) => {
 			for (let i = 0; i < fetchedRows.length; i += 1) {
 				globalIndexMapRef.current.set(offset + i, fetchedRows[i].id);
 			}
@@ -212,8 +256,8 @@ export function usePartialSyncWindow({
 			const result = await bridge.requestRangeQuery({
 				kind: "index",
 				mode: "cursor",
-				sort: sortRef.current,
-				limit: PAGE_LIMIT,
+				sort: sortRef.current as { column: string; direction: "asc" | "desc" },
+				limit: pageLimit,
 				afterCursor: nextCursor,
 			});
 			if (gen !== fetchGenRef.current) return;
@@ -222,8 +266,11 @@ export function usePartialSyncWindow({
 				const again = await bridge.requestRangeQuery({
 					kind: "index",
 					mode: "cursor",
-					sort: sortRef.current,
-					limit: PAGE_LIMIT,
+					sort: sortRef.current as {
+						column: string;
+						direction: "asc" | "desc";
+					},
+					limit: pageLimit,
 					afterCursor: nextCursor,
 				});
 				if (gen !== fetchGenRef.current) return;
@@ -233,7 +280,7 @@ export function usePartialSyncWindow({
 				);
 				setTotalCount(again.totalCount);
 				setNextCursor(again.lastCursor);
-				setHasMore(again.rows.length === PAGE_LIMIT);
+				setHasMore(again.rows.length === pageLimit);
 				return;
 			}
 
@@ -248,7 +295,7 @@ export function usePartialSyncWindow({
 			);
 			setTotalCount(result.totalCount);
 			setNextCursor(result.lastCursor);
-			setHasMore(result.rows.length === PAGE_LIMIT);
+			setHasMore(result.rows.length === pageLimit);
 		} catch (error: unknown) {
 			if (
 				error !== null &&
@@ -264,13 +311,10 @@ export function usePartialSyncWindow({
 				setLoading(false);
 			}
 		}
-	}, [bridge, hasMore, loading, nextCursor, recordIdsAtOffset]);
+	}, [bridge, hasMore, loading, nextCursor, pageLimit, recordIdsAtOffset]);
 
 	const seekToViewport = useCallback(
-		(
-			firstVisibleIndex: number,
-			options?: { scrollSettled?: boolean },
-		) => {
+		(firstVisibleIndex: number, options?: { scrollSettled?: boolean }) => {
 			const offset = Math.max(0, firstVisibleIndex);
 			const loadedEndExclusive =
 				windowStartRef.current + denseRowsRef.current.length;
@@ -286,10 +330,10 @@ export function usePartialSyncWindow({
 			const now = Date.now();
 			if (!options?.scrollSettled) {
 				const needsCatchUpSeek =
-					firstVisibleIndex > loadedEndExclusive + SEEK_ROW_GAP;
+					firstVisibleIndex > loadedEndExclusive + seekRowGap;
 				if (!needsCatchUpSeek && now < seekCooldownUntilRef.current) return;
 			}
-			seekCooldownUntilRef.current = now + SEEK_COOLDOWN_MS;
+			seekCooldownUntilRef.current = now + seekCooldownMs;
 
 			setLastSeekMeta({
 				offset,
@@ -300,7 +344,7 @@ export function usePartialSyncWindow({
 			bridge.abortRangeRequests();
 
 			const want = Math.min(
-				PAGE_LIMIT,
+				pageLimit,
 				Math.max(0, totalCountRef.current - offset),
 			);
 			if (totalCountRef.current > 0 && want === 0) {
@@ -320,10 +364,11 @@ export function usePartialSyncWindow({
 			if (ids !== null) {
 				setWindowStartIndex(offset);
 				const lastId = ids[ids.length - 1];
+				const gsv = getSortValueRef.current;
 				const lastRow =
-					lastId !== undefined ? parsePersonRow(collection.get(lastId)) : undefined;
+					lastId !== undefined ? collection.get(lastId) : undefined;
 				setNextCursor(
-					lastRow !== undefined ? cursorFromRow(lastRow, sortRef.current) : null,
+					lastRow !== undefined ? gsv(lastRow, sortRef.current.column) : null,
 				);
 				setHasMore(offset + ids.length < totalCountRef.current);
 				setLoading(false);
@@ -338,6 +383,7 @@ export function usePartialSyncWindow({
 					globalIndexMapRef.current,
 					offset,
 					want,
+					(row) => getVersionMsRef.current(row),
 				);
 				if (fp !== undefined) {
 					fingerprint = fp;
@@ -354,8 +400,11 @@ export function usePartialSyncWindow({
 						{
 							kind: "index",
 							mode: "offset",
-							sort: sortRef.current,
-							limit: PAGE_LIMIT,
+							sort: sortRef.current as {
+								column: string;
+								direction: "asc" | "desc";
+							},
+							limit: pageLimit,
 							offset,
 						},
 						fingerprint,
@@ -364,17 +413,16 @@ export function usePartialSyncWindow({
 
 					if (result.upToDate) {
 						setTotalCount(result.totalCount);
-						setHasMore(offset + PAGE_LIMIT < result.totalCount);
+						setHasMore(offset + pageLimit < result.totalCount);
+						const gsv = getSortValueRef.current;
 						const lastId =
 							globalIndexMapRef.current.get(offset + want - 1) ??
-							globalIndexMapRef.current.get(offset + PAGE_LIMIT - 1);
+							globalIndexMapRef.current.get(offset + pageLimit - 1);
 						const lastRow =
-							lastId !== undefined
-								? parsePersonRow(collection.get(lastId))
-								: undefined;
+							lastId !== undefined ? collection.get(lastId) : undefined;
 						setNextCursor(
 							lastRow !== undefined
-								? cursorFromRow(lastRow, sortRef.current)
+								? gsv(lastRow, sortRef.current.column)
 								: null,
 						);
 						return;
@@ -384,8 +432,11 @@ export function usePartialSyncWindow({
 						result = await bridge.requestRangeQuery({
 							kind: "index",
 							mode: "offset",
-							sort: sortRef.current,
-							limit: PAGE_LIMIT,
+							sort: sortRef.current as {
+								column: string;
+								direction: "asc" | "desc";
+							},
+							limit: pageLimit,
 							offset,
 						});
 						if (gen !== fetchGenRef.current) return;
@@ -394,7 +445,7 @@ export function usePartialSyncWindow({
 					recordIdsAtOffset(offset, result.rows);
 					setTotalCount(result.totalCount);
 					setNextCursor(result.lastCursor);
-					setHasMore(result.rows.length === PAGE_LIMIT);
+					setHasMore(result.rows.length === pageLimit);
 				} catch (error: unknown) {
 					if (
 						error !== null &&
@@ -412,7 +463,15 @@ export function usePartialSyncWindow({
 				}
 			})();
 		},
-		[bridge, bumpIndexMap, collection, recordIdsAtOffset],
+		[
+			bridge,
+			bumpIndexMap,
+			collection,
+			pageLimit,
+			recordIdsAtOffset,
+			seekCooldownMs,
+			seekRowGap,
+		],
 	);
 
 	const seekAfterScrollSettled = useCallback(
@@ -422,6 +481,8 @@ export function usePartialSyncWindow({
 		[seekToViewport],
 	);
 
+	// Re-run when `collection` or `sort` identity changes (new backend / sort column).
+	// biome-ignore lint/correctness/useExhaustiveDependencies: collection + sort intentionally reset the window
 	useEffect(() => {
 		fetchGenRef.current += 1;
 		bridge.abortRangeRequests();
@@ -433,9 +494,9 @@ export function usePartialSyncWindow({
 		setLastSeekMeta(null);
 		globalIndexMapRef.current.clear();
 		bumpIndexMap();
-		void peopleSyncUtils(collection).truncate();
+		void syncUtils.truncate();
 		cacheManager.clear();
-	}, [bridge, bumpIndexMap, cacheManager, collection, sort]);
+	}, [bridge, bumpIndexMap, cacheManager, collection, sort, syncUtils]);
 
 	useEffect(() => {
 		if (rows.length === 0 && !loading && hasMore) {
@@ -460,51 +521,3 @@ export function usePartialSyncWindow({
 		lastSeekMeta,
 	};
 }
-
-/**
- * Client-side predicate filter over the collection (e.g. spatial / MMO-style ranges).
- * Combine with {@link PartialSyncClientBridge.requestRangeQuery} using `kind: "predicate"` to hydrate from the server.
- */
-export function usePredicateFilteredRows(
-	collection: PeoplePartialSyncCollection,
-	conditions: RangeCondition[],
-	sort: SortState,
-	limit: number = PAGE_LIMIT,
-): PersonRow[] {
-	const [collectionVersion, setCollectionVersion] = useState(0);
-	useEffect(() => {
-		const sub = collection.subscribeChanges(() => {
-			setCollectionVersion((v) => v + 1);
-		});
-		return () => {
-			sub.unsubscribe();
-		};
-	}, [collection]);
-	return useMemo(() => {
-		void collectionVersion;
-		const out: PersonRow[] = [];
-		for (const [, raw] of collection.entries()) {
-			const row = parsePersonRow(raw);
-			if (row !== undefined && matchesPredicate(row, conditions)) {
-				out.push(row);
-			}
-		}
-		out.sort((a, b) => {
-			const av = sort.column === "age" ? a.age : a.name;
-			const bv = sort.column === "age" ? b.age : b.name;
-			const cmp =
-				typeof av === "number" && typeof bv === "number"
-					? av === bv
-						? 0
-						: av < bv
-							? -1
-							: 1
-					: String(av).localeCompare(String(bv));
-			return sort.direction === "asc" ? cmp : -cmp;
-		});
-		return out.slice(0, limit);
-	}, [collection, collectionVersion, conditions, limit, sort]);
-}
-
-export { matchesPredicate } from "./partial-sync-window-utils";
-

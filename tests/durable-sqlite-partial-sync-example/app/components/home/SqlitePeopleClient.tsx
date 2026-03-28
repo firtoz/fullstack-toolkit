@@ -7,8 +7,9 @@ import { createCollection } from "@tanstack/db";
 import { useMemo } from "react";
 import migrations from "../../../drizzle/migrations";
 import * as schema from "../../../src/schema";
+import type { PartialSyncCollection } from "@firtoz/collection-sync/react";
 import { PeoplePartialSyncClient } from "./PeoplePartialSyncClient";
-import type { WsTransport } from "./types";
+import type { PersonRow, WsTransport } from "./types";
 
 type Props = {
 	roomId: string;
@@ -37,7 +38,7 @@ export function SqlitePeopleClient({ roomId, wsTransport }: Props) {
 
 	return (
 		<PeoplePartialSyncClient
-			collection={collection}
+			collection={collection as PartialSyncCollection<PersonRow>}
 			roomId={roomId}
 			wsTransport={wsTransport}
 			label="sqlite-wasm"

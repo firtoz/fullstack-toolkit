@@ -37,17 +37,32 @@ export function SyncStatusBar({ state, totalCount, cachedCount }: Props) {
 			? state.cacheUtilization
 			: 0;
 	return (
-		<div style={{ marginTop: 12, padding: 8, background: "#f3f3f3", borderRadius: 6 }}>
+		<div
+			style={{
+				marginTop: 12,
+				padding: 8,
+				background: "#f3f3f3",
+				borderRadius: 6,
+			}}
+		>
 			<div>{describeState(state)}</div>
 			<div style={{ fontSize: 12, marginTop: 4 }}>
-				Cached rows: {cachedCount.toLocaleString()} / {totalCount.toLocaleString()}
+				Cached rows: {cachedCount.toLocaleString()} /{" "}
+				{totalCount.toLocaleString()}
 			</div>
-			<div style={{ marginTop: 6, height: 8, background: "#ddd", borderRadius: 4 }}>
+			<div
+				style={{ marginTop: 6, height: 8, background: "#ddd", borderRadius: 4 }}
+			>
 				<div
 					style={{
 						width: `${Math.min(100, Math.max(0, utilization * 100))}%`,
 						height: "100%",
-						background: utilization > 0.85 ? "#e44" : utilization > 0.7 ? "#e5a100" : "#2a8f45",
+						background:
+							utilization > 0.85
+								? "#e44"
+								: utilization > 0.7
+									? "#e5a100"
+									: "#2a8f45",
 						borderRadius: 4,
 					}}
 				/>

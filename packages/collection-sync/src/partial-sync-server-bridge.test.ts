@@ -10,8 +10,7 @@ describe("PartialSyncServerBridge", () => {
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
 				getTotalCount: async () => 3,
-				getSortValue: (row, column) =>
-					column === "age" ? row.age : row.name,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [
 						{ id: "1", name: "aaaaa", age: 20 },
@@ -133,8 +132,7 @@ describe("PartialSyncServerBridge", () => {
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
 				getTotalCount: async () => 100,
-				getSortValue: (row, column) =>
-					column === "age" ? row.age : row.name,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [];
 				},
@@ -191,8 +189,7 @@ describe("PartialSyncServerBridge", () => {
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
 				getTotalCount: async () => 10,
-				getSortValue: (row, column) =>
-					column === "age" ? row.age : row.name,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [];
 				},
@@ -229,8 +226,7 @@ describe("PartialSyncServerBridge", () => {
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
 				getTotalCount: async () => 11,
-				getSortValue: (row, column) =>
-					column === "age" ? row.age : row.name,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [];
 				},
@@ -286,8 +282,7 @@ describe("PartialSyncServerBridge", () => {
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
 				getTotalCount: async () => 100,
-				getSortValue: (row, column) =>
-					column === "age" ? row.age : row.name,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [];
 				},
@@ -330,8 +325,7 @@ describe("PartialSyncServerBridge", () => {
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
 				getTotalCount: async () => 3,
-				getSortValue: (row, column) =>
-					column === "age" ? row.age : row.name,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [];
 				},

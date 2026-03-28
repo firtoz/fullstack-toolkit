@@ -16,12 +16,16 @@ import {
  * reconnect works. Omit `syncOptions` (or omit `syncStateKey`) for in-memory collections that need a
  * full snapshot every load — see the module doc on {@link withSync} / `with-sync.ts`.
  */
-export function createSyncedCollection<TConfig extends AnyWithSyncableCollectionConfig>(
-	baseOptions: TConfig,
-	syncOptions?: WithSyncOptions,
-) {
+export function createSyncedCollection<
+	TConfig extends AnyWithSyncableCollectionConfig,
+>(baseOptions: TConfig, syncOptions?: WithSyncOptions) {
 	type TItem = InferItemFromCollectionOptions<TConfig>;
-	const { options, bridge, setTransportSend } = withSync(baseOptions, syncOptions);
-	const collection = createCollection(options as never) as unknown as Collection<TItem>;
+	const { options, bridge, setTransportSend } = withSync(
+		baseOptions,
+		syncOptions,
+	);
+	const collection = createCollection(
+		options as never,
+	) as unknown as Collection<TItem>;
 	return { collection, bridge, setTransportSend };
 }

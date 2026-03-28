@@ -3,7 +3,10 @@ import superjson from "superjson";
 import migrations from "../drizzle/migrations.js";
 import * as schema from "./schema";
 
-export class TodoSyncDO extends SyncableDurableObject<typeof schema, "todosTable"> {
+export class TodoSyncDO extends SyncableDurableObject<
+	typeof schema,
+	"todosTable"
+> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
 			schema,

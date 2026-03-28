@@ -110,9 +110,18 @@ export abstract class SyncableDurableObject<
 	TTableName extends ValidTableNames<TSchema>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
 	// biome-ignore lint/suspicious/noExplicitAny: ZodWebSocketDO session generic is internal; row type is TBridgeRow in constructor.
-> extends ZodWebSocketDO<any, SyncClientMessage, SyncServerMessage<unknown>, TEnv> {
+> extends ZodWebSocketDO<
+	any,
+	SyncClientMessage,
+	SyncServerMessage<unknown>,
+	TEnv
+> {
 	protected bridge!: SyncServerBridge<
-		BridgeRow<InferSchemaOutput<SelectSchema<TSchema[TTableName] & TableWithRequiredFields>>>
+		BridgeRow<
+			InferSchemaOutput<
+				SelectSchema<TSchema[TTableName] & TableWithRequiredFields>
+			>
+		>
 	>;
 
 	protected collection!: DrizzleSqliteTableCollection<
@@ -133,7 +142,9 @@ export abstract class SyncableDurableObject<
 		let bridgeRef!: SyncServerBridge<TBridgeRow>;
 
 		super(ctx, env, {
-			zodSessionOptions: (sessionCtx: Context<{ Bindings: TEnv }> | undefined) => {
+			zodSessionOptions: (
+				sessionCtx: Context<{ Bindings: TEnv }> | undefined,
+			) => {
 				const useMsgpack =
 					sessionCtx !== undefined &&
 					new URL(sessionCtx.req.url).searchParams.get("transport") ===
@@ -185,7 +196,9 @@ export abstract class SyncableDurableObject<
 					key: string | number,
 					fn: (draft: unknown) => void,
 				) => { isPersisted: { promise: Promise<void> } };
-				delete: (key: string | number) => { isPersisted: { promise: Promise<void> } };
+				delete: (key: string | number) => {
+					isPersisted: { promise: Promise<void> };
+				};
 				utils: { truncate: () => Promise<void> };
 				toArray: unknown[];
 				state: { get: (key: string | number) => unknown | undefined };
@@ -233,7 +246,10 @@ export abstract class SyncableDurableObject<
 						return col.state.get(key) as TBridgeRow | undefined;
 					},
 				},
-				sendToClient: (clientId: string, message: SyncServerMessage<TBridgeRow>) => {
+				sendToClient: (
+					clientId: string,
+					message: SyncServerMessage<TBridgeRow>,
+				) => {
 					for (const session of this.sessions.values()) {
 						const s = session as SyncTableSession<TBridgeRow, TEnv>;
 						if (s.clientId === clientId) {

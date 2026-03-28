@@ -17,10 +17,10 @@ describe("CacheManager", () => {
 			},
 		});
 
-		cache.recordFetchedRows(
-			[{ id: "1", name: "aaaaa", age: 20 }],
-			(row) => ({ name: row.name, age: row.age }),
-		);
+		cache.recordFetchedRows([{ id: "1", name: "aaaaa", age: 20 }], (row) => ({
+			name: row.name,
+			age: row.age,
+		}));
 		const result = await cache.evictIfNeeded({
 			sortColumn: "name",
 			sortDirection: "asc",

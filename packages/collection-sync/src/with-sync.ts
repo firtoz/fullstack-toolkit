@@ -1,6 +1,10 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { CollectionConfig, NonSingleResult, UtilsRecord } from "@tanstack/db";
+import type {
+	CollectionConfig,
+	NonSingleResult,
+	UtilsRecord,
+} from "@tanstack/db";
 import { SyncClientBridge } from "./sync-client-bridge";
 import type { SyncClientMessage } from "./sync-protocol";
 
@@ -56,13 +60,17 @@ export type WithSyncOptions = {
 
 /** Returns `globalThis.localStorage` when it looks usable; otherwise `null`. */
 export function getBrowserLocalStorageSyncStateStorage(): SyncStateStorage | null {
-	const g = globalThis as typeof globalThis & { localStorage?: SyncStateStorage };
+	const g = globalThis as typeof globalThis & {
+		localStorage?: SyncStateStorage;
+	};
 	const ls = g.localStorage;
 	if (!ls || typeof ls.getItem !== "function") return null;
 	return ls;
 }
 
-function resolveSyncStateStorage(syncOptions: WithSyncOptions | undefined): SyncStateStorage | null {
+function resolveSyncStateStorage(
+	syncOptions: WithSyncOptions | undefined,
+): SyncStateStorage | null {
 	if (typeof syncOptions?.syncStateKey !== "string") return null;
 	if (syncOptions.syncStateStorage !== undefined) {
 		return syncOptions.syncStateStorage;

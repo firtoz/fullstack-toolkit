@@ -12,6 +12,11 @@
 			"import": "./src/index.ts",
 			"require": "./src/index.ts"
 		},
+		"./react": {
+			"types": "./src/react/index.ts",
+			"import": "./src/react/index.ts",
+			"require": "./src/react/index.ts"
+		},
 		"./*": {
 			"types": "./src/*.ts",
 			"import": "./src/*.ts",
@@ -61,12 +66,15 @@
 	"peerDependencies": {
 		"@firtoz/websocket-do": "workspace:*",
 		"@standard-schema/spec": ">=1.1.0",
-		"@tanstack/db": ">=0.5.33"
+		"@tanstack/db": ">=0.5.33",
+		"react": ">=18.0.0"
 	},
 	"devDependencies": {
 		"@firtoz/websocket-do": "workspace:*",
 		"@standard-schema/spec": "catalog:",
 		"@tanstack/db": "catalog:",
+		"@types/react": "catalog:",
+		"react": "catalog:",
 		"typescript": "catalog:"
 	}
 }

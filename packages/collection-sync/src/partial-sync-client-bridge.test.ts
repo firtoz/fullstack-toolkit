@@ -77,7 +77,11 @@ describe("PartialSyncClientBridge", () => {
 		});
 
 		bridge.setConnected(true);
-		const p1 = bridge.requestRange({ column: "name", direction: "asc" }, 2, null);
+		const p1 = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			2,
+			null,
+		);
 		const id1 = (sent[0] as { requestId: string }).requestId;
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
@@ -94,7 +98,11 @@ describe("PartialSyncClientBridge", () => {
 		});
 		await p1;
 
-		const p2 = bridge.requestRange({ column: "name", direction: "asc" }, 2, "b");
+		const p2 = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			2,
+			"b",
+		);
 		const id2 = (sent[1] as { requestId: string }).requestId;
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
