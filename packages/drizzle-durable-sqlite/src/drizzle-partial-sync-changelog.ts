@@ -4,16 +4,17 @@ import type { PartialSyncSqliteDatabase } from "./partial-sync-sqlite-db";
 
 export type ChangelogOperation = "insert" | "update" | "delete";
 
-export type DrizzleChangelogHelperOptions<TSchema extends Record<string, unknown>> =
-	{
-		db: PartialSyncSqliteDatabase<TSchema>;
-		changelogTable: SQLiteTable;
-		serializeJson: (value: unknown) => string;
-	};
+export type DrizzleChangelogHelperOptions<
+	TSchema extends Record<string, unknown>,
+> = {
+	db: PartialSyncSqliteDatabase<TSchema>;
+	changelogTable: SQLiteTable;
+	serializeJson: (value: unknown) => string;
+};
 
-export function createDrizzleChangelogHelper<TSchema extends Record<string, unknown>>(
-	options: DrizzleChangelogHelperOptions<TSchema>,
-) {
+export function createDrizzleChangelogHelper<
+	TSchema extends Record<string, unknown>,
+>(options: DrizzleChangelogHelperOptions<TSchema>) {
 	const cols = getTableColumns(options.changelogTable);
 	const rowIdCol = cols.rowId;
 	const operationCol = cols.operation;
@@ -35,17 +36,15 @@ export function createDrizzleChangelogHelper<TSchema extends Record<string, unkn
 			payload: unknown,
 		): Promise<void> => {
 			const version = new Date();
-			await options.db
-				.insert(options.changelogTable)
-				.values({
-					rowId,
-					operation,
-					version,
-					payloadJson:
-						payload === null || payload === undefined
-							? null
-							: options.serializeJson(payload),
-				} as Record<string, unknown>);
+			await options.db.insert(options.changelogTable).values({
+				rowId,
+				operation,
+				version,
+				payloadJson:
+					payload === null || payload === undefined
+						? null
+						: options.serializeJson(payload),
+			} as Record<string, unknown>);
 		},
 
 		selectAfterVersion: async (sinceVersionMs: number) => {

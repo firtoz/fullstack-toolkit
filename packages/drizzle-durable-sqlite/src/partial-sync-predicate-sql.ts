@@ -78,19 +78,41 @@ export function rangeConditionToSQL(
 	const col = columnRefForPredicate(table, condition.column, columnConfig);
 	switch (condition.op) {
 		case "eq":
-			return eq(col, coercePredicateScalar(condition.column, condition.value, columnConfig));
+			return eq(
+				col,
+				coercePredicateScalar(condition.column, condition.value, columnConfig),
+			);
 		case "neq":
-			return ne(col, coercePredicateScalar(condition.column, condition.value, columnConfig));
+			return ne(
+				col,
+				coercePredicateScalar(condition.column, condition.value, columnConfig),
+			);
 		case "gt":
-			return gt(col, coercePredicateScalar(condition.column, condition.value, columnConfig));
+			return gt(
+				col,
+				coercePredicateScalar(condition.column, condition.value, columnConfig),
+			);
 		case "gte":
-			return gte(col, coercePredicateScalar(condition.column, condition.value, columnConfig));
+			return gte(
+				col,
+				coercePredicateScalar(condition.column, condition.value, columnConfig),
+			);
 		case "lt":
-			return lt(col, coercePredicateScalar(condition.column, condition.value, columnConfig));
+			return lt(
+				col,
+				coercePredicateScalar(condition.column, condition.value, columnConfig),
+			);
 		case "lte":
-			return lte(col, coercePredicateScalar(condition.column, condition.value, columnConfig));
+			return lte(
+				col,
+				coercePredicateScalar(condition.column, condition.value, columnConfig),
+			);
 		case "between": {
-			const from = coercePredicateScalar(condition.column, condition.value, columnConfig);
+			const from = coercePredicateScalar(
+				condition.column,
+				condition.value,
+				columnConfig,
+			);
 			const to = coercePredicateScalar(
 				condition.column,
 				condition.valueTo,
@@ -109,7 +131,9 @@ export function predicateWhereFromConditions(
 	columnConfig: PartialSyncTableConfig,
 ): SQL | undefined {
 	if (conditions.length === 0) return undefined;
-	const parts = conditions.map((c) => rangeConditionToSQL(table, c, columnConfig));
+	const parts = conditions.map((c) =>
+		rangeConditionToSQL(table, c, columnConfig),
+	);
 	return parts.length === 1 ? parts[0] : (and(...parts) as SQL);
 }
 

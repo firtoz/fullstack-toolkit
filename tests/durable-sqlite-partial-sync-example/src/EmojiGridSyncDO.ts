@@ -7,11 +7,13 @@ import {
 	QueryableDurableObject,
 } from "@firtoz/drizzle-durable-sqlite";
 import type { SyncMessage } from "@firtoz/db-helpers";
+import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { count, eq } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import superjson from "superjson";
 import emojiMigrations from "../drizzle-emoji/migrations.js";
+import { demoRandomizeVisibleJsonSchema } from "./demo-randomize-visible-schema";
 import * as schema from "./emoji-grid-schema";
 import { EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID } from "./partial-sync-collection-ids";
 
@@ -75,16 +77,16 @@ export class EmojiGridSyncDO extends QueryableDurableObject<
 > {
 	override readonly app = this.getBaseApp()
 		.get("/health", (c: Context) => c.text("ok"))
-		.post("/demo/randomize-visible", async (c: Context) => {
-			const body = (await c.req.json().catch(() => ({}))) as {
-				rowIds?: unknown;
-			};
-			const rowIds = (Array.isArray(body.rowIds) ? body.rowIds : [])
-				.filter((id): id is string => typeof id === "string")
-				.slice(0, 5);
-			await this.randomizeVisibleEmojiRows(rowIds);
-			return c.json({ ok: true as const, updated: rowIds.length });
-		});
+		.post(
+			"/demo/randomize-visible",
+			zValidator("json", demoRandomizeVisibleJsonSchema),
+			async (c) => {
+				const { rowIds } = c.req.valid("json");
+				const ids = (rowIds ?? []).slice(0, 5);
+				await this.randomizeVisibleEmojiRows(ids);
+				return c.json({ ok: true as const, updated: ids.length });
+			},
+		);
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
@@ -209,7 +211,9 @@ export class EmojiGridSyncDO extends QueryableDurableObject<
 			chunks.push(toInsert.slice(i, i + ROWS_PER_INSERT));
 		}
 		await Promise.all(
-			chunks.map((slice) => this.db.insert(schema.emojiGridTable).values(slice)),
+			chunks.map((slice) =>
+				this.db.insert(schema.emojiGridTable).values(slice),
+			),
 		);
 	}
 }

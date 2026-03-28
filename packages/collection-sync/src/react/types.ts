@@ -4,6 +4,7 @@ import type {
 	PartialSyncClientBridge,
 	PartialSyncState,
 } from "../partial-sync-client-bridge";
+import type { PartialSyncViewportAdapter } from "./partial-sync-adapter";
 import type { ConnectPartialSyncTransport } from "../connect-partial-sync";
 import type { SyncClientBridge } from "../sync-client-bridge";
 import type { PartialSyncRowId } from "../partial-sync-row-key";
@@ -142,4 +143,48 @@ export type UsePredicateFilteredRowsOptions<
 	/** For predicate `column` strings; defaults to property read when present on the row object. */
 	getColumnValue?: (row: TItem, column: string) => unknown;
 	limit?: number;
+};
+
+export type UsePartialSyncCollectionOptions<TItem extends PartialSyncItem> = {
+	collection: PartialSyncCollection<TItem>;
+	mutationBridge: SyncClientBridge<TItem>;
+	wsUrl: string;
+	wsTransport?: ConnectPartialSyncTransport;
+	serializeJson?: (value: unknown) => string;
+	deserializeJson?: (raw: string) => unknown;
+	mergeTransportSend?: (send: (msg: SyncClientMessage) => void) => void;
+	collectionId?: string;
+	beforeApplyRows?: (rows: TItem[]) => Promise<void>;
+};
+
+export type UsePartialSyncCollectionResult<TItem extends PartialSyncItem> = {
+	bridge: PartialSyncClientBridge<TItem>;
+	bridgeState: PartialSyncState;
+};
+
+export type UsePartialSyncViewportOptions<
+	TItem extends PartialSyncItem,
+	TViewport,
+	TSortColumn extends keyof TItem & string,
+> = {
+	bridge: PartialSyncClientBridge<TItem>;
+	/** From {@link usePartialSyncCollection}; drives {@link UsePartialSyncViewportResult.totalCount}. */
+	bridgeState: PartialSyncState;
+	collection: PartialSyncCollection<TItem>;
+	adapter: PartialSyncViewportAdapter<TItem, TViewport, TSortColumn>;
+	viewport: TViewport;
+	predicateLimit: number;
+	prefetchPad?: number;
+	quietMs?: number;
+	maxWaitMs?: number;
+	/**
+	 * Used when the bridge has not yet reported `totalCount` (e.g. world size for sparse grids).
+	 */
+	totalCountFallback?: number;
+	getColumnValue?: (row: TItem, column: string) => unknown;
+};
+
+export type UsePartialSyncViewportResult<TItem extends PartialSyncItem> = {
+	viewportRows: TItem[];
+	totalCount: number;
 };

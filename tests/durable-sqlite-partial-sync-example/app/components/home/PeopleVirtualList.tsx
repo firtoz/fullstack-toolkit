@@ -361,6 +361,7 @@ export function PeopleVirtualList<TItem extends PeoplePartialSyncRow>({
 								<>
 									{editing?.id === row.id && editing.field === "name" ? (
 										<input
+											// biome-ignore lint/a11y/noAutofocus: It's fine.
 											autoFocus
 											value={editing.draft}
 											onChange={(e) =>
@@ -403,6 +404,7 @@ export function PeopleVirtualList<TItem extends PeoplePartialSyncRow>({
 									)}
 									{editing?.id === row.id && editing.field === "age" ? (
 										<input
+											// biome-ignore lint/a11y/noAutofocus: It's fine.
 											autoFocus
 											type="number"
 											value={editing.draft}

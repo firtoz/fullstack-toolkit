@@ -20,8 +20,7 @@ export function createPartialSyncedCollection<
 	type TItem = InferItemFromCollectionOptions<TConfig>;
 	const { options, bridge, setTransportSend } = withSync(baseOptions, {
 		...syncOptions,
-		sendSyncHelloOnConnect:
-			syncOptions?.sendSyncHelloOnConnect ?? false,
+		sendSyncHelloOnConnect: syncOptions?.sendSyncHelloOnConnect ?? false,
 		forwardTruncateToMutations:
 			syncOptions?.forwardTruncateToMutations ?? false,
 	});

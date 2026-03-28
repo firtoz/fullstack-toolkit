@@ -11,10 +11,7 @@ import { connectPartialSync } from "../connect-partial-sync";
 import { PartialSyncClientBridge } from "../partial-sync-client-bridge";
 import type { PartialSyncState } from "../partial-sync-client-bridge";
 import type { RangeFingerprint, SyncClientMessage } from "../sync-protocol";
-import {
-	DEFAULT_PAGE_LIMIT,
-	DEFAULT_SEEK_COOLDOWN_MS,
-} from "./constants";
+import { DEFAULT_PAGE_LIMIT, DEFAULT_SEEK_COOLDOWN_MS } from "./constants";
 import { partialSyncRowKey } from "../partial-sync-row-key";
 import {
 	assertSyncUtils,
@@ -35,6 +32,8 @@ export {
 	DEFAULT_PAGE_LIMIT,
 	DEFAULT_SEEK_COOLDOWN_MS,
 	DEFAULT_SEEK_ROW_GAP,
+	DEFAULT_VIEWPORT_RANGE_MAX_WAIT_MS,
+	DEFAULT_VIEWPORT_RANGE_QUIET_MS,
 } from "./constants";
 
 export function usePartialSyncWindow<
@@ -182,9 +181,7 @@ export function usePartialSyncWindow<
 	const bridge = useMemo(
 		() =>
 			new PartialSyncClientBridge<TItem>({
-				...(partialClientId !== undefined
-					? { clientId: partialClientId }
-					: {}),
+				...(partialClientId !== undefined ? { clientId: partialClientId } : {}),
 				...(collectionId !== undefined ? { collectionId } : {}),
 				collection: {
 					utils: {
@@ -339,8 +336,7 @@ export function usePartialSyncWindow<
 	const fetchNext = useCallback(async () => {
 		if (rangeRequestInFlight || !hasMore) return;
 		const gen = fetchGenRef.current;
-		const fetchStart =
-			windowStartRef.current + denseRowsRef.current.length;
+		const fetchStart = windowStartRef.current + denseRowsRef.current.length;
 		setPendingServerRange({
 			start: fetchStart,
 			endExclusive: fetchStart + pageLimit,
@@ -406,7 +402,14 @@ export function usePartialSyncWindow<
 				setRangeRequestInFlight(false);
 			}
 		}
-	}, [bridge, hasMore, rangeRequestInFlight, nextCursor, pageLimit, recordIdsAtOffset]);
+	}, [
+		bridge,
+		hasMore,
+		rangeRequestInFlight,
+		nextCursor,
+		pageLimit,
+		recordIdsAtOffset,
+	]);
 
 	const seekToViewport = useCallback(
 		(
@@ -448,9 +451,7 @@ export function usePartialSyncWindow<
 				const ws = windowStartRef.current;
 				const f = firstVisibleIndex;
 				const firstInsideDense =
-					denseRowsRef.current.length > 0 &&
-					f >= ws &&
-					f < loadedEndExclusive;
+					denseRowsRef.current.length > 0 && f >= ws && f < loadedEndExclusive;
 				if (firstInsideDense && !options?.force) return;
 			}
 			seekCooldownUntilRef.current = now + seekCooldownMs;

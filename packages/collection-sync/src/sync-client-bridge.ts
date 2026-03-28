@@ -70,8 +70,7 @@ export class SyncClientBridge<
 
 	constructor(private readonly options: SyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId;
-		this.collectionId =
-			options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+		this.collectionId = options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 		this.#sendSyncHelloOnConnect = options.sendSyncHelloOnConnect ?? true;
 		this.#lastAckedServerVersion = Math.max(
 			0,

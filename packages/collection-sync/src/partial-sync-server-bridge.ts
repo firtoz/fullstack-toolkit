@@ -80,9 +80,7 @@ export class PartialSyncServerBridge<TItem extends { id: PartialSyncRowId }> {
 	#clientStates = new Map<string, ClientQueryState<TItem>>();
 	readonly #cid: string;
 
-	constructor(
-		private readonly options: PartialSyncServerBridgeOptions<TItem>,
-	) {
+	constructor(private readonly options: PartialSyncServerBridgeOptions<TItem>) {
 		this.#cid = options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 	}
 

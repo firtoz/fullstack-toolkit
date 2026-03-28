@@ -5,7 +5,10 @@ import { z } from "zod";
 /** Default {@link SyncClientMessage} / {@link SyncServerMessage} `collectionId` when omitted on the wire. */
 export const DEFAULT_SYNC_COLLECTION_ID = "default" as const;
 
-const collectionIdSchema = z.string().min(1).default(DEFAULT_SYNC_COLLECTION_ID);
+const collectionIdSchema = z
+	.string()
+	.min(1)
+	.default(DEFAULT_SYNC_COLLECTION_ID);
 
 const mutationTypeSchema = z.enum(["insert", "update", "delete", "truncate"]);
 

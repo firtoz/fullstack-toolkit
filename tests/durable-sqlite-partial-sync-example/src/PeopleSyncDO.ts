@@ -7,11 +7,13 @@ import {
 	QueryableDurableObject,
 } from "@firtoz/drizzle-durable-sqlite";
 import type { SyncMessage } from "@firtoz/db-helpers";
+import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { count, eq, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import superjson from "superjson";
 import migrations from "../drizzle/migrations.js";
+import { demoRandomizeVisibleJsonSchema } from "./demo-randomize-visible-schema";
 import { PEOPLE_PARTIAL_SYNC_COLLECTION_ID } from "./partial-sync-collection-ids";
 import * as schema from "./schema";
 
@@ -28,19 +30,22 @@ const peopleColumnConfig = {
 	sortableColumns: ["name", "age"] as const,
 } satisfies PartialSyncTableConfig<"name" | "age">;
 
-export class PeopleSyncDO extends QueryableDurableObject<PersonRow, typeof schema> {
+export class PeopleSyncDO extends QueryableDurableObject<
+	PersonRow,
+	typeof schema
+> {
 	override readonly app = this.getBaseApp()
 		.get("/health", (c: Context) => c.text("ok"))
-		.post("/demo/randomize-visible", async (c: Context) => {
-			const body = (await c.req.json().catch(() => ({}))) as {
-				rowIds?: unknown;
-			};
-			const rowIds = (Array.isArray(body.rowIds) ? body.rowIds : [])
-				.filter((id): id is string => typeof id === "string")
-				.slice(0, 5);
-			await this.randomizeVisiblePeopleRows(rowIds);
-			return c.json({ ok: true as const, updated: rowIds.length });
-		});
+		.post(
+			"/demo/randomize-visible",
+			zValidator("json", demoRandomizeVisibleJsonSchema),
+			async (c) => {
+				const { rowIds } = c.req.valid("json");
+				const ids = (rowIds ?? []).slice(0, 5);
+				await this.randomizeVisiblePeopleRows(ids);
+				return c.json({ ok: true as const, updated: ids.length });
+			},
+		);
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {

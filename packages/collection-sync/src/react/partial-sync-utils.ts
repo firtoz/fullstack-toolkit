@@ -98,4 +98,7 @@ export function computeFingerprintForIndexWindow<TItem extends PartialSyncItem>(
 	return { version: maxV, count };
 }
 
-export { defaultPredicateColumnValue, matchesPredicate } from "../partial-sync-predicate-match";
+export {
+	defaultPredicateColumnValue,
+	matchesPredicate,
+} from "../partial-sync-predicate-match";

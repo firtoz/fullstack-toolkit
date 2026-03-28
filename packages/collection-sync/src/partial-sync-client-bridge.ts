@@ -92,8 +92,7 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 
 	constructor(private readonly options: PartialSyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId ?? crypto.randomUUID();
-		this.collectionId =
-			options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+		this.collectionId = options.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 		this.#sendFn = options.send;
 	}
 

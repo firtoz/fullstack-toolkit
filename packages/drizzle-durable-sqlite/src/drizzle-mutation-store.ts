@@ -35,7 +35,9 @@ export function createDrizzleMutationStore<
 			for (const message of messages) {
 				switch (message.type) {
 					case "insert":
-						await db.insert(table).values(message.value as Record<string, unknown>);
+						await db
+							.insert(table)
+							.values(message.value as Record<string, unknown>);
 						await changelogHelper.append(
 							"insert",
 							String(message.value.id),
@@ -59,9 +61,7 @@ export function createDrizzleMutationStore<
 						break;
 					}
 					case "delete":
-						await db
-							.delete(table)
-							.where(eq(idCol, message.key as never));
+						await db.delete(table).where(eq(idCol, message.key as never));
 						await changelogHelper.append("delete", String(message.key), null);
 						break;
 					case "truncate":

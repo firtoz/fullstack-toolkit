@@ -11,8 +11,7 @@ import type { TodoId, TodoRow } from "./types";
 
 const superjsonSerializeJson = (value: unknown): string =>
 	superjson.stringify(value);
-const superjsonDeserializeJson = (raw: string): unknown =>
-	superjson.parse(raw);
+const superjsonDeserializeJson = (raw: string): unknown => superjson.parse(raw);
 
 export type WsTransport = "json" | "msgpack";
 

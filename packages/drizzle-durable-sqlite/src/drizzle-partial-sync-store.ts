@@ -154,7 +154,11 @@ export function createDrizzlePartialSyncStore<
 		if (sortColumnName === undefined) {
 			throw new Error("queryByPredicate requires sort or sortableColumns[0]");
 		}
-		const sortColumn = sortColumnFromConfig(table, sortColumnName, columnConfig);
+		const sortColumn = sortColumnFromConfig(
+			table,
+			sortColumnName,
+			columnConfig,
+		);
 		const directionExpr =
 			opts.sort?.direction === "desc" ? desc(sortColumn) : asc(sortColumn);
 		while (remaining > 0) {
@@ -177,11 +181,7 @@ export function createDrizzlePartialSyncStore<
 	async function getPredicateCount(
 		conditions: RangeCondition[],
 	): Promise<number> {
-		const where = predicateWhereFromConditions(
-			table,
-			conditions,
-			columnConfig,
-		);
+		const where = predicateWhereFromConditions(table, conditions, columnConfig);
 		const rows = await db.select({ c: count() }).from(table).where(where);
 		return rows[0]?.c ?? 0;
 	}
@@ -193,9 +193,7 @@ export function createDrizzlePartialSyncStore<
 	}): Promise<{ changes: SyncMessage<TRow>[]; totalCount: number } | null> {
 		void opts.range;
 		const totalCount = await getTotalCount();
-		const maxRow = await db
-			.select({ m: max(updatedAtCol) })
-			.from(table);
+		const maxRow = await db.select({ m: max(updatedAtCol) }).from(table);
 		const m = maxRow[0]?.m;
 		const maxMs = m instanceof Date ? m.getTime() : Number(m ?? 0);
 		if (opts.sinceVersion >= maxMs) {
@@ -261,4 +259,5 @@ export function createDrizzlePartialSyncStore<
 }
 
 /** Infer row type from a Drizzle SQLite table. */
-export type InferPartialSyncRow<TTable extends SQLiteTable> = InferSelectModel<TTable>;
+export type InferPartialSyncRow<TTable extends SQLiteTable> =
+	InferSelectModel<TTable>;

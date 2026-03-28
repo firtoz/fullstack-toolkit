@@ -355,6 +355,7 @@
         "@firtoz/idb-collections": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
         "@firtoz/websocket-do": "workspace:*",
+        "@hono/zod-validator": "catalog:",
         "@react-router/node": "catalog:",
         "@react-router/serve": "catalog:",
         "@tanstack/db": "catalog:",

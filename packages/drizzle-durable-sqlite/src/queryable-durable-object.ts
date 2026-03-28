@@ -249,8 +249,7 @@ export abstract class QueryableDurableObject<
 									}
 								: {}),
 						};
-			const collectionId =
-				config.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
+			const collectionId = config.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 			bridgeRef = new PartialSyncServerBridge<TRow>({
 				store,
 				sendToClient: (clientId, message) =>
@@ -292,26 +291,38 @@ export abstract class QueryableDurableObject<
 		});
 	}
 
-	protected async *queryRange(_options: {
+	protected queryRange(_options: {
 		sort: { column: string; direction: "asc" | "desc" };
 		limit: number;
 		afterCursor: unknown | null;
 		chunkSize: number;
 	}): AsyncIterable<TRow[]> {
-		throw new Error(
-			"QueryableDurableObject: override queryRange() or pass createPartialSyncStore in config",
-		);
+		const message =
+			"QueryableDurableObject: override queryRange() or pass createPartialSyncStore in config";
+		return {
+			[Symbol.asyncIterator](): AsyncIterator<TRow[]> {
+				return {
+					next: () => Promise.reject(new Error(message)),
+				};
+			},
+		};
 	}
 
-	protected async *queryByOffset(_options: {
+	protected queryByOffset(_options: {
 		sort: { column: string; direction: "asc" | "desc" };
 		limit: number;
 		offset: number;
 		chunkSize: number;
 	}): AsyncIterable<TRow[]> {
-		throw new Error(
-			"QueryableDurableObject: override queryByOffset() or pass createPartialSyncStore in config",
-		);
+		const message =
+			"QueryableDurableObject: override queryByOffset() or pass createPartialSyncStore in config";
+		return {
+			[Symbol.asyncIterator](): AsyncIterator<TRow[]> {
+				return {
+					next: () => Promise.reject(new Error(message)),
+				};
+			},
+		};
 	}
 
 	protected async getTotalCount(): Promise<number> {

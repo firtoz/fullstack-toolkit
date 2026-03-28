@@ -34,14 +34,48 @@ describe("coercePredicateScalar", () => {
 
 describe("rangeConditionToSQL", () => {
 	it("supports eq / neq / comparisons", () => {
-		expect(rangeConditionToSQL(testTable, { column: "age", op: "eq", value: 3 }, config)).toBeDefined();
 		expect(
-			rangeConditionToSQL(testTable, { column: "name", op: "neq", value: "a" }, config),
+			rangeConditionToSQL(
+				testTable,
+				{ column: "age", op: "eq", value: 3 },
+				config,
+			),
 		).toBeDefined();
-		expect(rangeConditionToSQL(testTable, { column: "age", op: "gt", value: 1 }, config)).toBeDefined();
-		expect(rangeConditionToSQL(testTable, { column: "age", op: "gte", value: 1 }, config)).toBeDefined();
-		expect(rangeConditionToSQL(testTable, { column: "age", op: "lt", value: 9 }, config)).toBeDefined();
-		expect(rangeConditionToSQL(testTable, { column: "age", op: "lte", value: 9 }, config)).toBeDefined();
+		expect(
+			rangeConditionToSQL(
+				testTable,
+				{ column: "name", op: "neq", value: "a" },
+				config,
+			),
+		).toBeDefined();
+		expect(
+			rangeConditionToSQL(
+				testTable,
+				{ column: "age", op: "gt", value: 1 },
+				config,
+			),
+		).toBeDefined();
+		expect(
+			rangeConditionToSQL(
+				testTable,
+				{ column: "age", op: "gte", value: 1 },
+				config,
+			),
+		).toBeDefined();
+		expect(
+			rangeConditionToSQL(
+				testTable,
+				{ column: "age", op: "lt", value: 9 },
+				config,
+			),
+		).toBeDefined();
+		expect(
+			rangeConditionToSQL(
+				testTable,
+				{ column: "age", op: "lte", value: 9 },
+				config,
+			),
+		).toBeDefined();
 	});
 
 	it("supports between", () => {

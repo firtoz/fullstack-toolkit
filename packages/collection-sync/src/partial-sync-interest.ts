@@ -82,15 +82,16 @@ export function rowMatchesClientInterest<TItem>(
  * Maps a server-side change to the {@link SyncMessage} that should be sent as a `rangePatch`,
  * or `null` if this client should not receive a patch.
  */
-export function classifyPartialSyncRangePatch<TItem extends { id: PartialSyncRowId }>(
+export function classifyPartialSyncRangePatch<
+	TItem extends { id: PartialSyncRowId },
+>(
 	sortRanges: DeliveredRange[],
 	predicateGroups: RangeCondition[][],
 	change: SyncMessage<TItem>,
 	getSortValue: (row: TItem, column: string) => unknown,
 	getColumnValue: (row: TItem, column: string) => unknown,
 ): SyncMessage<TItem> | null {
-	const hasInterest =
-		sortRanges.length > 0 || predicateGroups.length > 0;
+	const hasInterest = sortRanges.length > 0 || predicateGroups.length > 0;
 	if (!hasInterest) return null;
 
 	if (change.type === "truncate") return change;
