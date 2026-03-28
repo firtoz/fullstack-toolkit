@@ -7,14 +7,17 @@ import type {
 import type { PartialSyncViewportAdapter } from "./partial-sync-adapter";
 import type { ConnectPartialSyncTransport } from "../connect-partial-sync";
 import type { SyncClientBridge } from "../sync-client-bridge";
-import type { PartialSyncRowId } from "../partial-sync-row-key";
+import type { PartialSyncRowShape } from "../partial-sync-row-key";
 import type { RangeCondition, SyncClientMessage } from "../sync-protocol";
 
-/** Row shape expected for version-watermark fingerprints (default: `updatedAt` → ms). */
-export type PartialSyncItem = {
-	id: PartialSyncRowId;
-	updatedAt?: number | Date | null;
-};
+export type {
+	PartialSyncRowRef,
+	PartialSyncRowShape,
+	PartialSyncRowVersion,
+} from "../partial-sync-row-key";
+
+/** Row shape for partial-sync React hooks (mandatory `updatedAt` for fingerprints / reconciliation). */
+export type PartialSyncItem = PartialSyncRowShape;
 
 /**
  * Minimal collection surface for partial-sync window hooks (TanStack `Collection` satisfies this

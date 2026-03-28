@@ -5,6 +5,7 @@ import {
 	createServerMessageSchema,
 	DEFAULT_SYNC_COLLECTION_ID,
 	type PartialSyncServerBridgeStore,
+	type PartialSyncRowShape,
 	type RangeCondition,
 	type SyncClientMessage,
 	type SyncRange,
@@ -25,10 +26,7 @@ import type { Context } from "hono";
 
 type SessionData = { clientId: string };
 
-type MutationSyncRow = {
-	id: string | number;
-	updatedAt?: number | Date | null;
-};
+type MutationSyncRow = PartialSyncRowShape;
 
 type SessionDispatch<TRow extends MutationSyncRow> = {
 	partialBridge: PartialSyncServerBridge<TRow>;
@@ -40,7 +38,7 @@ type SessionSlot<TRow extends MutationSyncRow> = {
 	pending: SyncClientMessage[];
 };
 
-function createSessionCodecOptions<TItem extends { id: string | number }>(
+function createSessionCodecOptions<TItem extends PartialSyncRowShape>(
 	enableBufferMessages: boolean,
 	serializeJson?: (value: unknown) => string,
 	deserializeJson?: (raw: string) => unknown,
@@ -87,7 +85,7 @@ async function routeQueryableClientMessage<TRow extends MutationSyncRow>(
 }
 
 class QueryableSession<
-	TItem extends { id: string | number },
+	TItem extends PartialSyncRowShape,
 	TEnv extends Cloudflare.Env,
 > extends ZodSession<
 	SessionData,
@@ -123,7 +121,7 @@ class QueryableSession<
 
 export type QueryableDurableObjectConfig<
 	TSchema extends Record<string, unknown>,
-	TRow extends MutationSyncRow = MutationSyncRow,
+	TRow extends PartialSyncRowShape = PartialSyncRowShape,
 > = {
 	schema: TSchema;
 	migrations: Parameters<typeof migrate>[1];
@@ -147,10 +145,7 @@ export type QueryableDurableObjectConfig<
 };
 
 export abstract class QueryableDurableObject<
-	TRow extends {
-		id: string | number;
-		updatedAt?: number | Date | null;
-	},
+	TRow extends PartialSyncRowShape,
 	TSchema extends Record<string, unknown>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
 	// biome-ignore lint/suspicious/noExplicitAny: session generic is not exposed in subclass APIs.

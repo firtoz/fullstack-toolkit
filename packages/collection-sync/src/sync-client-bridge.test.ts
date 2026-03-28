@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { SyncClientBridge } from "./sync-client-bridge";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 
 type Item = { id: string; title: string; updatedAt: number };
 
@@ -44,6 +45,7 @@ describe("SyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "ack",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			clientMutationIds: [mutationId],
 			serverVersion: 1,
@@ -78,6 +80,7 @@ describe("SyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "syncBackfill",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			mode: "snapshot",
 			serverVersion: 1,
 			changes: [
@@ -112,6 +115,7 @@ describe("SyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "syncBackfill",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			mode: "delta",
 			serverVersion: 2,
 			changes: [
@@ -143,6 +147,7 @@ describe("SyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "syncBackfill",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			mode: "snapshot",
 			serverVersion: 3,
 			changes: [],
@@ -172,6 +177,7 @@ describe("SyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "syncBackfill",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			mode: "snapshot",
 			serverVersion: 5,
 			changes: [
@@ -182,6 +188,7 @@ describe("SyncClientBridge", () => {
 		});
 		await bridge.handleServerMessage({
 			type: "syncBackfill",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			mode: "snapshot",
 			serverVersion: 5,
 			changes: [

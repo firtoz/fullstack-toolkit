@@ -3,7 +3,7 @@ import type { SyncMessage } from "@firtoz/db-helpers";
 import { ZodWebSocketClient } from "@firtoz/websocket-do/zod-client";
 import type { PartialSyncClientBridge } from "./partial-sync-client-bridge";
 import type { SyncClientBridge } from "./sync-client-bridge";
-import type { PartialSyncRowId } from "./partial-sync-row-key";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
 import {
 	createClientMessageSchema,
 	createServerMessageSchema,
@@ -14,13 +14,8 @@ import {
 
 export type ConnectPartialSyncTransport = "json" | "msgpack";
 
-export type PartialSyncMutationItem = {
-	id: PartialSyncRowId;
-	updatedAt?: number | Date | null;
-};
-
 export type ConnectPartialSyncOptions<
-	TItem extends { id: PartialSyncRowId } = { id: PartialSyncRowId },
+	TItem extends PartialSyncRowShape = PartialSyncRowShape,
 > = {
 	url: string;
 	transport?: ConnectPartialSyncTransport;
@@ -34,16 +29,14 @@ export type ConnectPartialSyncOptions<
 	 * When set, inbound messages are split: range traffic → `bridge`, ack/reject/syncBackfill → mutation bridge;
 	 * `syncBatch` applies via mutation bridge then updates partial cache ids (no double `receiveSync`).
 	 */
-	mutationBridge?: SyncClientBridge<TItem & PartialSyncMutationItem>;
+	mutationBridge?: SyncClientBridge<TItem>;
 };
 
 /** @internal Exported for unit tests; prefer {@link connectPartialSync} in apps. */
-export async function dispatchPartialSyncServerMessage<
-	TItem extends { id: PartialSyncRowId },
->(
+export async function dispatchPartialSyncServerMessage<TItem extends PartialSyncRowShape>(
 	msg: SyncServerMessage<TItem>,
 	partialBridge: PartialSyncClientBridge<TItem>,
-	mutationBridge: SyncClientBridge<TItem & PartialSyncMutationItem> | undefined,
+	mutationBridge: SyncClientBridge<TItem> | undefined,
 ): Promise<void> {
 	const mid = msg.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 	const forPartial = mid === partialBridge.collectionId;
@@ -69,15 +62,11 @@ export async function dispatchPartialSyncServerMessage<
 		case "reject":
 		case "syncBackfill":
 			if (!forMutation) return;
-			await mutationBridge.handleServerMessage(
-				msg as SyncServerMessage<TItem & PartialSyncMutationItem>,
-			);
+			await mutationBridge.handleServerMessage(msg);
 			return;
 		case "syncBatch": {
 			if (!forMutation) return;
-			await mutationBridge.handleServerMessage(
-				msg as SyncServerMessage<TItem & PartialSyncMutationItem>,
-			);
+			await mutationBridge.handleServerMessage(msg);
 			if (forPartial) {
 				partialBridge.syncTrackedIdsFromMessages(
 					msg.changes as SyncMessage<TItem>[],
@@ -90,9 +79,7 @@ export async function dispatchPartialSyncServerMessage<
 	}
 }
 
-export function connectPartialSync<
-	TItem extends { id: PartialSyncRowId } = { id: PartialSyncRowId },
->(
+export function connectPartialSync<TItem extends PartialSyncRowShape = PartialSyncRowShape>(
 	bridge: PartialSyncClientBridge<TItem>,
 	options: ConnectPartialSyncOptions<TItem>,
 ): () => void {

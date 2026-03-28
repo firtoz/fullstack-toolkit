@@ -90,6 +90,9 @@ export function sqliteCollectionOptions<
 
 	const table = config.drizzle?._.fullSchema[tableName] as TTable;
 
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	const getKey = createGetKeyFunction<TTable>();
+
 	const backend = createSqliteTableSyncBackend({
 		drizzle: config.drizzle,
 		table,
@@ -105,6 +108,7 @@ export function sqliteCollectionOptions<
 		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: (item: TItem) => String(getKey(item)),
 	};
 
 	const syncResult = createSyncFunction(baseSyncConfig, backend);
@@ -113,7 +117,7 @@ export function sqliteCollectionOptions<
 
 	const collectionConfig = createCollectionConfig({
 		schema,
-		getKey: createGetKeyFunction<TTable>(),
+		getKey,
 		syncResult,
 		onInsert: config.debug
 			? async (params) => {

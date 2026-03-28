@@ -12,20 +12,18 @@ import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 import { createClientMutationId } from "./sync-protocol";
 import {
 	partialSyncRowKey,
-	type PartialSyncRowId,
+	partialSyncRowVersionWatermarkMs,
+	type PartialSyncRowShape,
 } from "./partial-sync-row-key";
 import type { PartialSyncViewTransition } from "./partial-sync-interest";
 
-export type PartialSyncViewTransitionEvent<
-	TItem extends { id: PartialSyncRowId },
-> = {
+export type PartialSyncViewTransitionEvent<TItem extends PartialSyncRowShape> = {
 	type: PartialSyncViewTransition;
 	change: SyncMessage<TItem>;
 };
 
-export type PartialSyncRangePatchAppliedEvent<
-	TItem extends { id: PartialSyncRowId },
-> = {
+export type PartialSyncRangePatchAppliedEvent<TItem extends PartialSyncRowShape> =
+	{
 	change: SyncMessage<TItem>;
 	viewTransition?: PartialSyncViewTransition;
 };
@@ -34,7 +32,28 @@ type CollectionWithReceiveSync<TItem> = {
 	utils: {
 		receiveSync: (messages: SyncMessage<TItem>[]) => Promise<void>;
 	};
+	/**
+	 * When set, server `queryRangeChunk` rows can become `update` messages for ids already in
+	 * `#cachedIds` (e.g. after {@link PartialSyncClientBridge.seedHydratedLocalRows}) so authoritative
+	 * snapshots replace stale durable rows instead of being skipped as duplicate inserts.
+	 */
+	get?: (key: string | number) => TItem | undefined;
 };
+
+function serverRowSupersedesLocal<TItem extends PartialSyncRowShape>(
+	local: TItem,
+	server: TItem,
+): boolean {
+	const lm = partialSyncRowVersionWatermarkMs(local);
+	const sm = partialSyncRowVersionWatermarkMs(server);
+	if (sm > lm) return true;
+	if (sm < lm) return false;
+	try {
+		return JSON.stringify(local) !== JSON.stringify(server);
+	} catch {
+		return true;
+	}
+}
 
 type SendFn = (msg: SyncClientMessage) => void;
 
@@ -70,9 +89,7 @@ export type PartialSyncRangeResult<TItem> = {
 	upToDate?: boolean;
 };
 
-export interface PartialSyncClientBridgeOptions<
-	TItem extends { id: PartialSyncRowId },
-> {
+export interface PartialSyncClientBridgeOptions<TItem extends PartialSyncRowShape> {
 	/** Defaults to a random UUID when omitted (must match {@link SyncClientBridge} when using mutations). */
 	clientId?: string;
 	/** Must match the server's partial-sync {@link PartialSyncServerBridgeOptions.collectionId}. */
@@ -100,7 +117,7 @@ type InFlightRequest<TItem> = {
 	reject: (error: unknown) => void;
 };
 
-export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
+export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 	readonly clientId: string;
 	readonly collectionId: string;
 	#connected = false;
@@ -475,17 +492,28 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 
 		if (message.rows.length > 0) {
 			await this.options.beforeApplyRows?.(message.rows);
-			const rowsToInsert = message.rows.filter(
-				(row) => !this.#cachedIds.has(partialSyncRowKey(row.id)),
-			);
-			if (rowsToInsert.length > 0) {
-				const changes = rowsToInsert.map(
-					(row) =>
-						({
-							type: "insert",
-							value: row,
-						}) as SyncMessage<TItem>,
-				);
+			const getRow = this.options.collection.get;
+			const changes: SyncMessage<TItem>[] = [];
+			for (const row of message.rows) {
+				const pk = partialSyncRowKey(row.id);
+				if (!this.#cachedIds.has(pk)) {
+					changes.push({ type: "insert", value: row } as SyncMessage<TItem>);
+					continue;
+				}
+				if (getRow === undefined) continue;
+				const local = getRow(partialSyncRowKey(row.id));
+				if (
+					local !== undefined &&
+					serverRowSupersedesLocal(local, row)
+				) {
+					changes.push({
+						type: "update",
+						value: row,
+						previousValue: local,
+					} as SyncMessage<TItem>);
+				}
+			}
+			if (changes.length > 0) {
 				await this.#applyAndTrack(changes);
 			}
 			inFlight.rows.push(...message.rows);
@@ -554,6 +582,50 @@ export class PartialSyncClientBridge<TItem extends { id: PartialSyncRowId }> {
 			totalCount: this.#totalCount,
 			cacheUtilization: this.#cacheUtilization,
 		});
+	}
+
+	/**
+	 * Merge rows already present in the local collection (e.g. IndexedDB eager `initialLoad`) into
+	 * `#cachedIds` so {@link cachedCount} and React-driven `bridgeState` match durable storage after reload.
+	 * Safe to call multiple times; ids are a set. Does not call `receiveSync`.
+	 */
+	seedHydratedLocalRows(rows: readonly TItem[]): void {
+		if (rows.length === 0) return;
+		for (const row of rows) {
+			this.#cachedIds.add(partialSyncRowKey(row.id));
+		}
+		this.#refreshCachedCountInState();
+	}
+
+	#refreshCachedCountInState(): void {
+		const s = this.#state;
+		switch (s.status) {
+			case "partial":
+			case "realtime":
+				this.#setState({ ...s, cachedCount: this.cachedCount });
+				break;
+			case "disconnected":
+				this.#setState({
+					status: "disconnected",
+					cachedCount: this.cachedCount,
+				});
+				break;
+			case "evicting":
+				this.#setState({ ...s, cachedCount: this.cachedCount });
+				break;
+			case "connected":
+				if (this.#connected && this.cachedCount > 0) {
+					this.#setState({
+						status: "realtime",
+						cachedCount: this.cachedCount,
+						totalCount: this.#totalCount,
+						cacheUtilization: this.#cacheUtilization,
+					});
+				}
+				break;
+			default:
+				break;
+		}
 	}
 
 	/**

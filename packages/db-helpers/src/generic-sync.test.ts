@@ -335,6 +335,7 @@ describe("createGenericSyncFunction", () => {
 			);
 			expect(insertWrites.length).toBe(1);
 			expect(insertWrites[0].type).toBe("insert");
+			expect(backend.insertedItems).toEqual([[item]]);
 		});
 
 		it("waits for eager initialSync before receiveSync so remote snapshot cannot race initial inserts", async () => {
@@ -394,6 +395,15 @@ describe("createGenericSyncFunction", () => {
 				(w) => w.type === "update" && w.value && w.value.id === "sync-1",
 			);
 			expect(updateWrites.length).toBe(1);
+			expect(backend.updatedMutations).toEqual([
+				[
+					{
+						key: "sync-1",
+						changes: { name: "updated", value: 100 },
+						original: prev,
+					},
+				],
+			]);
 		});
 
 		it("applies delete messages via sync write", async () => {
@@ -412,6 +422,8 @@ describe("createGenericSyncFunction", () => {
 
 			const deleteWrites = writes.filter((w) => w.type === "delete");
 			expect(deleteWrites.length).toBe(1);
+			expect(backend.deletedMutations.length).toBe(1);
+			expect(backend.deletedMutations[0]?.[0]?.key).toBe("sync-1");
 		});
 
 		it("applies truncate messages via sync truncate", async () => {
@@ -431,6 +443,7 @@ describe("createGenericSyncFunction", () => {
 			await result.utils.receiveSync([{ type: "truncate" }]);
 
 			expect(truncateSyncCalled).toBe(true);
+			expect(backend.truncateCalls).toBe(1);
 		});
 
 		it("ignores empty messages array", async () => {

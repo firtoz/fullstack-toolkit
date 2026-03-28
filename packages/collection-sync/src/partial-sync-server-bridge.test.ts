@@ -1,9 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { PartialSyncServerBridge } from "./partial-sync-server-bridge";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
 import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 
-type Item = { id: string; name: string; age: number };
+type Item = PartialSyncRowShape & { name: string; age: number };
+
+function item(
+	picks: { id: string; name: string; age: number; updatedAt?: number },
+): Item {
+	return { ...picks, updatedAt: picks.updatedAt ?? 0 };
+}
 
 describe("PartialSyncServerBridge", () => {
 	it("streams queryRange as chunks and tracks delivered ranges", async () => {
@@ -14,10 +21,10 @@ describe("PartialSyncServerBridge", () => {
 				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
 				queryRange: async function* () {
 					yield [
-						{ id: "1", name: "aaaaa", age: 20 },
-						{ id: "2", name: "aaaab", age: 21 },
+						item({ id: "1", name: "aaaaa", age: 20 }),
+						item({ id: "2", name: "aaaab", age: 21 }),
 					];
-					yield [{ id: "3", name: "aaaac", age: 22 }];
+					yield [item({ id: "3", name: "aaaac", age: 22 })];
 				},
 				queryByOffset: async function* () {
 					yield [];
@@ -29,6 +36,7 @@ describe("PartialSyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "queryRange",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			sort: { column: "name", direction: "asc" },
@@ -42,8 +50,8 @@ describe("PartialSyncServerBridge", () => {
 				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				rows: [
-					{ id: "1", name: "aaaaa", age: 20 },
-					{ id: "2", name: "aaaab", age: 21 },
+					item({ id: "1", name: "aaaaa", age: 20 }),
+					item({ id: "2", name: "aaaab", age: 21 }),
 				],
 				totalCount: 3,
 				lastCursor: "aaaab",
@@ -55,7 +63,7 @@ describe("PartialSyncServerBridge", () => {
 				type: "queryRangeChunk",
 				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
-				rows: [{ id: "3", name: "aaaac", age: 22 }],
+				rows: [item({ id: "3", name: "aaaac", age: 22 })],
 				totalCount: 3,
 				lastCursor: "aaaac",
 				hasMore: false,
@@ -79,9 +87,9 @@ describe("PartialSyncServerBridge", () => {
 				getTotalCount: async () => 2,
 				getSortValue: (row) => row.name,
 				queryRange: async function* () {
-					yield [{ id: "1", name: "aaaaa", age: 20 }];
+					yield [item({ id: "1", name: "aaaaa", age: 20 })];
 					await resumeGate;
-					yield [{ id: "2", name: "aaaab", age: 21 }];
+					yield [item({ id: "2", name: "aaaab", age: 21 })];
 				},
 				queryByOffset: async function* () {
 					yield [];
@@ -93,6 +101,7 @@ describe("PartialSyncServerBridge", () => {
 
 		const inFlight = bridge.handleClientMessage({
 			type: "queryRange",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			sort: { column: "name", direction: "asc" },
@@ -105,7 +114,7 @@ describe("PartialSyncServerBridge", () => {
 			await Promise.resolve();
 		}
 		await bridge.pushServerChanges([
-			{ type: "insert", value: { id: "1a", name: "aaaaa", age: 23 } },
+			{ type: "insert", value: item({ id: "1a", name: "aaaaa", age: 23 }) },
 		] satisfies SyncMessage<Item>[]);
 
 		// Patch should be queued while stream is active.
@@ -141,10 +150,10 @@ describe("PartialSyncServerBridge", () => {
 				},
 				queryByOffset: async function* () {
 					yield [
-						{ id: "1", name: "aaaaa", age: 20 },
-						{ id: "2", name: "aaaab", age: 21 },
+						item({ id: "1", name: "aaaaa", age: 20 }),
+						item({ id: "2", name: "aaaab", age: 21 }),
 					];
-					yield [{ id: "3", name: "aaaac", age: 22 }];
+					yield [item({ id: "3", name: "aaaac", age: 22 })];
 				},
 			},
 			sendToClient: (_clientId, message) => sent.push(message),
@@ -153,6 +162,7 @@ describe("PartialSyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "queryByOffset",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			sort: { column: "name", direction: "asc" },
@@ -166,8 +176,8 @@ describe("PartialSyncServerBridge", () => {
 				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
 				rows: [
-					{ id: "1", name: "aaaaa", age: 20 },
-					{ id: "2", name: "aaaab", age: 21 },
+					item({ id: "1", name: "aaaaa", age: 20 }),
+					item({ id: "2", name: "aaaab", age: 21 }),
 				],
 				totalCount: 100,
 				lastCursor: "aaaab",
@@ -179,7 +189,7 @@ describe("PartialSyncServerBridge", () => {
 				type: "queryRangeChunk",
 				collectionId: DEFAULT_SYNC_COLLECTION_ID,
 				requestId: "r1",
-				rows: [{ id: "3", name: "aaaac", age: 22 }],
+				rows: [item({ id: "3", name: "aaaac", age: 22 })],
 				totalCount: 100,
 				lastCursor: "aaaac",
 				hasMore: true,
@@ -209,6 +219,7 @@ describe("PartialSyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			range: {
@@ -247,7 +258,7 @@ describe("PartialSyncServerBridge", () => {
 					changes: [
 						{
 							type: "insert",
-							value: { id: "x", name: "zzzzz", age: 1 },
+							value: item({ id: "x", name: "zzzzz", age: 1 }),
 						},
 					] satisfies SyncMessage<Item>[],
 					totalCount: 11,
@@ -259,6 +270,7 @@ describe("PartialSyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			range: {
@@ -278,7 +290,7 @@ describe("PartialSyncServerBridge", () => {
 				requestId: "r1",
 				totalCount: 11,
 				changes: [
-					{ type: "insert", value: { id: "x", name: "zzzzz", age: 1 } },
+					{ type: "insert", value: item({ id: "x", name: "zzzzz", age: 1 }) },
 				],
 			},
 		]);
@@ -288,7 +300,7 @@ describe("PartialSyncServerBridge", () => {
 		const sent: unknown[] = [];
 		const manyChanges = Array.from({ length: 10 }, (_, i) => ({
 			type: "insert" as const,
-			value: { id: `n${i}`, name: `n${i}`, age: i },
+			value: item({ id: `n${i}`, name: `n${i}`, age: i }),
 		})) satisfies SyncMessage<Item>[];
 		const bridge = new PartialSyncServerBridge<Item>({
 			store: {
@@ -298,7 +310,7 @@ describe("PartialSyncServerBridge", () => {
 					yield [];
 				},
 				queryByOffset: async function* () {
-					yield [{ id: "1", name: "a", age: 1 }];
+					yield [item({ id: "1", name: "a", age: 1 })];
 				},
 				changesSince: async () => ({
 					changes: manyChanges,
@@ -311,6 +323,7 @@ describe("PartialSyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			range: {
@@ -341,7 +354,7 @@ describe("PartialSyncServerBridge", () => {
 					yield [];
 				},
 				queryByOffset: async function* () {
-					yield [{ id: "1", name: "a", age: 1 }];
+					yield [item({ id: "1", name: "a", age: 1 })];
 				},
 				changesSince: async () => null,
 			},
@@ -351,6 +364,7 @@ describe("PartialSyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			requestId: "r1",
 			range: {

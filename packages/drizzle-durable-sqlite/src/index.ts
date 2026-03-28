@@ -17,6 +17,7 @@ export {
 export {
 	SyncableDurableObject,
 	type SyncableDurableObjectConfig,
+	type SyncableDurableObjectSyncRow,
 } from "./syncable-durable-object";
 
 export {

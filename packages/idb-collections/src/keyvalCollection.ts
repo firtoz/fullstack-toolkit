@@ -209,10 +209,11 @@ export function keyvalCollectionOptions<TSchema extends StandardSchemaV1>(
 		},
 	};
 
-	const baseSyncConfig: GenericBaseSyncConfig = {
+	const baseSyncConfig: GenericBaseSyncConfig<TItem> = {
 		readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: getKey,
 	};
 
 	const syncResult: GenericSyncFunctionResult<TItem> =

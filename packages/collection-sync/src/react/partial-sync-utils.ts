@@ -28,6 +28,7 @@ export function defaultPartialSyncVersionMs<TItem extends PartialSyncItem>(
 	row: TItem,
 ): number {
 	const v = row.updatedAt;
+	if (v === null) return 0;
 	if (v instanceof Date) return v.getTime();
 	if (typeof v === "number") return v;
 	return 0;

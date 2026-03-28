@@ -108,7 +108,7 @@ export const USE_DEDUPE = _USE_DEDUPE;
  * Extends the generic (Drizzle-free) config with a Drizzle table reference.
  */
 export interface BaseSyncConfig<TTable extends Table>
-	extends GenericBaseSyncConfig {
+	extends GenericBaseSyncConfig<InferSchemaOutput<SelectSchema<TTable>>> {
 	table: TTable;
 }
 

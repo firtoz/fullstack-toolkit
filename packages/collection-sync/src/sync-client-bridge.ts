@@ -2,7 +2,10 @@ import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import {
 	partialSyncRowKey,
+	partialSyncRowVersionWatermarkMs,
+	partialSyncRowVersionWatermarkMsUnknown,
 	type PartialSyncRowId,
+	type PartialSyncRowShape,
 } from "./partial-sync-row-key";
 import {
 	createClientMutationId,
@@ -28,9 +31,7 @@ type PendingMutation = {
 	updatedAt: number;
 };
 
-export interface SyncClientBridgeOptions<
-	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
-> {
+export interface SyncClientBridgeOptions<TItem extends PartialSyncRowShape> {
 	clientId: string;
 	/** Must match the server's {@link SyncServerBridgeOptions.collectionId}. */
 	collectionId?: string;
@@ -46,9 +47,7 @@ export interface SyncClientBridgeOptions<
 	sendSyncHelloOnConnect?: boolean;
 }
 
-export class SyncClientBridge<
-	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
-> {
+export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 	readonly clientId: string;
 	readonly collectionId: string;
 	#pendingMutations = new Map<string, PendingMutation>();
@@ -349,7 +348,9 @@ export class SyncClientBridge<
 			if (!pendingMutationId) return true;
 			const pending = this.#pendingMutations.get(pendingMutationId);
 			if (!pending) return true;
-			return this.#changeUpdatedAt(change.value) >= pending.updatedAt;
+			return (
+				partialSyncRowVersionWatermarkMs(change.value) >= pending.updatedAt
+			);
 		});
 	}
 
@@ -372,16 +373,8 @@ export class SyncClientBridge<
 
 	#intentUpdatedAt(intent: MutationIntent): number {
 		if (intent.type === "insert" || intent.type === "update") {
-			return this.#changeUpdatedAt(intent.value);
+			return partialSyncRowVersionWatermarkMsUnknown(intent.value);
 		}
-		return 0;
-	}
-
-	#changeUpdatedAt(value: unknown): number {
-		if (!value || typeof value !== "object") return 0;
-		const updatedAt = (value as { updatedAt?: unknown }).updatedAt;
-		if (typeof updatedAt === "number") return updatedAt;
-		if (updatedAt instanceof Date) return updatedAt.getTime();
 		return 0;
 	}
 

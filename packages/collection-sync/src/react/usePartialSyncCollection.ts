@@ -38,12 +38,16 @@ export function usePartialSyncCollection<TItem extends PartialSyncItem>({
 
 	const partialClientId = mutationBridge.clientId;
 
+	const collectionRef = useRef(collection);
+	collectionRef.current = collection;
+
 	const bridge = useMemo(
 		() =>
 			new PartialSyncClientBridge<TItem>({
 				clientId: partialClientId,
 				...(collectionId !== undefined ? { collectionId } : {}),
 				collection: {
+					get: (key) => collectionRef.current.get(key),
 					utils: {
 						receiveSync: (messages) =>
 							syncUtilsRef.current.receiveSync(messages),
@@ -66,6 +70,49 @@ export function usePartialSyncCollection<TItem extends PartialSyncItem>({
 	mutationBridgeRef.current = mutationBridge;
 	const mergeTransportSendRef = useRef(mergeTransportSend);
 	mergeTransportSendRef.current = mergeTransportSend;
+
+	/**
+	 * Keep the object returned by `subscribeChanges` and call `.unsubscribe()` on it. Destructuring
+	 * `{ unsubscribe }` drops the method receiver, so TanStack's `unsubscribe()` runs with `this === undefined`
+	 * and throws (e.g. reading `truncateCleanup`).
+	 *
+	 * Declare this layout effect before the WebSocket one so teardown runs `unsubscribe` before
+	 * `disconnect` (layout cleanups run in declaration order in practice).
+	 */
+	useLayoutEffect(() => {
+		let cancelled = false;
+		let seeded = false;
+		const trySeed = () => {
+			if (cancelled || seeded) return;
+			const rows = Array.from(collection.entries(), ([, v]) => v);
+			if (rows.length === 0) return;
+			bridge.seedHydratedLocalRows(rows);
+			seeded = true;
+		};
+		const changeSubscription = collection.subscribeChanges(trySeed, {
+			includeInitialState: true,
+		});
+		queueMicrotask(trySeed);
+		let intervalId: ReturnType<typeof setInterval> | undefined;
+		intervalId = setInterval(() => {
+			trySeed();
+			if (seeded && intervalId !== undefined) {
+				clearInterval(intervalId);
+				intervalId = undefined;
+			}
+		}, 50);
+		const stopId = setTimeout(() => {
+			if (intervalId !== undefined) {
+				clearInterval(intervalId);
+			}
+		}, 10_000);
+		return () => {
+			cancelled = true;
+			changeSubscription.unsubscribe();
+			if (intervalId !== undefined) clearInterval(intervalId);
+			clearTimeout(stopId);
+		};
+	}, [bridge, collection]);
 
 	useLayoutEffect(() => {
 		const disconnect = connectPartialSync(bridge, {

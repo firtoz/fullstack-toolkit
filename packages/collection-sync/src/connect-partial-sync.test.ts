@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { dispatchPartialSyncServerMessage } from "./connect-partial-sync";
 import { PartialSyncClientBridge } from "./partial-sync-client-bridge";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 import { SyncClientBridge } from "./sync-client-bridge";
 
 type Row = { id: string; name: string; updatedAt: number };
@@ -45,7 +46,12 @@ describe("dispatchPartialSyncServerMessage", () => {
 		];
 
 		await dispatchPartialSyncServerMessage(
-			{ type: "syncBatch", serverVersion: 1, changes },
+			{
+				type: "syncBatch",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				serverVersion: 1,
+				changes,
+			},
 			partialBridge,
 			mutationBridge,
 		);
@@ -91,7 +97,7 @@ describe("dispatchPartialSyncServerMessage", () => {
 		};
 
 		await dispatchPartialSyncServerMessage(
-			{ type: "rangePatch", change },
+			{ type: "rangePatch", collectionId: DEFAULT_SYNC_COLLECTION_ID, change },
 			partialBridge,
 			mutationBridge,
 		);

@@ -12,10 +12,10 @@ export type CacheEntry = {
 	estimatedSizeBytes: number;
 };
 
-import type { PartialSyncRowId } from "./partial-sync-row-key";
+import type { PartialSyncRowRef } from "./partial-sync-row-key";
 import { partialSyncRowKey } from "./partial-sync-row-key";
 
-export interface CacheManagerOptions<TItem extends { id: PartialSyncRowId }> {
+export interface CacheManagerOptions<TItem extends PartialSyncRowRef> {
 	evictionThreshold?: number;
 	evictionTarget?: number;
 	estimateRowSize?: (row: TItem) => number;
@@ -30,7 +30,7 @@ export type CacheViewport = {
 	toValue: unknown;
 };
 
-export class CacheManager<TItem extends { id: PartialSyncRowId }> {
+export class CacheManager<TItem extends PartialSyncRowRef> {
 	#entries = new Map<string | number, CacheEntry>();
 	readonly evictionThreshold: number;
 	readonly evictionTarget: number;

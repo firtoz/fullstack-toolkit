@@ -1,11 +1,8 @@
-import type { PartialSyncRowId } from "../partial-sync-row-key";
+import type { PartialSyncRowShape } from "../partial-sync-row-key";
 import type { RangeCondition, SyncRangeSort } from "../sync-protocol";
 
 /** Row shape compatible with partial-sync viewport hooks (matches {@link PartialSyncItem}). */
-export type PartialSyncViewportItem = {
-	id: PartialSyncRowId;
-	updatedAt?: number | Date | null;
-};
+export type PartialSyncViewportItem = PartialSyncRowShape;
 
 export type PredicateSortSpec<TSortColumn extends string> = {
 	column: TSortColumn;

@@ -1,10 +1,37 @@
 import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { PartialSyncClientBridge } from "./partial-sync-client-bridge";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 
-type Item = { id: string; name: string; age: number };
+type Item = PartialSyncRowShape & { name: string; age: number };
+
+function item(
+	picks: { id: string; name: string; age: number; updatedAt?: number },
+): Item {
+	return { ...picks, updatedAt: picks.updatedAt ?? 0 };
+}
 
 describe("PartialSyncClientBridge", () => {
+	it("seedHydratedLocalRows merges local rows into cachedCount without receiveSync", () => {
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		expect(bridge.cachedCount).toBe(0);
+		bridge.seedHydratedLocalRows([
+			item({ id: "a", name: "x", age: 1 }),
+			item({ id: "b", name: "y", age: 2 }),
+		]);
+		expect(bridge.cachedCount).toBe(2);
+	});
+
 	it("requests range and resolves after final chunk", async () => {
 		const sent: unknown[] = [];
 		const received: unknown[] = [];
@@ -33,8 +60,9 @@ describe("PartialSyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId: (sent[0] as { requestId: string }).requestId,
-			rows: [{ id: "1", name: "aaaaa", age: 20 }],
+			rows: [item({ id: "1", name: "aaaaa", age: 20 })],
 			totalCount: 3,
 			lastCursor: "aaaaa",
 			hasMore: true,
@@ -43,8 +71,9 @@ describe("PartialSyncClientBridge", () => {
 		});
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId: (sent[0] as { requestId: string }).requestId,
-			rows: [{ id: "2", name: "aaaab", age: 21 }],
+			rows: [item({ id: "2", name: "aaaab", age: 21 })],
 			totalCount: 3,
 			lastCursor: "aaaab",
 			hasMore: true,
@@ -61,6 +90,57 @@ describe("PartialSyncClientBridge", () => {
 		expect(received.length).toBe(2);
 		expect(states.includes("fetching")).toBe(true);
 		expect(states.includes("realtime")).toBe(true);
+	});
+
+	it("reconciles queryRangeChunk against seeded ids with update when get shows stale local row", async () => {
+		const stale = item({ id: "1", name: "local", age: 1, updatedAt: 1 });
+		const serverRow = item({ id: "1", name: "server", age: 42, updatedAt: 2 });
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				get: (key) => (String(key) === "1" ? stale : undefined),
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		bridge.seedHydratedLocalRows([stale]);
+		const rangePromise = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			1,
+			null,
+		);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [serverRow],
+			totalCount: 1,
+			lastCursor: "server",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+		await rangePromise;
+
+		const updates = received.flatMap((batch) =>
+			batch.filter((m) => m.type === "update"),
+		);
+		expect(updates).toEqual([
+			{
+				type: "update",
+				value: serverRow,
+				previousValue: stale,
+			},
+		]);
 	});
 
 	it("skips receiveSync insert for row ids already tracked (overlap / re-fetch)", async () => {
@@ -87,10 +167,11 @@ describe("PartialSyncClientBridge", () => {
 		const id1 = (sent[0] as { requestId: string }).requestId;
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId: id1,
 			rows: [
-				{ id: "1", name: "a", age: 1 },
-				{ id: "2", name: "b", age: 2 },
+				item({ id: "1", name: "a", age: 1 }),
+				item({ id: "2", name: "b", age: 2 }),
 			],
 			totalCount: 10,
 			lastCursor: "b",
@@ -108,10 +189,11 @@ describe("PartialSyncClientBridge", () => {
 		const id2 = (sent[1] as { requestId: string }).requestId;
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId: id2,
 			rows: [
-				{ id: "2", name: "b", age: 2 },
-				{ id: "3", name: "c", age: 3 },
+				item({ id: "2", name: "b", age: 2 }),
+				item({ id: "3", name: "c", age: 3 }),
 			],
 			totalCount: 10,
 			lastCursor: "c",
@@ -151,10 +233,11 @@ describe("PartialSyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId: (sent[0] as { requestId: string }).requestId,
 			rows: [
-				{ id: "1", name: "aaaaa", age: 20 },
-				{ id: "2", name: "aaaab", age: 21 },
+				item({ id: "1", name: "aaaaa", age: 20 }),
+				item({ id: "2", name: "aaaab", age: 21 }),
 			],
 			totalCount: 500,
 			lastCursor: "aaaab",
@@ -185,17 +268,18 @@ describe("PartialSyncClientBridge", () => {
 
 		const update: SyncMessage<Item> = {
 			type: "update",
-			value: { id: "1", name: "new", age: 30 },
-			previousValue: { id: "1", name: "old", age: 20 },
+			value: item({ id: "1", name: "new", age: 30 }),
+			previousValue: item({ id: "1", name: "old", age: 20 }),
 		};
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: update,
 			viewTransition: "enterView",
 		});
 
 		expect(received).toEqual([
-			[{ type: "insert", value: { id: "1", name: "new", age: 30 } }],
+			[{ type: "insert", value: item({ id: "1", name: "new", age: 30 }) }],
 		]);
 		expect(bridge.cachedCount).toBe(1);
 	});
@@ -216,18 +300,20 @@ describe("PartialSyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: {
 				type: "insert",
-				value: { id: "1", name: "a", age: 1 },
+				value: item({ id: "1", name: "a", age: 1 }),
 			},
 		});
 		const update: SyncMessage<Item> = {
 			type: "update",
-			value: { id: "1", name: "b", age: 2 },
-			previousValue: { id: "1", name: "a", age: 1 },
+			value: item({ id: "1", name: "b", age: 2 }),
+			previousValue: item({ id: "1", name: "a", age: 1 }),
 		};
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: update,
 			viewTransition: "enterView",
 		});
@@ -253,18 +339,20 @@ describe("PartialSyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: {
 				type: "insert",
-				value: { id: "1", name: "a", age: 1 },
+				value: item({ id: "1", name: "a", age: 1 }),
 			},
 		});
 		const update: SyncMessage<Item> = {
 			type: "update",
-			value: { id: "1", name: "z", age: 99 },
-			previousValue: { id: "1", name: "a", age: 1 },
+			value: item({ id: "1", name: "z", age: 99 }),
+			previousValue: item({ id: "1", name: "a", age: 1 }),
 		};
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: update,
 			viewTransition: "exitView",
 		});
@@ -290,13 +378,15 @@ describe("PartialSyncClientBridge", () => {
 
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: {
 				type: "insert",
-				value: { id: "1", name: "aaaaa", age: 20 },
+				value: item({ id: "1", name: "aaaaa", age: 20 }),
 			},
 		});
 		await bridge.handleServerMessage({
 			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			change: {
 				type: "delete",
 				key: "1",
@@ -304,7 +394,7 @@ describe("PartialSyncClientBridge", () => {
 		});
 
 		expect(received).toEqual([
-			[{ type: "insert", value: { id: "1", name: "aaaaa", age: 20 } }],
+			[{ type: "insert", value: item({ id: "1", name: "aaaaa", age: 20 }) }],
 			[{ type: "delete", key: "1" }],
 		]);
 		expect(bridge.cachedCount).toBe(0);
@@ -339,6 +429,7 @@ describe("PartialSyncClientBridge", () => {
 		const requestId = (sent[0] as { requestId: string }).requestId;
 		await bridge.handleServerMessage({
 			type: "rangeUpToDate",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId,
 			totalCount: 99,
 		});
@@ -374,15 +465,16 @@ describe("PartialSyncClientBridge", () => {
 		const requestId = (sent[0] as { requestId: string }).requestId;
 		await bridge.handleServerMessage({
 			type: "rangeDelta",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId,
 			totalCount: 10,
-			changes: [{ type: "insert", value: { id: "9", name: "z", age: 9 } }],
+			changes: [{ type: "insert", value: item({ id: "9", name: "z", age: 9 }) }],
 			lastCursor: null,
 		});
 		const result = await p;
 		expect(result.invalidateWindow).toBe(true);
 		expect(received).toEqual([
-			[{ type: "insert", value: { id: "9", name: "z", age: 9 } }],
+			[{ type: "insert", value: item({ id: "9", name: "z", age: 9 }) }],
 		]);
 	});
 
@@ -410,10 +502,11 @@ describe("PartialSyncClientBridge", () => {
 		expect((sent[0] as { type: string }).type).toBe("rangeQuery");
 		await bridge.handleServerMessage({
 			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId,
 			rows: [
-				{ id: "1", name: "a", age: 1 },
-				{ id: "2", name: "b", age: 2 },
+				item({ id: "1", name: "a", age: 1 }),
+				item({ id: "2", name: "b", age: 2 }),
 			],
 			totalCount: 5,
 			lastCursor: "b",

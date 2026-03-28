@@ -6,7 +6,13 @@ import {
 } from "./partial-sync-interest";
 import { defaultPredicateColumnValue } from "./partial-sync-predicate-match";
 
-type Row = { id: string; age: number; x: number; y: number };
+type Row = {
+	id: string;
+	age: number;
+	x: number;
+	y: number;
+	updatedAt: number;
+};
 
 const ascAgeRange = (from: number, to: number): DeliveredRange => ({
 	sortColumn: "age",
@@ -23,8 +29,8 @@ describe("classifyPartialSyncRangePatch", () => {
 		const ranges: DeliveredRange[] = [ascAgeRange(50, 60)];
 		const change = {
 			type: "update" as const,
-			value: { id: "a", age: 99, x: 0, y: 0 },
-			previousValue: { id: "a", age: 57, x: 0, y: 0 },
+			value: { id: "a", age: 99, x: 0, y: 0, updatedAt: 0 },
+			previousValue: { id: "a", age: 57, x: 0, y: 0, updatedAt: 0 },
 		} satisfies SyncMessage<Row>;
 		const patch = classifyPartialSyncRangePatch(
 			ranges,
@@ -40,8 +46,8 @@ describe("classifyPartialSyncRangePatch", () => {
 		const ranges: DeliveredRange[] = [ascAgeRange(50, 60)];
 		const change = {
 			type: "update" as const,
-			value: { id: "a", age: 55, x: 0, y: 0 },
-			previousValue: { id: "a", age: 15, x: 0, y: 0 },
+			value: { id: "a", age: 55, x: 0, y: 0, updatedAt: 0 },
+			previousValue: { id: "a", age: 15, x: 0, y: 0, updatedAt: 0 },
 		} satisfies SyncMessage<Row>;
 		const patch = classifyPartialSyncRangePatch(
 			ranges,
@@ -57,8 +63,8 @@ describe("classifyPartialSyncRangePatch", () => {
 		const ranges: DeliveredRange[] = [ascAgeRange(50, 60)];
 		const change = {
 			type: "update" as const,
-			value: { id: "a", age: 58, x: 0, y: 0 },
-			previousValue: { id: "a", age: 55, x: 0, y: 0 },
+			value: { id: "a", age: 58, x: 0, y: 0, updatedAt: 0 },
+			previousValue: { id: "a", age: 55, x: 0, y: 0, updatedAt: 0 },
 		} satisfies SyncMessage<Row>;
 		const patch = classifyPartialSyncRangePatch(
 			ranges,
@@ -79,7 +85,7 @@ describe("classifyPartialSyncRangePatch", () => {
 		];
 		const change = {
 			type: "insert" as const,
-			value: { id: "b", age: 1, x: 5, y: 5 },
+			value: { id: "b", age: 1, x: 5, y: 5, updatedAt: 0 },
 		} satisfies SyncMessage<Row>;
 		const patch = classifyPartialSyncRangePatch(
 			[],

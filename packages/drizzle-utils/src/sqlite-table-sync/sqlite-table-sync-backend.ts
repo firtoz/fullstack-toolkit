@@ -1,5 +1,5 @@
 import type { InferSchemaOutput } from "@tanstack/db";
-import { and, eq, type SQL } from "drizzle-orm";
+import { and, eq, getTableColumns, sql, type SQL } from "drizzle-orm";
 import type {
 	SQLiteInsertValue,
 	SQLiteUpdateSetSource,
@@ -13,6 +13,22 @@ import {
 import type { SQLInterceptor } from "./types";
 
 export type SqliteDriverMode = "async" | "sync";
+
+/**
+ * `ON CONFLICT DO UPDATE` set map using SQLite `excluded.*` so inserts are idempotent
+ * (matches IndexedDB `put` / replayed partial-sync rows already present from `initialLoad`).
+ */
+function sqliteExcludedUpsertSet<TTable extends TableWithRequiredFields>(
+	table: TTable,
+): SQLiteUpdateSetSource<TTable> {
+	const cols = getTableColumns(table);
+	const set: Record<string, SQL> = {};
+	for (const [jsName, col] of Object.entries(cols)) {
+		if (jsName === "id") continue;
+		set[jsName] = sql.raw(`excluded."${col.name}"`);
+	}
+	return set as SQLiteUpdateSetSource<TTable>;
+}
 
 export interface SqliteTableSyncBackendConfig<
 	TTable extends TableWithRequiredFields,
@@ -198,6 +214,10 @@ export function createSqliteTableSyncBackend<
 								.values(
 									itemToInsert as unknown as SQLiteInsertValue<typeof table>,
 								)
+								.onConflictDoUpdate({
+									target: table.id,
+									set: sqliteExcludedUpsertSet(table),
+								})
 								.returning()
 								.all() as Array<InferSchemaOutput<SelectSchema<TTable>>>;
 							if (config.debug) {
@@ -226,6 +246,10 @@ export function createSqliteTableSyncBackend<
 									.values(
 										itemToInsert as unknown as SQLiteInsertValue<typeof table>,
 									)
+									.onConflictDoUpdate({
+										target: table.id,
+										set: sqliteExcludedUpsertSet(table),
+									})
 									.returning()) as Array<
 									InferSchemaOutput<SelectSchema<TTable>>
 								>;

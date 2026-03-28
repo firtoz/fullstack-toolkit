@@ -90,7 +90,12 @@ export {
 
 export {
 	partialSyncRowKey,
+	partialSyncRowVersionWatermarkMs,
+	partialSyncRowVersionWatermarkMsUnknown,
 	type PartialSyncRowId,
+	type PartialSyncRowRef,
+	type PartialSyncRowShape,
+	type PartialSyncRowVersion,
 } from "./partial-sync-row-key";
 
 export type {

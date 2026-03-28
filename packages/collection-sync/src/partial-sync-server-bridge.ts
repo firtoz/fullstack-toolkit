@@ -15,12 +15,12 @@ import type {
 	SyncServerMessageBody,
 } from "./sync-protocol";
 import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
-import type { PartialSyncRowId } from "./partial-sync-row-key";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
 
 export type { DeliveredRange } from "./partial-sync-interest";
 
 export type ClientQueryState<
-	TItem extends { id: PartialSyncRowId } = { id: string },
+	TItem extends PartialSyncRowShape = { id: string; updatedAt: null },
 > = {
 	clientId: string;
 	deliveredRanges: DeliveredRange[];
@@ -30,9 +30,7 @@ export type ClientQueryState<
 	streaming: boolean;
 };
 
-export interface PartialSyncServerBridgeStore<
-	TItem extends { id: PartialSyncRowId },
-> {
+export interface PartialSyncServerBridgeStore<TItem extends PartialSyncRowShape> {
 	queryRange: (options: {
 		sort: SyncRangeSort;
 		limit: number;
@@ -69,9 +67,7 @@ export interface PartialSyncServerBridgeStore<
 	}) => Promise<{ changes: SyncMessage<TItem>[]; totalCount: number } | null>;
 }
 
-export interface PartialSyncServerBridgeOptions<
-	TItem extends { id: PartialSyncRowId },
-> {
+export interface PartialSyncServerBridgeOptions<TItem extends PartialSyncRowShape> {
 	store: PartialSyncServerBridgeStore<TItem>;
 	sendToClient: (clientId: string, message: SyncServerMessage<TItem>) => void;
 	queryChunkSize?: number;
@@ -79,7 +75,7 @@ export interface PartialSyncServerBridgeOptions<
 	collectionId?: string;
 }
 
-export class PartialSyncServerBridge<TItem extends { id: PartialSyncRowId }> {
+export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 	#clientStates = new Map<string, ClientQueryState<TItem>>();
 	readonly #cid: string;
 

@@ -138,6 +138,9 @@ export function usePartialSyncWindow<
 	const syncUtilsRef = useRef(syncUtils);
 	syncUtilsRef.current = syncUtils;
 
+	const collectionRef = useRef(collection);
+	collectionRef.current = collection;
+
 	const cacheManager = useMemo(
 		() =>
 			new CacheManager<TItem>({
@@ -204,6 +207,7 @@ export function usePartialSyncWindow<
 				...(partialClientId !== undefined ? { clientId: partialClientId } : {}),
 				...(collectionId !== undefined ? { collectionId } : {}),
 				collection: {
+					get: (key) => collectionRef.current.get(key),
 					utils: {
 						receiveSync: (messages) =>
 							syncUtilsRef.current.receiveSync(messages),

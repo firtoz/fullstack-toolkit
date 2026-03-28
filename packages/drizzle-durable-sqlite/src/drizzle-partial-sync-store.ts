@@ -1,4 +1,5 @@
 import type {
+	PartialSyncRowShape,
 	PartialSyncServerBridgeStore,
 	RangeCondition,
 	SyncRange,
@@ -28,7 +29,7 @@ import {
 
 export type CreateDrizzlePartialSyncStoreOptions<
 	TSchema extends Record<string, unknown>,
-	TRow extends { id: string | number },
+	TRow extends PartialSyncRowShape,
 > = {
 	db: PartialSyncSqliteDatabase<TSchema>;
 	table: SQLiteTable;
@@ -41,7 +42,7 @@ export type CreateDrizzlePartialSyncStoreOptions<
 
 export function createDrizzlePartialSyncStore<
 	TSchema extends Record<string, unknown>,
-	TRow extends { id: string | number },
+	TRow extends PartialSyncRowShape,
 >(
 	options: CreateDrizzlePartialSyncStoreOptions<TSchema, TRow>,
 ): PartialSyncServerBridgeStore<TRow> {

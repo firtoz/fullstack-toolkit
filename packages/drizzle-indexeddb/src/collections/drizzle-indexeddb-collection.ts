@@ -320,11 +320,15 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 		},
 	};
 
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	const getKey = createGetKeyFunction<TTable>();
+
 	const baseSyncConfig: BaseSyncConfig<TTable> = {
 		table,
 		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: (item: TItem) => String(getKey(item)),
 	};
 
 	const syncResult = createSyncFunction(baseSyncConfig, wrappedBackend);
@@ -333,7 +337,7 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 
 	return createCollectionConfig({
 		schema,
-		getKey: createGetKeyFunction<TTable>(),
+		getKey,
 		syncResult,
 		syncMode: config.syncMode,
 	});

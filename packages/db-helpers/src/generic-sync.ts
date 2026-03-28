@@ -20,10 +20,15 @@ export const USE_DEDUPE = false as boolean;
 /**
  * Base configuration for sync lifecycle management (generic, no Drizzle dependency).
  */
-export interface GenericBaseSyncConfig {
+export interface GenericBaseSyncConfig<TItem extends object = object> {
 	readyPromise: Promise<void>;
 	syncMode?: SyncMode;
 	debug?: boolean;
+	/**
+	 * Row key for durable storage when applying {@link CollectionUtils.receiveSync} updates.
+	 * If omitted, `id` on the item (string or number) is used.
+	 */
+	getSyncPersistKey?: (item: TItem) => string;
 }
 
 /**
@@ -81,7 +86,7 @@ export type GenericSyncFunctionResult<TItem extends object> = {
  * Generic version -- no Drizzle dependency.
  */
 export function createGenericSyncFunction<TItem extends object>(
-	config: GenericBaseSyncConfig,
+	config: GenericBaseSyncConfig<TItem>,
 	backend: GenericSyncBackend<TItem>,
 ): GenericSyncFunctionResult<TItem> {
 	type CollectionType = CollectionConfig<
@@ -216,6 +221,40 @@ export function createGenericSyncFunction<TItem extends object>(
 		} satisfies SyncConfigRes;
 	};
 
+	const resolveReceiveSyncPersistKey = (item: TItem): string => {
+		if (config.getSyncPersistKey !== undefined) {
+			return config.getSyncPersistKey(item);
+		}
+		if (item !== null && typeof item === "object" && "id" in item) {
+			const id = (item as { id: unknown }).id;
+			if (typeof id === "string" || typeof id === "number") {
+				return String(id);
+			}
+		}
+		throw new Error(
+			"[receiveSync] Persist key missing: set GenericBaseSyncConfig.getSyncPersistKey or use items with string/number `id`",
+		);
+	};
+
+	const shallowRecordDiff = (previous: TItem, next: TItem): Partial<TItem> => {
+		const out: Partial<TItem> = {};
+		if (
+			previous !== null &&
+			typeof previous === "object" &&
+			next !== null &&
+			typeof next === "object"
+		) {
+			const prevRec = previous as Record<string, unknown>;
+			const nextRec = next as Record<string, unknown>;
+			for (const k of Object.keys(nextRec)) {
+				if (prevRec[k] !== nextRec[k]) {
+					(out as Record<string, unknown>)[k] = nextRec[k];
+				}
+			}
+		}
+		return out;
+	};
+
 	const receiveSync = async (messages: SyncMessage<TItem>[]) => {
 		if (messages.length === 0) return;
 		if (initialSyncDone) {
@@ -234,18 +273,41 @@ export function createGenericSyncFunction<TItem extends object>(
 		for (const msg of messages) {
 			switch (msg.type) {
 				case "insert":
+					await backend.handleInsert([msg.value]);
 					syncWrite({ type: "insert", value: msg.value });
 					break;
-				case "update":
+				case "update": {
+					const key = resolveReceiveSyncPersistKey(msg.value);
+					await backend.handleUpdate([
+						{
+							key,
+							changes: shallowRecordDiff(
+								msg.previousValue,
+								msg.value,
+							) as Partial<TItem>,
+							original: msg.previousValue,
+						},
+					]);
 					syncWrite({ type: "update", value: msg.value });
 					break;
+				}
 				case "delete":
+					await backend.handleDelete([
+						{
+							key: String(msg.key),
+							modified: { id: msg.key } as TItem,
+							original: { id: msg.key } as TItem,
+						},
+					]);
 					syncWrite({
 						type: "delete",
 						value: { id: msg.key } as TItem,
 					});
 					break;
 				case "truncate":
+					if (backend.handleTruncate) {
+						await backend.handleTruncate();
+					}
 					syncTruncate();
 					break;
 				default:

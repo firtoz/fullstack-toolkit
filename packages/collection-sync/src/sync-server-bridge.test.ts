@@ -27,6 +27,7 @@ describe("SyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "mutateBatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			mutations: [
 				{
@@ -64,6 +65,7 @@ describe("SyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			lastAckedServerVersion: 7,
 		});
@@ -100,6 +102,7 @@ describe("SyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			lastAckedServerVersion: 0,
 		});
@@ -133,6 +136,7 @@ describe("SyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "mutateBatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			mutations: [
 				{
@@ -144,6 +148,7 @@ describe("SyncServerBridge", () => {
 		});
 		await bridge.handleClientMessage({
 			type: "mutateBatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c2",
 			mutations: [
 				{
@@ -157,6 +162,7 @@ describe("SyncServerBridge", () => {
 		sentToClient.length = 0;
 		await bridge.handleClientMessage({
 			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c3",
 			lastAckedServerVersion: 1,
 		});
@@ -201,6 +207,7 @@ describe("SyncServerBridge", () => {
 
 		await bridge.handleClientMessage({
 			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			clientId: "c1",
 			lastAckedServerVersion: 0,
 		});

@@ -4,7 +4,7 @@ import {
 	createPartialSyncAdapter,
 } from "./partial-sync-adapter";
 
-type Row = { id: string; x: number; y: number };
+type Row = { id: string; x: number; y: number; updatedAt: number };
 
 describe("createPartialSyncAdapter", () => {
 	it("defaults expandViewport to identity", () => {
@@ -26,7 +26,9 @@ describe("createPartialSyncAdapter", () => {
 			{ column: "n", op: "gte", value: 1 },
 			{ column: "n", op: "lte", value: 2 },
 		]);
-		expect(adapter.getSortValue({ id: "a", x: 3, y: 4 }, "x")).toBe(3);
+		expect(adapter.getSortValue({ id: "a", x: 3, y: 4, updatedAt: 0 }, "x")).toBe(
+			3,
+		);
 	});
 });
 

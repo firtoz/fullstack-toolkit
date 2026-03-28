@@ -9,8 +9,10 @@ import type {
 } from "./sync-protocol";
 import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 import { toSyncMessage } from "./sync-protocol";
-import type { PartialSyncRowId } from "./partial-sync-row-key";
-import { partialSyncRowKey } from "./partial-sync-row-key";
+import {
+	partialSyncRowKey,
+	type PartialSyncRowShape,
+} from "./partial-sync-row-key";
 
 export interface SyncServerBridgeStore<TItem> {
 	applySyncMessages: (messages: SyncMessage<TItem>[]) => Promise<void>;
@@ -33,9 +35,7 @@ export interface SyncServerBridgeOptions<TItem> {
 	collectionId?: string;
 }
 
-export class SyncServerBridge<
-	TItem extends { id: PartialSyncRowId; updatedAt?: number | Date | null },
-> {
+export class SyncServerBridge<TItem extends PartialSyncRowShape> {
 	#serverVersion = 0;
 	#changeLog: Array<{ serverVersion: number; changes: SyncMessage<TItem>[] }> =
 		[];

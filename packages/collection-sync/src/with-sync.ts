@@ -6,7 +6,7 @@ import type {
 	UtilsRecord,
 } from "@tanstack/db";
 import { SyncClientBridge } from "./sync-client-bridge";
-import type { PartialSyncRowId } from "./partial-sync-row-key";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
 import type { SyncClientMessage } from "./sync-protocol";
 
 /**
@@ -25,10 +25,7 @@ import type { SyncClientMessage } from "./sync-protocol";
  */
 
 /** Row shape required for sync (matches {@link SyncClientBridge}). */
-export type SyncableCollectionItem = {
-	id: PartialSyncRowId;
-	updatedAt?: number | Date | null;
-};
+export type SyncableCollectionItem = PartialSyncRowShape;
 
 /**
  * Key/value persistence for sync metadata (`clientId`, `lastAckedServerVersion`).

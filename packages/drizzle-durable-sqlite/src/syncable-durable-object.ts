@@ -2,6 +2,7 @@ import {
 	SyncServerBridge,
 	createClientMessageSchema,
 	createServerMessageSchema,
+	type PartialSyncRowShape,
 	type SyncClientMessage,
 	type SyncServerMessage,
 } from "@firtoz/collection-sync";
@@ -26,20 +27,28 @@ import {
 	type ValidTableNames,
 } from "./durable-sqlite-collection";
 
-type BridgeRow<T> = T & {
-	id: string | number;
-	updatedAt?: number | Date | null;
-};
+/**
+ * Drizzle/Valibot `InferSchemaOutput` is not always structurally assignable to
+ * {@link PartialSyncRowShape}. Intersecting keeps inferred columns while requiring sync row keys for
+ * {@link SyncServerBridge}.
+ */
+type SyncBridgeRowFromTable<TTable extends TableWithRequiredFields> =
+	InferSchemaOutput<SelectSchema<TTable>> & PartialSyncRowShape;
+
+export type SyncableDurableObjectSyncRow<
+	TSchema extends Record<string, unknown>,
+	TTableName extends ValidTableNames<TSchema>,
+> = SyncBridgeRowFromTable<TSchema[TTableName] & TableWithRequiredFields>;
 
 type SessionData = { clientId: string };
 
-function createSessionCodecOptions<TItem extends { id: string | number }>(
+function createSessionCodecOptions<TItem extends PartialSyncRowShape>(
 	enableBufferMessages: boolean,
 	serializeJson?: (value: unknown) => string,
 	deserializeJson?: (raw: string) => unknown,
-): ZodSessionOptions<SyncClientMessage, SyncServerMessage<BridgeRow<TItem>>> {
+): ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>> {
 	const clientSchema = createClientMessageSchema();
-	const serverSchema = createServerMessageSchema<BridgeRow<TItem>>();
+	const serverSchema = createServerMessageSchema<TItem>();
 	if (!enableBufferMessages) {
 		return {
 			clientSchema,
@@ -58,11 +67,11 @@ function createSessionCodecOptions<TItem extends { id: string | number }>(
 }
 
 class SyncTableSession<
-	TItem extends { id: string | number; updatedAt?: number | Date | null },
+	TItem extends PartialSyncRowShape,
 	TEnv extends Cloudflare.Env,
 > extends ZodSession<
 	SessionData,
-	SyncServerMessage<BridgeRow<TItem>>,
+	SyncServerMessage<TItem>,
 	SyncClientMessage,
 	TEnv
 > {
@@ -73,9 +82,9 @@ class SyncTableSession<
 		sessions: Map<WebSocket, SyncTableSession<TItem, TEnv>>,
 		options: ZodSessionOptions<
 			SyncClientMessage,
-			SyncServerMessage<BridgeRow<TItem>>
+			SyncServerMessage<TItem>
 		>,
-		bridge: SyncServerBridge<BridgeRow<TItem>>,
+		bridge: SyncServerBridge<TItem>,
 	) {
 		const generatedClientId = crypto.randomUUID();
 		super(websocket, sessions, options, {
@@ -109,19 +118,15 @@ export abstract class SyncableDurableObject<
 	TSchema extends Record<string, unknown>,
 	TTableName extends ValidTableNames<TSchema>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
-	// biome-ignore lint/suspicious/noExplicitAny: ZodWebSocketDO session generic is internal; row type is TBridgeRow in constructor.
 > extends ZodWebSocketDO<
+	// biome-ignore lint/suspicious/noExplicitAny: ZodWebSocketDO session generic is internal; row type is fixed in constructor.
 	any,
 	SyncClientMessage,
 	SyncServerMessage<unknown>,
 	TEnv
 > {
 	protected bridge!: SyncServerBridge<
-		BridgeRow<
-			InferSchemaOutput<
-				SelectSchema<TSchema[TTableName] & TableWithRequiredFields>
-			>
-		>
+		SyncableDurableObjectSyncRow<TSchema, TTableName>
 	>;
 
 	protected collection!: DrizzleSqliteTableCollection<
@@ -136,10 +141,9 @@ export abstract class SyncableDurableObject<
 		config: SyncableDurableObjectConfig<TSchema, TTableName>,
 	) {
 		type TTable = TSchema[TTableName] & TableWithRequiredFields;
-		type TRow = InferSchemaOutput<SelectSchema<TTable>>;
-		type TBridgeRow = BridgeRow<TRow>;
+		type TRow = SyncBridgeRowFromTable<TTable>;
 
-		let bridgeRef!: SyncServerBridge<TBridgeRow>;
+		let bridgeRef!: SyncServerBridge<TRow>;
 
 		super(ctx, env, {
 			zodSessionOptions: (
@@ -149,7 +153,7 @@ export abstract class SyncableDurableObject<
 					sessionCtx !== undefined &&
 					new URL(sessionCtx.req.url).searchParams.get("transport") ===
 						"msgpack";
-				return createSessionCodecOptions<TBridgeRow>(
+				return createSessionCodecOptions<TRow>(
 					useMsgpack,
 					config.serializeJson,
 					config.deserializeJson,
@@ -163,12 +167,12 @@ export abstract class SyncableDurableObject<
 					SyncServerMessage<unknown>
 				>,
 			) => {
-				return new SyncTableSession<TBridgeRow, TEnv>(
+				return new SyncTableSession<TRow, TEnv>(
 					websocket,
-					this.sessions as Map<WebSocket, SyncTableSession<TBridgeRow, TEnv>>,
+					this.sessions as Map<WebSocket, SyncTableSession<TRow, TEnv>>,
 					options as ZodSessionOptions<
 						SyncClientMessage,
-						SyncServerMessage<TBridgeRow>
+						SyncServerMessage<TRow>
 					>,
 					bridgeRef,
 				);
@@ -182,11 +186,11 @@ export abstract class SyncableDurableObject<
 			const tableName = config.tableName as never;
 
 			const collection = createCollection(
-				// biome-ignore lint/suspicious/noExplicitAny: TanStack collection + Drizzle generic row inference is too heavy for TS here.
 				durableSqliteCollectionOptions({
 					drizzle: db,
 					tableName,
 					syncMode: config.syncMode ?? "eager",
+					// biome-ignore lint/suspicious/noExplicitAny: TanStack collection + Drizzle generic row inference is too heavy for TS here.
 				}) as any,
 			) as DrizzleSqliteTableCollection<TTable>;
 
@@ -211,9 +215,9 @@ export abstract class SyncableDurableObject<
 				col.onFirstReady(() => resolve());
 			});
 
-			bridgeRef = new SyncServerBridge<TBridgeRow>({
+			bridgeRef = new SyncServerBridge<TRow>({
 				store: {
-					applySyncMessages: async (messages: SyncMessage<TBridgeRow>[]) => {
+					applySyncMessages: async (messages: SyncMessage<TRow>[]) => {
 						for (const message of messages) {
 							if (message.type === "insert") {
 								const tx = col.insert(message.value);
@@ -237,21 +241,21 @@ export abstract class SyncableDurableObject<
 						}
 					},
 					getSnapshotMessages: async () => {
-						return (col.toArray as TBridgeRow[]).map((row) => ({
+						return (col.toArray as TRow[]).map((row) => ({
 							type: "insert" as const,
 							value: row,
 						}));
 					},
 					getRow: async (key: string | number) => {
-						return col.state.get(key) as TBridgeRow | undefined;
+						return col.state.get(key) as TRow | undefined;
 					},
 				},
 				sendToClient: (
 					clientId: string,
-					message: SyncServerMessage<TBridgeRow>,
+					message: SyncServerMessage<TRow>,
 				) => {
 					for (const session of this.sessions.values()) {
-						const s = session as SyncTableSession<TBridgeRow, TEnv>;
+						const s = session as SyncTableSession<TRow, TEnv>;
 						if (s.clientId === clientId) {
 							s.send(message);
 							return;
@@ -260,17 +264,17 @@ export abstract class SyncableDurableObject<
 				},
 				broadcastExcept: (
 					excludeClientId: string,
-					message: SyncServerMessage<TBridgeRow>,
+					message: SyncServerMessage<TRow>,
 				) => {
 					for (const session of this.sessions.values()) {
-						const s = session as SyncTableSession<TBridgeRow, TEnv>;
+						const s = session as SyncTableSession<TRow, TEnv>;
 						if (s.clientId === excludeClientId) continue;
 						s.send(message);
 					}
 				},
-				broadcastAll: (message: SyncServerMessage<TBridgeRow>) => {
+				broadcastAll: (message: SyncServerMessage<TRow>) => {
 					for (const session of this.sessions.values()) {
-						(session as SyncTableSession<TBridgeRow, TEnv>).send(message);
+						(session as SyncTableSession<TRow, TEnv>).send(message);
 					}
 				},
 			});

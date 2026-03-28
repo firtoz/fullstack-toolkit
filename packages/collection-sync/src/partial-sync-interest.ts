@@ -1,13 +1,13 @@
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type { RangeCondition } from "./sync-protocol";
-import type { PartialSyncRowId } from "./partial-sync-row-key";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
 import { matchesPredicate } from "./partial-sync-predicate-match";
 
 /** Metadata on `rangePatch` when an update crosses client interest boundaries. */
 export type PartialSyncViewTransition = "enterView" | "exitView";
 
-export type PartialSyncPatchResult<TItem extends { id: PartialSyncRowId }> = {
+export type PartialSyncPatchResult<TItem extends PartialSyncRowShape> = {
 	change: SyncMessage<TItem>;
 	viewTransition?: PartialSyncViewTransition;
 };
@@ -88,9 +88,7 @@ export function rowMatchesClientInterest<TItem>(
  * receive a patch. View enter/exit keeps the real `update` on the wire so clients can cache
  * rows and filter locally instead of fake delete/insert.
  */
-export function classifyPartialSyncRangePatch<
-	TItem extends { id: PartialSyncRowId },
->(
+export function classifyPartialSyncRangePatch<TItem extends PartialSyncRowShape>(
 	sortRanges: DeliveredRange[],
 	predicateGroups: RangeCondition[][],
 	change: SyncMessage<TItem>,
