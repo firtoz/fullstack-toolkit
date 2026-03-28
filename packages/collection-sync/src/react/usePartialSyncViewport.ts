@@ -4,6 +4,7 @@ import {
 	DEFAULT_VIEWPORT_RANGE_MAX_WAIT_MS,
 	DEFAULT_VIEWPORT_RANGE_QUIET_MS,
 } from "./constants";
+import { primePartialSyncBridgeCachedIdsFromCollection } from "./partial-sync-utils";
 import { usePredicateFilteredRows } from "./usePredicateFilteredRows";
 import type {
 	PartialSyncItem,
@@ -82,6 +83,9 @@ export function usePartialSyncViewport<
 	const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastRangeFetchAtRef = useRef(0);
 
+	const collectionRef = useRef(collection);
+	collectionRef.current = collection;
+
 	useLayoutEffect(() => {
 		const clearQuietTimer = () => {
 			if (quietTimerRef.current !== null) {
@@ -100,6 +104,10 @@ export function usePartialSyncViewport<
 			clearQuietTimer();
 			clearMaxWaitTimer();
 			lastRangeFetchAtRef.current = performance.now();
+			primePartialSyncBridgeCachedIdsFromCollection(
+				bridgeRef.current,
+				collectionRef.current,
+			);
 			const v = fetchViewportRef.current;
 			const ad = adapterRef.current;
 			const range: SyncRange = {

@@ -3,6 +3,16 @@ import type { UtilsRecord } from "@tanstack/db";
 import type { RangeFingerprint } from "../sync-protocol";
 import type { PartialSyncCollection, PartialSyncItem } from "./types";
 
+/** Merge every row currently in the collection into the bridge cache (id set only). Idempotent. */
+export function primePartialSyncBridgeCachedIdsFromCollection<
+	TItem extends PartialSyncItem,
+>(
+	bridge: { seedHydratedLocalRows: (rows: readonly TItem[]) => void },
+	collection: Pick<PartialSyncCollection<TItem>, "entries">,
+): void {
+	bridge.seedHydratedLocalRows(Array.from(collection.entries(), ([, v]) => v));
+}
+
 /**
  * TanStack `Collection` types `utils` as {@link UtilsRecord}. This narrows to sync helpers when
  * present (e.g. after `memoryCollectionOptions` / Drizzle sync config).

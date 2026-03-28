@@ -33,9 +33,10 @@ type CollectionWithReceiveSync<TItem> = {
 		receiveSync: (messages: SyncMessage<TItem>[]) => Promise<void>;
 	};
 	/**
-	 * When set, server `queryRangeChunk` rows can become `update` messages for ids already in
-	 * `#cachedIds` (e.g. after {@link PartialSyncClientBridge.seedHydratedLocalRows}) so authoritative
-	 * snapshots replace stale durable rows instead of being skipped as duplicate inserts.
+	 * When set, server `queryRangeChunk` rows can become `update` messages when the collection
+	 * already holds that id — including durable hydration (IndexedDB / SQLite reload) where rows
+	 * exist before {@link PartialSyncClientBridge.seedHydratedLocalRows} runs or if it is skipped.
+	 * Without this, the bridge may emit `insert` and hit duplicate-key errors from `receiveSync`.
 	 */
 	get?: (key: string | number) => TItem | undefined;
 };
@@ -131,6 +132,11 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 	#serverConfirmedKeys = new Set<string | number>();
 	#serverConfirmedKeysRevision = 0;
 	#confirmedRevisionListeners = new Set<() => void>();
+	/**
+	 * Ensures `queryRangeChunk` / `rangeDelta` handlers never overlap: concurrent
+	 * {@link handleServerMessage} calls must not run `receiveSync` in parallel for range fetches.
+	 */
+	#rangeFetchApplySerial: Promise<void> = Promise.resolve();
 
 	constructor(private readonly options: PartialSyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId ?? crypto.randomUUID();
@@ -143,6 +149,12 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			...msg,
 			collectionId: this.collectionId,
 		} as SyncClientMessage);
+	}
+
+	#scheduleRangeFetchApply(fn: () => Promise<void>): Promise<void> {
+		const next = this.#rangeFetchApplySerial.catch(() => {}).then(fn);
+		this.#rangeFetchApplySerial = next;
+		return next;
 	}
 
 	get state(): PartialSyncState {
@@ -215,7 +227,29 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		});
 	}
 
-	/** Drop in-flight `queryRange` / `queryByOffset` requests (e.g. user seek / sort reset). */
+	#exitFetchingAfterApplyFailure(): void {
+		if (this.#connected) {
+			this.#setState({
+				status: "realtime",
+				cachedCount: this.cachedCount,
+				totalCount: this.#totalCount,
+				cacheUtilization: this.#cacheUtilization,
+			});
+		} else {
+			this.#setState({
+				status: "partial",
+				cachedCount: this.cachedCount,
+				totalCount: this.#totalCount,
+				cacheUtilization: this.#cacheUtilization,
+			});
+		}
+	}
+
+	/**
+	 * Drop in-flight `queryRange` / `queryByOffset` / `rangeQuery` requests (e.g. user seek / sort reset).
+	 * {@link requestRange}, {@link requestByOffset}, and {@link requestRangeQuery} call this first so
+	 * overlapping viewport debounces cannot double-apply the same rows.
+	 */
 	abortRangeRequests(): void {
 		for (const inflight of this.#inFlightRequests.values()) {
 			inflight.reject(
@@ -281,6 +315,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		limit: number,
 		afterCursor: unknown | null,
 	): Promise<PartialSyncRangeResult<TItem>> {
+		this.abortRangeRequests();
 		const requestId = createClientMutationId("qr");
 		this.#setState({
 			status: "fetching",
@@ -315,6 +350,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		limit: number,
 		offset: number,
 	): Promise<PartialSyncRangeResult<TItem>> {
+		this.abortRangeRequests();
 		const requestId = createClientMutationId("qo");
 		this.#setState({
 			status: "fetching",
@@ -348,6 +384,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		range: SyncRange,
 		fingerprint?: RangeFingerprint,
 	): Promise<PartialSyncRangeResult<TItem>> {
+		this.abortRangeRequests();
 		const requestId = createClientMutationId("rq");
 		this.#setState({
 			status: "fetching",
@@ -381,13 +418,17 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		if (mid !== this.collectionId) return;
 		switch (message.type) {
 			case "queryRangeChunk":
-				await this.#handleQueryRangeChunk(message);
+				await this.#scheduleRangeFetchApply(() =>
+					this.#handleQueryRangeChunk(message),
+				);
 				return;
 			case "rangeUpToDate":
 				this.#handleRangeUpToDate(message);
 				return;
 			case "rangeDelta":
-				await this.#handleRangeDelta(message);
+				await this.#scheduleRangeFetchApply(() =>
+					this.#handleRangeDelta(message),
+				);
 				return;
 			case "rangePatch":
 				await this.#handleRangePatch(message);
@@ -474,6 +515,14 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		this.#notifyConfirmedKeysRevision();
 	}
 
+	/** True only if this handler still owns the in-flight entry (not superseded by {@link abortRangeRequests}). */
+	#isActiveRangeRequest(
+		requestId: string,
+		inFlight: InFlightRequest<TItem>,
+	): boolean {
+		return this.#inFlightRequests.get(requestId) === inFlight;
+	}
+
 	async #handleQueryRangeChunk(
 		message: Extract<SyncServerMessage<TItem>, { type: "queryRangeChunk" }>,
 	): Promise<void> {
@@ -492,34 +541,57 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 
 		if (message.rows.length > 0) {
 			await this.options.beforeApplyRows?.(message.rows);
+			if (!this.#isActiveRangeRequest(message.requestId, inFlight)) return;
 			const getRow = this.options.collection.get;
 			const changes: SyncMessage<TItem>[] = [];
+			let cacheTouched = false;
 			for (const row of message.rows) {
 				const pk = partialSyncRowKey(row.id);
-				if (!this.#cachedIds.has(pk)) {
-					changes.push({ type: "insert", value: row } as SyncMessage<TItem>);
+				const local =
+					getRow !== undefined ? getRow(pk) : undefined;
+
+				if (local !== undefined) {
+					if (!this.#cachedIds.has(pk)) {
+						this.#cachedIds.add(pk);
+						cacheTouched = true;
+					}
+					if (serverRowSupersedesLocal(local, row)) {
+						changes.push({
+							type: "update",
+							value: row,
+							previousValue: local,
+						} as SyncMessage<TItem>);
+					}
 					continue;
 				}
-				if (getRow === undefined) continue;
-				const local = getRow(partialSyncRowKey(row.id));
-				if (
-					local !== undefined &&
-					serverRowSupersedesLocal(local, row)
-				) {
-					changes.push({
-						type: "update",
-						value: row,
-						previousValue: local,
-					} as SyncMessage<TItem>);
+
+				if (!this.#cachedIds.has(pk)) {
+					changes.push({ type: "insert", value: row } as SyncMessage<TItem>);
 				}
 			}
 			if (changes.length > 0) {
-				await this.#applyAndTrack(changes);
+				try {
+					await this.#applyAndTrack(changes);
+				} catch (err) {
+					if (!this.#isActiveRangeRequest(message.requestId, inFlight)) {
+						return;
+					}
+					this.#inFlightRequests.delete(message.requestId);
+					inFlight.reject(err as Error);
+					this.#exitFetchingAfterApplyFailure();
+					return;
+				}
+				if (!this.#isActiveRangeRequest(message.requestId, inFlight)) {
+					return;
+				}
+			} else if (cacheTouched) {
+				this.#refreshCachedCountInState();
 			}
 			inFlight.rows.push(...message.rows);
 		}
 
 		if (!message.done) return;
+		if (!this.#isActiveRangeRequest(message.requestId, inFlight)) return;
 		this.#replaceServerConfirmedKeysFromRows(inFlight.rows);
 		this.#inFlightRequests.delete(message.requestId);
 		const result: PartialSyncRangeResult<TItem> = {
@@ -566,6 +638,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		if (!inFlight) return;
 		const delta = message.changes as SyncMessage<TItem>[];
 		await this.#applyAndTrack(delta);
+		if (!this.#isActiveRangeRequest(message.requestId, inFlight)) return;
 		this.#mergeServerConfirmedKeysFromMessages(delta);
 		this.#inFlightRequests.delete(message.requestId);
 		this.#totalCount = message.totalCount;

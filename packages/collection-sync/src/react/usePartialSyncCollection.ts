@@ -3,7 +3,11 @@ import { connectPartialSync } from "../connect-partial-sync";
 import { PartialSyncClientBridge } from "../partial-sync-client-bridge";
 import type { PartialSyncState } from "../partial-sync-client-bridge";
 import type { SyncClientMessage } from "../sync-protocol";
-import { assertSyncUtils } from "./partial-sync-utils";
+import {
+	assertSyncUtils,
+	getPartialSyncRowByMapId,
+	primePartialSyncBridgeCachedIdsFromCollection,
+} from "./partial-sync-utils";
 import type {
 	PartialSyncItem,
 	UsePartialSyncCollectionOptions,
@@ -47,7 +51,8 @@ export function usePartialSyncCollection<TItem extends PartialSyncItem>({
 				clientId: partialClientId,
 				...(collectionId !== undefined ? { collectionId } : {}),
 				collection: {
-					get: (key) => collectionRef.current.get(key),
+					get: (key) =>
+						getPartialSyncRowByMapId(collectionRef.current, key),
 					utils: {
 						receiveSync: (messages) =>
 							syncUtilsRef.current.receiveSync(messages),
@@ -80,6 +85,7 @@ export function usePartialSyncCollection<TItem extends PartialSyncItem>({
 	 * `disconnect` (layout cleanups run in declaration order in practice).
 	 */
 	useLayoutEffect(() => {
+		primePartialSyncBridgeCachedIdsFromCollection(bridge, collection);
 		let cancelled = false;
 		let seeded = false;
 		const trySeed = () => {
