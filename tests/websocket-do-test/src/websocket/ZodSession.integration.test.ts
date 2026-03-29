@@ -474,31 +474,31 @@ describe("ZodSession Integration Tests", () => {
 
 			ws.accept();
 
-			// Test each message type in the discriminated union
-			const messageTypes: ClientMessage[] = [
-				{ type: "message", text: "Hello" },
-				{ type: "setName", name: "NewName" },
-			];
-
-			// Send all messages
-			for (const message of messageTypes) {
-				ws.send(JSON.stringify(message));
-			}
-
-			// Wait for both messages to be processed
+			// One client, two sequential client frames: the DO awaits `webSocketMessage`, so the
+			// second frame is not handled until the first handler finishes (including broadcast).
+			// We still send round-by-round so the test does not depend on buffering two sends before
+			// any server work runs (clearer under Vitest / workerd).
+			ws.send(JSON.stringify({ type: "message", text: "Hello" } satisfies ClientMessage));
 			await vi.waitFor(
 				() => {
-					expect(messages.length).toBeGreaterThanOrEqual(2);
+					expect(messages).toHaveLength(1);
+					expect(messages[0].type).toBe("message");
 				},
 				{ timeout: 1000, interval: 20 },
 			);
 
-			// Validate message contents
+			ws.send(JSON.stringify({ type: "setName", name: "NewName" } satisfies ClientMessage));
+			await vi.waitFor(
+				() => {
+					expect(messages).toHaveLength(2);
+				},
+				{ timeout: 1000, interval: 20 },
+			);
+
 			expect(messages[0]).toMatchObject({
 				type: "message",
 				text: "Hello",
 			});
-
 			expect(messages[1]).toMatchObject({
 				type: "nameChanged",
 				newName: "NewName",
