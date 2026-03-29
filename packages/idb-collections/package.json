@@ -51,7 +51,7 @@
 	},
 	"peerDependencies": {
 		"@standard-schema/spec": ">=1.1.0",
-		"@tanstack/db": ">=0.5.33"
+		"@tanstack/db": ">=0.6.1"
 	},
 	"devDependencies": {
 		"@standard-schema/spec": "catalog:",

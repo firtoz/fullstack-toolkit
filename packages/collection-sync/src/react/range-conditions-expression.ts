@@ -1,19 +1,28 @@
-import { and, eq, gt, gte, lt, lte, not } from "@tanstack/db";
+import { and, eq, gt, gte, lt, lte, not, type Ref } from "@tanstack/db";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import type { PartialSyncRowShape } from "../partial-sync-row-key";
 import type { RangeCondition } from "../sync-protocol";
 
 /**
  * Row ref from `q.from({ items: collection }).where(({ items }) => …)`.
  * Column access must match {@link RangeCondition.column} names on the stored row shape.
+ *
+ * Uses TanStack {@link Ref} so column reads are `ExpressionLike` (e.g. for `inArray`), not `unknown`.
  */
-export type PredicateRowRef = Record<string, unknown>;
+export type PredicateRowRef = Ref<PartialSyncRowShape & Record<string, unknown>>;
+
+/**
+ * Row accepted by {@link buildRangeConditionsAndExpression}: live query refs or plain objects (e.g. tests).
+ * Dynamic `column` access yields `unknown`, which TanStack comparison helpers still accept.
+ */
+export type PredicateRangeBuildRow = PredicateRowRef | Record<string, unknown>;
 
 /**
  * Builds a TanStack DB `where` expression AND-ing all conditions (same semantics as
  * {@link matchesPredicate} for plain property rows).
  */
 export function buildRangeConditionsAndExpression(
-	row: PredicateRowRef,
+	row: PredicateRangeBuildRow,
 	conditions: RangeCondition[],
 ) {
 	if (conditions.length === 0) {
@@ -29,7 +38,7 @@ export function buildRangeConditionsAndExpression(
 	return rest.length === 0 ? and(a, b) : and(a, b, ...rest);
 }
 
-function rangeConditionExpression(row: PredicateRowRef, c: RangeCondition) {
+function rangeConditionExpression(row: PredicateRangeBuildRow, c: RangeCondition) {
 	const col = row[c.column];
 	switch (c.op) {
 		case "eq":
