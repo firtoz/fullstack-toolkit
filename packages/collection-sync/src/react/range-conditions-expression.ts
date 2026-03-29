@@ -9,7 +9,9 @@ import type { RangeCondition } from "../sync-protocol";
  *
  * Uses TanStack {@link Ref} so column reads are `ExpressionLike` (e.g. for `inArray`), not `unknown`.
  */
-export type PredicateRowRef = Ref<PartialSyncRowShape & Record<string, unknown>>;
+export type PredicateRowRef = Ref<
+	PartialSyncRowShape & Record<string, unknown>
+>;
 
 /**
  * Row accepted by {@link buildRangeConditionsAndExpression}: live query refs or plain objects (e.g. tests).
@@ -38,7 +40,10 @@ export function buildRangeConditionsAndExpression(
 	return rest.length === 0 ? and(a, b) : and(a, b, ...rest);
 }
 
-function rangeConditionExpression(row: PredicateRangeBuildRow, c: RangeCondition) {
+function rangeConditionExpression(
+	row: PredicateRangeBuildRow,
+	c: RangeCondition,
+) {
 	const col = row[c.column];
 	switch (c.op) {
 		case "eq":
