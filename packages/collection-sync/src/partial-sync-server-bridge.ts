@@ -2,10 +2,17 @@ import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import {
 	classifyPartialSyncRangePatch,
+	filterSyncMessagesForPredicateRange,
 	type DeliveredRange,
 	type PartialSyncPatchResult,
 } from "./partial-sync-interest";
 import { defaultPredicateColumnValue } from "./partial-sync-predicate-match";
+import type { PartialSyncRowId } from "./partial-sync-row-key";
+import { partialSyncRowKey } from "./partial-sync-row-key";
+
+function deliveredRowIdKey(id: PartialSyncRowId): string {
+	return String(partialSyncRowKey(id));
+}
 import type {
 	RangeCondition,
 	SyncClientMessage,
@@ -26,11 +33,15 @@ export type ClientQueryState<
 	deliveredRanges: DeliveredRange[];
 	/** Each entry is one predicate query's `conditions` (AND); OR across entries. */
 	predicateGroups: RangeCondition[][];
+	/** Row ids delivered to this client in the current interest session (for scoped deletes). */
+	deliveredRowIds: Set<string>;
 	pendingPatches: PartialSyncPatchResult<TItem>[];
 	streaming: boolean;
 };
 
-export interface PartialSyncServerBridgeStore<TItem extends PartialSyncRowShape> {
+export interface PartialSyncServerBridgeStore<
+	TItem extends PartialSyncRowShape,
+> {
 	queryRange: (options: {
 		sort: SyncRangeSort;
 		limit: number;
@@ -75,12 +86,22 @@ export type PartialSyncPushServerChangesOptions = {
 	excludeClientId?: string;
 };
 
-export interface PartialSyncServerBridgeOptions<TItem extends PartialSyncRowShape> {
+export interface PartialSyncServerBridgeOptions<
+	TItem extends PartialSyncRowShape,
+> {
 	store: PartialSyncServerBridgeStore<TItem>;
 	sendToClient: (clientId: string, message: SyncServerMessage<TItem>) => void;
 	queryChunkSize?: number;
 	/** Multiplex key for sync messages. Default {@link DEFAULT_SYNC_COLLECTION_ID}. */
 	collectionId?: string;
+	/**
+	 * Narrow client-requested predicate conditions (e.g. fog of war). Applied before querying and
+	 * before interest tracking for predicate `rangeQuery`.
+	 */
+	resolveClientVisibility?: (
+		clientId: string,
+		requestedConditions: RangeCondition[],
+	) => RangeCondition[] | Promise<RangeCondition[]>;
 }
 
 export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
@@ -144,6 +165,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 					change,
 					(row, column) => this.options.store.getSortValue(row, column),
 					(row, column) => defaultPredicateColumnValue(row, column),
+					{ deliveredRowIds: state.deliveredRowIds },
 				);
 				if (patch === null) continue;
 				if (state.streaming) {
@@ -157,18 +179,120 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 						? { viewTransition: patch.viewTransition }
 						: {}),
 				});
+				this.#applyPatchToDeliveredRowIds(state, patch);
 			}
 		}
+	}
+
+	/**
+	 * Drop partial-sync interest for a disconnected client (prevents unbounded `#clientStates`
+	 * growth and stale subscriptions).
+	 */
+	removeClient(clientId: string): void {
+		this.#clientStates.delete(clientId);
+	}
+
+	/**
+	 * Replace predicate interest for a client (server-authoritative visibility). Clears sort-range
+	 * tracking; the next `rangeQuery` should re-establish delivered ranges from fresh chunks.
+	 */
+	setClientVisibility(clientId: string, conditions: RangeCondition[]): void {
+		const state = this.#getOrCreateClientState(clientId);
+		state.predicateGroups = [[...conditions]];
+		state.deliveredRanges.length = 0;
+		state.deliveredRowIds.clear();
 	}
 
 	getClientState(clientId: string): ClientQueryState<TItem> | undefined {
 		return this.#clientStates.get(clientId);
 	}
 
+	#resetClientInterest(state: ClientQueryState<TItem>): void {
+		state.deliveredRanges.length = 0;
+		state.predicateGroups.length = 0;
+		state.pendingPatches.length = 0;
+		state.deliveredRowIds.clear();
+	}
+
+	#trackDeliveredRowIdsFromRows(
+		state: ClientQueryState<TItem>,
+		rows: TItem[],
+	): void {
+		for (const row of rows) {
+			state.deliveredRowIds.add(deliveredRowIdKey(row.id));
+		}
+	}
+
+	#trackDeliveredRowIdsFromMessages(
+		state: ClientQueryState<TItem>,
+		messages: SyncMessage<TItem>[],
+	): void {
+		for (const c of messages) {
+			if (c.type === "insert" || c.type === "update") {
+				state.deliveredRowIds.add(deliveredRowIdKey(c.value.id));
+			}
+			if (c.type === "delete") {
+				state.deliveredRowIds.delete(deliveredRowIdKey(c.key));
+			}
+			if (c.type === "truncate") {
+				state.deliveredRowIds.clear();
+			}
+		}
+	}
+
+	#applyPatchToDeliveredRowIds(
+		state: ClientQueryState<TItem>,
+		patch: PartialSyncPatchResult<TItem>,
+	): void {
+		const ch = patch.change;
+		if (ch.type === "truncate") {
+			state.deliveredRowIds.clear();
+			return;
+		}
+		if (ch.type === "delete") {
+			state.deliveredRowIds.delete(deliveredRowIdKey(ch.key));
+			return;
+		}
+		if (ch.type === "insert") {
+			state.deliveredRowIds.add(deliveredRowIdKey(ch.value.id));
+			return;
+		}
+		if (ch.type === "update") {
+			const id = deliveredRowIdKey(ch.value.id);
+			if (patch.viewTransition === "exitView") {
+				state.deliveredRowIds.delete(id);
+			} else {
+				state.deliveredRowIds.add(id);
+			}
+		}
+	}
+
 	async #handleRangeQuery(
 		message: Extract<SyncClientMessage, { type: "rangeQuery" }>,
 	): Promise<void> {
-		const { range, clientId, requestId, fingerprint } = message;
+		const { clientId, requestId, fingerprint } = message;
+		let range: SyncRange = message.range;
+		const state = this.#getOrCreateClientState(clientId);
+		/** Predicate viewport queries replace interest; index fingerprint refresh must keep sort ranges. */
+		if (range.kind === "predicate") {
+			this.#resetClientInterest(state);
+		} else {
+			state.predicateGroups.length = 0;
+			state.pendingPatches.length = 0;
+		}
+
+		if (range.kind === "predicate") {
+			const resolved =
+				this.options.resolveClientVisibility !== undefined
+					? await this.options.resolveClientVisibility(
+							clientId,
+							range.conditions,
+						)
+					: range.conditions;
+			range = { ...range, conditions: resolved };
+			state.predicateGroups.push([...resolved]);
+		}
+
 		const rangeLimit =
 			range.kind === "index" ? range.limit : (range.limit ?? 200);
 
@@ -185,26 +309,28 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 						requestId,
 						totalCount: delta.totalCount,
 					});
-					this.#mergeDeliveredRangesFromChanges(
-						this.#getOrCreateClientState(clientId),
-						range,
-						delta.changes,
-					);
+					this.#mergeDeliveredRangesFromChanges(state, range, delta.changes);
 					return;
 				}
 				const maxDelta = Math.max(1, Math.ceil(rangeLimit * 0.5));
 				if (delta.changes.length <= maxDelta) {
+					const filteredDelta =
+						range.kind === "predicate"
+							? filterSyncMessagesForPredicateRange(
+									range.conditions,
+									delta.changes,
+									(row, column) => this.options.store.getSortValue(row, column),
+									defaultPredicateColumnValue,
+								)
+							: delta.changes;
 					this.#emit(clientId, {
 						type: "rangeDelta",
 						requestId,
 						totalCount: delta.totalCount,
-						changes: delta.changes,
+						changes: filteredDelta,
 					});
-					this.#mergeDeliveredRangesFromChanges(
-						this.#getOrCreateClientState(clientId),
-						range,
-						delta.changes,
-					);
+					this.#mergeDeliveredRangesFromChanges(state, range, filteredDelta);
+					this.#trackDeliveredRowIdsFromMessages(state, filteredDelta);
 					return;
 				}
 			}
@@ -262,7 +388,6 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 		}
 
 		const state = this.#getOrCreateClientState(message.clientId);
-		state.predicateGroups.push([...range.conditions]);
 		state.streaming = true;
 		const chunkSize = Math.max(1, this.options.queryChunkSize ?? 200);
 		const limit = range.limit ?? chunkSize;
@@ -308,6 +433,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 			if (sortForTrack !== undefined) {
 				this.#trackDeliveredRange(state, sortForTrack, null, rows);
 			}
+			this.#trackDeliveredRowIdsFromRows(state, rows as TItem[]);
 			chunkIndex += 1;
 			if (isFinalChunk) break;
 		}
@@ -349,6 +475,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 		}
 		if (rows.length === 0) return;
 		this.#trackDeliveredRange(state, sort, null, rows);
+		this.#trackDeliveredRowIdsFromRows(state, rows);
 	}
 
 	async #handleQueryRange(
@@ -396,6 +523,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 				done: isFinalChunk,
 			});
 			this.#trackDeliveredRange(state, message.sort, message.afterCursor, rows);
+			this.#trackDeliveredRowIdsFromRows(state, rows as TItem[]);
 			chunkIndex += 1;
 			if (isFinalChunk) {
 				break;
@@ -461,6 +589,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 				done: isFinalChunk,
 			});
 			this.#trackDeliveredRange(state, message.sort, null, rows);
+			this.#trackDeliveredRowIdsFromRows(state, rows as TItem[]);
 			chunkIndex += 1;
 			if (isFinalChunk) {
 				break;
@@ -491,6 +620,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 				clientId,
 				deliveredRanges: [],
 				predicateGroups: [],
+				deliveredRowIds: new Set(),
 				pendingPatches: [],
 				streaming: false,
 			};
@@ -532,6 +662,7 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 					? { viewTransition: patch.viewTransition }
 					: {}),
 			});
+			this.#applyPatchToDeliveredRowIds(state, patch);
 		}
 		state.pendingPatches.length = 0;
 	}

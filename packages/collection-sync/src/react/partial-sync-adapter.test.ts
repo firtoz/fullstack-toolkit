@@ -26,9 +26,9 @@ describe("createPartialSyncAdapter", () => {
 			{ column: "n", op: "gte", value: 1 },
 			{ column: "n", op: "lte", value: 2 },
 		]);
-		expect(adapter.getSortValue({ id: "a", x: 3, y: 4, updatedAt: 0 }, "x")).toBe(
-			3,
-		);
+		expect(
+			adapter.getSortValue({ id: "a", x: 3, y: 4, updatedAt: 0 }, "x"),
+		).toBe(3);
 	});
 });
 

@@ -6,9 +6,12 @@ import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
 
 type Item = PartialSyncRowShape & { name: string; age: number };
 
-function item(
-	picks: { id: string; name: string; age: number; updatedAt?: number },
-): Item {
+function item(picks: {
+	id: string;
+	name: string;
+	age: number;
+	updatedAt?: number;
+}): Item {
 	return { ...picks, updatedAt: picks.updatedAt ?? 0 };
 }
 
@@ -385,9 +388,7 @@ describe("PartialSyncClientBridge", () => {
 			send: () => {},
 			collection: {
 				get: (key) =>
-					key === "1"
-						? item({ id: "1", name: "local", age: 5 })
-						: undefined,
+					key === "1" ? item({ id: "1", name: "local", age: 5 }) : undefined,
 				utils: {
 					receiveSync: async (messages) => {
 						received.push(messages);
@@ -580,7 +581,12 @@ describe("PartialSyncClientBridge", () => {
 	it("coalesced drain sets update previousValue from collection.get when provided", async () => {
 		const received: SyncMessage<Item>[][] = [];
 		const local = item({ id: "r1", name: "local", age: 7, updatedAt: 5 });
-		const stalePrev = item({ id: "r1", name: "stale-prev", age: 0, updatedAt: 0 });
+		const stalePrev = item({
+			id: "r1",
+			name: "stale-prev",
+			age: 0,
+			updatedAt: 0,
+		});
 		const bridge = new PartialSyncClientBridge<Item>({
 			clientId: "c1",
 			send: () => {},
@@ -776,11 +782,7 @@ describe("PartialSyncClientBridge", () => {
 		});
 
 		bridge.setConnected(true);
-		void bridge.requestRange(
-			{ column: "name", direction: "asc" },
-			2,
-			null,
-		);
+		void bridge.requestRange({ column: "name", direction: "asc" }, 2, null);
 		const requestId = (sent[0] as { requestId: string }).requestId;
 
 		const a = bridge.handleServerMessage({
@@ -878,7 +880,9 @@ describe("PartialSyncClientBridge", () => {
 			collectionId: DEFAULT_SYNC_COLLECTION_ID,
 			requestId,
 			totalCount: 10,
-			changes: [{ type: "insert", value: item({ id: "9", name: "z", age: 9 }) }],
+			changes: [
+				{ type: "insert", value: item({ id: "9", name: "z", age: 9 }) },
+			],
 			lastCursor: null,
 		});
 		const result = await p;

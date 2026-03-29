@@ -207,8 +207,7 @@ export function usePartialSyncWindow<
 				...(partialClientId !== undefined ? { clientId: partialClientId } : {}),
 				...(collectionId !== undefined ? { collectionId } : {}),
 				collection: {
-					get: (key) =>
-						getPartialSyncRowByMapId(collectionRef.current, key),
+					get: (key) => getPartialSyncRowByMapId(collectionRef.current, key),
 					utils: {
 						receiveSync: (messages) =>
 							syncUtilsRef.current.receiveSync(messages),

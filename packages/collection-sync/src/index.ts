@@ -103,3 +103,10 @@ export type {
 	PartialSyncPatchResult,
 	PartialSyncViewTransition,
 } from "./partial-sync-interest";
+
+export {
+	compareInterestValues,
+	filterSyncMessagesForPredicateRange,
+	rowMatchesClientInterest,
+	type ClassifyPartialSyncRangePatchOptions,
+} from "./partial-sync-interest";

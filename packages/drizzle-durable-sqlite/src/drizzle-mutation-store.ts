@@ -60,10 +60,21 @@ export function createDrizzleMutationStore<
 						});
 						break;
 					}
-					case "delete":
+					case "delete": {
+						const existing = await db
+							.select()
+							.from(table)
+							.where(eq(idCol, message.key as never))
+							.limit(1);
+						const prev = existing[0];
 						await db.delete(table).where(eq(idCol, message.key as never));
-						await changelogHelper.append("delete", String(message.key), null);
+						await changelogHelper.append(
+							"delete",
+							String(message.key),
+							prev ?? null,
+						);
 						break;
+					}
 					case "truncate":
 						await changelogHelper.deleteAll();
 						await db.delete(table);

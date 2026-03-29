@@ -563,11 +563,7 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 			}
 			const flushed = dragPendingPublishCellRef.current;
 			dragPendingPublishCellRef.current = null;
-			if (
-				payload !== null &&
-				dragSlopExceededRef.current &&
-				flushed !== null
-			) {
+			if (payload !== null && dragSlopExceededRef.current && flushed !== null) {
 				const lp0 = dragLastPublishedCellRef.current;
 				if (flushed.x !== lp0.x || flushed.y !== lp0.y) {
 					dragLastPublishedCellRef.current = {

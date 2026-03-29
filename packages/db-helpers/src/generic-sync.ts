@@ -522,7 +522,10 @@ export function createGenericSyncFunction<TItem extends object>(
 					}
 				}
 			} catch (err) {
-				console.error("[receiveSync] error during sync writes, committing partial batch to avoid leaving transaction open", err);
+				console.error(
+					"[receiveSync] error during sync writes, committing partial batch to avoid leaving transaction open",
+					err,
+				);
 			}
 			syncCommit();
 		});

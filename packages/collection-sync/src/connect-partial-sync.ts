@@ -15,6 +15,22 @@ import {
 	type SyncServerMessage,
 } from "./sync-protocol";
 
+/**
+ * Optional browser `document` for Page Visibility — accessed via `globalThis` so this module typechecks
+ * under configs that omit the DOM global (e.g. Worker-only `lib`).
+ */
+type PageVisibilityDocument = {
+	readonly visibilityState: string;
+	addEventListener(type: "visibilitychange", listener: () => void): void;
+	removeEventListener(type: "visibilitychange", listener: () => void): void;
+};
+
+function pageVisibilityDocument(): PageVisibilityDocument | undefined {
+	return (
+		globalThis as typeof globalThis & { document?: PageVisibilityDocument }
+	).document;
+}
+
 export type ConnectPartialSyncTransport = "json" | "msgpack";
 
 export type ConnectPartialSyncOptions<
@@ -299,21 +315,24 @@ export function connectPartialSync<
 	}
 
 	const onVisibilityFlush = (): void => {
-		if (typeof document === "undefined") return;
-		if (document.visibilityState !== "visible") return;
+		const doc = pageVisibilityDocument();
+		if (doc === undefined) return;
+		if (doc.visibilityState !== "visible") return;
 		enqueueInbound(async () => {
 			await flushCoalescedRangePatchesInline();
 		});
 	};
 
-	if (typeof document !== "undefined") {
-		document.addEventListener("visibilitychange", onVisibilityFlush);
+	const visibilityDoc = pageVisibilityDocument();
+	if (visibilityDoc !== undefined) {
+		visibilityDoc.addEventListener("visibilitychange", onVisibilityFlush);
 	}
 
 	return () => {
 		connectDisposed = true;
-		if (typeof document !== "undefined") {
-			document.removeEventListener("visibilitychange", onVisibilityFlush);
+		const docCleanup = pageVisibilityDocument();
+		if (docCleanup !== undefined) {
+			docCleanup.removeEventListener("visibilitychange", onVisibilityFlush);
 		}
 		cancelCoalescedRangePatchDeferredFlush();
 		inboundWorkQueue.length = 0;

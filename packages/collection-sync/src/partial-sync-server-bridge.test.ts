@@ -2,14 +2,32 @@ import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { PartialSyncServerBridge } from "./partial-sync-server-bridge";
 import type { PartialSyncRowShape } from "./partial-sync-row-key";
-import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
+import {
+	DEFAULT_SYNC_COLLECTION_ID,
+	type RangeCondition,
+} from "./sync-protocol";
 
-type Item = PartialSyncRowShape & { name: string; age: number };
+type Item = PartialSyncRowShape & {
+	name: string;
+	age: number;
+	x: number;
+	y: number;
+};
 
-function item(
-	picks: { id: string; name: string; age: number; updatedAt?: number },
-): Item {
-	return { ...picks, updatedAt: picks.updatedAt ?? 0 };
+function item(picks: {
+	id: string;
+	name: string;
+	age: number;
+	x?: number;
+	y?: number;
+	updatedAt?: number;
+}): Item {
+	return {
+		...picks,
+		x: picks.x ?? 0,
+		y: picks.y ?? 0,
+		updatedAt: picks.updatedAt ?? 0,
+	};
 }
 
 describe("PartialSyncServerBridge", () => {
@@ -430,6 +448,490 @@ describe("PartialSyncServerBridge", () => {
 
 		expect(
 			sent.some((m) => (m as { type?: string }).type === "queryRangeChunk"),
+		).toBe(true);
+	});
+
+	it("predicate rangeQuery rangeDelta drops changes outside predicate (bridge filter)", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 100,
+				getSortValue: (row, column) =>
+					column === "age" ? row.age : column === "x" ? row.x : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* () {
+					yield [];
+				},
+				changesSince: async () => ({
+					changes: [
+						{
+							type: "insert" as const,
+							value: item({
+								id: "in",
+								name: "in",
+								age: 1,
+								x: 5,
+								y: 5,
+							}),
+						},
+						{
+							type: "insert" as const,
+							value: item({
+								id: "out",
+								name: "out",
+								age: 2,
+								x: 500,
+								y: 500,
+							}),
+						},
+					] satisfies SyncMessage<Item>[],
+					totalCount: 100,
+				}),
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "predicate",
+				conditions: [
+					{ column: "x", op: "between", value: 0, valueTo: 10 },
+					{ column: "y", op: "between", value: 0, valueTo: 10 },
+				],
+				sort: { column: "x", direction: "asc" },
+				limit: 50,
+			},
+			fingerprint: { version: 1, count: 1 },
+		});
+
+		const delta = sent.find(
+			(m) => (m as { type?: string }).type === "rangeDelta",
+		) as { changes: SyncMessage<Item>[] } | undefined;
+		expect(delta).toBeDefined();
+		expect(delta?.changes).toEqual([
+			{
+				type: "insert",
+				value: item({ id: "in", name: "in", age: 1, x: 5, y: 5 }),
+			},
+		]);
+	});
+
+	it("pushServerChanges notifies only clients whose predicate matches the row", async () => {
+		type Sent = { clientId: string; message: unknown };
+		const sent: Sent[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 10,
+				getSortValue: (row, column) =>
+					column === "x" ? row.x : column === "y" ? row.y : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* (opts) {
+					const rows: Item[] = [
+						item({ id: "a", name: "a", age: 1, x: 5, y: 5 }),
+						item({ id: "b", name: "b", age: 1, x: 105, y: 105 }),
+					];
+					const filtered = rows.filter((r) =>
+						opts.conditions.every((c) => {
+							if (
+								c.op !== "between" ||
+								c.valueTo === undefined ||
+								typeof c.value !== "number"
+							) {
+								return false;
+							}
+							const v = c.column === "x" ? r.x : c.column === "y" ? r.y : 0;
+							return v >= c.value && v <= Number(c.valueTo);
+						}),
+					);
+					yield filtered;
+				},
+				getPredicateCount: async () => 1,
+			},
+			sendToClient: (clientId, message) => sent.push({ clientId, message }),
+			queryChunkSize: 50,
+		});
+
+		const leftPred = {
+			kind: "predicate" as const,
+			conditions: [
+				{ column: "x", op: "between" as const, value: 0, valueTo: 50 },
+				{ column: "y", op: "between" as const, value: 0, valueTo: 50 },
+			],
+			sort: { column: "x", direction: "asc" as const },
+			limit: 10,
+		};
+		const rightPred = {
+			kind: "predicate" as const,
+			conditions: [
+				{ column: "x", op: "between" as const, value: 100, valueTo: 150 },
+				{ column: "y", op: "between" as const, value: 100, valueTo: 150 },
+			],
+			sort: { column: "x", direction: "asc" as const },
+			limit: 10,
+		};
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "left",
+			requestId: "r-left",
+			range: leftPred,
+		});
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "right",
+			requestId: "r-right",
+			range: rightPred,
+		});
+
+		sent.length = 0;
+		await bridge.pushServerChanges([
+			{
+				type: "update",
+				value: item({
+					id: "far",
+					name: "far",
+					age: 9,
+					x: 120,
+					y: 120,
+				}),
+				previousValue: item({
+					id: "far",
+					name: "far",
+					age: 8,
+					x: 119,
+					y: 119,
+				}),
+			},
+		]);
+
+		const patchClients = sent
+			.filter(
+				(e) =>
+					typeof e.message === "object" &&
+					e.message !== null &&
+					(e.message as { type?: string }).type === "rangePatch",
+			)
+			.map((e) => e.clientId)
+			.sort();
+		expect(patchClients).toEqual(["right"]);
+	});
+
+	it("second predicate rangeQuery replaces interest so old viewport stops receiving patches", async () => {
+		type Sent = { clientId: string; message: unknown };
+		const sent: Sent[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 10,
+				getSortValue: (row, column) =>
+					column === "x" ? row.x : column === "y" ? row.y : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* (opts) {
+					const isRight = opts.conditions.some(
+						(c) => c.column === "x" && c.op === "between" && c.value === 100,
+					);
+					if (isRight) {
+						yield [item({ id: "r", name: "r", age: 1, x: 105, y: 105 })];
+					} else {
+						yield [item({ id: "only", name: "o", age: 1, x: 5, y: 5 })];
+					}
+				},
+				getPredicateCount: async () => 1,
+			},
+			sendToClient: (clientId, message) => sent.push({ clientId, message }),
+			queryChunkSize: 50,
+		});
+
+		const leftViewport = {
+			kind: "predicate" as const,
+			conditions: [
+				{ column: "x", op: "between" as const, value: 0, valueTo: 10 },
+				{ column: "y", op: "between" as const, value: 0, valueTo: 10 },
+			],
+			sort: { column: "x", direction: "asc" as const },
+			limit: 10,
+		};
+		const rightViewport = {
+			kind: "predicate" as const,
+			conditions: [
+				{ column: "x", op: "between" as const, value: 100, valueTo: 110 },
+				{ column: "y", op: "between" as const, value: 100, valueTo: 110 },
+			],
+			sort: { column: "x", direction: "asc" as const },
+			limit: 10,
+		};
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "r1",
+			range: leftViewport,
+		});
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "r2",
+			range: rightViewport,
+		});
+
+		sent.length = 0;
+		await bridge.pushServerChanges([
+			{
+				type: "update",
+				value: item({ id: "only", name: "o", age: 2, x: 5, y: 5 }),
+				previousValue: item({ id: "only", name: "o", age: 1, x: 5, y: 5 }),
+			},
+		]);
+
+		const patches = sent.filter(
+			(e) =>
+				typeof e.message === "object" &&
+				e.message !== null &&
+				(e.message as { type?: string }).type === "rangePatch",
+		);
+		expect(patches.length).toBe(0);
+	});
+
+	it("removeClient drops client state", async () => {
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 1,
+				getSortValue: (row) => row.name,
+				queryRange: async function* () {
+					yield [item({ id: "1", name: "a", age: 1 })];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+			},
+			sendToClient: () => {},
+			queryChunkSize: 50,
+		});
+		await bridge.handleClientMessage({
+			type: "queryRange",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "gone",
+			requestId: "r1",
+			sort: { column: "name", direction: "asc" },
+			limit: 5,
+			afterCursor: null,
+		});
+		expect(bridge.getClientState("gone")).toBeDefined();
+		bridge.removeClient("gone");
+		expect(bridge.getClientState("gone")).toBeUndefined();
+	});
+
+	it("resolveClientVisibility narrows predicate interest and queries", async () => {
+		const sent: unknown[] = [];
+		let lastPredicateConditions: RangeCondition[] | undefined;
+		const leftPred = {
+			kind: "predicate" as const,
+			conditions: [
+				{ column: "x", op: "between" as const, value: 0, valueTo: 50 },
+				{ column: "y", op: "between" as const, value: 0, valueTo: 50 },
+			],
+			sort: { column: "x", direction: "asc" as const },
+			limit: 10,
+		};
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 10,
+				getSortValue: (row, column) =>
+					column === "x" ? row.x : column === "y" ? row.y : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* (opts) {
+					lastPredicateConditions = opts.conditions;
+					yield [item({ id: "in", name: "i", age: 1, x: 5, y: 5 })];
+				},
+				getPredicateCount: async (conditions) =>
+					conditions.some(
+						(c) => c.column === "x" && c.value === 0 && c.valueTo === 10,
+					)
+						? 1
+						: 0,
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+			resolveClientVisibility: async (_clientId, requested) => {
+				const xCond = requested.find((c) => c.column === "x");
+				if (xCond?.op !== "between") return requested;
+				const xFrom = xCond.value;
+				const xTo = xCond.valueTo;
+				if (typeof xFrom !== "number" || typeof xTo !== "number") {
+					return requested;
+				}
+				return requested.map((c) =>
+					c.column === "x" ? { ...c, value: 0, valueTo: Math.min(10, xTo) } : c,
+				);
+			},
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "r1",
+			range: leftPred,
+		});
+
+		const xBetween = lastPredicateConditions?.find((c) => c.column === "x");
+		expect(xBetween?.op).toBe("between");
+		expect(xBetween).toMatchObject({ value: 0, valueTo: 10 });
+
+		sent.length = 0;
+		await bridge.pushServerChanges([
+			{
+				type: "insert",
+				value: item({ id: "outsider", name: "o", age: 1, x: 200, y: 200 }),
+			},
+		]);
+		const patches = sent.filter(
+			(m) => (m as { type?: string }).type === "rangePatch",
+		);
+		expect(patches.length).toBe(0);
+	});
+
+	it("setClientVisibility replaces predicate interest for patches", async () => {
+		type Sent = { clientId: string; message: unknown };
+		const sent: Sent[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 10,
+				getSortValue: (row, column) =>
+					column === "x" ? row.x : column === "y" ? row.y : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* () {
+					yield [];
+				},
+			},
+			sendToClient: (clientId, message) => sent.push({ clientId, message }),
+			queryChunkSize: 50,
+		});
+
+		bridge.setClientVisibility("c1", [
+			{ column: "x", op: "between", value: 0, valueTo: 5 },
+			{ column: "y", op: "between", value: 0, valueTo: 5 },
+		]);
+
+		sent.length = 0;
+		await bridge.pushServerChanges([
+			{
+				type: "update",
+				value: item({ id: "z", name: "z", age: 1, x: 3, y: 3 }),
+				previousValue: item({ id: "z", name: "z", age: 1, x: 2, y: 2 }),
+			},
+		]);
+		expect(
+			sent.some(
+				(e) =>
+					(e.message as { type?: string }).type === "rangePatch" &&
+					(e.message as { change?: { value?: Item } }).change?.value?.x === 3,
+			),
+		).toBe(true);
+
+		bridge.setClientVisibility("c1", [
+			{ column: "x", op: "between", value: 100, valueTo: 110 },
+			{ column: "y", op: "between", value: 100, valueTo: 110 },
+		]);
+		sent.length = 0;
+		await bridge.pushServerChanges([
+			{
+				type: "update",
+				value: item({ id: "z", name: "z", age: 2, x: 4, y: 4 }),
+				previousValue: item({ id: "z", name: "z", age: 1, x: 3, y: 3 }),
+			},
+		]);
+		expect(
+			sent.some((e) => (e.message as { type?: string }).type === "rangePatch"),
+		).toBe(false);
+	});
+
+	it("pushServerChanges does not forward delete for undelivered row ids", async () => {
+		type Sent = { clientId: string; message: unknown };
+		const sent: Sent[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 10,
+				getSortValue: (row, column) =>
+					column === "x" ? row.x : column === "y" ? row.y : row.name,
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* () {
+					yield [item({ id: "a", name: "a", age: 1, x: 1, y: 1 })];
+				},
+				getPredicateCount: async () => 1,
+			},
+			sendToClient: (clientId, message) => sent.push({ clientId, message }),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeQuery",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "r1",
+			range: {
+				kind: "predicate",
+				conditions: [
+					{ column: "x", op: "between", value: 0, valueTo: 10 },
+					{ column: "y", op: "between", value: 0, valueTo: 10 },
+				],
+				sort: { column: "x", direction: "asc" },
+				limit: 10,
+			},
+		});
+
+		sent.length = 0;
+		await bridge.pushServerChanges([{ type: "delete", key: "other" }]);
+		expect(
+			sent.some((e) => (e.message as { type?: string }).type === "rangePatch"),
+		).toBe(false);
+
+		await bridge.pushServerChanges([{ type: "delete", key: "a" }]);
+		expect(
+			sent.some(
+				(e) =>
+					(e.message as { type?: string }).type === "rangePatch" &&
+					(e.message as { change?: { type?: string } }).change?.type ===
+						"delete",
+			),
 		).toBe(true);
 	});
 });

@@ -80,10 +80,7 @@ class SyncTableSession<
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, SyncTableSession<TItem, TEnv>>,
-		options: ZodSessionOptions<
-			SyncClientMessage,
-			SyncServerMessage<TItem>
-		>,
+		options: ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>>,
 		bridge: SyncServerBridge<TItem>,
 	) {
 		const generatedClientId = crypto.randomUUID();
@@ -250,10 +247,7 @@ export abstract class SyncableDurableObject<
 						return col.state.get(key) as TRow | undefined;
 					},
 				},
-				sendToClient: (
-					clientId: string,
-					message: SyncServerMessage<TRow>,
-				) => {
+				sendToClient: (clientId: string, message: SyncServerMessage<TRow>) => {
 					for (const session of this.sessions.values()) {
 						const s = session as SyncTableSession<TRow, TEnv>;
 						if (s.clientId === clientId) {

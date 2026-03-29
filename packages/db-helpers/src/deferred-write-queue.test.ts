@@ -11,8 +11,11 @@ function mockBackend(): GenericSyncBackend<Row> & {
 	deletes: Array<{ key: string; modified: Row; original: Row }>[];
 } {
 	const inserts: Row[][] = [];
-	const updates: Array<{ key: string; changes: Partial<Row>; original: Row }>[] =
-		[];
+	const updates: Array<{
+		key: string;
+		changes: Partial<Row>;
+		original: Row;
+	}>[] = [];
 	const batchPuts: Row[][] = [];
 	const deletes: Array<{ key: string; modified: Row; original: Row }>[] = [];
 	return {
@@ -124,16 +127,19 @@ describe("DeferredWriteQueue", () => {
 	});
 
 	test("falls back to handleUpdate when handleBatchPut missing", async () => {
-		const updates: Array<{ key: string; changes: Partial<Row>; original: Row }>[] =
-			[];
+		const updates: Array<{
+			key: string;
+			changes: Partial<Row>;
+			original: Row;
+		}>[] = [];
 		const backend: GenericSyncBackend<Row> = {
 			initialLoad: async () => [],
 			loadSubset: async () => [],
 			handleInsert: async (items) => items,
-		handleUpdate: async (mutations) => {
-			updates.push(mutations);
-			return mutations.map((m) => ({ ...m.original, ...m.changes }) as Row);
-		},
+			handleUpdate: async (mutations) => {
+				updates.push(mutations);
+				return mutations.map((m) => ({ ...m.original, ...m.changes }) as Row);
+			},
 			handleDelete: async () => {},
 		};
 		const q = new DeferredWriteQueue<Row>({

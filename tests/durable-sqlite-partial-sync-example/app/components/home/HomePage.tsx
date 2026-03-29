@@ -75,7 +75,10 @@ export function HomePage() {
 			) : backendMode === "indexeddb" ? (
 				<IndexedDbPeopleClient roomId={roomId} wsTransport={wsTransport} />
 			) : (
-				<DrizzleIndexedDbPeopleClient roomId={roomId} wsTransport={wsTransport} />
+				<DrizzleIndexedDbPeopleClient
+					roomId={roomId}
+					wsTransport={wsTransport}
+				/>
 			)}
 		</div>
 	);

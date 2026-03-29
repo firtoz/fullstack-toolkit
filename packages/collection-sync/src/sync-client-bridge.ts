@@ -417,9 +417,7 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 				out.push(change);
 				continue;
 			}
-			if (
-				partialSyncRowVersionWatermarkMs(change.value) >= pending.updatedAt
-			) {
+			if (partialSyncRowVersionWatermarkMs(change.value) >= pending.updatedAt) {
 				out.push(change);
 			}
 		}

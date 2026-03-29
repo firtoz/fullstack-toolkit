@@ -17,13 +17,15 @@ import {
 } from "./partial-sync-row-key";
 import type { PartialSyncViewTransition } from "./partial-sync-interest";
 
-export type PartialSyncViewTransitionEvent<TItem extends PartialSyncRowShape> = {
-	type: PartialSyncViewTransition;
-	change: SyncMessage<TItem>;
-};
-
-export type PartialSyncRangePatchAppliedEvent<TItem extends PartialSyncRowShape> =
+export type PartialSyncViewTransitionEvent<TItem extends PartialSyncRowShape> =
 	{
+		type: PartialSyncViewTransition;
+		change: SyncMessage<TItem>;
+	};
+
+export type PartialSyncRangePatchAppliedEvent<
+	TItem extends PartialSyncRowShape,
+> = {
 	change: SyncMessage<TItem>;
 	viewTransition?: PartialSyncViewTransition;
 };
@@ -90,7 +92,9 @@ export type PartialSyncRangeResult<TItem> = {
 	upToDate?: boolean;
 };
 
-export interface PartialSyncClientBridgeOptions<TItem extends PartialSyncRowShape> {
+export interface PartialSyncClientBridgeOptions<
+	TItem extends PartialSyncRowShape,
+> {
 	/** Defaults to a random UUID when omitted (must match {@link SyncClientBridge} when using mutations). */
 	clientId?: string;
 	/** Must match the server's partial-sync {@link PartialSyncServerBridgeOptions.collectionId}. */
@@ -482,8 +486,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 				this.options.onViewTransition?.({ type: "enterView", change });
 				const key = partialSyncRowKey(change.value.id);
 				const getRow = this.options.collection.get;
-				let local =
-					getRow !== undefined ? getRow(key) : undefined;
+				let local = getRow !== undefined ? getRow(key) : undefined;
 				if (local === undefined && getRow !== undefined) {
 					if (typeof key === "number") {
 						local = getRow(String(key));
@@ -507,10 +510,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			this.options.onRangePatchApplied?.({ change, viewTransition });
 			return;
 		}
-		await this.#applyAndTrack(
-			[change],
-			change.type === "update",
-		);
+		await this.#applyAndTrack([change], change.type === "update");
 		this.#mergeServerConfirmedKeysFromMessages([change]);
 		this.options.onRangePatchApplied?.({ change, viewTransition });
 	}
@@ -525,9 +525,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 	}
 
 	/** Row left the client's server-confirmed window; stop counting it as partial-sync cached. */
-	#prunePartialInterestTrackingAfterExitView(
-		change: SyncMessage<TItem>,
-	): void {
+	#prunePartialInterestTrackingAfterExitView(change: SyncMessage<TItem>): void {
 		switch (change.type) {
 			case "insert":
 			case "update": {
@@ -607,8 +605,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			let cacheTouched = false;
 			for (const row of message.rows) {
 				const pk = partialSyncRowKey(row.id);
-				const local =
-					getRow !== undefined ? getRow(pk) : undefined;
+				const local = getRow !== undefined ? getRow(pk) : undefined;
 
 				if (local !== undefined) {
 					if (!this.#cachedIds.has(pk)) {

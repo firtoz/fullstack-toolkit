@@ -2,7 +2,10 @@ import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { createMemoryCollection } from "@firtoz/db-helpers";
 import { z } from "zod";
-import { DEFAULT_SYNC_COLLECTION_ID, type SyncServerMessage } from "./sync-protocol";
+import {
+	DEFAULT_SYNC_COLLECTION_ID,
+	type SyncServerMessage,
+} from "./sync-protocol";
 import { SyncClientBridge } from "./sync-client-bridge";
 
 const rowSchema = z.object({
@@ -14,7 +17,10 @@ const rowSchema = z.object({
 
 type Row = z.infer<typeof rowSchema>;
 
-async function waitReady(coll: { isReady: () => boolean; preload: () => Promise<unknown> }) {
+async function waitReady(coll: {
+	isReady: () => boolean;
+	preload: () => Promise<unknown>;
+}) {
 	if (coll.isReady()) return;
 	await coll.preload();
 }
@@ -117,7 +123,8 @@ describe("partial sync — rapid position updates (drag echo)", () => {
 			getKey: (r) => r.id,
 		});
 		await waitReady(collObserver);
-		await collObserver.insert({ id: "t", x: 0, y: 0, updatedAt: 0 }).isPersisted.promise;
+		await collObserver.insert({ id: "t", x: 0, y: 0, updatedAt: 0 }).isPersisted
+			.promise;
 
 		const bridgeObserver = new SyncClientBridge<Row>({
 			clientId: "observer",

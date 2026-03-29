@@ -5,6 +5,11 @@ import type {
 	SyncRange,
 	SyncRangeSort,
 } from "@firtoz/collection-sync";
+import { compareInterestValues } from "@firtoz/collection-sync/partial-sync-interest";
+import {
+	defaultPredicateColumnValue,
+	matchesPredicate,
+} from "@firtoz/collection-sync/partial-sync-predicate-match";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import {
@@ -12,14 +17,20 @@ import {
 	asc,
 	count,
 	desc,
+	eq,
 	gt,
 	lt,
 	max,
+	or,
 	type InferSelectModel,
+	type SQL,
 } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
-import type { DrizzleChangelogHelper } from "./drizzle-partial-sync-changelog";
+import type {
+	ChangelogOperation,
+	DrizzleChangelogHelper,
+} from "./drizzle-partial-sync-changelog";
 import type { PartialSyncSqliteDatabase } from "./partial-sync-sqlite-db";
 import {
 	predicateWhereFromConditions,
@@ -187,12 +198,161 @@ export function createDrizzlePartialSyncStore<
 		return rows[0]?.c ?? 0;
 	}
 
+	function strictlyBeforeInSortOrder(
+		sortCol: ReturnType<typeof sortColumnFromConfig>,
+		idColSQLite: typeof idCol,
+		rowSort: unknown,
+		rowId: unknown,
+		direction: "asc" | "desc",
+	): SQL {
+		if (direction === "asc") {
+			return or(
+				lt(sortCol, rowSort as never),
+				and(eq(sortCol, rowSort as never), lt(idColSQLite, rowId as never)),
+			) as SQL;
+		}
+		return or(
+			gt(sortCol, rowSort as never),
+			and(eq(sortCol, rowSort as never), lt(idColSQLite, rowId as never)),
+		) as SQL;
+	}
+
+	async function rowInIndexRange(
+		row: TRow,
+		indexRange: Extract<SyncRange, { kind: "index" }>,
+	): Promise<boolean> {
+		const sortName = indexRange.sort.column;
+		const rowRec = row as Record<string, unknown>;
+		const rowSort = rowRec[sortName];
+		const rowId = rowRec.id;
+		const sortCol = sortColumnFromConfig(table, sortName, columnConfig);
+
+		if (indexRange.mode === "cursor") {
+			const ac = indexRange.afterCursor;
+			if (ac !== null) {
+				const cmp = compareInterestValues(rowSort, ac);
+				if (indexRange.sort.direction === "asc" && cmp <= 0) return false;
+				if (indexRange.sort.direction === "desc" && cmp >= 0) return false;
+			}
+		}
+
+		const before = strictlyBeforeInSortOrder(
+			sortCol,
+			idCol,
+			rowSort,
+			rowId,
+			indexRange.sort.direction,
+		);
+		let whereRank: SQL = before;
+		if (indexRange.mode === "cursor" && indexRange.afterCursor !== null) {
+			const eligible =
+				indexRange.sort.direction === "asc"
+					? gt(sortCol, indexRange.afterCursor as never)
+					: lt(sortCol, indexRange.afterCursor as never);
+			whereRank = and(eligible, before) as SQL;
+		}
+		const rankRows = await db
+			.select({ c: count() })
+			.from(table)
+			.where(whereRank);
+		const rank = rankRows[0]?.c ?? 0;
+
+		if (indexRange.mode === "offset") {
+			return (
+				rank >= indexRange.offset && rank < indexRange.offset + indexRange.limit
+			);
+		}
+		return rank < indexRange.limit;
+	}
+
+	async function changelogEntryMatchesRange(
+		op: ChangelogOperation,
+		payloadJson: unknown,
+		range: SyncRange,
+	): Promise<boolean> {
+		if (range.kind === "predicate") {
+			const conds = range.conditions;
+			switch (op) {
+				case "delete": {
+					if (payloadJson === null || typeof payloadJson !== "string") {
+						return false;
+					}
+					const prev = deserializeJson(payloadJson) as TRow;
+					return matchesPredicate(prev, conds, defaultPredicateColumnValue);
+				}
+				case "insert": {
+					if (payloadJson === null || typeof payloadJson !== "string") {
+						return false;
+					}
+					const value = deserializeJson(payloadJson) as TRow;
+					return matchesPredicate(value, conds, defaultPredicateColumnValue);
+				}
+				case "update": {
+					if (payloadJson === null || typeof payloadJson !== "string") {
+						return false;
+					}
+					const parsed = deserializeJson(payloadJson) as {
+						value: TRow;
+						previousValue: TRow;
+					};
+					return (
+						matchesPredicate(
+							parsed.value,
+							conds,
+							defaultPredicateColumnValue,
+						) ||
+						matchesPredicate(
+							parsed.previousValue,
+							conds,
+							defaultPredicateColumnValue,
+						)
+					);
+				}
+				default:
+					exhaustiveGuard(op);
+			}
+		}
+		if (range.kind === "index") {
+			switch (op) {
+				case "delete": {
+					if (payloadJson === null || typeof payloadJson !== "string") {
+						return false;
+					}
+					const prev = deserializeJson(payloadJson) as TRow;
+					return rowInIndexRange(prev, range);
+				}
+				case "insert": {
+					if (payloadJson === null || typeof payloadJson !== "string") {
+						return false;
+					}
+					const value = deserializeJson(payloadJson) as TRow;
+					return rowInIndexRange(value, range);
+				}
+				case "update": {
+					if (payloadJson === null || typeof payloadJson !== "string") {
+						return false;
+					}
+					const parsed = deserializeJson(payloadJson) as {
+						value: TRow;
+						previousValue: TRow;
+					};
+					return (
+						(await rowInIndexRange(parsed.value, range)) ||
+						(await rowInIndexRange(parsed.previousValue, range))
+					);
+				}
+				default:
+					exhaustiveGuard(op);
+			}
+		}
+		return false;
+	}
+
 	async function changesSince(opts: {
 		range: SyncRange;
 		sinceVersion: number;
 		chunkSize: number;
 	}): Promise<{ changes: SyncMessage<TRow>[]; totalCount: number } | null> {
-		void opts.range;
 		const totalCount = await getTotalCount();
 		const maxRow = await db.select({ m: max(updatedAtCol) }).from(table);
 		const m = maxRow[0]?.m;
@@ -216,20 +376,27 @@ export function createDrizzlePartialSyncStore<
 			if (op !== "insert" && op !== "update" && op !== "delete") {
 				throw new Error(`Unknown changelog operation: ${op}`);
 			}
+			if (
+				!(await changelogEntryMatchesRange(
+					op as ChangelogOperation,
+					payloadJson,
+					opts.range,
+				))
+			) {
+				continue;
+			}
 			switch (op) {
 				case "delete":
 					changes.push({ type: "delete", key: rowId });
 					break;
 				case "insert": {
-					if (payloadJson === null || payloadJson === undefined) break;
-					if (typeof payloadJson !== "string") break;
+					if (payloadJson === null || typeof payloadJson !== "string") break;
 					const value = deserializeJson(payloadJson) as TRow;
 					changes.push({ type: "insert", value });
 					break;
 				}
 				case "update": {
-					if (payloadJson === null || payloadJson === undefined) break;
-					if (typeof payloadJson !== "string") break;
+					if (payloadJson === null || typeof payloadJson !== "string") break;
 					const parsed = deserializeJson(payloadJson) as {
 						value: TRow;
 						previousValue: TRow;

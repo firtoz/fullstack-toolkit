@@ -113,7 +113,12 @@ class QueryableSession<
 				}
 				await routeQueryableClientMessage(message, dispatch);
 			},
-			handleClose: async () => {},
+			handleClose: async () => {
+				const dispatch = this.sessionSlot.dispatch;
+				if (dispatch !== undefined) {
+					dispatch.partialBridge.removeClient(this.clientId);
+				}
+			},
 		});
 		this.clientId = generatedClientId;
 	}
@@ -142,6 +147,14 @@ export type QueryableDurableObjectConfig<
 	 * When using a {@link SyncServerBridge} on the same socket, set the mutation store's id to the same value unless you multiplex multiple collections.
 	 */
 	collectionId?: string;
+	/**
+	 * Server-side narrowing of client predicate viewports (e.g. fog of war). Passed to
+	 * {@link PartialSyncServerBridge}.
+	 */
+	resolveClientVisibility?: (
+		clientId: string,
+		requestedConditions: RangeCondition[],
+	) => RangeCondition[] | Promise<RangeCondition[]>;
 };
 
 export abstract class QueryableDurableObject<
@@ -251,6 +264,11 @@ export abstract class QueryableDurableObject<
 					this.sendToClient(clientId, message),
 				queryChunkSize: config.queryChunkSize,
 				collectionId,
+				...(config.resolveClientVisibility !== undefined
+					? {
+							resolveClientVisibility: config.resolveClientVisibility,
+						}
+					: {}),
 			});
 			this.bridge = bridgeRef;
 

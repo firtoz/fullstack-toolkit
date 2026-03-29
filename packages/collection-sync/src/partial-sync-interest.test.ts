@@ -96,4 +96,29 @@ describe("classifyPartialSyncRangePatch", () => {
 		);
 		expect(patch).toEqual({ change });
 	});
+
+	it("delete is filtered when deliveredRowIds is set and key was not delivered", () => {
+		const patch = classifyPartialSyncRangePatch(
+			[],
+			[],
+			{ type: "delete", key: "a" },
+			getSort,
+			getCol,
+			{ deliveredRowIds: new Set(["b"]) },
+		);
+		expect(patch).toBeNull();
+	});
+
+	it("delete is forwarded when deliveredRowIds contains the key", () => {
+		const change = { type: "delete" as const, key: "a" };
+		const patch = classifyPartialSyncRangePatch(
+			[],
+			[],
+			change,
+			getSort,
+			getCol,
+			{ deliveredRowIds: new Set(["a"]) },
+		);
+		expect(patch).toEqual({ change });
+	});
 });

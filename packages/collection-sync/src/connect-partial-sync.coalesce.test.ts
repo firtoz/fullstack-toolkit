@@ -29,9 +29,9 @@ describe("mergeCoalescedRangePatches", () => {
 		];
 		const merged = mergeCoalescedRangePatches(patches);
 		expect(merged).toHaveLength(1);
-		expect((merged[0]?.change as SyncMessage<Row> & { type: "update" }).value.name).toBe(
-			"two",
-		);
+		expect(
+			(merged[0]?.change as SyncMessage<Row> & { type: "update" }).value.name,
+		).toBe("two");
 	});
 
 	it("preserves distinct rows", () => {

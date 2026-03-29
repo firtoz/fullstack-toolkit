@@ -17,7 +17,11 @@ export type PeoplePartialSyncRow = PartialSyncItem & {
 
 export type PeopleSqliteCollection = DrizzleSqliteTableCollection<PeopleTable>;
 
-export const BACKEND_MODES = ["memory", "indexeddb", "drizzleIndexedDb"] as const;
+export const BACKEND_MODES = [
+	"memory",
+	"indexeddb",
+	"drizzleIndexedDb",
+] as const;
 export type BackendMode = (typeof BACKEND_MODES)[number];
 
 export type WsTransport = "json" | "msgpack";

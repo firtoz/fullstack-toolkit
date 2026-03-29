@@ -46,7 +46,10 @@ export class DeferredWriteQueue<TItem extends object> {
 
 		if (typeof globalThis !== "undefined") {
 			globalThis.addEventListener?.("beforeunload", this.#onBeforeUnload);
-			globalThis.addEventListener?.("visibilitychange", this.#onVisibilityChange);
+			globalThis.addEventListener?.(
+				"visibilitychange",
+				this.#onVisibilityChange,
+			);
 		}
 
 		this.#intervalId = setInterval(() => {
@@ -75,11 +78,19 @@ export class DeferredWriteQueue<TItem extends object> {
 			const key = this.#getPersistKey(item);
 			const cur = this.#pending.get(key);
 			if (cur?.kind === "delete") {
-				this.#pending.set(key, { kind: "row", value: item, insertedOnly: true });
+				this.#pending.set(key, {
+					kind: "row",
+					value: item,
+					insertedOnly: true,
+				});
 				continue;
 			}
 			if (cur?.kind === "row" && !cur.insertedOnly) {
-				this.#pending.set(key, { kind: "row", value: item, insertedOnly: false });
+				this.#pending.set(key, {
+					kind: "row",
+					value: item,
+					insertedOnly: false,
+				});
 				continue;
 			}
 			this.#pending.set(key, { kind: "row", value: item, insertedOnly: true });
@@ -182,7 +193,10 @@ export class DeferredWriteQueue<TItem extends object> {
 			this.#intervalId = null;
 		}
 		globalThis.removeEventListener?.("beforeunload", this.#onBeforeUnload);
-		globalThis.removeEventListener?.("visibilitychange", this.#onVisibilityChange);
+		globalThis.removeEventListener?.(
+			"visibilitychange",
+			this.#onVisibilityChange,
+		);
 		void this.flush();
 	}
 }
