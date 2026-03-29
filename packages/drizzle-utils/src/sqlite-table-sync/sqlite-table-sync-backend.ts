@@ -1,3 +1,5 @@
+import type { ReceiveSyncDurableOp } from "@firtoz/db-helpers";
+import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type { InferSchemaOutput } from "@tanstack/db";
 import { and, eq, getTableColumns, sql, type SQL } from "drizzle-orm";
 import type {
@@ -51,12 +53,17 @@ export interface SqliteTableSyncBackendConfig<
 export function createSqliteTableSyncBackend<
 	TTable extends TableWithRequiredFields,
 >(config: SqliteTableSyncBackendConfig<TTable>): SyncBackend<TTable> {
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
 	const table = config.table;
 	const driverMode = config.driverMode;
 
 	let transactionQueue = Promise.resolve();
-	const queueTransaction = <T>(fn: () => Promise<T>): Promise<T> => {
-		const result = transactionQueue.then(fn, fn);
+	const queueTransaction = <T>(
+		_label: string,
+		fn: () => Promise<T>,
+	): Promise<T> => {
+		const run = (): Promise<T> => fn();
+		const result = transactionQueue.then(run, run);
 		transactionQueue = result.then(
 			() => {},
 			() => {},
@@ -199,7 +206,7 @@ export function createSqliteTableSyncBackend<
 		handleInsert: async (items) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
-			await queueTransaction(async () => {
+			await queueTransaction("handleInsert", async () => {
 				if (driverMode === "sync") {
 					config.drizzle.transaction((tx: typeof config.drizzle) => {
 						for (const itemToInsert of items) {
@@ -278,7 +285,7 @@ export function createSqliteTableSyncBackend<
 		handleUpdate: async (mutations) => {
 			const results: Array<InferSchemaOutput<SelectSchema<TTable>>> = [];
 
-			await queueTransaction(async () => {
+			await queueTransaction("handleUpdate", async () => {
 				if (driverMode === "sync") {
 					config.drizzle.transaction((tx: typeof config.drizzle) => {
 						for (const mutation of mutations) {
@@ -351,7 +358,7 @@ export function createSqliteTableSyncBackend<
 		},
 
 		handleDelete: async (mutations) => {
-			await queueTransaction(async () => {
+			await queueTransaction("handleDelete", async () => {
 				if (driverMode === "sync") {
 					config.drizzle.transaction((tx: typeof config.drizzle) => {
 						for (const mutation of mutations) {
@@ -380,7 +387,7 @@ export function createSqliteTableSyncBackend<
 			});
 		},
 		handleTruncate: async () => {
-			await queueTransaction(async () => {
+			await queueTransaction("handleTruncate", async () => {
 				if (driverMode === "sync") {
 					config.drizzle.transaction((tx: typeof config.drizzle) => {
 						tx.delete(table).run();
@@ -389,6 +396,130 @@ export function createSqliteTableSyncBackend<
 					await config.drizzle.transaction(
 						async (tx: typeof config.drizzle) => {
 							await tx.delete(table);
+						},
+					);
+				}
+
+				if (config.checkpoint) {
+					await config.checkpoint();
+				}
+			});
+		},
+
+		applyReceiveSyncDurableWrites: async (
+			ops: ReceiveSyncDurableOp<TItem>[],
+		) => {
+			if (ops.length === 0) return;
+
+			await queueTransaction("applyReceiveSyncDurableWrites", async () => {
+				if (driverMode === "sync") {
+					config.drizzle.transaction((tx: typeof config.drizzle) => {
+						for (const op of ops) {
+							switch (op.type) {
+								case "insert": {
+									if (config.debug) {
+										console.log(
+											`[${new Date().toISOString()}] receiveSync batch insert`,
+											op.value,
+										);
+									}
+									tx.insert(table)
+										.values(
+											op.value as unknown as SQLiteInsertValue<typeof table>,
+										)
+										.onConflictDoUpdate({
+											target: table.id,
+											set: sqliteExcludedUpsertSet(table),
+										})
+										.run();
+									break;
+								}
+								case "update": {
+									if (config.debug) {
+										console.log(
+											`[${new Date().toISOString()}] receiveSync batch update`,
+											op,
+										);
+									}
+									const updateTime = new Date();
+									tx.update(table)
+										.set({
+											...op.changes,
+											updatedAt: updateTime,
+										} as SQLiteUpdateSetSource<typeof table>)
+										// biome-ignore lint/suspicious/noExplicitAny: branded id key
+										.where(eq(table.id, op.key as any))
+										.run();
+									break;
+								}
+								case "delete":
+									tx.delete(table)
+										// biome-ignore lint/suspicious/noExplicitAny: branded id key
+										.where(eq(table.id, op.key as any))
+										.run();
+									break;
+								case "truncate":
+									tx.delete(table).run();
+									break;
+								default:
+									exhaustiveGuard(op);
+							}
+						}
+					});
+				} else {
+					await config.drizzle.transaction(
+						async (tx: typeof config.drizzle) => {
+							for (const op of ops) {
+								switch (op.type) {
+									case "insert": {
+										if (config.debug) {
+											console.log(
+												`[${new Date().toISOString()}] receiveSync batch insert`,
+												op.value,
+											);
+										}
+										await tx
+											.insert(table)
+											.values(
+												op.value as unknown as SQLiteInsertValue<typeof table>,
+											)
+											.onConflictDoUpdate({
+												target: table.id,
+												set: sqliteExcludedUpsertSet(table),
+											});
+										break;
+									}
+									case "update": {
+										if (config.debug) {
+											console.log(
+												`[${new Date().toISOString()}] receiveSync batch update`,
+												op,
+											);
+										}
+										const updateTime = new Date();
+										await tx
+											.update(table)
+											.set({
+												...op.changes,
+												updatedAt: updateTime,
+											} as SQLiteUpdateSetSource<typeof table>)
+											// biome-ignore lint/suspicious/noExplicitAny: branded id key
+											.where(eq(table.id, op.key as any));
+										break;
+									}
+									case "delete":
+										await tx
+											.delete(table)
+											// biome-ignore lint/suspicious/noExplicitAny: branded id key
+											.where(eq(table.id, op.key as any));
+										break;
+									case "truncate":
+										await tx.delete(table);
+										break;
+									default:
+										exhaustiveGuard(op);
+								}
+							}
 						},
 					);
 				}

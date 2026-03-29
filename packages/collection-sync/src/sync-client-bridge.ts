@@ -66,6 +66,12 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 		  }
 		| undefined;
 	readonly #sendSyncHelloOnConnect: boolean;
+	/**
+	 * When set (via {@link SyncClientBridge.setRowGet} after `createCollection`), server `insert`
+	 * messages are turned into `update` if that row is already in the collection — required when
+	 * partial `rangePatch` hydrated the row before an `ack`/`syncBatch` insert arrives.
+	 */
+	#rowGet: ((key: string | number) => TItem | undefined) | undefined;
 
 	constructor(private readonly options: SyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId;
@@ -86,6 +92,16 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 		if (connected && this.#sendSyncHelloOnConnect) {
 			this.sendHello();
 		}
+	}
+
+	/**
+	 * Wire `collection.get` after the TanStack collection exists so mutation-path `receiveSync` can
+	 * coerce duplicate `insert` echoes to `update` (partial sync + `mutateBatch`).
+	 */
+	setRowGet(
+		get: ((key: string | number) => TItem | undefined) | undefined,
+	): void {
+		this.#rowGet = get;
 	}
 
 	sendHello(): void {
@@ -158,7 +174,11 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 			case "ack":
 				this.#updateLastAckedServerVersion(message.serverVersion);
 				await this.options.collection.utils.receiveSync(
-					this.#filterIncomingChanges(message.changes as SyncMessage<TItem>[]),
+					this.#coerceInsertsWhenRowExists(
+						this.#filterIncomingChanges(
+							message.changes as SyncMessage<TItem>[],
+						),
+					),
 				);
 				for (const mutationId of message.clientMutationIds) {
 					this.#forgetPendingMutation(mutationId);
@@ -167,7 +187,11 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 			case "syncBatch":
 				this.#updateLastAckedServerVersion(message.serverVersion);
 				await this.options.collection.utils.receiveSync(
-					this.#filterIncomingChanges(message.changes as SyncMessage<TItem>[]),
+					this.#coerceInsertsWhenRowExists(
+						this.#filterIncomingChanges(
+							message.changes as SyncMessage<TItem>[],
+						),
+					),
 				);
 				return;
 			case "syncBackfill": {
@@ -202,7 +226,9 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 				outgoingChanges.push(...incomingChanges);
 
 				if (outgoingChanges.length > 0) {
-					await this.options.collection.utils.receiveSync(outgoingChanges);
+					await this.options.collection.utils.receiveSync(
+						this.#coerceInsertsWhenRowExists(outgoingChanges),
+					);
 				}
 
 				active.receivedChunks += 1;
@@ -219,7 +245,9 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 				this.#forgetPendingMutation(message.clientMutationId);
 				const allChanges = message.correctiveChanges as SyncMessage<TItem>[];
 				if (allChanges.length > 0) {
-					await this.options.collection.utils.receiveSync(allChanges);
+					await this.options.collection.utils.receiveSync(
+						this.#coerceInsertsWhenRowExists(allChanges),
+					);
 				}
 
 				this.options.onRejectedMutation?.(
@@ -337,21 +365,65 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 		});
 	}
 
+	#localRowForIncomingInsert(id: PartialSyncRowId): TItem | undefined {
+		const get = this.#rowGet;
+		if (get === undefined) return undefined;
+		if (typeof id === "string" || typeof id === "number") {
+			return get(id) ?? get(partialSyncRowKey(id));
+		}
+		return get(partialSyncRowKey(id));
+	}
+
+	#coerceInsertsWhenRowExists(
+		changes: SyncMessage<TItem>[],
+	): SyncMessage<TItem>[] {
+		if (this.#rowGet === undefined) return changes;
+		const out: SyncMessage<TItem>[] = [];
+		for (const ch of changes) {
+			if (ch.type !== "insert") {
+				out.push(ch);
+				continue;
+			}
+			const local = this.#localRowForIncomingInsert(ch.value.id);
+			if (local === undefined) {
+				out.push(ch);
+			} else {
+				out.push({
+					type: "update",
+					value: ch.value,
+					previousValue: local,
+				});
+			}
+		}
+		return out;
+	}
+
 	#filterIncomingChanges(changes: SyncMessage<TItem>[]): SyncMessage<TItem>[] {
-		return changes.filter((change) => {
+		const out: SyncMessage<TItem>[] = [];
+		for (const change of changes) {
 			if (change.type !== "update") {
-				return true;
+				out.push(change);
+				continue;
 			}
 			const pendingMutationId = this.#pendingMutationByKey.get(
 				partialSyncRowKey(change.value.id),
 			);
-			if (!pendingMutationId) return true;
+			if (!pendingMutationId) {
+				out.push(change);
+				continue;
+			}
 			const pending = this.#pendingMutations.get(pendingMutationId);
-			if (!pending) return true;
-			return (
+			if (!pending) {
+				out.push(change);
+				continue;
+			}
+			if (
 				partialSyncRowVersionWatermarkMs(change.value) >= pending.updatedAt
-			);
-		});
+			) {
+				out.push(change);
+			}
+		}
+		return out;
 	}
 
 	#intentKey(intent: MutationIntent): string | number | null {

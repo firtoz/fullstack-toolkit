@@ -12,6 +12,7 @@ import {
 } from "./schema";
 import { handleRemoteCallback } from "../drizzle/handle-callback";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import type { SqliteWasmWorkerOpenOptions } from "./sqlite-open-options";
 import type { Sqlite3Static, Database } from "../types";
 
 // Declare self as DedicatedWorkerGlobalScope for TypeScript
@@ -133,10 +134,31 @@ class SqliteWorkerHelper extends WorkerHelper<
 		}
 	}
 
+	private applyOpenPragmas(
+		db: Database,
+		openOptions?: SqliteWasmWorkerOpenOptions,
+	) {
+		const journalMode = openOptions?.journalMode ?? "WAL";
+		const synchronous = openOptions?.synchronous ?? "FULL";
+		try {
+			db.exec(`PRAGMA journal_mode=${journalMode};`);
+			db.exec(`PRAGMA synchronous=${synchronous};`);
+			this.log(
+				"PRAGMA journal_mode=",
+				journalMode,
+				"synchronous=",
+				synchronous,
+			);
+		} catch (e) {
+			this.error("Error applying open pragmas:", e);
+		}
+	}
+
 	private async startDatabase(
 		sqlite3: Sqlite3Static,
 		dbName: string,
 		requestId: StartRequestId,
+		openOptions?: SqliteWasmWorkerOpenOptions,
 	) {
 		const dbId = DbIdSchema.parse(crypto.randomUUID());
 
@@ -146,24 +168,14 @@ class SqliteWorkerHelper extends WorkerHelper<
 		if ("opfs" in sqlite3) {
 			db = new sqlite3.oo1.OpfsDb(dbFileName);
 			this.log("OPFS database created:", db.filename);
-
-			// Configure database for reliable persistence
-			try {
-				// Ensure WAL mode is enabled
-				db.exec("PRAGMA journal_mode=WAL;");
-				// Use FULL synchronous mode to ensure data is written to persistent storage
-				// before transactions are considered complete
-				db.exec("PRAGMA synchronous=FULL;");
-				this.log("Database configured with WAL mode and FULL synchronous");
-			} catch (e) {
-				this.error("Error configuring database:", e);
-			}
+			this.applyOpenPragmas(db, openOptions);
 		} else {
 			db = new sqlite3.oo1.DB(dbFileName, "c");
 			this.log(
 				"OPFS is not available, created transient database",
 				db.filename,
 			);
+			this.applyOpenPragmas(db, openOptions);
 		}
 
 		// Store database with initialized flag
@@ -183,7 +195,12 @@ class SqliteWorkerHelper extends WorkerHelper<
 			case SqliteWorkerClientMessageType.Start:
 				{
 					const sqlite3 = await this.initPromise;
-					await this.startDatabase(sqlite3, data.dbName, data.requestId);
+					await this.startDatabase(
+						sqlite3,
+						data.dbName,
+						data.requestId,
+						data.openOptions,
+					);
 				}
 				break;
 			case SqliteWorkerClientMessageType.RemoteCallbackRequest:

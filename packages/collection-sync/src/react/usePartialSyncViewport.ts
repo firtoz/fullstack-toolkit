@@ -4,7 +4,6 @@ import {
 	DEFAULT_VIEWPORT_RANGE_MAX_WAIT_MS,
 	DEFAULT_VIEWPORT_RANGE_QUIET_MS,
 } from "./constants";
-import { primePartialSyncBridgeCachedIdsFromCollection } from "./partial-sync-utils";
 import { usePredicateFilteredRows } from "./usePredicateFilteredRows";
 import type {
 	PartialSyncItem,
@@ -33,6 +32,7 @@ export function usePartialSyncViewport<
 	totalCountFallback = 0,
 	getColumnValue,
 	cacheDisplayMode = "immediate",
+	alwaysIncludeRowIds,
 }: UsePartialSyncViewportOptions<
 	TItem,
 	TViewport,
@@ -57,6 +57,9 @@ export function usePartialSyncViewport<
 		...(getColumnValue !== undefined ? { getColumnValue } : {}),
 		limit: predicateLimit,
 		cacheDisplayMode,
+		...(alwaysIncludeRowIds !== undefined && alwaysIncludeRowIds.length > 0
+			? { alwaysIncludeRowIds }
+			: {}),
 		...(cacheDisplayMode === "confirmed"
 			? {
 					confirmedRowKeys: bridge.serverConfirmedKeys,
@@ -104,10 +107,6 @@ export function usePartialSyncViewport<
 			clearQuietTimer();
 			clearMaxWaitTimer();
 			lastRangeFetchAtRef.current = performance.now();
-			primePartialSyncBridgeCachedIdsFromCollection(
-				bridgeRef.current,
-				collectionRef.current,
-			);
 			const v = fetchViewportRef.current;
 			const ad = adapterRef.current;
 			const range: SyncRange = {
@@ -148,6 +147,28 @@ export function usePartialSyncViewport<
 			clearMaxWaitTimer();
 		};
 	}, [conditions, prefetchPad, maxWaitMs, quietMs]);
+
+	useLayoutEffect(() => {
+		if (typeof document === "undefined") return;
+		const onVisibleRefresh = (): void => {
+			if (document.visibilityState !== "visible") return;
+			const v = fetchViewportRef.current;
+			const ad = adapterRef.current;
+			const range: SyncRange = {
+				kind: "predicate",
+				conditions: ad.toConditions(v),
+				sort: ad.sort,
+				limit: predicateLimitRef.current,
+			};
+			void bridgeRef.current.requestRangeQuery(range).catch((err: unknown) => {
+				console.error("partial sync viewport rangeQuery failed", err);
+			});
+		};
+		document.addEventListener("visibilitychange", onVisibleRefresh);
+		return () => {
+			document.removeEventListener("visibilitychange", onVisibleRefresh);
+		};
+	}, []);
 
 	const totalCount =
 		bridgeState.status === "partial" || bridgeState.status === "realtime"

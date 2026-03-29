@@ -67,6 +67,14 @@ export interface PartialSyncServerBridgeStore<TItem extends PartialSyncRowShape>
 	}) => Promise<{ changes: SyncMessage<TItem>[]; totalCount: number } | null>;
 }
 
+export type PartialSyncPushServerChangesOptions = {
+	/**
+	 * Do not emit `rangePatch` to this client (e.g. the mutation author already applied the change
+	 * locally and receives `ack` with the same payload).
+	 */
+	excludeClientId?: string;
+};
+
 export interface PartialSyncServerBridgeOptions<TItem extends PartialSyncRowShape> {
 	store: PartialSyncServerBridgeStore<TItem>;
 	sendToClient: (clientId: string, message: SyncServerMessage<TItem>) => void;
@@ -122,8 +130,13 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 		}
 	}
 
-	async pushServerChanges(changes: SyncMessage<TItem>[]): Promise<void> {
+	async pushServerChanges(
+		changes: SyncMessage<TItem>[],
+		options?: PartialSyncPushServerChangesOptions,
+	): Promise<void> {
+		const exclude = options?.excludeClientId;
 		for (const state of this.#clientStates.values()) {
+			if (exclude !== undefined && state.clientId === exclude) continue;
 			for (const change of changes) {
 				const patch = classifyPartialSyncRangePatch(
 					state.deliveredRanges,

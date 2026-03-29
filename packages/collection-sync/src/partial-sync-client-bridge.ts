@@ -137,6 +137,15 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 	 * {@link handleServerMessage} calls must not run `receiveSync` in parallel for range fetches.
 	 */
 	#rangeFetchApplySerial: Promise<void> = Promise.resolve();
+	/**
+	 * Plain `rangePatch` updates: merge by row key. `connectPartialSync` calls
+	 * `flushPendingCoalescedInboundUpdates` after each inbound pump pass; call it yourself if you use
+	 * the bridge without that helper.
+	 */
+	#pendingCoalescedUpdatesByKey = new Map<
+		string | number,
+		Extract<SyncMessage<TItem>, { type: "update" }>
+	>();
 
 	constructor(private readonly options: PartialSyncClientBridgeOptions<TItem>) {
 		this.clientId = options.clientId ?? crypto.randomUUID();
@@ -166,12 +175,14 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 	}
 
 	setConnecting(): void {
+		this.#pendingCoalescedUpdatesByKey.clear();
 		this.#setState({ status: "connecting" });
 	}
 
 	setConnected(connected: boolean): void {
 		this.#connected = connected;
 		if (!connected) {
+			this.#pendingCoalescedUpdatesByKey.clear();
 			this.#setState({ status: "disconnected", cachedCount: this.cachedCount });
 			return;
 		}
@@ -189,6 +200,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 
 	setOffline(): void {
 		this.#connected = false;
+		this.#pendingCoalescedUpdatesByKey.clear();
 		this.#setState({ status: "offline" });
 	}
 
@@ -461,6 +473,7 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 				this.options.onViewTransition?.({ type: "exitView", change });
 			}
 			await this.#applyAndTrack([change]);
+			this.#prunePartialInterestTrackingAfterExitView(change);
 			this.options.onRangePatchApplied?.({ change, viewTransition });
 			return;
 		}
@@ -468,7 +481,22 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			if (change.type === "update") {
 				this.options.onViewTransition?.({ type: "enterView", change });
 				const key = partialSyncRowKey(change.value.id);
-				const toApply: SyncMessage<TItem>[] = this.#cachedIds.has(key)
+				const getRow = this.options.collection.get;
+				let local =
+					getRow !== undefined ? getRow(key) : undefined;
+				if (local === undefined && getRow !== undefined) {
+					if (typeof key === "number") {
+						local = getRow(String(key));
+					} else {
+						const asNum = Number(key);
+						if (!Number.isNaN(asNum)) {
+							local = getRow(asNum);
+						}
+					}
+				}
+				const alreadyInCollection =
+					this.#cachedIds.has(key) || local !== undefined;
+				const toApply: SyncMessage<TItem>[] = alreadyInCollection
 					? [change]
 					: [{ type: "insert", value: change.value }];
 				await this.#applyAndTrack(toApply);
@@ -479,7 +507,10 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			this.options.onRangePatchApplied?.({ change, viewTransition });
 			return;
 		}
-		await this.#applyAndTrack([change]);
+		await this.#applyAndTrack(
+			[change],
+			change.type === "update",
+		);
 		this.#mergeServerConfirmedKeysFromMessages([change]);
 		this.options.onRangePatchApplied?.({ change, viewTransition });
 	}
@@ -491,6 +522,35 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		}
 		this.#serverConfirmedKeysRevision += 1;
 		this.#notifyConfirmedKeysRevision();
+	}
+
+	/** Row left the client's server-confirmed window; stop counting it as partial-sync cached. */
+	#prunePartialInterestTrackingAfterExitView(
+		change: SyncMessage<TItem>,
+	): void {
+		switch (change.type) {
+			case "insert":
+			case "update": {
+				const key = partialSyncRowKey(change.value.id);
+				this.#cachedIds.delete(key);
+				this.#serverConfirmedKeys.delete(key);
+				break;
+			}
+			case "delete": {
+				this.#cachedIds.delete(change.key);
+				this.#serverConfirmedKeys.delete(change.key);
+				break;
+			}
+			case "truncate":
+				this.#cachedIds.clear();
+				this.#serverConfirmedKeys.clear();
+				break;
+			default:
+				exhaustiveGuard(change);
+		}
+		this.#serverConfirmedKeysRevision += 1;
+		this.#notifyConfirmedKeysRevision();
+		this.#refreshCachedCountInState();
 	}
 
 	#mergeServerConfirmedKeysFromMessages(changes: SyncMessage<TItem>[]): void {
@@ -726,10 +786,68 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		}
 	}
 
-	async #applyAndTrack(changes: SyncMessage<TItem>[]): Promise<void> {
+	async #drainPendingCoalescedUpdates(): Promise<void> {
+		if (this.#pendingCoalescedUpdatesByKey.size === 0) return;
+		const batch = [...this.#pendingCoalescedUpdatesByKey.values()];
+		this.#pendingCoalescedUpdatesByKey.clear();
+		const get = this.options.collection.get;
+		const toApply =
+			get === undefined
+				? batch
+				: batch.map((ch) => {
+						if (ch.type !== "update") return ch;
+						const id = ch.value.id;
+						const current =
+							(typeof id === "string" || typeof id === "number"
+								? get(id)
+								: undefined) ?? get(partialSyncRowKey(id));
+						if (current === undefined) return ch;
+						return { ...ch, previousValue: current };
+					});
+		await this.#receiveSyncAndTrack(toApply);
+	}
+
+	/**
+	 * Apply pending plain `rangePatch` updates coalesced by row id. Idempotent when the map is empty.
+	 * Invoked automatically by `connectPartialSync` after each inbound pump drain.
+	 */
+	async flushPendingCoalescedInboundUpdates(): Promise<void> {
+		await this.#drainPendingCoalescedUpdates();
+	}
+
+	async #receiveSyncAndTrack(changes: SyncMessage<TItem>[]): Promise<void> {
 		if (changes.length === 0) return;
 		await this.options.collection.utils.receiveSync(changes);
 		this.syncTrackedIdsFromMessages(changes);
+	}
+
+	/**
+	 * @param coalesceSameRowUpdates When true (plain `rangePatch` updates only), merge by row key;
+	 * the transport layer must call `flushPendingCoalescedInboundUpdates` after processing queued inbound work.
+	 */
+	async #applyAndTrack(
+		changes: SyncMessage<TItem>[],
+		coalesceSameRowUpdates = false,
+	): Promise<void> {
+		if (changes.length === 0) return;
+
+		if (!coalesceSameRowUpdates) {
+			await this.#drainPendingCoalescedUpdates();
+			await this.#receiveSyncAndTrack(changes);
+			return;
+		}
+
+		for (const ch of changes) {
+			if (ch.type !== "update") {
+				await this.#drainPendingCoalescedUpdates();
+				await this.#receiveSyncAndTrack(changes);
+				return;
+			}
+			this.#pendingCoalescedUpdatesByKey.set(
+				partialSyncRowKey(ch.value.id),
+				ch,
+			);
+		}
 	}
 
 	#setState(state: PartialSyncState): void {

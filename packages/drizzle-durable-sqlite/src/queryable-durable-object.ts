@@ -261,8 +261,24 @@ export abstract class QueryableDurableObject<
 					store: mutationStore,
 					sendToClient: (clientId, message) =>
 						this.sendToClient(clientId, message),
-					broadcastExcept: (excludeClientId, message) =>
-						this.broadcastExcept(excludeClientId, message),
+					broadcastExcept: async (excludeClientId, message) => {
+						if (message.type === "syncBatch") {
+							await bridgeRef.pushServerChanges(
+								message.changes as SyncMessage<TRow>[],
+								{ excludeClientId: excludeClientId },
+							);
+							for (const session of this.sessions.values()) {
+								const typedSession = session as QueryableSession<TRow, TEnv>;
+								if (typedSession.clientId === excludeClientId) continue;
+								typedSession.send({
+									...message,
+									changes: [],
+								});
+							}
+							return;
+						}
+						this.broadcastExcept(excludeClientId, message);
+					},
 					collectionId,
 				});
 				this.mutationSyncBridge = mutationBridge;

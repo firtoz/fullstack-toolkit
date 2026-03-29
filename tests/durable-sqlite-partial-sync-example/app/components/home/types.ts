@@ -7,7 +7,7 @@ export type PeopleTable = typeof schema.peopleTable;
 export type PersonRow = InferSelectModel<PeopleTable>;
 export type PersonId = PersonRow["id"];
 
-/** Row shape for partial-sync people UI (memory / idb / sqlite-wasm). */
+/** Row shape for partial-sync people UI (memory / keyval idb / drizzle idb). */
 export type PeoplePartialSyncRow = PartialSyncItem & {
 	name: string;
 	age: number;
@@ -17,7 +17,7 @@ export type PeoplePartialSyncRow = PartialSyncItem & {
 
 export type PeopleSqliteCollection = DrizzleSqliteTableCollection<PeopleTable>;
 
-export const BACKEND_MODES = ["memory", "indexeddb", "sqlite"] as const;
+export const BACKEND_MODES = ["memory", "indexeddb", "drizzleIndexedDb"] as const;
 export type BackendMode = (typeof BACKEND_MODES)[number];
 
 export type WsTransport = "json" | "msgpack";

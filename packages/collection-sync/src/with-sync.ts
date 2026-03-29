@@ -70,6 +70,12 @@ export type WithSyncOptions = {
 	 * Must match the server's {@link SyncServerBridgeOptions.collectionId} on the same WebSocket.
 	 */
 	collectionId?: string;
+	/**
+	 * When set to a positive number (milliseconds), local mutation batches are debounced: each
+	 * burst merges into one `onLocalMutation` call after this many milliseconds of quiet time.
+	 * `truncate` messages flush any pending batch immediately and are not delayed.
+	 */
+	localMutationThrottleMs?: number;
 };
 
 /** Returns `globalThis.localStorage` when it looks usable; otherwise `null`. */
@@ -261,22 +267,54 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 		sendSyncHelloOnConnect: syncOptions?.sendSyncHelloOnConnect,
 	});
 
+	const throttleMs = syncOptions?.localMutationThrottleMs;
+	let mutationThrottleBuffer: SyncMessage<TItem>[] = [];
+	let mutationThrottleTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const flushMutationThrottle = (): void => {
+		mutationThrottleTimer = null;
+		if (mutationThrottleBuffer.length === 0) return;
+		const batch = mutationThrottleBuffer;
+		mutationThrottleBuffer = [];
+		bridge.onLocalMutation(batch);
+	};
+
+	const emitLocalMutation = (writes: SyncMessage<TItem>[]): void => {
+		if (
+			throttleMs === undefined ||
+			throttleMs <= 0 ||
+			writes.some((w) => w.type === "truncate")
+		) {
+			if (mutationThrottleTimer !== null) {
+				clearTimeout(mutationThrottleTimer);
+				mutationThrottleTimer = null;
+				flushMutationThrottle();
+			}
+			bridge.onLocalMutation(writes);
+			return;
+		}
+		mutationThrottleBuffer.push(...writes);
+		if (mutationThrottleTimer !== null) {
+			clearTimeout(mutationThrottleTimer);
+		}
+		mutationThrottleTimer = setTimeout(flushMutationThrottle, throttleMs);
+	};
+
 	const onInsert = baseOptions.onInsert
 		? async (params: Parameters<NonNullable<TConfig["onInsert"]>>[0]) => {
-				await baseOptions.onInsert?.(params);
 				const writes: SyncMessage<TItem>[] = params.transaction.mutations.map(
 					(mutation) => ({
 						type: "insert" as const,
 						value: mutation.modified,
 					}),
 				);
-				bridge.onLocalMutation(writes);
+				emitLocalMutation(writes);
+				await baseOptions.onInsert?.(params);
 			}
 		: undefined;
 
 	const onUpdate = baseOptions.onUpdate
 		? async (params: Parameters<NonNullable<TConfig["onUpdate"]>>[0]) => {
-				await baseOptions.onUpdate?.(params);
 				const writes: SyncMessage<TItem>[] = params.transaction.mutations.map(
 					(mutation) => ({
 						type: "update" as const,
@@ -284,20 +322,21 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 						previousValue: mutation.original,
 					}),
 				);
-				bridge.onLocalMutation(writes);
+				emitLocalMutation(writes);
+				await baseOptions.onUpdate?.(params);
 			}
 		: undefined;
 
 	const onDelete = baseOptions.onDelete
 		? async (params: Parameters<NonNullable<TConfig["onDelete"]>>[0]) => {
-				await baseOptions.onDelete?.(params);
 				const writes: SyncMessage<TItem>[] = params.transaction.mutations.map(
 					(mutation) => ({
 						type: "delete" as const,
 						key: mutation.key as string | number,
 					}),
 				);
-				bridge.onLocalMutation(writes);
+				emitLocalMutation(writes);
+				await baseOptions.onDelete?.(params);
 			}
 		: undefined;
 
@@ -306,7 +345,7 @@ export function withSync<TConfig extends AnyWithSyncableCollectionConfig>(
 		truncate: async () => {
 			await originalTruncate();
 			if (forwardTruncateToMutations) {
-				bridge.onLocalMutation([{ type: "truncate" } as SyncMessage<TItem>]);
+				emitLocalMutation([{ type: "truncate" } as SyncMessage<TItem>]);
 			}
 		},
 	};

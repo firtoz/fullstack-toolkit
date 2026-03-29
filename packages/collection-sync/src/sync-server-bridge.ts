@@ -26,7 +26,7 @@ export interface SyncServerBridgeOptions<TItem> {
 	broadcastExcept: (
 		excludeClientId: string,
 		message: SyncServerMessage<TItem>,
-	) => void;
+	) => void | Promise<void>;
 	/** Deliver a server message to every connected client (e.g. {@link SyncServerBridge.pushServerChanges}). */
 	broadcastAll?: (message: SyncServerMessage<TItem>) => void;
 	/** Maximum number of changes per `syncBackfill` frame. Defaults to 500. */
@@ -59,8 +59,8 @@ export class SyncServerBridge<TItem extends PartialSyncRowShape> {
 	#broadcastExcept(
 		excludeClientId: string,
 		body: SyncServerMessageBody<TItem>,
-	): void {
-		this.options.broadcastExcept(excludeClientId, {
+	): void | Promise<void> {
+		return this.options.broadcastExcept(excludeClientId, {
 			...body,
 			collectionId: this.#cid,
 		} as SyncServerMessage<TItem>);
@@ -160,11 +160,13 @@ export class SyncServerBridge<TItem extends PartialSyncRowShape> {
 			changes: resolvedChanges,
 		});
 
-		this.#broadcastExcept(message.clientId, {
-			type: "syncBatch",
-			serverVersion: this.#serverVersion,
-			changes: resolvedChanges,
-		});
+		await Promise.resolve(
+			this.#broadcastExcept(message.clientId, {
+				type: "syncBatch",
+				serverVersion: this.#serverVersion,
+				changes: resolvedChanges,
+			}),
+		);
 	}
 
 	async #intentToMessageLww(

@@ -13,6 +13,7 @@ import {
 	isSqliteWorkerInitialized,
 } from "../worker/global-manager";
 import type { SQLInterceptor } from "../collections/sqlite-collection";
+import type { SqliteWasmWorkerOpenOptions } from "../worker/sqlite-open-options";
 
 export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	WorkerConstructor: new () => Worker,
@@ -22,6 +23,11 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	debug?: boolean,
 	/** Optional interceptor to log ALL SQL queries (including direct Drizzle queries) */
 	interceptor?: SQLInterceptor,
+	/**
+	 * Pragmas applied when the worker first opens this `dbName` in the session.
+	 * Ignored if that database was already started (same global worker + dbName).
+	 */
+	workerOpenOptions?: SqliteWasmWorkerOpenOptions,
 ) => {
 	const resolveRef = useRef<null | (() => void)>(null);
 	const rejectRef = useRef<null | ((error: unknown) => void)>(null);
@@ -63,7 +69,7 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 				"../worker/global-manager"
 			);
 			const manager = getSqliteWorkerManager();
-			const instance = await manager.getDbInstance(dbName);
+			const instance = await manager.getDbInstance(dbName, workerOpenOptions);
 
 			if (mounted) {
 				sqliteClientRef.current = instance;
@@ -76,7 +82,7 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 		return () => {
 			mounted = false;
 		};
-	}, [dbName, WorkerConstructor]);
+	}, [dbName, WorkerConstructor, workerOpenOptions]);
 
 	// Store interceptor in a ref to avoid recreating drizzle on interceptor changes
 	const interceptorRef = useRef(interceptor);

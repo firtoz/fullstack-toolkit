@@ -1,3 +1,4 @@
+import type { SyncMessage } from "@firtoz/db-helpers";
 import { describe, expect, it } from "bun:test";
 import { SyncClientBridge } from "./sync-client-bridge";
 import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
@@ -61,6 +62,48 @@ describe("SyncClientBridge", () => {
 		expect(sent.length).toBe(2);
 		expect(received.length).toBe(1);
 		expect(bridge.pendingCount).toBe(0);
+	});
+
+	it("coerces ack insert to update when setRowGet finds an existing row", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const local: Item = { id: "a", title: "local", updatedAt: 1 };
+		const bridge = new SyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+		bridge.setRowGet((key) => (String(key) === "a" ? local : undefined));
+		bridge.setConnected(true);
+
+		await bridge.handleServerMessage({
+			type: "ack",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			clientMutationIds: [],
+			serverVersion: 1,
+			changes: [
+				{
+					type: "insert",
+					value: { id: "a", title: "server", updatedAt: 2 },
+				},
+			],
+		});
+
+		expect(received.length).toBe(1);
+		const batch = received[0];
+		expect(batch?.length).toBe(1);
+		const ch = batch?.[0];
+		expect(ch?.type).toBe("update");
+		if (ch?.type === "update") {
+			expect(ch.value.title).toBe("server");
+			expect(ch.previousValue).toEqual(local);
+		}
 	});
 
 	it("applies snapshot backfill with truncate then changes", async () => {

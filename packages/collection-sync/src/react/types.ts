@@ -170,6 +170,12 @@ export type UsePredicateFilteredRowsOptions<
 	confirmedRowKeys?: ReadonlySet<string | number>;
 	/** Pass `bridge.serverConfirmedKeysRevision` so React re-runs the query when the set mutates. */
 	confirmedKeysRevision?: number;
+	/**
+	 * Row ids that stay visible even when they no longer match the viewport predicate (union with
+	 * predicate hits). Useful for in-progress drags or pinned selections. Rows must already exist
+	 * in the local collection.
+	 */
+	alwaysIncludeRowIds?: readonly string[];
 };
 
 export type UsePartialSyncCollectionOptions<TItem extends PartialSyncItem> = {
@@ -210,6 +216,11 @@ export type UsePartialSyncViewportOptions<
 	totalCountFallback?: number;
 	getColumnValue?: (row: TItem, column: string) => unknown;
 	cacheDisplayMode?: CacheDisplayMode;
+	/**
+	 * Ids to always include in {@link UsePartialSyncViewportResult.viewportRows} in addition to
+	 * rows matching the viewport predicate (see {@link UsePredicateFilteredRowsOptions.alwaysIncludeRowIds}).
+	 */
+	alwaysIncludeRowIds?: readonly string[];
 };
 
 export type UsePartialSyncViewportResult<TItem extends PartialSyncItem> = {

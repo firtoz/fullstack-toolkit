@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Zod schema for client-side emoji grid rows (memory / IndexedDB / sqlite-wasm). */
+/** Zod schema for client-side emoji grid rows (memory / keyval IDB / Drizzle IDB). */
 export const emojiGridRowSchema = z.object({
 	id: z.string(),
 	x: z.number(),

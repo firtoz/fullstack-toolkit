@@ -15,7 +15,7 @@ export function BackendSelector({ backendMode, onChange }: Props) {
 			>
 				<option value="memory">memory</option>
 				<option value="indexeddb">indexeddb</option>
-				<option value="sqlite">sqlite-wasm</option>
+				<option value="drizzleIndexedDb">drizzle + IDB</option>
 			</select>
 		</label>
 	);

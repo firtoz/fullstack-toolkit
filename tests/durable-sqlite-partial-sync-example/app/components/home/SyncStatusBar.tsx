@@ -4,6 +4,8 @@ type Props = {
 	state: PartialSyncState;
 	totalCount: number;
 	cachedCount: number;
+	/** Last server `rangeQuery` confirmation: row ids in the subscribed window (optional). */
+	serverWindowRowCount?: number;
 };
 
 function describeState(state: PartialSyncState): string {
@@ -19,7 +21,7 @@ function describeState(state: PartialSyncState): string {
 		case "partial":
 			return `${state.cachedCount.toLocaleString()} / ${state.totalCount.toLocaleString()} rows cached (${Math.round(state.cacheUtilization * 100)}% used)`;
 		case "realtime":
-			return `Live -- ${state.cachedCount.toLocaleString()} / ${state.totalCount.toLocaleString()} cached`;
+			return `Live — ${state.totalCount.toLocaleString()} row(s) match server range · ${state.cachedCount.toLocaleString()} id(s) tracked locally (mutations + patches)`;
 		case "evicting":
 			return `Cache full -- trimming distant rows (${state.evictingCount})...`;
 		case "disconnected":
@@ -31,7 +33,12 @@ function describeState(state: PartialSyncState): string {
 	}
 }
 
-export function SyncStatusBar({ state, totalCount, cachedCount }: Props) {
+export function SyncStatusBar({
+	state,
+	totalCount,
+	cachedCount,
+	serverWindowRowCount,
+}: Props) {
 	const utilization =
 		state.status === "partial" || state.status === "realtime"
 			? state.cacheUtilization
@@ -47,9 +54,16 @@ export function SyncStatusBar({ state, totalCount, cachedCount }: Props) {
 		>
 			<div>{describeState(state)}</div>
 			<div style={{ fontSize: 12, marginTop: 4 }}>
-				Cached rows: {cachedCount.toLocaleString()} /{" "}
-				{totalCount.toLocaleString()}
+				Bridge tracked ids: {cachedCount.toLocaleString()} /{" "}
+				{totalCount.toLocaleString()} (server range total)
 			</div>
+			{serverWindowRowCount !== undefined ? (
+				<div style={{ fontSize: 12, marginTop: 2, color: "#333" }}>
+					Server window (confirmed row ids):{" "}
+					{serverWindowRowCount.toLocaleString()} /{" "}
+					{totalCount.toLocaleString()}
+				</div>
+			) : null}
 			<div
 				style={{ marginTop: 6, height: 8, background: "#ddd", borderRadius: 4 }}
 			>

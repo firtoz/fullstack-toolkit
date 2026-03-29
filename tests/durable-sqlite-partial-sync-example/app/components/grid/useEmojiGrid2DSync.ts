@@ -37,6 +37,8 @@ export type UseEmojiGrid2DSyncOptions<TItem extends EmojiGridPartialSyncRow> = {
 	roomId: string;
 	wsTransport: WsTransport;
 	viewport: Viewport2D;
+	/** Row ids kept visible in addition to the viewport predicate (e.g. active drag). */
+	alwaysIncludeRowIds?: readonly string[];
 	/** Defaults to `EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID` (must match the emoji grid DO). */
 	collectionId?: string;
 };
@@ -55,6 +57,7 @@ export function useEmojiGrid2DSync<TItem extends EmojiGridPartialSyncRow>({
 	roomId,
 	wsTransport,
 	viewport,
+	alwaysIncludeRowIds,
 	collectionId = EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID,
 }: UseEmojiGrid2DSyncOptions<TItem>): UseEmojiGrid2DSyncResult<TItem> {
 	const wsUrl = useMemo(() => {
@@ -103,6 +106,9 @@ export function useEmojiGrid2DSync<TItem extends EmojiGridPartialSyncRow>({
 		predicateLimit: EMOJI_GRID_PREDICATE_LIMIT,
 		prefetchPad: EMOJI_GRID_PREFETCH_UNITS,
 		totalCountFallback: EMOJI_GRID_WORLD_SIZE,
+		...(alwaysIncludeRowIds !== undefined && alwaysIncludeRowIds.length > 0
+			? { alwaysIncludeRowIds }
+			: {}),
 	});
 
 	return {

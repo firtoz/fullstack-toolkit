@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { BackendSelector } from "../home/BackendSelector";
 import type { BackendMode, WsTransport } from "../home/types";
+import { DrizzleIndexedDbEmojiGridClient } from "./DrizzleIndexedDbEmojiGridClient";
 import { IndexedDbEmojiGridClient } from "./IndexedDbEmojiGridClient";
 import { MemoryEmojiGridClient } from "./MemoryEmojiGridClient";
-import { SqliteEmojiGridClient } from "./SqliteEmojiGridClient";
 
 function getWsTransport(value: string | null): WsTransport {
 	return value === "msgpack" ? "msgpack" : "json";
 }
 
 function getBackendMode(value: string | null): BackendMode {
-	if (value === "indexeddb" || value === "sqlite") return value;
+	if (value === "indexeddb" || value === "drizzleIndexedDb") return value;
+	/** Legacy links from when the third option was sqlite-wasm. */
+	if (value === "sqlite") return "drizzleIndexedDb";
 	return "memory";
 }
 
@@ -183,7 +185,10 @@ export function EmojiGridPage() {
 				) : backendMode === "indexeddb" ? (
 					<IndexedDbEmojiGridClient roomId={roomId} wsTransport={wsTransport} />
 				) : (
-					<SqliteEmojiGridClient roomId={roomId} wsTransport={wsTransport} />
+					<DrizzleIndexedDbEmojiGridClient
+						roomId={roomId}
+						wsTransport={wsTransport}
+					/>
 				)}
 			</div>
 		</div>

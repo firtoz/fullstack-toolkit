@@ -16,6 +16,22 @@ export type SyncMessage<
 	| { type: "truncate" };
 
 /**
+ * Normalized durable ops for a {@link SyncMessage} batch. SQLite-style backends can implement
+ * `GenericSyncBackend.applyReceiveSyncDurableWrites` to persist the whole batch in one store
+ * transaction instead of one transaction per message.
+ */
+export type ReceiveSyncDurableOp<TItem extends object> =
+	| { type: "insert"; value: TItem }
+	| {
+			type: "update";
+			key: string;
+			changes: Partial<TItem>;
+			original: TItem;
+	  }
+	| { type: "delete"; key: string }
+	| { type: "truncate" };
+
+/**
  * External sync event (batched). Used internally by the sync layer.
  */
 export type ExternalSyncEvent<T> =

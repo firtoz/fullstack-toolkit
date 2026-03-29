@@ -18,7 +18,7 @@
 		"@firtoz/collection-sync": "workspace:*",
 		"@firtoz/db-helpers": "workspace:*",
 		"@firtoz/drizzle-durable-sqlite": "workspace:*",
-		"@firtoz/drizzle-sqlite-wasm": "workspace:*",
+		"@firtoz/drizzle-indexeddb": "workspace:*",
 		"@firtoz/drizzle-utils": "workspace:*",
 		"@firtoz/idb-collections": "workspace:*",
 		"@firtoz/maybe-error": "workspace:*",

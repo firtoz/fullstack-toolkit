@@ -34,5 +34,15 @@ export {
 } from "./worker/global-manager";
 export { SqliteWorkerManager, DbInstance } from "./worker/manager";
 export type { ISqliteWorkerClient } from "./worker/manager";
+export type {
+	SqliteWasmJournalMode,
+	SqliteWasmSynchronousMode,
+	SqliteWasmWorkerOpenOptions,
+} from "./worker/sqlite-open-options";
+export {
+	SqliteWasmJournalModeSchema,
+	SqliteWasmSynchronousModeSchema,
+	SqliteWasmWorkerOpenOptionsSchema,
+} from "./worker/sqlite-open-options";
 export { customSqliteMigrate } from "./migration/migrator";
 export type { DurableSqliteMigrationConfig } from "./migration/migrator";

@@ -57,6 +57,7 @@ export {
 	PartialSyncServerBridge,
 	type ClientQueryState,
 	type DeliveredRange,
+	type PartialSyncPushServerChangesOptions,
 	type PartialSyncServerBridgeOptions,
 	type PartialSyncServerBridgeStore,
 } from "./partial-sync-server-bridge";

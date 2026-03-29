@@ -101,6 +101,7 @@ describe("dispatchPartialSyncServerMessage", () => {
 			partialBridge,
 			mutationBridge,
 		);
+		await partialBridge.flushPendingCoalescedInboundUpdates();
 
 		expect(partialReceiveSync.length).toBe(1);
 		expect(mutationReceiveSync.length).toBe(0);

@@ -293,10 +293,26 @@ Context provider for SQLite WASM:
 - `dbName: string` - Name of the SQLite database
 - `schema: TSchema` - Drizzle schema object
 - `migrations: DurableSqliteMigrationConfig` - Migration configuration
+- `workerOpenOptions?: SqliteWasmWorkerOpenOptions` - Optional `PRAGMA synchronous` / `journal_mode` on first DB open (see hook section below)
 
-#### `useDrizzleSqliteDb(worker, dbName, schema, migrations)`
+#### `useDrizzleSqliteDb(worker, dbName, schema, migrations, debug?, interceptor?, workerOpenOptions?)`
 
 Hook to create a Drizzle instance with Web Worker:
+
+Optional **`workerOpenOptions`** sets SQLite pragmas when the worker **first** opens that `dbName` (same global worker + same `dbName` ⇒ options from the first open win until the worker is reset):
+
+```typescript
+import type { SqliteWasmWorkerOpenOptions } from "@firtoz/drizzle-sqlite-wasm";
+
+const open: SqliteWasmWorkerOpenOptions = {
+  synchronous: "NORMAL", // default worker behavior if omitted: "FULL"
+  journalMode: "WAL", // default if omitted: "WAL"
+};
+
+useDrizzleSqliteDb(SqliteWorker, "my-app", schema, migrations, undefined, undefined, open);
+```
+
+`DrizzleSqliteProvider` accepts the same shape as **`workerOpenOptions`**.
 
 ```typescript
 function MyComponent() {

@@ -76,6 +76,57 @@ describe("PartialSyncServerBridge", () => {
 		expect(state?.deliveredRanges.length).toBe(2);
 	});
 
+	it("pushServerChanges with excludeClientId does not emit rangePatch to that client", async () => {
+		type Sent = { clientId: string; message: unknown };
+		const sent: Sent[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 2,
+				getSortValue: (row, column) => (column === "age" ? row.age : row.name),
+				queryRange: async function* () {
+					yield [
+						item({ id: "1", name: "a", age: 20 }),
+						item({ id: "2", name: "b", age: 21 }),
+					];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+			},
+			sendToClient: (clientId, message) => sent.push({ clientId, message }),
+			queryChunkSize: 2,
+		});
+
+		for (const clientId of ["author", "observer"] as const) {
+			await bridge.handleClientMessage({
+				type: "queryRange",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				clientId,
+				requestId: `r-${clientId}`,
+				sort: { column: "name", direction: "asc" },
+				limit: 10,
+				afterCursor: null,
+			});
+		}
+
+		sent.length = 0;
+
+		const upd: SyncMessage<Item> = {
+			type: "update",
+			value: item({ id: "1", name: "a", age: 99 }),
+			previousValue: item({ id: "1", name: "a", age: 20 }),
+		};
+		await bridge.pushServerChanges([upd], { excludeClientId: "author" });
+
+		const patches = sent.filter(
+			(e) =>
+				typeof e.message === "object" &&
+				e.message !== null &&
+				(e.message as { type?: string }).type === "rangePatch",
+		);
+		expect(patches.map((e) => e.clientId).sort()).toEqual(["observer"]);
+	});
+
 	it("queues range patches while streaming and flushes after final chunk", async () => {
 		const sent: unknown[] = [];
 		let resume!: () => void;

@@ -61,6 +61,6 @@ test("backend switch keeps UI responsive", async ({ page }) => {
 	await page.goto(`/?backend=memory&room=${room}`);
 	await page.selectOption("select", "indexeddb");
 	await expect(page.getByText("People (indexeddb)")).toBeVisible();
-	await page.selectOption("select", "sqlite");
-	await expect(page.getByText("People (sqlite-wasm)")).toBeVisible();
+	await page.selectOption("select", "drizzleIndexedDb");
+	await expect(page.getByText("People (drizzle-idb)")).toBeVisible();
 });

@@ -33,26 +33,6 @@ export default defineConfig({
 				});
 			},
 		},
-		{
-			name: "sqlite-wasm-opfs-fix",
-			enforce: "pre",
-			transform(code, id) {
-				if (
-					id.includes("@sqlite.org/sqlite-wasm") &&
-					code.includes("new Worker")
-				) {
-					const workerRegex =
-						/new\s+Worker\s*\(\s*(new\s+URL\s*\([^)]+,[^)]+\))\s*\)/g;
-					const transformed = code.replace(
-						workerRegex,
-						"new Worker($1, { type: 'module' })",
-					);
-					if (transformed !== code) {
-						return { code: transformed, map: null };
-					}
-				}
-			},
-		},
 	] as PluginOption[],
 	server: {
 		// Keep in sync with `package.json` `dev` script (`--port ${DEV_PORT}`). Use 5199
@@ -71,9 +51,6 @@ export default defineConfig({
 			"Cross-Origin-Opener-Policy": "same-origin",
 			"Cross-Origin-Embedder-Policy": "require-corp",
 		},
-	},
-	optimizeDeps: {
-		exclude: ["@sqlite.org/sqlite-wasm"],
 	},
 	worker: {
 		format: "es",

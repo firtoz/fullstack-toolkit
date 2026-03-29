@@ -3,11 +3,12 @@ import { Link, useSearchParams } from "react-router";
 import { BackendSelector } from "./BackendSelector";
 import { IndexedDbPeopleClient } from "./IndexedDbPeopleClient";
 import { MemoryPeopleClient } from "./MemoryPeopleClient";
-import { SqlitePeopleClient } from "./SqlitePeopleClient";
+import { DrizzleIndexedDbPeopleClient } from "./DrizzleIndexedDbPeopleClient";
 import type { BackendMode, WsTransport } from "./types";
 
 function getBackendMode(value: string | null): BackendMode {
-	if (value === "indexeddb" || value === "sqlite") return value;
+	if (value === "indexeddb" || value === "drizzleIndexedDb") return value;
+	if (value === "sqlite") return "drizzleIndexedDb";
 	return "memory";
 }
 
@@ -74,7 +75,7 @@ export function HomePage() {
 			) : backendMode === "indexeddb" ? (
 				<IndexedDbPeopleClient roomId={roomId} wsTransport={wsTransport} />
 			) : (
-				<SqlitePeopleClient roomId={roomId} wsTransport={wsTransport} />
+				<DrizzleIndexedDbPeopleClient roomId={roomId} wsTransport={wsTransport} />
 			)}
 		</div>
 	);

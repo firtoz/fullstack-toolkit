@@ -378,6 +378,39 @@ describe("PartialSyncClientBridge", () => {
 		expect(bridge.cachedCount).toBe(1);
 	});
 
+	it("enterView rangePatch updates when collection.get finds row but cachedIds is empty", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				get: (key) =>
+					key === "1"
+						? item({ id: "1", name: "local", age: 5 })
+						: undefined,
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: item({ id: "1", name: "srv", age: 9 }),
+			previousValue: item({ id: "1", name: "local", age: 5 }),
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: update,
+			viewTransition: "enterView",
+		});
+
+		expect(received).toEqual([[update]]);
+	});
+
 	it("enterView rangePatch updates when row already cached", async () => {
 		const received: SyncMessage<Item>[][] = [];
 		const bridge = new PartialSyncClientBridge<Item>({
@@ -453,7 +486,7 @@ describe("PartialSyncClientBridge", () => {
 
 		expect(transitions).toEqual([{ type: "exitView", change: update }]);
 		expect(received[1]).toEqual([update]);
-		expect(bridge.cachedCount).toBe(1);
+		expect(bridge.cachedCount).toBe(0);
 	});
 
 	it("applies range patches to local cache", async () => {
@@ -492,6 +525,94 @@ describe("PartialSyncClientBridge", () => {
 			[{ type: "delete", key: "1" }],
 		]);
 		expect(bridge.cachedCount).toBe(0);
+	});
+
+	it("coalesces rapid plain rangePatch updates for the same row into one receiveSync", async () => {
+		const received: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const row0 = item({ id: "r1", name: "a", age: 1, updatedAt: 0 });
+		const row1 = { ...row0, name: "b", updatedAt: 1 };
+		const row2 = { ...row0, name: "c", updatedAt: 2 };
+		const u1 = {
+			type: "update" as const,
+			value: row1,
+			previousValue: row0,
+		} satisfies SyncMessage<Item>;
+		const u2 = {
+			type: "update" as const,
+			value: row2,
+			previousValue: row1,
+		} satisfies SyncMessage<Item>;
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: u1,
+		});
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: u2,
+		});
+		/** Without `connectPartialSync`, the bridge does not auto-flush after a pump pass. */
+		await bridge.flushPendingCoalescedInboundUpdates();
+
+		expect(received.length).toBe(1);
+		const batch = received[0] as SyncMessage<Item>[];
+		expect(batch).toHaveLength(1);
+		expect(batch[0]?.type).toBe("update");
+		if (batch[0]?.type === "update") {
+			expect(batch[0].value.name).toBe("c");
+		}
+	});
+
+	it("coalesced drain sets update previousValue from collection.get when provided", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const local = item({ id: "r1", name: "local", age: 7, updatedAt: 5 });
+		const stalePrev = item({ id: "r1", name: "stale-prev", age: 0, updatedAt: 0 });
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				get: (key) => (String(key) === "r1" ? local : undefined),
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const serverRow = { ...local, name: "from-server", updatedAt: 10 };
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: {
+				type: "update",
+				value: serverRow,
+				previousValue: stalePrev,
+			},
+		});
+		await bridge.flushPendingCoalescedInboundUpdates();
+
+		expect(received.length).toBe(1);
+		const first = received[0]?.[0];
+		expect(first?.type).toBe("update");
+		if (first?.type === "update") {
+			expect(first.previousValue).toEqual(local);
+			expect(first.value.name).toBe("from-server");
+		}
 	});
 
 	it("second requestRangeQuery aborts the first; stale chunks are ignored", async () => {

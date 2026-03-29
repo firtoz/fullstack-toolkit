@@ -17,3 +17,6 @@ dist/
 # Playwright and e2e artifacts
 test-results/
 playwright-report/
+
+# Cursor agent debug ingest / session logs (local only)
+.cursor/debug-*.log

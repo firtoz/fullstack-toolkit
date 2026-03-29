@@ -47,6 +47,9 @@ export function EmojiGridPartialSyncClient<
 	label,
 }: Props<TItem>) {
 	const [viewport, setViewport] = useState<Viewport2D>(initialViewport);
+	const [alwaysIncludeRowIds, setAlwaysIncludeRowIds] = useState<
+		readonly string[]
+	>([]);
 
 	const {
 		bridge: partialBridge,
@@ -60,6 +63,7 @@ export function EmojiGridPartialSyncClient<
 		roomId,
 		wsTransport,
 		viewport,
+		alwaysIncludeRowIds,
 	});
 
 	return (
@@ -74,6 +78,7 @@ export function EmojiGridPartialSyncClient<
 				partialBridge={partialBridge}
 				bridgeState={bridgeState}
 				totalCountForStatus={totalCountForStatus}
+				onAlwaysIncludeRowIdsChange={setAlwaysIncludeRowIds}
 			/>
 		</div>
 	);

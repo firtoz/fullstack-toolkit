@@ -27,5 +27,6 @@ export function createSyncedCollection<
 	const collection = createCollection(
 		options as never,
 	) as unknown as Collection<TItem>;
+	bridge.setRowGet((key) => collection.get(key));
 	return { collection, bridge, setTransportSend };
 }

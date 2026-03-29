@@ -3,11 +3,12 @@ import type {
 	PartialSyncState,
 } from "@firtoz/collection-sync";
 import type { Collection } from "@tanstack/db";
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import {
 	useCallback,
 	useEffect,
 	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
 } from "react";
@@ -23,6 +24,9 @@ import {
 	type Viewport2D,
 } from "./types";
 
+/** Pixels of pointer movement before we treat the gesture as a drag (not a click). */
+const DRAG_SLOP_PX = 7;
+
 type Props<TItem extends EmojiGridPartialSyncRow> = {
 	collection: Collection<TItem>;
 	roomId: string;
@@ -34,6 +38,11 @@ type Props<TItem extends EmojiGridPartialSyncRow> = {
 	partialBridge: PartialSyncClientBridge<TItem>;
 	bridgeState: PartialSyncState;
 	totalCountForStatus: number;
+	/**
+	 * While non-empty, those row ids stay in the partial-sync viewport row set (predicate OR pins).
+	 * Set on tile pointer down, clear on pointer up/cancel.
+	 */
+	onAlwaysIncludeRowIdsChange?: (ids: readonly string[]) => void;
 };
 
 function extractTouchIds(changes: unknown[]): string[] {
@@ -68,6 +77,18 @@ function scrollRectToViewport(
 	const minY = Math.floor(scrollTop / u);
 	const maxY = Math.ceil((scrollTop + clientHeight) / u) - 1;
 	return clampViewportToWorld({ minX, maxX, minY, maxY });
+}
+
+function clientPointToScrollContent(
+	scrollEl: HTMLDivElement,
+	clientX: number,
+	clientY: number,
+): { x: number; y: number } {
+	const r = scrollEl.getBoundingClientRect();
+	return {
+		x: scrollEl.scrollLeft + (clientX - r.left),
+		y: scrollEl.scrollTop + (clientY - r.top),
+	};
 }
 
 const ZOOM_SCALE_MAX = 4;
@@ -138,6 +159,16 @@ function tileSize(unitPx: number): { w: number; h: number } {
 	};
 }
 
+/** Match server / viewport query ordering (x asc, then y, then id). */
+function compareEmojiGridWorldOrder<TItem extends EmojiGridPartialSyncRow>(
+	a: TItem,
+	b: TItem,
+): number {
+	if (a.x !== b.x) return a.x - b.x;
+	if (a.y !== b.y) return a.y - b.y;
+	return String(a.id).localeCompare(String(b.id));
+}
+
 export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 	collection,
 	roomId,
@@ -148,6 +179,7 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 	partialBridge,
 	bridgeState,
 	totalCountForStatus,
+	onAlwaysIncludeRowIdsChange,
 }: Props<TItem>) {
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	const [scale, setScale] = useState(1);
@@ -165,6 +197,53 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 	const [demoBusy, setDemoBusy] = useState(false);
 	const [flashIds, setFlashIds] = useState(() => new Set<string>());
 	const [bottomOverlayOpen, setBottomOverlayOpen] = useState(true);
+
+	type TileDragPayload = {
+		row: TItem;
+		offsetX: number;
+		offsetY: number;
+		pointerId: number;
+		captureTarget: HTMLElement;
+		startClientX: number;
+		startClientY: number;
+	};
+
+	const collectionRef = useRef(collection);
+	collectionRef.current = collection;
+
+	const onAlwaysIncludeRowIdsChangeRef = useRef(onAlwaysIncludeRowIdsChange);
+	onAlwaysIncludeRowIdsChangeRef.current = onAlwaysIncludeRowIdsChange;
+
+	const onItemClickRef = useRef<((row: TItem) => Promise<void>) | null>(null);
+
+	const dragPayloadRef = useRef<TileDragPayload | null>(null);
+	/** Snapshot of visible tile ids at pointer-down so rapid x/y updates during drag do not drop peers from the live query. */
+	const dragRenderBaselineRef = useRef<Map<string, TItem>>(new Map());
+	/** Union of all `viewportItems` ids seen while a drag overlay is active (handles tiles that enter then leave the predicate mid-gesture). */
+	const dragSeenViewportIdsRef = useRef<Set<string>>(new Set());
+	const dragPreviewRef = useRef<{ left: number; top: number }>({
+		left: 0,
+		top: 0,
+	});
+	const dragSlopExceededRef = useRef(false);
+	const dragGestureEndedRef = useRef(false);
+
+	/** Last (x,y) cell written to the collection during the active drag (live sync). */
+	const dragLastPublishedCellRef = useRef<{ x: number; y: number }>({
+		x: 0,
+		y: 0,
+	});
+	/** Target cell for the next rAF-throttled `collection.update` (reduces WS/persist load during drag). */
+	const dragPendingPublishCellRef = useRef<{ x: number; y: number } | null>(
+		null,
+	);
+	const dragPublishRafIdRef = useRef<number | null>(null);
+
+	const [dragOverlay, setDragOverlay] = useState<{
+		left: number;
+		top: number;
+		row: TItem;
+	} | null>(null);
 
 	const minZoomScaleRef = useRef(computeMinZoomScale(800, 600));
 	const [minZoomScale, setMinZoomScale] = useState(
@@ -355,6 +434,219 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 		},
 		[collection],
 	);
+	onItemClickRef.current = onItemClick;
+
+	const onTilePointerDown = useCallback(
+		(e: ReactPointerEvent<HTMLButtonElement>, row: TItem) => {
+			if (e.button !== 0) return;
+			const scrollEl = scrollRef.current;
+			if (scrollEl === null) return;
+			const content = clientPointToScrollContent(
+				scrollEl,
+				e.clientX,
+				e.clientY,
+			);
+			const tileLeft = row.x * unitPx;
+			const tileTop = row.y * unitPx;
+			dragGestureEndedRef.current = false;
+			dragSlopExceededRef.current = false;
+			dragLastPublishedCellRef.current = { x: row.x, y: row.y };
+			dragPendingPublishCellRef.current = null;
+			if (dragPublishRafIdRef.current !== null) {
+				cancelAnimationFrame(dragPublishRafIdRef.current);
+				dragPublishRafIdRef.current = null;
+			}
+			dragPayloadRef.current = {
+				row,
+				offsetX: content.x - tileLeft,
+				offsetY: content.y - tileTop,
+				pointerId: e.pointerId,
+				/** Capture on the scroll surface so the gesture survives if the tile unmounts (viewport predicate). */
+				captureTarget: scrollEl,
+				startClientX: e.clientX,
+				startClientY: e.clientY,
+			};
+			dragPreviewRef.current = { left: tileLeft, top: tileTop };
+			const baseline = new Map<string, TItem>();
+			const seenIds = new Set<string>();
+			for (const r of viewportItems) {
+				const sid = String(r.id);
+				baseline.set(sid, r);
+				seenIds.add(sid);
+			}
+			dragRenderBaselineRef.current = baseline;
+			dragSeenViewportIdsRef.current = seenIds;
+			setDragOverlay({ left: tileLeft, top: tileTop, row });
+			onAlwaysIncludeRowIdsChangeRef.current?.([String(row.id)]);
+			scrollEl.setPointerCapture(e.pointerId);
+		},
+		[unitPx, viewportItems],
+	);
+
+	useEffect(() => {
+		if (dragOverlay === null) return;
+		const payloadAtStart = dragPayloadRef.current;
+		if (payloadAtStart === null) return;
+
+		const onMove = (e: PointerEvent) => {
+			if (e.pointerId !== payloadAtStart.pointerId) return;
+			const scrollEl = scrollRef.current;
+			if (scrollEl === null) return;
+			const u = EMOJI_GRID_UNIT_PX * scaleRef.current;
+			const wp = EMOJI_GRID_WORLD_SIZE * u;
+			const { w: tw, h: th } = tileSize(u);
+			const c = clientPointToScrollContent(scrollEl, e.clientX, e.clientY);
+			let left = c.x - payloadAtStart.offsetX;
+			let top = c.y - payloadAtStart.offsetY;
+			left = Math.max(0, Math.min(wp - tw, left));
+			top = Math.max(0, Math.min(wp - th, top));
+			if (!dragSlopExceededRef.current) {
+				const d = Math.hypot(
+					e.clientX - payloadAtStart.startClientX,
+					e.clientY - payloadAtStart.startClientY,
+				);
+				if (d >= DRAG_SLOP_PX) dragSlopExceededRef.current = true;
+			}
+			dragPreviewRef.current = { left, top };
+			setDragOverlay((prev) => (prev === null ? null : { ...prev, left, top }));
+
+			if (dragSlopExceededRef.current) {
+				const nx = Math.max(
+					0,
+					Math.min(EMOJI_GRID_WORLD_SIZE - 1, Math.round(left / u)),
+				);
+				const ny = Math.max(
+					0,
+					Math.min(EMOJI_GRID_WORLD_SIZE - 1, Math.round(top / u)),
+				);
+				const lp = dragLastPublishedCellRef.current;
+				if (nx !== lp.x || ny !== lp.y) {
+					dragPendingPublishCellRef.current = { x: nx, y: ny };
+					if (dragPublishRafIdRef.current !== null) return;
+					dragPublishRafIdRef.current = requestAnimationFrame(() => {
+						dragPublishRafIdRef.current = null;
+						if (dragGestureEndedRef.current) return;
+						const cell = dragPendingPublishCellRef.current;
+						dragPendingPublishCellRef.current = null;
+						if (cell === null) return;
+						const lpInner = dragLastPublishedCellRef.current;
+						if (cell.x === lpInner.x && cell.y === lpInner.y) return;
+						dragLastPublishedCellRef.current = {
+							x: cell.x,
+							y: cell.y,
+						};
+						const coll = collectionRef.current;
+						const pl = dragPayloadRef.current;
+						if (pl === null) return;
+						const tx = coll.update(pl.row.id, (d) => {
+							d.x = cell.x;
+							d.y = cell.y;
+							d.updatedAt = new Date();
+						});
+						void tx.isPersisted.promise;
+					});
+				}
+			}
+		};
+
+		const finish = (e: PointerEvent) => {
+			if (e.pointerId !== payloadAtStart.pointerId) return;
+			if (dragGestureEndedRef.current) return;
+			dragGestureEndedRef.current = true;
+
+			const payload = dragPayloadRef.current;
+			const pos = dragPreviewRef.current;
+
+			if (dragPublishRafIdRef.current !== null) {
+				cancelAnimationFrame(dragPublishRafIdRef.current);
+				dragPublishRafIdRef.current = null;
+			}
+			const flushed = dragPendingPublishCellRef.current;
+			dragPendingPublishCellRef.current = null;
+			if (
+				payload !== null &&
+				dragSlopExceededRef.current &&
+				flushed !== null
+			) {
+				const lp0 = dragLastPublishedCellRef.current;
+				if (flushed.x !== lp0.x || flushed.y !== lp0.y) {
+					dragLastPublishedCellRef.current = {
+						x: flushed.x,
+						y: flushed.y,
+					};
+					const coll = collectionRef.current;
+					const tx = coll.update(payload.row.id, (d) => {
+						d.x = flushed.x;
+						d.y = flushed.y;
+						d.updatedAt = new Date();
+					});
+					void tx.isPersisted.promise;
+				}
+			}
+
+			const u = EMOJI_GRID_UNIT_PX * scaleRef.current;
+			const nx = Math.max(
+				0,
+				Math.min(EMOJI_GRID_WORLD_SIZE - 1, Math.round(pos.left / u)),
+			);
+			const ny = Math.max(
+				0,
+				Math.min(EMOJI_GRID_WORLD_SIZE - 1, Math.round(pos.top / u)),
+			);
+
+			/** Apply final cell before clearing pins / overlay so the list never paints a stale grid position for one frame. */
+			if (payload !== null && dragSlopExceededRef.current) {
+				const lp = dragLastPublishedCellRef.current;
+				if (nx !== lp.x || ny !== lp.y) {
+					dragLastPublishedCellRef.current = { x: nx, y: ny };
+					const coll = collectionRef.current;
+					const tx = coll.update(payload.row.id, (d) => {
+						d.x = nx;
+						d.y = ny;
+						d.updatedAt = new Date();
+					});
+					void tx.isPersisted.promise;
+				}
+			} else if (payload !== null && !dragSlopExceededRef.current) {
+				const runClick = onItemClickRef.current;
+				if (runClick !== null) void runClick(payload.row);
+			}
+
+			onAlwaysIncludeRowIdsChangeRef.current?.([]);
+			try {
+				payloadAtStart.captureTarget.releasePointerCapture(e.pointerId);
+			} catch {
+				// Already released or target detached
+			}
+			dragPayloadRef.current = null;
+			dragRenderBaselineRef.current = new Map();
+			dragSeenViewportIdsRef.current = new Set();
+			setDragOverlay(null);
+		};
+
+		window.addEventListener("pointermove", onMove);
+		window.addEventListener("pointerup", finish);
+		window.addEventListener("pointercancel", finish);
+
+		return () => {
+			if (dragPublishRafIdRef.current !== null) {
+				cancelAnimationFrame(dragPublishRafIdRef.current);
+				dragPublishRafIdRef.current = null;
+			}
+			dragPendingPublishCellRef.current = null;
+			window.removeEventListener("pointermove", onMove);
+			window.removeEventListener("pointerup", finish);
+			window.removeEventListener("pointercancel", finish);
+		};
+	}, [dragOverlay?.row.id]);
+
+	useLayoutEffect(() => {
+		if (dragOverlay === null) return;
+		const seen = dragSeenViewportIdsRef.current;
+		for (const r of viewportItems) {
+			seen.add(String(r.id));
+		}
+	}, [dragOverlay, viewportItems]);
 
 	const randomizeServerVisible = useCallback(async () => {
 		const candidates = viewportItems.map((r) => String(r.id));
@@ -379,9 +671,78 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 		}
 	}, [roomId, viewportItems]);
 
+	const tilesToRender = useMemo(() => {
+		const ids = new Set<string>();
+		for (const r of viewportItems) ids.add(String(r.id));
+		if (dragOverlay !== null) {
+			for (const id of dragRenderBaselineRef.current.keys()) ids.add(id);
+			for (const id of dragSeenViewportIdsRef.current) ids.add(id);
+		}
+		const merged: TItem[] = [];
+		for (const id of ids) {
+			const live =
+				collection.get(id) ??
+				(Number.isFinite(Number(id)) ? collection.get(Number(id)) : undefined);
+			if (live !== undefined) merged.push(live);
+		}
+		merged.sort(compareEmojiGridWorldOrder);
+		return merged;
+	}, [collection, dragOverlay, viewportItems]);
+
 	const worldPx = EMOJI_GRID_WORLD_SIZE * unitPx;
 	const { w: tileW, h: tileH } = tileSize(unitPx);
 	const rangeBusy = bridgeState.status === "fetching";
+
+	const emojiTileBody = (r: TItem) => (
+		<>
+			<div
+				style={{
+					fontSize: 22,
+					lineHeight: 1,
+					textAlign: "center",
+				}}
+			>
+				{r.emoji}
+			</div>
+			<div
+				style={{
+					fontSize: 10,
+					color: "#333",
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap",
+				}}
+			>
+				{r.name}
+			</div>
+			<div
+				style={{
+					height: 6,
+					background: "#e8e8e8",
+					borderRadius: 3,
+					overflow: "hidden",
+				}}
+			>
+				<div
+					style={{
+						width: `${Math.min(100, Math.max(0, r.health))}%`,
+						height: "100%",
+						background: healthBarColor(r.health),
+						borderRadius: 3,
+					}}
+				/>
+			</div>
+			<div
+				style={{
+					fontSize: 9,
+					color: "#666",
+					textAlign: "right",
+				}}
+			>
+				{r.health}
+			</div>
+		</>
+	);
 	const prefetchViewport = expandViewportForPrefetch(
 		viewport,
 		EMOJI_GRID_PREFETCH_UNITS,
@@ -470,6 +831,7 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 								state={bridgeState}
 								totalCount={totalCountForStatus}
 								cachedCount={partialBridge.cachedCount}
+								serverWindowRowCount={partialBridge.serverConfirmedKeys.size}
 							/>
 						</div>
 						<div
@@ -497,8 +859,8 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 								{Math.round(scale * 100)}%
 							</div>
 							<div style={{ fontSize: 10, color: "#666" }}>
-								Ctrl+scroll or pinch to zoom. Full-window viewport; wider window
-								→ wider query.
+								Drag tiles to move (cell position syncs while you drag). Tap
+								without dragging to randomize. Ctrl+scroll or pinch to zoom.
 							</div>
 						</div>
 					</div>
@@ -535,16 +897,19 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 						backgroundSize: `${unitPx}px ${unitPx}px`,
 					}}
 				>
-					{viewportItems.map((row) => {
+					{tilesToRender.map((row) => {
 						const flash = flashIds.has(String(row.id));
 						const left = row.x * unitPx;
 						const top = row.y * unitPx;
+						const draggingThis =
+							dragOverlay !== null &&
+							String(dragOverlay.row.id) === String(row.id);
 						return (
 							<button
 								key={String(row.id)}
 								type="button"
-								onClick={() => {
-									void onItemClick(row);
+								onPointerDown={(e) => {
+									onTilePointerDown(e, row);
 								}}
 								style={{
 									position: "absolute",
@@ -560,64 +925,50 @@ export function EmojiGrid2D<TItem extends EmojiGridPartialSyncRow>({
 									border: "1px solid #bbb",
 									borderRadius: 6,
 									background: "#fff",
-									cursor: "pointer",
+									cursor: "grab",
 									textAlign: "left",
 									font: "inherit",
 									boxSizing: "border-box",
+									touchAction: "none",
+									...(draggingThis ? { visibility: "hidden" as const } : {}),
 									...(flash
 										? { animation: "eg2d-highlight 1.15s ease-out" }
 										: {}),
 								}}
 							>
-								<div
-									style={{
-										fontSize: 22,
-										lineHeight: 1,
-										textAlign: "center",
-									}}
-								>
-									{row.emoji}
-								</div>
-								<div
-									style={{
-										fontSize: 10,
-										color: "#333",
-										overflow: "hidden",
-										textOverflow: "ellipsis",
-										whiteSpace: "nowrap",
-									}}
-								>
-									{row.name}
-								</div>
-								<div
-									style={{
-										height: 6,
-										background: "#e8e8e8",
-										borderRadius: 3,
-										overflow: "hidden",
-									}}
-								>
-									<div
-										style={{
-											width: `${Math.min(100, Math.max(0, row.health))}%`,
-											height: "100%",
-											background: healthBarColor(row.health),
-											borderRadius: 3,
-										}}
-									/>
-								</div>
-								<div
-									style={{
-										fontSize: 9,
-										color: "#666",
-										textAlign: "right",
-									}}
-								>
-									{row.health}
-								</div>
+								{emojiTileBody(row)}
 							</button>
 						);
 					})}
+					{dragOverlay !== null ? (
+						<div
+							role="presentation"
+							style={{
+								position: "absolute",
+								left: dragOverlay.left,
+								top: dragOverlay.top,
+								width: tileW,
+								minHeight: tileH,
+								padding: 4,
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "stretch",
+								gap: 2,
+								border: "1px solid #888",
+								borderRadius: 6,
+								background: "#fff",
+								cursor: "grabbing",
+								textAlign: "left",
+								font: "inherit",
+								boxSizing: "border-box",
+								zIndex: 25,
+								pointerEvents: "none",
+								boxShadow: "0 12px 32px rgba(0,0,0,0.22)",
+							}}
+						>
+							{emojiTileBody(dragOverlay.row)}
+						</div>
+					) : null}
 				</div>
 			</div>
 		</div>
