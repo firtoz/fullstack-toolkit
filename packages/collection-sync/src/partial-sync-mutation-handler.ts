@@ -24,7 +24,7 @@ export interface PartialSyncMutationHandlerOptions<
 	TItem extends PartialSyncRowShape,
 > {
 	store: PartialSyncMutationHandlerStore<TItem>;
-	partialBridge: PartialSyncServerBridge<TItem>;
+	partialBridge: Pick<PartialSyncServerBridge<TItem>, "pushServerChanges">;
 	sendToClient: (clientId: string, message: SyncServerMessage<TItem>) => void;
 	collectionId?: string;
 }

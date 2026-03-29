@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
 import type { SyncMessage } from "@firtoz/db-helpers";
-import type { PartialSyncServerBridge } from "./partial-sync-server-bridge";
 import type { PartialSyncRowShape } from "./partial-sync-row-key";
 import { PartialSyncMutationHandler } from "./partial-sync-mutation-handler";
 import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
@@ -24,7 +23,7 @@ describe("PartialSyncMutationHandler", () => {
 			pushServerChanges: async (changes: SyncMessage<Item>[]) => {
 				pushed.push(changes);
 			},
-		} as PartialSyncServerBridge<Item>;
+		};
 
 		const handler = new PartialSyncMutationHandler<Item>({
 			store,
@@ -71,7 +70,7 @@ describe("PartialSyncMutationHandler", () => {
 			},
 			partialBridge: {
 				pushServerChanges: async () => {},
-			} as PartialSyncServerBridge<Item>,
+			},
 			sendToClient: () => {
 				throw new Error("should not send");
 			},

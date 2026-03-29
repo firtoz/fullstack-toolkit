@@ -133,61 +133,7 @@ const rangeFingerprintSchema = z.object({
 	count: z.number().int().nonnegative(),
 });
 
-export type SyncClientMessage =
-	| {
-			type: "mutateBatch";
-			collectionId: string;
-			clientId: string;
-			mutations: MutationIntent[];
-	  }
-	| {
-			type: "syncHello";
-			collectionId: string;
-			clientId: string;
-			lastAckedServerVersion: number;
-	  }
-	| {
-			type: "ping";
-			collectionId: string;
-			clientId: string;
-			timestamp: number;
-	  }
-	| {
-			type: "queryRange";
-			collectionId: string;
-			clientId: string;
-			requestId: string;
-			sort: SyncRangeSort;
-			limit: number;
-			afterCursor: unknown | null;
-	  }
-	| {
-			type: "queryByOffset";
-			collectionId: string;
-			clientId: string;
-			requestId: string;
-			sort: SyncRangeSort;
-			limit: number;
-			offset: number;
-	  }
-	| {
-			type: "rangeQuery";
-			collectionId: string;
-			clientId: string;
-			requestId: string;
-			range: SyncRange;
-			fingerprint?: RangeFingerprint;
-	  }
-	| {
-			type: "rangeReconcile";
-			collectionId: string;
-			clientId: string;
-			requestId: string;
-			range: SyncRange;
-			manifest: Array<{ id: string | number; version: number }>;
-	  };
-
-export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
+export function createClientMessageSchema() {
 	return z.discriminatedUnion("type", [
 		z.object({
 			type: z.literal("mutateBatch"),
@@ -255,97 +201,14 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 	]);
 }
 
+export type SyncClientMessage = z.infer<
+	ReturnType<typeof createClientMessageSchema>
+>;
+
 export const clientMessageSchema = createClientMessageSchema();
 
 /** How to apply {@link SyncServerMessage} `syncBackfill` changes on the client. */
 export type SyncBackfillMode = "snapshot" | "delta";
-
-export type SyncServerMessage<
-	TItem = unknown,
-	TKey extends string | number = string | number,
-> =
-	| {
-			type: "ack";
-			collectionId: string;
-			clientId: string;
-			clientMutationIds: string[];
-			serverVersion: number;
-			changes: SyncMessage<TItem, TKey>[];
-	  }
-	| {
-			type: "syncBatch";
-			collectionId: string;
-			serverVersion: number;
-			changes: SyncMessage<TItem, TKey>[];
-	  }
-	| {
-			type: "syncBackfill";
-			collectionId: string;
-			/** `snapshot`: replace local collection state, then apply `changes`. `delta`: apply incrementally only. */
-			mode: SyncBackfillMode;
-			serverVersion: number;
-			changes: SyncMessage<TItem, TKey>[];
-			chunkIndex?: number;
-			totalChunks?: number;
-	  }
-	| {
-			type: "reject";
-			collectionId: string;
-			clientId: string;
-			clientMutationId: string;
-			reason: string;
-			correctiveChanges: SyncMessage<TItem, TKey>[];
-	  }
-	| {
-			type: "pong";
-			collectionId: string;
-			timestamp: number;
-	  }
-	| {
-			type: "queryRangeChunk";
-			collectionId: string;
-			requestId: string;
-			rows: TItem[];
-			totalCount: number;
-			lastCursor: unknown | null;
-			hasMore: boolean;
-			chunkIndex: number;
-			done: boolean;
-	  }
-	| {
-			type: "rangePatch";
-			collectionId: string;
-			change: SyncMessage<TItem, TKey>;
-			/** When set, client should apply `change` without treating it as a real DB delete/insert. */
-			viewTransition?: "enterView" | "exitView";
-	  }
-	| {
-			type: "rangeUpToDate";
-			collectionId: string;
-			requestId: string;
-			totalCount: number;
-	  }
-	| {
-			type: "rangeDelta";
-			collectionId: string;
-			requestId: string;
-			totalCount: number;
-			changes: SyncMessage<TItem, TKey>[];
-			lastCursor?: unknown;
-	  }
-	| {
-			type: "rangeReconcileResult";
-			collectionId: string;
-			requestId: string;
-			added: SyncMessage<TItem, TKey>[];
-			updated: SyncMessage<TItem, TKey>[];
-			stale: Array<string | number>;
-			movedHints: Array<{
-				id: string | number;
-				hint: Record<string, unknown>;
-			}>;
-			totalCount: number;
-	  };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 	? Omit<T, K>
@@ -357,16 +220,10 @@ export type SyncClientMessageBody = DistributiveOmit<
 	"collectionId"
 >;
 
-/** Server payload before `collectionId` is attached (bridge outbox helpers). */
-export type SyncServerMessageBody<
-	TItem = unknown,
-	TKey extends string | number = string | number,
-> = DistributiveOmit<SyncServerMessage<TItem, TKey>, "collectionId">;
-
 export function createServerMessageSchema<
 	TItem = unknown,
 	TKey extends string | number = string | number,
->(): z.ZodType<SyncServerMessage<TItem, TKey>> {
+>() {
 	const syncMessageSchema = z.custom<SyncMessage<TItem, TKey>>();
 	return z.discriminatedUnion("type", [
 		z.object({
@@ -453,6 +310,17 @@ export function createServerMessageSchema<
 		}),
 	]);
 }
+
+export type SyncServerMessage<
+	TItem = unknown,
+	TKey extends string | number = string | number,
+> = z.infer<ReturnType<typeof createServerMessageSchema<TItem, TKey>>>;
+
+/** Server payload before `collectionId` is attached (bridge outbox helpers). */
+export type SyncServerMessageBody<
+	TItem = unknown,
+	TKey extends string | number = string | number,
+> = DistributiveOmit<SyncServerMessage<TItem, TKey>, "collectionId">;
 
 /** Attach `collectionId` to an outbound server message (single-collection servers). */
 export function withServerCollectionId<TItem, TKey extends string | number>(

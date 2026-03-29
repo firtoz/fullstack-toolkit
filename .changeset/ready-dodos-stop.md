@@ -10,7 +10,8 @@
 - `rangePatch` delete fan-out is scoped to `deliveredRowIds`; optional `resolveClientVisibility` on `PartialSyncServerBridge`; `removeClient` and `setClientVisibility` helpers.
 - `connectPartialSync` registers `visibilitychange` via `globalThis.document` typing so dependents typecheck without the DOM `lib` (e.g. Worker-only projects).
 - `rangeReconcile` / `rangeReconcileResult`: manifest-based window reconciliation with optional `resolveMovedHint` for controlled position hints when rows leave a range (fog of war by default).
-- `PartialSyncMutationHandler`: queryable DOs use this instead of `SyncServerBridge` for `mutateBatch` — `ack` uses `serverVersion: 0`, no `syncBatch` broadcast; observers only get interest-scoped `rangePatch`.
+- `PartialSyncMutationHandler`: queryable DOs use this instead of `SyncServerBridge` for `mutateBatch` — `ack` uses `serverVersion: 0`, no `syncBatch` broadcast; observers only get interest-scoped `rangePatch`; `partialBridge` option is typed as `Pick<PartialSyncServerBridge, "pushServerChanges">`.
+- `SyncClientMessage` and `SyncServerMessage` are derived from `createClientMessageSchema` / `createServerMessageSchema` via `z.infer` so wire types match the Zod schemas without a duplicate manual union.
 - `usePartialSyncViewport` uses `requestRangeReconcile` when cached server-confirmed keys exist; optional `onRangeReconcile` callback.
 
 **@firtoz/drizzle-durable-sqlite**
