@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 7.0.2
+
+### Patch Changes
+
+- [`f90479f`](https://github.com/firtoz/fullstack-toolkit/commit/f90479f263e932b39269aecce4f54dbbb7cdce3e) Thanks [@firtoz](https://github.com/firtoz)! - Fix `useConcurrentSubmitter` `submitJson` overload selection: detect no-params routes with `keyof params extends never` so `RegisterPages`’ `AnyPages` fallback is not treated as `{}`, avoiding bogus route-args typing (e.g. numeric JSON fields rejected as non-strings).
+
 ## 7.0.1
 
 ### Patch Changes

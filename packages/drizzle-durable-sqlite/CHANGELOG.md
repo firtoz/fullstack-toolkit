@@ -1,5 +1,23 @@
 # @firtoz/drizzle-durable-sqlite
 
+## 1.0.0
+
+### Major Changes
+
+- [#64](https://github.com/firtoz/fullstack-toolkit/pull/64) [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f) Thanks [@firtoz](https://github.com/firtoz)! - **Breaking:** Shared TanStack collection row type is `DrizzleSqliteTableCollection` from `@firtoz/drizzle-utils` — remove `DrizzleSqliteCollection` / `DurableSqliteCollection` type exports from the wasm and durable packages and import from `@firtoz/drizzle-utils` instead. Align bridge/session row types with `PartialSyncRowShape`.
+
+  **`@firtoz/drizzle-durable-sqlite`:** `SyncableDurableObject` / `QueryableDurableObject`, Drizzle partial sync store (`createDrizzlePartialSyncStore`) with scoped `changesSince`, `getRow`, visibility and `rangeReconcile` hooks, `PartialSyncMutationHandler`, `applyDurableMutationIntents`, queued WS message handling, optional `seedInBackground`, and integration with `PartialSyncServerBridge` / `SyncServerBridge` as documented in the package.
+
+  **`@firtoz/drizzle-sqlite-wasm`:** `createSyncedSqliteCollection`, optional `workerOpenOptions` for worker `Start` / provider hooks, table sync upsert on `id` for replayed inserts, and receive-sync persist key alignment with generic sync.
+
+### Patch Changes
+
+- Updated dependencies [[`afb1873`](https://github.com/firtoz/fullstack-toolkit/commit/afb187331bebb1f0231f6615c5b74989191cf30d), [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f), [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f), [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f), [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f)]:
+  - @firtoz/collection-sync@1.0.0
+  - @firtoz/db-helpers@2.1.0
+  - @firtoz/drizzle-utils@1.2.0
+  - @firtoz/websocket-do@7.1.0
+
 ## 0.2.1
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @firtoz/drizzle-utils
 
+## 1.2.0
+
+### Minor Changes
+
+- [#64](https://github.com/firtoz/fullstack-toolkit/pull/64) [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f) Thanks [@firtoz](https://github.com/firtoz)! - **`@firtoz/drizzle-utils`:** Export `DrizzleSqliteTableCollection`; extend `BaseSyncConfig` / `createCollectionConfig` for typed `getSyncPersistKey` and `getKey` as `IdOf<TTable>`; avoid executing `syncableTable` default functions during table definition for Worker/DO globals; export collection helper types for Drizzle-backed TanStack collections.
+
+  **`@firtoz/drizzle-indexeddb` (major):** `deferLocalPersistence`, `handleBatchPut`, and related collection options; `receiveSync` persistence aligned with generic sync and partial-sync traffic; remove debug ingest usage. **Breaking** alongside the `@firtoz/drizzle-utils` sync/collection typing changes above (including `DrizzleSqliteTableCollection` and `BaseSyncConfig` expectations).
+
+### Patch Changes
+
+- Updated dependencies [[`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f)]:
+  - @firtoz/db-helpers@2.1.0
+
 ## 1.1.0
 
 ### Minor Changes
