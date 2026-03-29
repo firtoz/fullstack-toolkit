@@ -18,16 +18,16 @@
 		"@firtoz/drizzle-durable-sqlite": "workspace:*",
 		"@firtoz/drizzle-utils": "workspace:*",
 		"@firtoz/hono-fetcher": "workspace:*",
-		"@hono/zod-validator": "^0.7.6",
+		"@hono/zod-validator": "catalog:",
 		"@tanstack/db": "catalog:",
 		"drizzle-orm": "catalog:",
-		"hono": "^4.12.9",
-		"zod": "^4.3.6"
+		"hono": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
-		"drizzle-kit": "^0.31.10",
+		"drizzle-kit": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:",
 		"wrangler": "catalog:"

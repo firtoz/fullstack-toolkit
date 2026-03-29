@@ -1,4 +1,5 @@
 import z from "zod";
+import { SqliteWasmWorkerOpenOptionsSchema } from "./sqlite-open-options";
 
 export const RemoteCallbackIdSchema = z.string().brand("remote-callback-id");
 export type RemoteCallbackId = z.infer<typeof RemoteCallbackIdSchema>;
@@ -55,6 +56,8 @@ export const SqliteWorkerClientMessageSchema = z.discriminatedUnion("type", [
 		type: z.literal(SqliteWorkerClientMessageType.Start),
 		requestId: StartRequestIdSchema,
 		dbName: z.string(),
+		/** Applied on first open of this `dbName` in the worker process. */
+		openOptions: SqliteWasmWorkerOpenOptionsSchema.optional(),
 	}),
 	RemoteCallbackRequestSchema,
 	CheckpointRequestSchema,

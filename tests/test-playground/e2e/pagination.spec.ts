@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { idbSyncDbName, openSyncModePage } from "./e2e-worker-db";
 
 /**
  * E2E tests for cursor and offset pagination
@@ -39,15 +40,14 @@ async function populateDb(page: Page) {
 }
 
 test.describe("Pagination - IndexedDB Collection", () => {
-	test.beforeEach(async ({ page }) => {
+	test.beforeEach(async ({ page }, testInfo) => {
 		await page.goto("/");
-		await clearIndexedDB(page, "test-sync-mode.db");
+		await clearIndexedDB(page, idbSyncDbName(testInfo));
 	});
 
 	test.describe("On-Demand Mode with Limits", () => {
-		test("should return all items when no limit is set", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should return all items when no limit is set", async ({ page }, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database with 7 test items
 			await populateDb(page);
@@ -68,9 +68,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 
 		test("should filter items with priority > 10 (indexed query)", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -90,9 +89,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 
 		test("should filter items with priority > 5 (broader range)", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -112,9 +110,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 
 		test("should filter items with status = pending (equality query)", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -134,9 +131,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 
 		test("should handle range queries with combined conditions", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -154,9 +150,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 			);
 		});
 
-		test("should handle IN array queries", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should handle IN array queries", async ({ page }, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -178,9 +173,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 	test.describe("Query Switching and Cursor Reset", () => {
 		test("should correctly switch between different filtered queries", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -226,9 +220,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 			);
 		});
 
-		test("should unmount and remount queries correctly", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should unmount and remount queries correctly", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -260,9 +255,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 	});
 
 	test.describe("Eager Mode", () => {
-		test("should load all items upfront in eager mode", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=eager");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should load all items upfront in eager mode", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "eager");
 			await expect(page.getByTestId("sync-mode-indicator")).toContainText(
 				"EAGER",
 			);
@@ -286,9 +282,8 @@ test.describe("Pagination - IndexedDB Collection", () => {
 
 		test("should filter from memory without additional DB calls in eager mode", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=eager");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "eager");
 
 			await populateDb(page);
 			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
@@ -330,9 +325,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 	});
 
 	test.describe("Data Persistence", () => {
-		test("should persist query results after page reload", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should persist query results after page reload", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database
 			await populateDb(page);
@@ -364,9 +360,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 			);
 		});
 
-		test("should clear all data when clearing database", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should clear all data when clearing database", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate
 			await populateDb(page);
@@ -402,9 +399,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 	});
 
 	test.describe("Complex Query Patterns", () => {
-		test("should handle narrowing queries correctly", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should handle narrowing queries correctly", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -450,9 +448,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 			);
 		});
 
-		test("should handle widening queries correctly", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should handle widening queries correctly", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);
@@ -498,9 +497,10 @@ test.describe("Pagination - IndexedDB Collection", () => {
 			);
 		});
 
-		test("should handle alternating query types", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should handle alternating query types", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await populateDb(page);
 			await waitForDbReady(page);

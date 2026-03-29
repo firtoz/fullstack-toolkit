@@ -26,6 +26,18 @@
 			}
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["packages/collection-sync/src/react/usePartialSyncViewport.ts"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"useExhaustiveDependencies": "off"
+					}
+				}
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"

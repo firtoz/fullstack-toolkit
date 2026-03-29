@@ -1,13 +1,12 @@
 import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig, type PluginOption } from "vite";
 import devtoolsJson from "vite-plugin-devtools-json";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
 	plugins: [
 		devtoolsJson(),
 		reactRouter(),
-		tsconfigPaths(),
+		// tsconfigPaths(),
 		// This is required for OPFS to work for sqlite-wasm.
 		{
 			name: "configure-response-headers",
@@ -91,6 +90,7 @@ export default defineConfig({
 		},
 	},
 	resolve: {
+		tsconfigPaths: true,
 		alias: [
 			{
 				// Alias all .sql imports to .sql?raw

@@ -108,7 +108,7 @@ export const USE_DEDUPE = _USE_DEDUPE;
  * Extends the generic (Drizzle-free) config with a Drizzle table reference.
  */
 export interface BaseSyncConfig<TTable extends Table>
-	extends GenericBaseSyncConfig {
+	extends GenericBaseSyncConfig<InferSchemaOutput<SelectSchema<TTable>>> {
 	table: TTable;
 }
 
@@ -236,10 +236,9 @@ export function createInsertSchemaWithIdDefault<TTable extends Table>(
  * Standard getKey function for collections
  */
 export function createGetKeyFunction<TTable extends Table>() {
-	return (item: InferSchemaOutput<SelectSchema<TTable>>) => {
-		const id = (item as { id: string }).id;
-		return id;
-	};
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	type TKey = IdOf<TTable>;
+	return (item: TItem): TKey => (item as { id: TKey }).id;
 }
 
 /**
@@ -251,7 +250,7 @@ export function createCollectionConfig<
 	TSchema extends v.GenericSchema<unknown>,
 >(config: {
 	schema: TSchema;
-	getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => string;
+	getKey: (item: InferSchemaOutput<SelectSchema<TTable>>) => IdOf<TTable>;
 	syncResult: SyncFunctionResult<TTable>;
 	onInsert?: CollectionConfig<
 		InferSchemaOutput<SelectSchema<TTable>>,
@@ -290,5 +289,10 @@ export function createCollectionConfig<
 		utils: CollectionUtils<TItem>;
 	};
 
-	return createGenericCollectionConfig<TItem, TSchema>(config) as ReturnType;
+	const { getKey: getId, ...rest } = config;
+	return createGenericCollectionConfig<TItem, TSchema>({
+		...rest,
+		// Generic sync is typed with string keys; runtime id may be number — same value as Drizzle row id.
+		getKey: (item: TItem) => getId(item) as string,
+	}) as ReturnType;
 }

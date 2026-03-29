@@ -54,7 +54,7 @@
 		"@tanstack/db": ">=0.5.33"
 	},
 	"devDependencies": {
-		"@standard-schema/spec": "^1.1.0",
+		"@standard-schema/spec": "catalog:",
 		"@tanstack/db": "catalog:",
 		"bun-types": "catalog:",
 		"zod": "catalog:"

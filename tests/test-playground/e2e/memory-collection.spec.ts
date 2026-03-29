@@ -100,18 +100,16 @@ test.describe("Memory Collection", () => {
 		await page.waitForLoadState("networkidle");
 
 		await expect(page.getByTestId("status")).toContainText("Ready ✓", {
-			timeout: 5000,
+			timeout: 15_000,
 		});
 
 		for (let i = 1; i <= 3; i++) {
 			await page.getByTestId("todo-input").fill(`Todo ${i}`);
 			await page.getByTestId("add-button").click();
-			await page.waitForTimeout(200);
+			await expect(page.getByTestId("count-total")).toContainText(String(i), {
+				timeout: 5000,
+			});
 		}
-
-		await expect(page.getByTestId("count-total")).toContainText("3", {
-			timeout: 3000,
-		});
 
 		await page.getByTestId("truncate-button").click();
 

@@ -209,10 +209,11 @@ export function keyvalCollectionOptions<TSchema extends StandardSchemaV1>(
 		},
 	};
 
-	const baseSyncConfig: GenericBaseSyncConfig = {
+	const baseSyncConfig: GenericBaseSyncConfig<TItem> = {
 		readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: getKey,
 	};
 
 	const syncResult: GenericSyncFunctionResult<TItem> =
@@ -223,6 +224,34 @@ export function keyvalCollectionOptions<TSchema extends StandardSchemaV1>(
 		getKey,
 		syncResult,
 		syncMode: config.syncMode,
+		onInsert: async (params) => {
+			await syncResult.onInsert?.(params);
+			const writes: SyncMessage<TItem, string>[] =
+				params.transaction.mutations.map((mutation) => ({
+					type: "insert",
+					value: mutation.modified,
+				}));
+			config.onBroadcast?.(writes);
+		},
+		onUpdate: async (params) => {
+			await syncResult.onUpdate?.(params);
+			const writes: SyncMessage<TItem, string>[] =
+				params.transaction.mutations.map((mutation) => ({
+					type: "update",
+					value: mutation.modified,
+					previousValue: mutation.original,
+				}));
+			config.onBroadcast?.(writes);
+		},
+		onDelete: async (params) => {
+			await syncResult.onDelete?.(params);
+			const writes: SyncMessage<TItem, string>[] =
+				params.transaction.mutations.map((mutation) => ({
+					type: "delete",
+					key: mutation.key,
+				}));
+			config.onBroadcast?.(writes);
+		},
 	});
 }
 

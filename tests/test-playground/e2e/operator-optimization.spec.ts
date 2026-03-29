@@ -1,4 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
+import {
+	deleteIdbSyncDb,
+	sqliteSyncModeTestUrl,
+	syncModeTestUrl,
+} from "./e2e-worker-db";
 
 /**
  * Tests to verify that TanStack DB correctly optimizes supported operators
@@ -86,12 +91,10 @@ async function waitForPopulateComplete(page: Page): Promise<void> {
 }
 
 test.describe("IndexedDB Operator Optimization", () => {
-	test.beforeEach(async ({ page }) => {
+	test.beforeEach(async ({ page }, testInfo) => {
 		await page.goto("/");
-		await page.evaluate(() => {
-			indexedDB.deleteDatabase("test-sync-mode.db");
-		});
-		await page.goto("/collections/sync-mode-test?mode=on-demand", {
+		await deleteIdbSyncDb(page, testInfo);
+		await page.goto(syncModeTestUrl(testInfo, "on-demand"), {
 			waitUntil: "networkidle",
 		});
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
@@ -203,12 +206,12 @@ test.describe("SQLite Operator Optimization", () => {
 	// Increase timeout for SQLite tests as they involve OPFS and worker initialization
 	test.setTimeout(60000);
 
-	test.beforeEach(async ({ page }) => {
+	test.beforeEach(async ({ page }, testInfo) => {
 		// Clear OPFS from worker context
 		await clearOPFSViaWorker(page);
 
 		// Navigate to test page
-		await page.goto("/collections/sqlite-sync-mode-test?mode=on-demand", {
+		await page.goto(sqliteSyncModeTestUrl(testInfo, "on-demand"), {
 			waitUntil: "networkidle",
 		});
 		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {

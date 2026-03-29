@@ -5,7 +5,7 @@
 	"description": "E2E tests for ChatAgent using Playwright and wrangler dev",
 	"type": "module",
 	"scripts": {
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --port 8791 --inspector-port 9230",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
 		"typegen": "bun run cf-typegen",
@@ -14,11 +14,11 @@
 	"dependencies": {
 		"@firtoz/chat-agent": "workspace:*",
 		"@firtoz/chat-agent-drizzle": "workspace:*",
-		"hono": "^4.12.9"
+		"hono": "catalog:"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3.11",
-		"typescript": "^6.0.2",
-		"wrangler": "^4.77.0"
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
 	}
 }

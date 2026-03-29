@@ -1,4 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
+import {
+	deleteIdbSyncDb,
+	openSyncModePage,
+	syncModeTestUrl,
+} from "./e2e-worker-db";
 
 /**
  * Integration tests for eager vs on-demand sync modes
@@ -69,20 +74,16 @@ async function waitForPopulateCompleteEager(page: Page): Promise<void> {
 }
 
 test.describe("Sync Mode Integration Tests", () => {
-	test.beforeEach(async ({ page }) => {
-		// Clear IndexedDB before each test
+	test.beforeEach(async ({ page }, testInfo) => {
 		await page.goto("/");
-		await page.evaluate(() => {
-			indexedDB.deleteDatabase("test-sync-mode.db");
-		});
+		await deleteIdbSyncDb(page, testInfo);
 	});
 
 	test.describe("On-Demand Mode", () => {
 		test("should NOT load items until a query component is mounted", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 			await expect(page.getByTestId("sync-mode-indicator")).toContainText(
 				"ON-DEMAND",
 			);
@@ -118,9 +119,8 @@ test.describe("Sync Mode Integration Tests", () => {
 
 		test("should load only queried items on-demand (indexed query)", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database
 			await page.click('[data-testid="populate-db"]');
@@ -161,9 +161,8 @@ test.describe("Sync Mode Integration Tests", () => {
 
 		test("should handle switching between different query components", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database
 			await page.click('[data-testid="populate-db"]');
@@ -211,9 +210,8 @@ test.describe("Sync Mode Integration Tests", () => {
 			);
 		});
 
-		test("should use index for status queries", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should use index for status queries", async ({ page }, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database
 			await page.click('[data-testid="populate-db"]');
@@ -266,9 +264,8 @@ test.describe("Sync Mode Integration Tests", () => {
 			console.log("IDB Operations for status = in-progress:", ops2);
 		});
 
-		test("should handle consecutive range queries", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should handle consecutive range queries", async ({ page }, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database
 			await page.click('[data-testid="populate-db"]');
@@ -316,9 +313,8 @@ test.describe("Sync Mode Integration Tests", () => {
 			);
 		});
 
-		test("should unmount query component correctly", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should unmount query component correctly", async ({ page }, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			// Populate database
 			await page.click('[data-testid="populate-db"]');
@@ -341,9 +337,8 @@ test.describe("Sync Mode Integration Tests", () => {
 	});
 
 	test.describe("Eager Mode", () => {
-		test("should load ALL items on initialization", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=eager");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should load ALL items on initialization", async ({ page }, testInfo) => {
+			await openSyncModePage(page, testInfo, "eager");
 			await expect(page.getByTestId("sync-mode-indicator")).toContainText(
 				"EAGER",
 			);
@@ -369,9 +364,8 @@ test.describe("Sync Mode Integration Tests", () => {
 
 		test("should serve queries from memory without additional DB calls", async ({
 			page,
-		}) => {
-			await page.goto("/collections/sync-mode-test?mode=eager");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "eager");
 
 			// Populate database (reloads in eager mode)
 			await page.click('[data-testid="populate-db"]');
@@ -410,9 +404,10 @@ test.describe("Sync Mode Integration Tests", () => {
 			console.log("IDB Operations after switching to priority query:", ops);
 		});
 
-		test("should handle multiple queries without issues", async ({ page }) => {
-			await page.goto("/collections/sync-mode-test?mode=eager");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		test("should handle multiple queries without issues", async ({
+			page,
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "eager");
 
 			// Populate database (reloads in eager mode)
 			await page.click('[data-testid="populate-db"]');
@@ -456,10 +451,8 @@ test.describe("Sync Mode Integration Tests", () => {
 		test("should demonstrate difference between eager and on-demand", async ({
 			page,
 			context,
-		}) => {
-			// Test on-demand mode
-			await page.goto("/collections/sync-mode-test?mode=on-demand");
-			await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		}, testInfo) => {
+			await openSyncModePage(page, testInfo, "on-demand");
 
 			await page.click('[data-testid="populate-db"]');
 			await page.waitForSelector(
@@ -472,9 +465,8 @@ test.describe("Sync Mode Integration Tests", () => {
 			// On-demand: No items until query is mounted
 			await expect(page.getByTestId("no-query")).toBeVisible();
 
-			// Open eager mode in new page
 			const eagerPage = await context.newPage();
-			await eagerPage.goto("/collections/sync-mode-test?mode=eager");
+			await eagerPage.goto(syncModeTestUrl(testInfo, "eager"));
 			await eagerPage.waitForSelector('[data-testid="sync-mode-indicator"]');
 
 			// Need to populate in eager mode page too (different DB)

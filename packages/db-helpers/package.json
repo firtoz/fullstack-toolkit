@@ -52,10 +52,10 @@
 		"@tanstack/db": ">=0.5.33"
 	},
 	"devDependencies": {
-		"@standard-schema/spec": "^1.1.0",
+		"@standard-schema/spec": "catalog:",
 		"@tanstack/db": "catalog:",
-		"bun-types": "^1.3.11",
-		"zod": "^4.3.6"
+		"bun-types": "catalog:",
+		"zod": "catalog:"
 	},
 	"dependencies": {
 		"@firtoz/maybe-error": "workspace:*"

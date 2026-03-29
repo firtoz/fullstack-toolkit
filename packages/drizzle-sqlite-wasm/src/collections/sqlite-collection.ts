@@ -1,6 +1,4 @@
 import type {
-	Collection,
-	InferSchemaInput,
 	InferSchemaOutput,
 	SyncMode,
 	CollectionConfig,
@@ -80,15 +78,6 @@ export type SqliteCollectionConfig<TTable extends Table> = Omit<
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 };
 
-export type DrizzleSqliteCollection<TTable extends TableWithRequiredFields> =
-	Collection<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		IdOf<TTable>,
-		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
-		InsertToSelectSchema<TTable>,
-		InferSchemaInput<InsertToSelectSchema<TTable>>
-	>;
-
 export function sqliteCollectionOptions<
 	const TDrizzle extends AnyDrizzleDatabase,
 	const TTableName extends string & ValidTableNames<DrizzleSchema<TDrizzle>>,
@@ -100,6 +89,9 @@ export function sqliteCollectionOptions<
 		ValidTableNames<DrizzleSchema<TDrizzle>>;
 
 	const table = config.drizzle?._.fullSchema[tableName] as TTable;
+
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	const getKey = createGetKeyFunction<TTable>();
 
 	const backend = createSqliteTableSyncBackend({
 		drizzle: config.drizzle,
@@ -116,6 +108,7 @@ export function sqliteCollectionOptions<
 		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: (item: TItem) => String(getKey(item)),
 	};
 
 	const syncResult = createSyncFunction(baseSyncConfig, backend);
@@ -124,7 +117,7 @@ export function sqliteCollectionOptions<
 
 	const collectionConfig = createCollectionConfig({
 		schema,
-		getKey: createGetKeyFunction<TTable>(),
+		getKey,
 		syncResult,
 		onInsert: config.debug
 			? async (params) => {

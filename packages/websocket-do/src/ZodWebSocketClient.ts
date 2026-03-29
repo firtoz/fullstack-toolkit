@@ -13,6 +13,8 @@ export interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
 	webSocket?: WebSocket;
 	clientSchema: ZodType<TClientMessage>;
 	serverSchema: ZodType<TServerMessage>;
+	serializeJson?: (value: unknown) => string;
+	deserializeJson?: (raw: string) => unknown;
 	enableBufferMessages?: boolean;
 	onMessage?: (message: TServerMessage) => void;
 	onOpen?: (event: Event) => void;
@@ -25,6 +27,8 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 	private ws: WebSocket;
 	private readonly clientSchema: ZodType<TClientMessage>;
 	private readonly serverSchema: ZodType<TServerMessage>;
+	private readonly serializeJson: (value: unknown) => string;
+	private readonly deserializeJson: (raw: string) => unknown;
 	private readonly enableBufferMessages: boolean;
 	private readonly onMessageCallback?: (message: TServerMessage) => void;
 	private readonly onValidationError?: (
@@ -37,6 +41,8 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 	) {
 		this.clientSchema = options.clientSchema;
 		this.serverSchema = options.serverSchema;
+		this.serializeJson = options.serializeJson ?? JSON.stringify;
+		this.deserializeJson = options.deserializeJson ?? JSON.parse;
 		this.enableBufferMessages = options.enableBufferMessages ?? false;
 		this.onMessageCallback = options.onMessage;
 		this.onValidationError = options.onValidationError;
@@ -108,7 +114,7 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 				}
 
 				// Parse and validate
-				const parsed = JSON.parse(event.data);
+				const parsed = this.deserializeJson(event.data);
 				parsedMessage = this.serverSchema.parse(parsed);
 			}
 
@@ -132,12 +138,12 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 			const validatedMessage = this.clientSchema.parse(message);
 
 			if (this.enableBufferMessages) {
-				// Encode as msgpack
+				// Encode as msgpack (ensure ArrayBufferView for WebSocket.send)
 				const packed = pack(validatedMessage);
-				this.ws.send(packed);
+				this.ws.send(new Uint8Array(packed));
 			} else {
 				// Encode as JSON
-				this.ws.send(JSON.stringify(validatedMessage));
+				this.ws.send(this.serializeJson(validatedMessage));
 			}
 		} catch (error) {
 			console.error("Failed to send message:", error);

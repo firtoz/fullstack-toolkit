@@ -16,6 +16,7 @@ import {
 } from "../collections/sqlite-collection";
 import { useDrizzleSqliteDb } from "../hooks/useDrizzleSqliteDb";
 import type { DurableSqliteMigrationConfig } from "../migration/migrator";
+import type { SqliteWasmWorkerOpenOptions } from "../worker/sqlite-open-options";
 import type {
 	IdOf,
 	GetTableFromSchema,
@@ -74,6 +75,10 @@ type DrizzleSqliteProviderProps<TSchema extends Record<string, unknown>> =
 		 * Optional interceptor for tracking SQLite operations (for testing/debugging)
 		 */
 		interceptor?: SQLInterceptor;
+		/**
+		 * Worker DB pragmas on first open of `dbName` this session (see `useDrizzleSqliteDb`).
+		 */
+		workerOpenOptions?: SqliteWasmWorkerOpenOptions;
 	}>;
 
 export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
@@ -86,6 +91,7 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 	enableCheckpoint = false,
 	syncMode = "eager",
 	interceptor,
+	workerOpenOptions,
 }: DrizzleSqliteProviderProps<TSchema>) {
 	const { drizzle, readyPromise, sqliteClient } = useDrizzleSqliteDb(
 		worker,
@@ -94,6 +100,7 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 		migrations,
 		debug,
 		interceptor, // Pass interceptor to log ALL Drizzle queries
+		workerOpenOptions,
 	);
 
 	// Collection cache with ref counting

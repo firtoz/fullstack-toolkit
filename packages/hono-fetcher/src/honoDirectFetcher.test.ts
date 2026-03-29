@@ -19,22 +19,26 @@ describe("honoDirectFetcher", () => {
 			const id = c.req.param("id");
 			return c.json({ id, name: `User ${id}` });
 		})
-		.post("/users/:id", async (c) => {
-			const id = c.req.param("id");
-			const { name } = await c.req.json<{ name: string }>();
-			return c.json({ id, name });
-		})
+		.post(
+			"/users/:id",
+			zValidator("json", z.object({ name: z.string() })),
+			async (c) => {
+				const id = c.req.param("id");
+				const { name } = c.req.valid("json");
+				return c.json({ id, name });
+			},
+		)
 		.get("/items", (c) => {
 			return c.json({ items: ["item1", "item2", "item3"] });
 		})
-		.post("/items", async (c) => {
-			try {
-				const { item } = await c.req.json<{ item: string }>();
+		.post(
+			"/items",
+			zValidator("json", z.object({ item: z.string() })),
+			async (c) => {
+				const { item } = c.req.valid("json");
 				return c.json({ success: true, item });
-			} catch {
-				return c.json({ success: false }, 400);
-			}
-		})
+			},
+		)
 		.post(
 			"/items-form",
 			zValidator(

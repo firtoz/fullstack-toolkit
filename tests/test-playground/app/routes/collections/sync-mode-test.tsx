@@ -854,10 +854,19 @@ const SyncModeTestContent = ({
 	);
 };
 
+function idbNameFromSearchParams(searchParams: URLSearchParams): string {
+	const w = searchParams.get("e2eWorker");
+	return w !== null && /^\d+$/.test(w)
+		? `test-sync-mode-w${w}.db`
+		: "test-sync-mode.db";
+}
+
 export default function SyncModeTest() {
 	const [searchParams] = useSearchParams();
 	const syncMode =
 		(searchParams.get("mode") as "eager" | "on-demand") || "on-demand";
+	const e2eWorker = searchParams.get("e2eWorker");
+	const dbName = idbNameFromSearchParams(searchParams);
 
 	// Track IDB operations
 	const [operations, setOperations] = useState<IDBOperation[]>([]);
@@ -878,8 +887,13 @@ export default function SyncModeTest() {
 	// Compute toggle URL
 	const toggleUrl = useMemo(() => {
 		const newMode = syncMode === "eager" ? "on-demand" : "eager";
-		return `${href("/collections/sync-mode-test")}?mode=${newMode}`;
-	}, [syncMode]);
+		const base = `${href("/collections/sync-mode-test")}?mode=${newMode}`;
+		const workerSuffix =
+			e2eWorker !== null && /^\d+$/.test(e2eWorker)
+				? `&e2eWorker=${e2eWorker}`
+				: "";
+		return base + workerSuffix;
+	}, [syncMode, e2eWorker]);
 
 	const toggleLabel = useMemo(
 		() => (syncMode === "eager" ? "On-Demand" : "Eager"),
@@ -925,7 +939,7 @@ export default function SyncModeTest() {
 				</Link>
 			</div>
 			<DrizzleIndexedDBProvider
-				dbName="test-sync-mode.db"
+				dbName={dbName}
 				schema={schema}
 				migrations={migrations}
 				syncMode={syncMode}

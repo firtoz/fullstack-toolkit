@@ -65,6 +65,11 @@ export interface DrizzleIndexedDBCollectionConfig<TTable extends Table> {
 	 * Enable debug logging for index discovery and query optimization
 	 */
 	debug?: boolean;
+	/**
+	 * When set, local mutations confirm TanStack sync immediately and persist to IndexedDB on a
+	 * coalesced timer (`createGenericSyncFunction` in `@firtoz/db-helpers`).
+	 */
+	deferLocalPersistence?: boolean | { flushIntervalMs?: number };
 }
 
 export type DrizzleIndexedDBCollectionConfigResult<TTable extends Table> = Omit<
@@ -284,6 +289,21 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 			return results;
 		},
 
+		handleBatchPut: async (itemsToPut) => {
+			const db = config.indexedDBRef.current;
+			if (!db) {
+				throw new Error("Database not ready");
+			}
+			const now = new Date();
+			const rows = (itemsToPut as unknown as DrizzleIndexedDBSyncItem[]).map(
+				(row) => ({
+					...row,
+					updatedAt: now,
+				}),
+			);
+			await db.put(config.storeName, rows);
+		},
+
 		handleDelete: async (mutations) => {
 			const db = config.indexedDBRef.current;
 
@@ -320,11 +340,18 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 		},
 	};
 
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	const getKey = createGetKeyFunction<TTable>();
+
 	const baseSyncConfig: BaseSyncConfig<TTable> = {
 		table,
 		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: (item: TItem) => String(getKey(item)),
+		...(config.deferLocalPersistence !== undefined
+			? { deferLocalPersistence: config.deferLocalPersistence }
+			: {}),
 	};
 
 	const syncResult = createSyncFunction(baseSyncConfig, wrappedBackend);
@@ -333,7 +360,7 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 
 	return createCollectionConfig({
 		schema,
-		getKey: createGetKeyFunction<TTable>(),
+		getKey,
 		syncResult,
 		syncMode: config.syncMode,
 	});

@@ -1,5 +1,6 @@
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import { WorkerClient } from "@firtoz/worker-helper/WorkerClient";
+import type { SqliteWasmWorkerOpenOptions } from "./sqlite-open-options";
 import {
 	type SqliteWorkerClientMessage,
 	type SqliteWorkerServerMessage,
@@ -257,7 +258,10 @@ export class SqliteWorkerManager extends WorkerClient<
 	/**
 	 * Get or create a database instance
 	 */
-	public async getDbInstance(dbName: string): Promise<DbInstance> {
+	public async getDbInstance(
+		dbName: string,
+		openOptions?: SqliteWasmWorkerOpenOptions,
+	): Promise<DbInstance> {
 		// Check if instance already exists
 		let instance = this.dbInstances.get(dbName);
 		if (instance) {
@@ -283,6 +287,7 @@ export class SqliteWorkerManager extends WorkerClient<
 			type: SqliteWorkerClientMessageType.Start,
 			requestId: startRequestId,
 			dbName: dbName,
+			...(openOptions !== undefined ? { openOptions } : {}),
 		});
 
 		return instance;

@@ -1,0 +1,1028 @@
+import { describe, expect, it } from "bun:test";
+import type { SyncMessage } from "@firtoz/db-helpers";
+import { PartialSyncClientBridge } from "./partial-sync-client-bridge";
+import type { PartialSyncRowShape } from "./partial-sync-row-key";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
+
+type Item = PartialSyncRowShape & { name: string; age: number };
+
+function item(picks: {
+	id: string;
+	name: string;
+	age: number;
+	updatedAt?: number;
+}): Item {
+	return { ...picks, updatedAt: picks.updatedAt ?? 0 };
+}
+
+describe("PartialSyncClientBridge", () => {
+	it("seedHydratedLocalRows merges local rows into cachedCount without receiveSync", () => {
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		expect(bridge.cachedCount).toBe(0);
+		bridge.seedHydratedLocalRows([
+			item({ id: "a", name: "x", age: 1 }),
+			item({ id: "b", name: "y", age: 2 }),
+		]);
+		expect(bridge.cachedCount).toBe(2);
+	});
+
+	it("requests range and resolves after final chunk", async () => {
+		const sent: unknown[] = [];
+		const received: unknown[] = [];
+		const states: string[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+			onStateChange: (state) => states.push(state.status),
+		});
+
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			2,
+			null,
+		);
+		expect(sent.length).toBe(1);
+		expect((sent[0] as { type: string }).type).toBe("queryRange");
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: (sent[0] as { requestId: string }).requestId,
+			rows: [item({ id: "1", name: "aaaaa", age: 20 })],
+			totalCount: 3,
+			lastCursor: "aaaaa",
+			hasMore: true,
+			chunkIndex: 0,
+			done: false,
+		});
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: (sent[0] as { requestId: string }).requestId,
+			rows: [item({ id: "2", name: "aaaab", age: 21 })],
+			totalCount: 3,
+			lastCursor: "aaaab",
+			hasMore: true,
+			chunkIndex: 1,
+			done: true,
+		});
+
+		const result = await rangePromise;
+		expect(result.rows.length).toBe(2);
+		expect(result.totalCount).toBe(3);
+		expect(bridge.cachedCount).toBe(2);
+		expect([...bridge.serverConfirmedKeys].sort()).toEqual(["1", "2"]);
+		expect(bridge.serverConfirmedKeysRevision).toBeGreaterThan(0);
+		expect(received.length).toBe(2);
+		expect(states.includes("fetching")).toBe(true);
+		expect(states.includes("realtime")).toBe(true);
+	});
+
+	it("reconciles queryRangeChunk against seeded ids with update when get shows stale local row", async () => {
+		const stale = item({ id: "1", name: "local", age: 1, updatedAt: 1 });
+		const serverRow = item({ id: "1", name: "server", age: 42, updatedAt: 2 });
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				get: (key) => (String(key) === "1" ? stale : undefined),
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		bridge.seedHydratedLocalRows([stale]);
+		const rangePromise = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			1,
+			null,
+		);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [serverRow],
+			totalCount: 1,
+			lastCursor: "server",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+		await rangePromise;
+
+		const updates = received.flatMap((batch) =>
+			batch.filter((m) => m.type === "update"),
+		);
+		expect(updates).toEqual([
+			{
+				type: "update",
+				value: serverRow,
+				previousValue: stale,
+			},
+		]);
+	});
+
+	it("reconciles queryRangeChunk with update when get finds a row not yet in cachedIds (durable hydration without seed)", async () => {
+		const localRow = item({ id: "1", name: "local", age: 1, updatedAt: 1 });
+		const serverRow = item({ id: "1", name: "server", age: 42, updatedAt: 2 });
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				get: (key) => (String(key) === "1" ? localRow : undefined),
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		expect(bridge.cachedCount).toBe(0);
+		const rangePromise = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			1,
+			null,
+		);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [serverRow],
+			totalCount: 1,
+			lastCursor: "server",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+		await rangePromise;
+
+		const inserts = received.flatMap((batch) =>
+			batch.filter((m) => m.type === "insert"),
+		);
+		expect(inserts).toEqual([]);
+		const updates = received.flatMap((batch) =>
+			batch.filter((m) => m.type === "update"),
+		);
+		expect(updates).toEqual([
+			{
+				type: "update",
+				value: serverRow,
+				previousValue: localRow,
+			},
+		]);
+		expect(bridge.cachedCount).toBe(1);
+	});
+
+	it("rejects in-flight range and leaves non-fetching state when receiveSync throws", async () => {
+		const sent: unknown[] = [];
+		const states: string[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			onStateChange: (s) => states.push(s.status),
+			collection: {
+				utils: {
+					receiveSync: async () => {
+						throw new Error("sync write failed");
+					},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			1,
+			null,
+		);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [item({ id: "1", name: "a", age: 1 })],
+			totalCount: 1,
+			lastCursor: "a",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+		await expect(rangePromise).rejects.toThrow("sync write failed");
+		expect(states.includes("fetching")).toBe(true);
+		expect(states[states.length - 1]).toBe("realtime");
+	});
+
+	it("skips receiveSync insert for row ids already tracked (overlap / re-fetch)", async () => {
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p1 = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			2,
+			null,
+		);
+		const id1 = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: id1,
+			rows: [
+				item({ id: "1", name: "a", age: 1 }),
+				item({ id: "2", name: "b", age: 2 }),
+			],
+			totalCount: 10,
+			lastCursor: "b",
+			hasMore: true,
+			chunkIndex: 0,
+			done: true,
+		});
+		await p1;
+
+		const p2 = bridge.requestRange(
+			{ column: "name", direction: "asc" },
+			2,
+			"b",
+		);
+		const id2 = (sent[1] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: id2,
+			rows: [
+				item({ id: "2", name: "b", age: 2 }),
+				item({ id: "3", name: "c", age: 3 }),
+			],
+			totalCount: 10,
+			lastCursor: "c",
+			hasMore: true,
+			chunkIndex: 0,
+			done: true,
+		});
+		await p2;
+
+		const insertedIds = received.flatMap((batch) =>
+			batch.filter((m) => m.type === "insert").map((m) => m.value.id),
+		);
+		expect(insertedIds).toEqual(["1", "2", "3"]);
+	});
+
+	it("requestByOffset sends queryByOffset and resolves after final chunk", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestByOffset(
+			{ column: "name", direction: "asc" },
+			2,
+			100,
+		);
+		expect(sent.length).toBe(1);
+		expect((sent[0] as { type: string }).type).toBe("queryByOffset");
+		expect((sent[0] as { offset: number }).offset).toBe(100);
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: (sent[0] as { requestId: string }).requestId,
+			rows: [
+				item({ id: "1", name: "aaaaa", age: 20 }),
+				item({ id: "2", name: "aaaab", age: 21 }),
+			],
+			totalCount: 500,
+			lastCursor: "aaaab",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+
+		const result = await rangePromise;
+		expect(result.rows.length).toBe(2);
+		expect(result.totalCount).toBe(500);
+		expect(result.lastCursor).toBe("aaaab");
+	});
+
+	it("enterView rangePatch inserts when row not cached", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: item({ id: "1", name: "new", age: 30 }),
+			previousValue: item({ id: "1", name: "old", age: 20 }),
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: update,
+			viewTransition: "enterView",
+		});
+
+		expect(received).toEqual([
+			[{ type: "insert", value: item({ id: "1", name: "new", age: 30 }) }],
+		]);
+		expect(bridge.cachedCount).toBe(1);
+	});
+
+	it("enterView rangePatch updates when collection.get finds row but cachedIds is empty", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				get: (key) =>
+					key === "1" ? item({ id: "1", name: "local", age: 5 }) : undefined,
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: item({ id: "1", name: "srv", age: 9 }),
+			previousValue: item({ id: "1", name: "local", age: 5 }),
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: update,
+			viewTransition: "enterView",
+		});
+
+		expect(received).toEqual([[update]]);
+	});
+
+	it("enterView rangePatch updates when row already cached", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: {
+				type: "insert",
+				value: item({ id: "1", name: "a", age: 1 }),
+			},
+		});
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: item({ id: "1", name: "b", age: 2 }),
+			previousValue: item({ id: "1", name: "a", age: 1 }),
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: update,
+			viewTransition: "enterView",
+		});
+
+		expect(received[1]).toEqual([update]);
+	});
+
+	it("exitView rangePatch applies update and invokes onViewTransition", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const transitions: { type: string; change: SyncMessage<Item> }[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+			onViewTransition: (e) => transitions.push(e),
+		});
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: {
+				type: "insert",
+				value: item({ id: "1", name: "a", age: 1 }),
+			},
+		});
+		const update: SyncMessage<Item> = {
+			type: "update",
+			value: item({ id: "1", name: "z", age: 99 }),
+			previousValue: item({ id: "1", name: "a", age: 1 }),
+		};
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: update,
+			viewTransition: "exitView",
+		});
+
+		expect(transitions).toEqual([{ type: "exitView", change: update }]);
+		expect(received[1]).toEqual([update]);
+		expect(bridge.cachedCount).toBe(0);
+	});
+
+	it("applies range patches to local cache", async () => {
+		const received: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: {
+				type: "insert",
+				value: item({ id: "1", name: "aaaaa", age: 20 }),
+			},
+		});
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: {
+				type: "delete",
+				key: "1",
+			},
+		});
+
+		expect(received).toEqual([
+			[{ type: "insert", value: item({ id: "1", name: "aaaaa", age: 20 }) }],
+			[{ type: "delete", key: "1" }],
+		]);
+		expect(bridge.cachedCount).toBe(0);
+	});
+
+	it("coalesces rapid plain rangePatch updates for the same row into one receiveSync", async () => {
+		const received: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const row0 = item({ id: "r1", name: "a", age: 1, updatedAt: 0 });
+		const row1 = { ...row0, name: "b", updatedAt: 1 };
+		const row2 = { ...row0, name: "c", updatedAt: 2 };
+		const u1 = {
+			type: "update" as const,
+			value: row1,
+			previousValue: row0,
+		} satisfies SyncMessage<Item>;
+		const u2 = {
+			type: "update" as const,
+			value: row2,
+			previousValue: row1,
+		} satisfies SyncMessage<Item>;
+
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: u1,
+		});
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: u2,
+		});
+		/** Without `connectPartialSync`, the bridge does not auto-flush after a pump pass. */
+		await bridge.flushPendingCoalescedInboundUpdates();
+
+		expect(received.length).toBe(1);
+		const batch = received[0] as SyncMessage<Item>[];
+		expect(batch).toHaveLength(1);
+		expect(batch[0]?.type).toBe("update");
+		if (batch[0]?.type === "update") {
+			expect(batch[0].value.name).toBe("c");
+		}
+	});
+
+	it("coalesced drain sets update previousValue from collection.get when provided", async () => {
+		const received: SyncMessage<Item>[][] = [];
+		const local = item({ id: "r1", name: "local", age: 7, updatedAt: 5 });
+		const stalePrev = item({
+			id: "r1",
+			name: "stale-prev",
+			age: 0,
+			updatedAt: 0,
+		});
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: () => {},
+			collection: {
+				get: (key) => (String(key) === "r1" ? local : undefined),
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		const serverRow = { ...local, name: "from-server", updatedAt: 10 };
+		await bridge.handleServerMessage({
+			type: "rangePatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			change: {
+				type: "update",
+				value: serverRow,
+				previousValue: stalePrev,
+			},
+		});
+		await bridge.flushPendingCoalescedInboundUpdates();
+
+		expect(received.length).toBe(1);
+		const first = received[0]?.[0];
+		expect(first?.type).toBe("update");
+		if (first?.type === "update") {
+			expect(first.previousValue).toEqual(local);
+			expect(first.value.name).toBe("from-server");
+		}
+	});
+
+	it("second requestRangeQuery aborts the first; stale chunks are ignored", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p1 = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 2,
+			offset: 0,
+		});
+		const id1 = (sent[0] as { requestId: string }).requestId;
+		const p2 = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 2,
+			offset: 0,
+		});
+		const id2 = (sent[1] as { requestId: string }).requestId;
+		expect(id1).not.toBe(id2);
+
+		await expect(p1).rejects.toMatchObject({ name: "AbortError" });
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: id1,
+			rows: [item({ id: "stale", name: "x", age: 1 })],
+			totalCount: 1,
+			lastCursor: "x",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: id2,
+			rows: [item({ id: "2", name: "b", age: 2 })],
+			totalCount: 1,
+			lastCursor: "b",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+
+		const result = await p2;
+		expect(result.rows.length).toBe(1);
+		expect(result.rows[0].id).toBe("2");
+	});
+
+	it("stale queryRangeChunk after beforeApplyRows await does not call receiveSync", async () => {
+		let releaseBeforeApply: (() => void) | undefined;
+		const beforeApplyGate = new Promise<void>((r) => {
+			releaseBeforeApply = r;
+		});
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			beforeApplyRows: async () => {
+				await beforeApplyGate;
+			},
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p1 = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 2,
+			offset: 0,
+		});
+		const id1 = (sent[0] as { requestId: string }).requestId;
+
+		const chunk1Promise = bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: id1,
+			rows: [item({ id: "1", name: "a", age: 1 })],
+			totalCount: 1,
+			lastCursor: "a",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+
+		await Promise.resolve();
+
+		const p2 = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 2,
+			offset: 0,
+		});
+		const id2 = (sent[1] as { requestId: string }).requestId;
+
+		await expect(p1).rejects.toMatchObject({ name: "AbortError" });
+
+		releaseBeforeApply?.();
+		await chunk1Promise;
+
+		expect(received).toEqual([]);
+
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: id2,
+			rows: [item({ id: "2", name: "b", age: 2 })],
+			totalCount: 1,
+			lastCursor: "b",
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+
+		const result = await p2;
+		expect(result.rows[0].id).toBe("2");
+		expect(received.length).toBe(1);
+	});
+
+	it("concurrent handleServerMessage for same range request runs receiveSync serially", async () => {
+		const sent: unknown[] = [];
+		let depth = 0;
+		let maxDepth = 0;
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async () => {
+						depth += 1;
+						maxDepth = Math.max(maxDepth, depth);
+						await Promise.resolve();
+						depth -= 1;
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		void bridge.requestRange({ column: "name", direction: "asc" }, 2, null);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+
+		const a = bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [item({ id: "1", name: "a", age: 1 })],
+			totalCount: 2,
+			lastCursor: "a",
+			hasMore: true,
+			chunkIndex: 0,
+			done: false,
+		});
+		const b = bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [item({ id: "2", name: "b", age: 2 })],
+			totalCount: 2,
+			lastCursor: "b",
+			hasMore: false,
+			chunkIndex: 1,
+			done: true,
+		});
+		await Promise.all([a, b]);
+
+		expect(maxDepth).toBe(1);
+	});
+
+	it("requestRangeQuery resolves on rangeUpToDate without receiveSync", async () => {
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p = bridge.requestRangeQuery(
+			{
+				kind: "index",
+				mode: "offset",
+				sort: { column: "name", direction: "asc" },
+				limit: 5,
+				offset: 0,
+			},
+			{ version: 1, count: 5 },
+		);
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "rangeUpToDate",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			totalCount: 99,
+		});
+		const result = await p;
+		expect(result.upToDate).toBe(true);
+		expect(result.totalCount).toBe(99);
+		expect(received.length).toBe(0);
+	});
+
+	it("requestRangeQuery applies rangeDelta via receiveSync", async () => {
+		const sent: unknown[] = [];
+		const received: SyncMessage<Item>[][] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async (messages) => {
+						received.push(messages);
+					},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 5,
+			offset: 0,
+		});
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "rangeDelta",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			totalCount: 10,
+			changes: [
+				{ type: "insert", value: item({ id: "9", name: "z", age: 9 }) },
+			],
+			lastCursor: null,
+		});
+		const result = await p;
+		expect(result.invalidateWindow).toBe(true);
+		expect(received).toEqual([
+			[{ type: "insert", value: item({ id: "9", name: "z", age: 9 }) }],
+		]);
+	});
+
+	it("requestRangeQuery full fetch uses queryRangeChunk path", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (msg) => sent.push(msg),
+			collection: {
+				utils: {
+					receiveSync: async () => {},
+				},
+			},
+		});
+
+		bridge.setConnected(true);
+		const p = bridge.requestRangeQuery({
+			kind: "index",
+			mode: "offset",
+			sort: { column: "name", direction: "asc" },
+			limit: 2,
+			offset: 0,
+		});
+		const requestId = (sent[0] as { requestId: string }).requestId;
+		expect((sent[0] as { type: string }).type).toBe("rangeQuery");
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId,
+			rows: [
+				item({ id: "1", name: "a", age: 1 }),
+				item({ id: "2", name: "b", age: 2 }),
+			],
+			totalCount: 5,
+			lastCursor: "b",
+			hasMore: true,
+			chunkIndex: 0,
+			done: true,
+		});
+		const result = await p;
+		expect(result.rows.length).toBe(2);
+		expect(result.totalCount).toBe(5);
+	});
+
+	it("applies rangeReconcileResult and resolves manifest reconcile", async () => {
+		const sent: unknown[] = [];
+		const rowsById = new Map<string, Item>([
+			["1", item({ id: "1", name: "a", age: 1, updatedAt: 10 })],
+			["2", item({ id: "2", name: "b", age: 2, updatedAt: 20 })],
+		]);
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (m) => sent.push(m),
+			collection: {
+				get: (k) => {
+					const s = String(k);
+					return (
+						rowsById.get(s) ??
+						(typeof k === "number" ? rowsById.get(String(k)) : undefined)
+					);
+				},
+				utils: {
+					receiveSync: async (messages) => {
+						for (const m of messages) {
+							if (m.type === "insert") {
+								rowsById.set(String(m.value.id), m.value);
+							}
+							if (m.type === "update") {
+								rowsById.set(String(m.value.id), m.value);
+							}
+							if (m.type === "delete") {
+								rowsById.delete(String(m.key));
+							}
+						}
+					},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestRangeQuery({
+			kind: "predicate",
+			conditions: [{ column: "age", op: "gt", value: 0 }],
+			limit: 10,
+		});
+		const rqId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: rqId,
+			rows: [
+				item({ id: "1", name: "a", age: 1, updatedAt: 10 }),
+				item({ id: "2", name: "b", age: 2, updatedAt: 20 }),
+			],
+			totalCount: 2,
+			lastCursor: null,
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+		await rangePromise;
+
+		const recP = bridge.requestRangeReconcile({
+			kind: "predicate",
+			conditions: [{ column: "age", op: "gt", value: 0 }],
+			limit: 10,
+		});
+		const rcId = (sent[sent.length - 1] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "rangeReconcileResult",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: rcId,
+			added: [
+				{
+					type: "insert",
+					value: item({ id: "3", name: "c", age: 3, updatedAt: 5 }),
+				},
+			],
+			updated: [
+				{
+					type: "update",
+					value: item({ id: "1", name: "a2", age: 1, updatedAt: 99 }),
+					previousValue: item({ id: "1", name: "a", age: 1, updatedAt: 10 }),
+				},
+			],
+			stale: ["2"],
+			movedHints: [{ id: "2", hint: { x: 1 } }],
+			totalCount: 2,
+		});
+		const rec = await recP;
+		expect(rec.added.length).toBe(1);
+		expect(rec.updated.length).toBe(1);
+		expect(rec.staleIds).toEqual(["2"]);
+		expect(rec.movedHints).toEqual([{ id: "2", hint: { x: 1 } }]);
+		expect(rowsById.has("2")).toBe(false);
+		expect(rowsById.get("3")?.name).toBe("c");
+	});
+});

@@ -46,10 +46,27 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 	type TItem = InferSchemaOutput<TSchema>;
 	type TKey = string | number;
 	let syncParams: Parameters<SyncConfig<TItem>["sync"]>[0] | null = null;
+	/** Batches from `receiveSync` that arrived before TanStack called `sync`. */
+	const pendingReceiveSyncBatches: SyncMessage<TItem, TKey>[][] = [];
+	/**
+	 * One TanStack sync transaction at a time: `receiveSync`, local mutations, and `truncate` all
+	 * call `begin`/`commit` — overlapping calls cause SyncTransactionAlreadyCommittedWriteError.
+	 */
+	let syncWriteChain: Promise<void> = Promise.resolve();
+
+	const enqueueSyncWrite = async (fn: () => void): Promise<void> => {
+		const next = syncWriteChain.catch(() => {}).then(fn);
+		syncWriteChain = next;
+		await next;
+	};
 
 	const sync: SyncConfig<TItem>["sync"] = (params) => {
 		syncParams = params;
 		params.markReady();
+		for (const batch of pendingReceiveSyncBatches) {
+			writeChanges(batch);
+		}
+		pendingReceiveSyncBatches.length = 0;
 		return () => {};
 	};
 
@@ -88,7 +105,9 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 		for (const mutation of params.transaction.mutations) {
 			writes.push({ type: "insert", value: mutation.modified });
 		}
-		writeChanges(writes);
+		await enqueueSyncWrite(() => {
+			writeChanges(writes);
+		});
 		config.onBroadcast?.(writes);
 	};
 
@@ -101,7 +120,9 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 				previousValue: mutation.original,
 			});
 		}
-		writeChanges(writes);
+		await enqueueSyncWrite(() => {
+			writeChanges(writes);
+		});
 		config.onBroadcast?.(writes);
 	};
 
@@ -110,22 +131,36 @@ export function memoryCollectionOptions<TSchema extends StandardSchemaV1>(
 		for (const mutation of params.transaction.mutations) {
 			writes.push({ type: "delete", key: mutation.key as TKey });
 		}
-		writeChanges(writes);
+		await enqueueSyncWrite(() => {
+			writeChanges(writes);
+		});
 		config.onBroadcast?.(writes);
 	};
 
 	const truncate = async () => {
 		if (!syncParams) {
-			throw new Error("Sync parameters not initialized");
+			// TanStack may not have invoked `sync` yet (e.g. first paint / effect). Nothing to clear.
+			pendingReceiveSyncBatches.length = 0;
+			return;
 		}
-		syncParams.begin();
-		syncParams.truncate();
-		syncParams.commit();
+		await enqueueSyncWrite(() => {
+			const p = syncParams;
+			if (!p) return;
+			p.begin();
+			p.truncate();
+			p.commit();
+		});
 	};
 
 	const receiveSync = async (messages: SyncMessage<TItem, TKey>[]) => {
 		if (messages.length === 0) return;
-		writeChanges(messages);
+		if (!syncParams) {
+			pendingReceiveSyncBatches.push(messages);
+			return;
+		}
+		await enqueueSyncWrite(() => {
+			writeChanges(messages);
+		});
 	};
 
 	return {

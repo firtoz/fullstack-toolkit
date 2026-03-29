@@ -1,6 +1,4 @@
 import type {
-	Collection,
-	InferSchemaInput,
 	InferSchemaOutput,
 	SyncMode,
 	CollectionConfig,
@@ -72,15 +70,6 @@ export type DurableSqliteCollectionConfigResult<TTable extends Table> = Omit<
 	utils: CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>;
 };
 
-export type DurableSqliteCollection<TTable extends TableWithRequiredFields> =
-	Collection<
-		InferSchemaOutput<SelectSchema<TTable>>,
-		IdOf<TTable>,
-		CollectionUtils<InferSchemaOutput<SelectSchema<TTable>>>,
-		InsertToSelectSchema<TTable>,
-		InferSchemaInput<InsertToSelectSchema<TTable>>
-	>;
-
 /**
  * TanStack DB collection configuration for a table stored in Durable Object SQLite via Drizzle.
  *
@@ -101,6 +90,9 @@ export function durableSqliteCollectionOptions<
 
 	const table = config.drizzle._.fullSchema[tableName] as TTable;
 
+	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
+	const getKey = createGetKeyFunction<TTable>();
+
 	const backend = createSqliteTableSyncBackend({
 		drizzle: config.drizzle,
 		table,
@@ -115,6 +107,7 @@ export function durableSqliteCollectionOptions<
 		readyPromise: config.readyPromise ?? Promise.resolve(),
 		syncMode: config.syncMode,
 		debug: config.debug,
+		getSyncPersistKey: (item: TItem) => String(getKey(item)),
 	};
 
 	const syncResult = createSyncFunction(baseSyncConfig, backend);
@@ -123,7 +116,7 @@ export function durableSqliteCollectionOptions<
 
 	return createCollectionConfig({
 		schema,
-		getKey: createGetKeyFunction<TTable>(),
+		getKey,
 		syncResult,
 		onInsert: config.debug
 			? async (params) => {

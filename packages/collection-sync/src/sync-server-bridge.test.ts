@@ -1,0 +1,267 @@
+import { describe, expect, it } from "bun:test";
+import { SyncServerBridge } from "./sync-server-bridge";
+import { DEFAULT_SYNC_COLLECTION_ID } from "./sync-protocol";
+
+type Item = { id: string; title: string; updatedAt: number };
+
+describe("SyncServerBridge", () => {
+	it("converts mutateBatch into ack + syncBatch", async () => {
+		const sentToClient: unknown[] = [];
+		const broadcasted: unknown[] = [];
+		const applied: unknown[] = [];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async (messages) => {
+					applied.push(messages);
+				},
+				getSnapshotMessages: async () => [],
+				getRow: async () => undefined,
+			},
+			sendToClient: (_clientId, message) => {
+				sentToClient.push(message);
+			},
+			broadcastExcept: (_excludeClientId, message) => {
+				broadcasted.push(message);
+			},
+		});
+
+		await bridge.handleClientMessage({
+			type: "mutateBatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			mutations: [
+				{
+					clientMutationId: "m1",
+					type: "insert",
+					value: { id: "1", title: "hello", updatedAt: 1 },
+				},
+			],
+		});
+
+		expect(applied.length).toBe(1);
+		expect(sentToClient.length).toBe(1);
+		expect(broadcasted.length).toBe(1);
+	});
+
+	it("falls back to snapshot when client version is ahead", async () => {
+		const sentToClient: unknown[] = [];
+		const snapshotChanges = [
+			{
+				type: "insert" as const,
+				value: { id: "1", title: "snap", updatedAt: 1 },
+			},
+		];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async () => {},
+				getSnapshotMessages: async () => snapshotChanges,
+				getRow: async () => undefined,
+			},
+			sendToClient: (_clientId, message) => {
+				sentToClient.push(message);
+			},
+			broadcastExcept: () => {},
+		});
+
+		await bridge.handleClientMessage({
+			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			lastAckedServerVersion: 7,
+		});
+
+		expect(sentToClient).toEqual([
+			{
+				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				mode: "snapshot",
+				serverVersion: 0,
+				changes: snapshotChanges,
+				chunkIndex: 0,
+				totalChunks: 1,
+			},
+		]);
+	});
+
+	it("emits snapshot mode for baseline hello", async () => {
+		const sentToClient: unknown[] = [];
+		const snapshotChanges = [
+			{ type: "insert" as const, value: { id: "1", title: "a", updatedAt: 1 } },
+		];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async () => {},
+				getSnapshotMessages: async () => snapshotChanges,
+				getRow: async () => undefined,
+			},
+			sendToClient: (_clientId, message) => {
+				sentToClient.push(message);
+			},
+			broadcastExcept: () => {},
+		});
+
+		await bridge.handleClientMessage({
+			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			lastAckedServerVersion: 0,
+		});
+
+		expect(sentToClient).toEqual([
+			{
+				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				mode: "snapshot",
+				serverVersion: 0,
+				changes: snapshotChanges,
+				chunkIndex: 0,
+				totalChunks: 1,
+			},
+		]);
+	});
+
+	it("emits delta mode when replaying changelog", async () => {
+		const sentToClient: unknown[] = [];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async () => {},
+				getSnapshotMessages: async () => [],
+				getRow: async () => undefined,
+			},
+			sendToClient: (_clientId, message) => {
+				sentToClient.push(message);
+			},
+			broadcastExcept: () => {},
+		});
+
+		await bridge.handleClientMessage({
+			type: "mutateBatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			mutations: [
+				{
+					clientMutationId: "m1",
+					type: "insert",
+					value: { id: "1", title: "first", updatedAt: 1 },
+				},
+			],
+		});
+		await bridge.handleClientMessage({
+			type: "mutateBatch",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c2",
+			mutations: [
+				{
+					clientMutationId: "m2",
+					type: "insert",
+					value: { id: "2", title: "second", updatedAt: 2 },
+				},
+			],
+		});
+
+		sentToClient.length = 0;
+		await bridge.handleClientMessage({
+			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c3",
+			lastAckedServerVersion: 1,
+		});
+
+		expect(sentToClient).toEqual([
+			{
+				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				mode: "delta",
+				serverVersion: 2,
+				changes: [
+					{
+						type: "insert",
+						value: { id: "2", title: "second", updatedAt: 2 },
+					},
+				],
+				chunkIndex: 0,
+				totalChunks: 1,
+			},
+		]);
+	});
+
+	it("chunks large snapshot backfills across multiple frames", async () => {
+		const sentToClient: unknown[] = [];
+		const snapshotChanges = [
+			{ type: "insert" as const, value: { id: "1", title: "a", updatedAt: 1 } },
+			{ type: "insert" as const, value: { id: "2", title: "b", updatedAt: 2 } },
+			{ type: "insert" as const, value: { id: "3", title: "c", updatedAt: 3 } },
+		];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async () => {},
+				getSnapshotMessages: async () => snapshotChanges,
+				getRow: async () => undefined,
+			},
+			sendToClient: (_clientId, message) => {
+				sentToClient.push(message);
+			},
+			broadcastExcept: () => {},
+			backfillChunkSize: 2,
+		});
+
+		await bridge.handleClientMessage({
+			type: "syncHello",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			lastAckedServerVersion: 0,
+		});
+
+		expect(sentToClient).toEqual([
+			{
+				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				mode: "snapshot",
+				serverVersion: 0,
+				changes: snapshotChanges.slice(0, 2),
+				chunkIndex: 0,
+				totalChunks: 2,
+			},
+			{
+				type: "syncBackfill",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				mode: "snapshot",
+				serverVersion: 0,
+				changes: snapshotChanges.slice(2),
+				chunkIndex: 1,
+				totalChunks: 2,
+			},
+		]);
+	});
+
+	it("pushServerChanges broadcasts to all clients", async () => {
+		const broadcastAll: unknown[] = [];
+		const bridge = new SyncServerBridge<Item>({
+			store: {
+				applySyncMessages: async () => {},
+				getSnapshotMessages: async () => [],
+				getRow: async () => undefined,
+			},
+			sendToClient: () => {},
+			broadcastExcept: () => {},
+			broadcastAll: (message) => {
+				broadcastAll.push(message);
+			},
+		});
+
+		await bridge.pushServerChanges([
+			{ type: "insert", value: { id: "x", title: "srv", updatedAt: 1 } },
+		]);
+
+		expect(broadcastAll).toEqual([
+			{
+				type: "syncBatch",
+				collectionId: DEFAULT_SYNC_COLLECTION_ID,
+				serverVersion: 1,
+				changes: [
+					{ type: "insert", value: { id: "x", title: "srv", updatedAt: 1 } },
+				],
+			},
+		]);
+	});
+});

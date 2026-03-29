@@ -4,6 +4,7 @@ import {
 	createGenericCollectionConfig,
 } from "./generic-sync";
 import type { GenericBaseSyncConfig, GenericSyncBackend } from "./generic-sync";
+import type { ReceiveSyncDurableOp } from "./sync-types";
 import type { SyncConfig, SyncConfigRes } from "@tanstack/db";
 import { z } from "zod";
 
@@ -221,6 +222,43 @@ describe("createGenericSyncFunction", () => {
 		});
 	});
 
+	describe("deferLocalPersistence", () => {
+		it("defers backend.handleUpdate until receiveSync flush", async () => {
+			const backend = createMockBackend();
+			const config: GenericBaseSyncConfig<Item> = {
+				...baseConfig,
+				deferLocalPersistence: { flushIntervalMs: 60_000 },
+			};
+			const result = createGenericSyncFunction(config, backend);
+
+			result.sync(mockSyncParams());
+			await new Promise((r) => setTimeout(r, 10));
+
+			const mutation = {
+				key: "1",
+				changes: { name: "updated" },
+				original: { id: "1", name: "a", value: 1 },
+			};
+
+			await result.onUpdate?.({
+				transaction: { mutations: [mutation] },
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+			} as any);
+
+			expect(backend.updatedMutations.length).toBe(0);
+
+			await result.utils.receiveSync([
+				{
+					type: "update",
+					value: { id: "1", name: "remote", value: 2 },
+					previousValue: { id: "1", name: "a", value: 1 },
+				},
+			]);
+
+			expect(backend.updatedMutations.length).toBeGreaterThanOrEqual(1);
+		});
+	});
+
 	describe("onUpdate handler", () => {
 		it("delegates to backend.handleUpdate after sync", async () => {
 			const backend = createMockBackend();
@@ -315,6 +353,53 @@ describe("createGenericSyncFunction", () => {
 	});
 
 	describe("utils.receiveSync", () => {
+		it("uses applyReceiveSyncDurableWrites once for multi-message receiveSync when provided", async () => {
+			const backend = createMockBackend();
+			const batches: ReceiveSyncDurableOp<Item>[][] = [];
+			const backendWithBatch: GenericSyncBackend<Item> = {
+				...backend,
+				applyReceiveSyncDurableWrites: async (ops) => {
+					batches.push(ops);
+				},
+			};
+			const result = createGenericSyncFunction(baseConfig, backendWithBatch);
+
+			const writes: unknown[] = [];
+			result.sync(
+				mockSyncParams({
+					write: (op) => writes.push(op),
+				}),
+			);
+			await new Promise((r) => setTimeout(r, 10));
+
+			const prev: Item = { id: "1", name: "a", value: 1 };
+			const next: Item = { id: "1", name: "b", value: 2 };
+			const next2: Item = { id: "1", name: "c", value: 3 };
+
+			await result.utils.receiveSync([
+				{ type: "update", value: next, previousValue: prev },
+				{ type: "update", value: next2, previousValue: next },
+			]);
+
+			expect(batches.length).toBe(1);
+			expect(batches[0]).toEqual([
+				{
+					type: "update",
+					key: "1",
+					changes: { name: "b", value: 2 },
+					original: prev,
+				},
+				{
+					type: "update",
+					key: "1",
+					changes: { name: "c", value: 3 },
+					original: next,
+				},
+			]);
+			expect(backend.updatedMutations.length).toBe(0);
+			expect(writes.length).toBe(2);
+		});
+
 		it("applies insert messages via sync write", async () => {
 			const backend = createMockBackend();
 			const result = createGenericSyncFunction(baseConfig, backend);
@@ -335,6 +420,96 @@ describe("createGenericSyncFunction", () => {
 			);
 			expect(insertWrites.length).toBe(1);
 			expect(insertWrites[0].type).toBe("insert");
+			expect(backend.insertedItems).toEqual([[item]]);
+		});
+
+		it("waits for eager initialSync before receiveSync so remote snapshot cannot race initial inserts", async () => {
+			const local: Item = { id: "local-1", name: "local", value: 1 };
+			const remote: Item = { id: "remote-1", name: "remote", value: 2 };
+			const backend: GenericSyncBackend<Item> = {
+				...createMockBackend([local]),
+				initialLoad: async () => {
+					await new Promise((r) => setTimeout(r, 40));
+					return [local];
+				},
+			};
+			const result = createGenericSyncFunction(baseConfig, backend);
+
+			const writes: Array<{ type: string; value?: Item }> = [];
+			result.sync(
+				mockSyncParams({
+					write: (op) => writes.push(op),
+				}),
+			);
+
+			const receivePromise = result.utils.receiveSync([
+				{ type: "insert", value: remote },
+			]);
+			await receivePromise;
+
+			const localIdx = writes.findIndex(
+				(w) => w.value?.id === "local-1" && w.type === "insert",
+			);
+			const remoteIdx = writes.findIndex(
+				(w) => w.value?.id === "remote-1" && w.type === "insert",
+			);
+			expect(localIdx).toBeGreaterThanOrEqual(0);
+			expect(remoteIdx).toBeGreaterThanOrEqual(0);
+			expect(localIdx).toBeLessThan(remoteIdx);
+		});
+
+		it("does not nest begin/commit when receiveSync awaits a slow backend concurrently with onUpdate (SQLite-style)", async () => {
+			const seed: Item = { id: "1", name: "a", value: 1 };
+			const backend = createMockBackend([seed]);
+			const origUpdate = backend.handleUpdate.bind(backend);
+			backend.handleUpdate = async (mutations) => {
+				await new Promise((r) => setTimeout(r, 25));
+				return origUpdate(mutations);
+			};
+
+			const result = createGenericSyncFunction(baseConfig, backend);
+
+			let openTransactions = 0;
+			result.sync(
+				mockSyncParams({
+					begin: () => {
+						openTransactions += 1;
+						if (openTransactions > 1) {
+							throw new Error(
+								"nested TanStack sync begin — reproduces concurrent receiveSync + local mutation with async SQLite",
+							);
+						}
+					},
+					commit: () => {
+						openTransactions -= 1;
+					},
+					write: () => {},
+				}),
+			);
+			await new Promise((r) => setTimeout(r, 50));
+
+			const fromRemote: Item = { id: "1", name: "rx", value: 50 };
+			const receivePromise = result.utils.receiveSync([
+				{ type: "update", value: fromRemote, previousValue: seed },
+			]);
+
+			const updatePromise = result.onUpdate?.({
+				transaction: {
+					mutations: [
+						{
+							key: "1",
+							changes: { name: "local" },
+							original: seed,
+						},
+					],
+				},
+				// biome-ignore lint/suspicious/noExplicitAny: test mock
+			} as any);
+
+			await expect(
+				Promise.all([receivePromise, updatePromise]),
+			).resolves.toBeDefined();
+			expect(openTransactions).toBe(0);
 		});
 
 		it("applies update messages via sync write", async () => {
@@ -359,6 +534,15 @@ describe("createGenericSyncFunction", () => {
 				(w) => w.type === "update" && w.value && w.value.id === "sync-1",
 			);
 			expect(updateWrites.length).toBe(1);
+			expect(backend.updatedMutations).toEqual([
+				[
+					{
+						key: "sync-1",
+						changes: { name: "updated", value: 100 },
+						original: prev,
+					},
+				],
+			]);
 		});
 
 		it("applies delete messages via sync write", async () => {
@@ -377,6 +561,8 @@ describe("createGenericSyncFunction", () => {
 
 			const deleteWrites = writes.filter((w) => w.type === "delete");
 			expect(deleteWrites.length).toBe(1);
+			expect(backend.deletedMutations.length).toBe(1);
+			expect(backend.deletedMutations[0]?.[0]?.key).toBe("sync-1");
 		});
 
 		it("applies truncate messages via sync truncate", async () => {
@@ -396,6 +582,7 @@ describe("createGenericSyncFunction", () => {
 			await result.utils.receiveSync([{ type: "truncate" }]);
 
 			expect(truncateSyncCalled).toBe(true);
+			expect(backend.truncateCalls).toBe(1);
 		});
 
 		it("ignores empty messages array", async () => {

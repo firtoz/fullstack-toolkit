@@ -125,6 +125,19 @@ export abstract class BaseWebSocketDO<
 				return;
 			}
 
+			const rawMessageSession = session as BaseSession<
+				unknown,
+				unknown,
+				unknown,
+				TEnv
+			> & {
+				handleRawMessage?: (rawMessage: string) => Promise<void>;
+			};
+			if (rawMessageSession.handleRawMessage) {
+				await rawMessageSession.handleRawMessage(message);
+				return;
+			}
+
 			const parsed = JSON.parse(message) as SessionClientMessage<TSession>;
 			await session.handleMessage(parsed);
 		} catch (error) {
