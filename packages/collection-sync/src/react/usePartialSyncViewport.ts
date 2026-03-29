@@ -1,4 +1,11 @@
-import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import {
+	useEffectEvent,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useSyncExternalStore,
+} from "react";
+import type { PartialSyncReconcileResult } from "../partial-sync-client-bridge";
 import type { SyncRange } from "../sync-protocol";
 import {
 	DEFAULT_VIEWPORT_RANGE_MAX_WAIT_MS,
@@ -87,15 +94,16 @@ export function usePartialSyncViewport<
 	const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastRangeFetchAtRef = useRef(0);
 
-	const collectionRef = useRef(collection);
-	collectionRef.current = collection;
-	const onRangeReconcileRef = useRef(onRangeReconcile);
-	onRangeReconcileRef.current = onRangeReconcile;
+	const onRangeReconcileEvent = useEffectEvent(
+		(rec: PartialSyncReconcileResult<TItem>) => {
+			onRangeReconcile?.(rec);
+		},
+	);
 
-	function canReconcileWithManifest(): boolean {
-		const col = collectionRef.current;
+	const canReconcileWithManifest = useEffectEvent((): boolean => {
+		const col = collection;
 		if (typeof col.get !== "function") return false;
-		const keys = bridgeRef.current.serverConfirmedKeys;
+		const keys = bridge.serverConfirmedKeys;
 		if (keys.size === 0) return false;
 		for (const k of keys) {
 			let row = col.get(k);
@@ -108,7 +116,7 @@ export function usePartialSyncViewport<
 			if (row !== undefined) return true;
 		}
 		return false;
-	}
+	});
 
 	useLayoutEffect(() => {
 		const clearQuietTimer = () => {
@@ -140,7 +148,7 @@ export function usePartialSyncViewport<
 				void bridgeRef.current
 					.requestRangeReconcile(range)
 					.then((rec) => {
-						onRangeReconcileRef.current?.(rec);
+						onRangeReconcileEvent(rec);
 					})
 					.catch((err: unknown) => {
 						console.error("partial sync viewport rangeReconcile failed", err);
@@ -196,7 +204,7 @@ export function usePartialSyncViewport<
 				void bridgeRef.current
 					.requestRangeReconcile(range)
 					.then((rec) => {
-						onRangeReconcileRef.current?.(rec);
+						onRangeReconcileEvent(rec);
 					})
 					.catch((err: unknown) => {
 						console.error("partial sync viewport rangeReconcile failed", err);
