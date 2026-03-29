@@ -1,5 +1,11 @@
 # @firtoz/websocket-do
 
+## 7.1.0
+
+### Minor Changes
+
+- [#64](https://github.com/firtoz/fullstack-toolkit/pull/64) [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f) Thanks [@firtoz](https://github.com/firtoz)! - Add `@firtoz/websocket-do/zod-client` so browser bundles can import `ZodWebSocketClient` without pulling Durable Object worker modules from the package root.
+
 ## 7.0.1
 
 ### Patch Changes

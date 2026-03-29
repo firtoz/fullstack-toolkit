@@ -80,7 +80,7 @@
     },
     "packages/collection-sync": {
       "name": "@firtoz/collection-sync",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -105,7 +105,7 @@
     },
     "packages/db-helpers": {
       "name": "@firtoz/db-helpers",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
       },
@@ -122,7 +122,7 @@
     },
     "packages/drizzle-durable-sqlite": {
       "name": "@firtoz/drizzle-durable-sqlite",
-      "version": "0.2.1",
+      "version": "1.0.0",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -149,7 +149,7 @@
     },
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
-      "version": "3.0.1",
+      "version": "4.0.0",
       "bin": {
         "drizzle-indexeddb-generate": "./src/bin/generate-migrations.ts",
       },
@@ -169,7 +169,7 @@
         "valibot": "catalog:",
       },
       "peerDependencies": {
-        "@firtoz/drizzle-utils": ">=1.1.0",
+        "@firtoz/drizzle-utils": ">=1.2.0",
         "@tanstack/db": ">=0.6.1",
         "drizzle-orm": ">=0.45.2",
         "drizzle-valibot": ">=0.4.0",
@@ -179,7 +179,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "0.2.17",
+      "version": "1.0.0",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -201,7 +201,7 @@
     },
     "packages/drizzle-utils": {
       "name": "@firtoz/drizzle-utils",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -235,7 +235,7 @@
     },
     "packages/idb-collections": {
       "name": "@firtoz/idb-collections",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
       },
@@ -259,7 +259,7 @@
     },
     "packages/router-toolkit": {
       "name": "@firtoz/router-toolkit",
-      "version": "7.0.1",
+      "version": "7.0.2",
       "dependencies": {
         "zod-form-data": "catalog:",
       },
@@ -279,7 +279,7 @@
     },
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
-      "version": "7.0.1",
+      "version": "7.1.0",
       "devDependencies": {
         "@types/react": "catalog:",
         "bun-types": "catalog:",
@@ -327,7 +327,7 @@
     },
     "tests/drizzle-durable-sqlite-test": {
       "name": "drizzle-durable-sqlite-test",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "dependencies": {
         "@firtoz/drizzle-durable-sqlite": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
@@ -482,7 +482,7 @@
     },
     "tests/websocket-do-test": {
       "name": "websocket-do-test",
-      "version": "1.2.6",
+      "version": "1.2.7",
       "dependencies": {
         "@firtoz/hono-fetcher": "^2.3.2",
         "@firtoz/websocket-do": "workspace:*",

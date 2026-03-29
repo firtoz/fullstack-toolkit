@@ -1,5 +1,11 @@
 # @firtoz/db-helpers
 
+## 2.1.0
+
+### Minor Changes
+
+- [#64](https://github.com/firtoz/fullstack-toolkit/pull/64) [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f) Thanks [@firtoz](https://github.com/firtoz)! - Harden generic TanStack sync: single-pump inbound processing with per-job error handling; wrap `receiveSync` writes so `syncCommit` always runs; serialize `receiveSync` and the sync phase of `truncate`; optional `deferLocalPersistence` with coalesced `DeferredWriteQueue` and optional `handleBatchPut` for batch upserts; optional `applyReceiveSyncDurableWrites` for one queued transaction per batch; wait for eager `initialSync` before applying remote messages; remove debug NDJSON ingest helper and call sites.
+
 ## 2.0.0
 
 ### Major Changes

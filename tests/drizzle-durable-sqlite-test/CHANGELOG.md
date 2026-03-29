@@ -1,5 +1,13 @@
 # drizzle-durable-sqlite-test
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f), [`556555a`](https://github.com/firtoz/fullstack-toolkit/commit/556555a2e09030a8658be8c07b5881e72be64b2f)]:
+  - @firtoz/drizzle-durable-sqlite@1.0.0
+  - @firtoz/drizzle-utils@1.2.0
+
 ## 1.0.2
 
 ### Patch Changes
