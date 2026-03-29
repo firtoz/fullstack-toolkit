@@ -19,4 +19,5 @@ test-results/
 playwright-report/
 
 # Cursor agent debug ingest / session logs (local only)
+.cursor/debug.log
 .cursor/debug-*.log
