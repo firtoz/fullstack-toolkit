@@ -79,7 +79,7 @@ Two skills—**planning** vs **execution**—so phased work does not collapse in
 4. **Cursor todos vs punch list:** If the workflow uses Cursor’s todo list, it is for **optional high-level milestones** only. The **temp punch list** is mandatory for step-by-step execution and **per-phase** test runs. Do not treat “all todos checked” as done unless the punch-list phases (including tests) are complete.
 5. Each phase in the plan and on the punch list must end with **tests + a test run** (narrowest `bun test` / `typecheck` as appropriate)—**not** one big testing phase at the end.
 
-**Execution:** Follow [punch-list-execution](.cursor/skills/punch-list-execution/SKILL.md): temp directory only (never commit punch lists); one unchecked item in flight at a time; mark each **phase** complete only after that phase’s test run passes.
+**Execution:** Follow [punch-list-execution](.cursor/skills/punch-list-execution/SKILL.md): temp directory only (never commit punch lists); one unchecked item in flight at a time; mark each **phase** complete only after that phase’s test run passes. Create the file with `mkdir -p` + `touch` (or open existing), seed and edit with **Write** / **StrReplace**—not shell heredocs; **update the punch list again at every phase boundary** (completion marks, next-phase items, discoveries), not only at the end.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: punch-list-execution
-description: Read when implementing multi-phase work after a plan exists. Mandatory—create/open/seed temp punch list, one item at a time, per-phase tests. Complements punch-list-planning for authors.
+description: Read when implementing multi-phase work after a plan exists. Mandatory—mkdir+touch then Write/StrReplace (no heredocs), update the temp punch list at every phase boundary, one item at a time, per-phase tests. Complements punch-list-planning for authors.
 ---
 
 # Punch-List Execution (for implementing agents)
@@ -18,12 +18,23 @@ description: Read when implementing multi-phase work after a plan exists. Mandat
 
 **Your first implementation action** is not “start coding the feature”—it is **punch list I/O**:
 
-1. Ensure the directory exists: `$TMPDIR/router-toolkit-punchlists/` (Linux: `/tmp/router-toolkit-punchlists/`).
+1. Ensure the directory exists: `$TMPDIR/router-toolkit-punchlists/` (Linux: `/tmp/router-toolkit-punchlists/`). A single `mkdir -p` in the shell is fine.
 2. **Create or open** `<task-slug>.md` for this task (reuse if it already exists from an earlier session).
 3. **Seed** the file with phased headings (`## Phase 1: …`) and `- [ ]` items that mirror the **written plan** (and tests/typecheck per phase). If the plan is thin, expand it into **atomic** checklist items here—this file becomes authoritative.
 4. Only after the list exists and reflects the work: start the **re-read → first unchecked → execute → mark `[x]`** loop.
 
 **Never** commit punch-list files to the repository.
+
+### How to create and edit the file (no heredoc dumps)
+
+Do **not** seed or rewrite the punch list using terminal heredocs (`cat > … <<'EOF'`), long `echo`/`printf` chains, or other shell redirection for multi-line content. Those are brittle, hard to fix when truncated, and encourage “paste once and forget.”
+
+**Prefer:**
+
+1. `touch` the path (after `mkdir -p` if needed), or open an existing file.
+2. Fill and maintain content with **Write** (initial seed) and **StrReplace** (ongoing edits)—the same way you edit repo source.
+
+You may use the shell only for **directory + empty file**: e.g. `mkdir -p /tmp/router-toolkit-punchlists && touch /tmp/router-toolkit-punchlists/<task-slug>.md`, then **Write** the markdown body.
 
 ## Cursor todos vs this checklist
 
@@ -45,6 +56,16 @@ If instructions conflict, prefer: **temp punch list + this skill** over ad-hoc t
 - Group items under **phase headings**. Within each phase, order so **implement → tests → run tests/typecheck** appears in the list, then phase wrap-up.
 - Mark a **phase** complete **only after** that phase’s test run item is checked and passing.
 - Do not mark all phases in one shot at the very end of the project; complete phases incrementally.
+
+### Update the punch list after every phase (not only at the end)
+
+When a phase’s tests/typecheck have passed:
+
+1. **Edit the temp file in that same turn**—mark the phase’s remaining `- [ ]` items `[x]` (including “Phase N complete” if you use that line) with one-line notes.
+2. If the next phase’s checklist is missing or was only sketched, **add or flesh out** `## Phase N+1` items now, before you start coding that phase.
+3. Capture new discoveries (extra tasks, blockers, deferred follow-ups) as new `- [ ]` or notes **immediately**, not in a final cleanup pass after all phases.
+
+Do not batch “make the punch list accurate again” until the whole feature is done; the file should stay current at **each phase boundary**.
 
 ## Per-phase testing (required)
 

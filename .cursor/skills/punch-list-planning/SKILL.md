@@ -25,7 +25,7 @@ Include an **Execution** or **Execution discipline** section. **Item 1** under t
    (Linux: `/tmp/router-toolkit-punchlists/<task-slug>.md`), **seed** it with phased `- [ ]` items derived from **this plan**, then treat **only that file** as the authoritative checklist during implementation: re-read → first unchecked → do → mark `[x]` with a one-line note → repeat.
 3. **Do not commit** punch-list files to the repo.
 
-The planner may **outline** phases in prose; the **executor** is responsible for **materializing** the checklist in the temp file as the first implementation step (unless a prior run already created it—in which case open, reconcile with the plan, then continue).
+The planner may **outline** phases in prose; the **executor** is responsible for **materializing** the checklist in the temp file as the first implementation step (unless a prior run already created it—in which case open, reconcile with the plan, then continue). Executors follow **[punch-list-execution](../punch-list-execution/SKILL.md)** for **how** to do that: `mkdir -p` + `touch` (or open existing), then **Write** / **StrReplace** for content—**not** shell heredocs (`cat <<'EOF'`). They also **re-edit the punch list at every phase boundary** (mark completion, add next phase items, note discoveries), not only once at startup and once at the end.
 
 ### 2. Cursor todos vs temp punch list
 
