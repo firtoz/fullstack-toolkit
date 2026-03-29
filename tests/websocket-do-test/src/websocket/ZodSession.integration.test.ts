@@ -478,7 +478,12 @@ describe("ZodSession Integration Tests", () => {
 			// second frame is not handled until the first handler finishes (including broadcast).
 			// We still send round-by-round so the test does not depend on buffering two sends before
 			// any server work runs (clearer under Vitest / workerd).
-			ws.send(JSON.stringify({ type: "message", text: "Hello" } satisfies ClientMessage));
+			ws.send(
+				JSON.stringify({
+					type: "message",
+					text: "Hello",
+				} satisfies ClientMessage),
+			);
 			await vi.waitFor(
 				() => {
 					expect(messages).toHaveLength(1);
@@ -487,7 +492,12 @@ describe("ZodSession Integration Tests", () => {
 				{ timeout: 1000, interval: 20 },
 			);
 
-			ws.send(JSON.stringify({ type: "setName", name: "NewName" } satisfies ClientMessage));
+			ws.send(
+				JSON.stringify({
+					type: "setName",
+					name: "NewName",
+				} satisfies ClientMessage),
+			);
 			await vi.waitFor(
 				() => {
 					expect(messages).toHaveLength(2);
