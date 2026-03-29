@@ -31,7 +31,8 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          # Match root `packageManager` so CI reproduces local installs; `latest` can diverge and trigger Bun-only crashes.
+          bun-version-file: package.json
 
       - name: Cache Turbo
         uses: actions/cache@v4
@@ -52,9 +53,11 @@ jobs:
       - name: Run Typecheck and Lint
         run: TURBO_TELEMETRY_DISABLED=1 bun turbo run typecheck lint:ci
 
+      # Limit parallel `test` tasks: default turbo concurrency plus Wrangler/Vitest pools
+      # can exceed ~7GB on ubuntu-latest and trigger OOM (exit 137) or Bun crashes under pressure.
       - name: Run Non-Playwright Tests
         run: |
-          TURBO_TELEMETRY_DISABLED=1 bun turbo run test --filter='!test-playground'
+          TURBO_TELEMETRY_DISABLED=1 bun turbo run test --filter='!test-playground' --concurrency=2
           cd tests/test-playground && bun run test:unit
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
