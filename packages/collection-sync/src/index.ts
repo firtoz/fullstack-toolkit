@@ -35,6 +35,7 @@ export {
 	type PartialSyncClientBridgeOptions,
 	type PartialSyncRangePatchAppliedEvent,
 	type PartialSyncRangeResult,
+	type PartialSyncReconcileResult,
 	type PartialSyncState,
 	type PartialSyncViewTransitionEvent,
 } from "./partial-sync-client-bridge";
@@ -61,6 +62,12 @@ export {
 	type PartialSyncServerBridgeOptions,
 	type PartialSyncServerBridgeStore,
 } from "./partial-sync-server-bridge";
+
+export {
+	PartialSyncMutationHandler,
+	type PartialSyncMutationHandlerOptions,
+	type PartialSyncMutationHandlerStore,
+} from "./partial-sync-mutation-handler";
 
 export {
 	withSync,

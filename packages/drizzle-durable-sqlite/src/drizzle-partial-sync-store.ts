@@ -415,6 +415,16 @@ export function createDrizzlePartialSyncStore<
 		return { changes, totalCount };
 	}
 
+	async function getRow(key: string | number): Promise<TRow | undefined> {
+		const rows = await db
+			.select()
+			.from(table)
+			.where(eq(idCol, key as never))
+			.limit(1);
+		const r = rows[0];
+		return r !== undefined ? (r as TRow) : undefined;
+	}
+
 	return {
 		queryRange,
 		queryByOffset,
@@ -423,6 +433,7 @@ export function createDrizzlePartialSyncStore<
 		queryByPredicate,
 		getPredicateCount,
 		changesSince,
+		getRow,
 	};
 }
 

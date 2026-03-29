@@ -932,4 +932,97 @@ describe("PartialSyncClientBridge", () => {
 		expect(result.rows.length).toBe(2);
 		expect(result.totalCount).toBe(5);
 	});
+
+	it("applies rangeReconcileResult and resolves manifest reconcile", async () => {
+		const sent: unknown[] = [];
+		const rowsById = new Map<string, Item>([
+			["1", item({ id: "1", name: "a", age: 1, updatedAt: 10 })],
+			["2", item({ id: "2", name: "b", age: 2, updatedAt: 20 })],
+		]);
+		const bridge = new PartialSyncClientBridge<Item>({
+			clientId: "c1",
+			send: (m) => sent.push(m),
+			collection: {
+				get: (k) => {
+					const s = String(k);
+					return (
+						rowsById.get(s) ??
+						(typeof k === "number" ? rowsById.get(String(k)) : undefined)
+					);
+				},
+				utils: {
+					receiveSync: async (messages) => {
+						for (const m of messages) {
+							if (m.type === "insert") {
+								rowsById.set(String(m.value.id), m.value);
+							}
+							if (m.type === "update") {
+								rowsById.set(String(m.value.id), m.value);
+							}
+							if (m.type === "delete") {
+								rowsById.delete(String(m.key));
+							}
+						}
+					},
+				},
+			},
+		});
+		bridge.setConnected(true);
+		const rangePromise = bridge.requestRangeQuery({
+			kind: "predicate",
+			conditions: [{ column: "age", op: "gt", value: 0 }],
+			limit: 10,
+		});
+		const rqId = (sent[0] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "queryRangeChunk",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: rqId,
+			rows: [
+				item({ id: "1", name: "a", age: 1, updatedAt: 10 }),
+				item({ id: "2", name: "b", age: 2, updatedAt: 20 }),
+			],
+			totalCount: 2,
+			lastCursor: null,
+			hasMore: false,
+			chunkIndex: 0,
+			done: true,
+		});
+		await rangePromise;
+
+		const recP = bridge.requestRangeReconcile({
+			kind: "predicate",
+			conditions: [{ column: "age", op: "gt", value: 0 }],
+			limit: 10,
+		});
+		const rcId = (sent[sent.length - 1] as { requestId: string }).requestId;
+		await bridge.handleServerMessage({
+			type: "rangeReconcileResult",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			requestId: rcId,
+			added: [
+				{
+					type: "insert",
+					value: item({ id: "3", name: "c", age: 3, updatedAt: 5 }),
+				},
+			],
+			updated: [
+				{
+					type: "update",
+					value: item({ id: "1", name: "a2", age: 1, updatedAt: 99 }),
+					previousValue: item({ id: "1", name: "a", age: 1, updatedAt: 10 }),
+				},
+			],
+			stale: ["2"],
+			movedHints: [{ id: "2", hint: { x: 1 } }],
+			totalCount: 2,
+		});
+		const rec = await recP;
+		expect(rec.added.length).toBe(1);
+		expect(rec.updated.length).toBe(1);
+		expect(rec.staleIds).toEqual(["2"]);
+		expect(rec.movedHints).toEqual([{ id: "2", hint: { x: 1 } }]);
+		expect(rowsById.has("2")).toBe(false);
+		expect(rowsById.get("3")?.name).toBe("c");
+	});
 });

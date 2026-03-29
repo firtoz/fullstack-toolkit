@@ -2,6 +2,7 @@ import type { Collection, UtilsRecord } from "@tanstack/db";
 import type { CacheManager } from "../cache-manager";
 import type {
 	PartialSyncClientBridge,
+	PartialSyncReconcileResult,
 	PartialSyncState,
 } from "../partial-sync-client-bridge";
 import type { PartialSyncViewportAdapter } from "./partial-sync-adapter";
@@ -221,6 +222,8 @@ export type UsePartialSyncViewportOptions<
 	 * rows matching the viewport predicate (see {@link UsePredicateFilteredRowsOptions.alwaysIncludeRowIds}).
 	 */
 	alwaysIncludeRowIds?: readonly string[];
+	/** After a successful manifest reconcile (re-entry with cached keys), receive `movedHints` etc. */
+	onRangeReconcile?: (result: PartialSyncReconcileResult<TItem>) => void;
 };
 
 export type UsePartialSyncViewportResult<TItem extends PartialSyncItem> = {

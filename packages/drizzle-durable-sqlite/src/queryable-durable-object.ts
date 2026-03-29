@@ -1,6 +1,6 @@
 import {
+	PartialSyncMutationHandler,
 	PartialSyncServerBridge,
-	SyncServerBridge,
 	createClientMessageSchema,
 	createServerMessageSchema,
 	DEFAULT_SYNC_COLLECTION_ID,
@@ -30,7 +30,7 @@ type MutationSyncRow = PartialSyncRowShape;
 
 type SessionDispatch<TRow extends MutationSyncRow> = {
 	partialBridge: PartialSyncServerBridge<TRow>;
-	mutationBridge?: SyncServerBridge<TRow>;
+	partialMutationHandler?: PartialSyncMutationHandler<TRow>;
 };
 
 type SessionSlot<TRow extends MutationSyncRow> = {
@@ -71,10 +71,10 @@ async function routeQueryableClientMessage<TRow extends MutationSyncRow>(
 		case "mutateBatch":
 		case "syncHello":
 			if (
-				dispatch.mutationBridge !== undefined &&
-				mid === dispatch.mutationBridge.collectionId
+				dispatch.partialMutationHandler !== undefined &&
+				mid === dispatch.partialMutationHandler.collectionId
 			) {
-				await dispatch.mutationBridge.handleClientMessage(message);
+				await dispatch.partialMutationHandler.handleClientMessage(message);
 			}
 			return;
 		default:
@@ -144,7 +144,7 @@ export type QueryableDurableObjectConfig<
 	) => PartialSyncServerBridgeStore<TRow>;
 	/**
 	 * Multiplex key for partial-sync WebSocket messages.
-	 * When using a {@link SyncServerBridge} on the same socket, set the mutation store's id to the same value unless you multiplex multiple collections.
+	 * When using {@link PartialSyncMutationHandler} on the same socket, use the same id unless you multiplex multiple collections.
 	 */
 	collectionId?: string;
 	/**
@@ -155,22 +155,29 @@ export type QueryableDurableObjectConfig<
 		clientId: string,
 		requestedConditions: RangeCondition[],
 	) => RangeCondition[] | Promise<RangeCondition[]>;
+	/**
+	 * Optional hints for rows that left the client's range during `rangeReconcile`. Return `null` for
+	 * fog of war (default when omitted).
+	 */
+	resolveMovedHint?: (
+		row: TRow,
+		range: SyncRange,
+	) => Record<string, unknown> | null | Promise<Record<string, unknown> | null>;
 };
 
 export abstract class QueryableDurableObject<
 	TRow extends PartialSyncRowShape,
 	TSchema extends Record<string, unknown>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
-	// biome-ignore lint/suspicious/noExplicitAny: session generic is not exposed in subclass APIs.
 > extends ZodWebSocketDO<
-	any,
+	QueryableSession<TRow, TEnv>,
 	SyncClientMessage,
 	SyncServerMessage<TRow>,
 	TEnv
 > {
 	protected db!: ReturnType<typeof drizzle>;
 	protected bridge!: PartialSyncServerBridge<TRow>;
-	protected mutationSyncBridge?: SyncServerBridge<TRow>;
+	protected partialMutationHandler?: PartialSyncMutationHandler<TRow>;
 
 	readonly app = this.getBaseApp().get("/health", (c: Context) => c.text("ok"));
 
@@ -269,42 +276,28 @@ export abstract class QueryableDurableObject<
 							resolveClientVisibility: config.resolveClientVisibility,
 						}
 					: {}),
+				...(config.resolveMovedHint !== undefined
+					? { resolveMovedHint: config.resolveMovedHint }
+					: {}),
 			});
 			this.bridge = bridgeRef;
 
 			const mutationStore = this.createClientMutationSyncStore();
-			let mutationBridge: SyncServerBridge<TRow> | undefined;
+			let partialMutationHandler: PartialSyncMutationHandler<TRow> | undefined;
 			if (mutationStore !== undefined) {
-				mutationBridge = new SyncServerBridge<TRow>({
+				partialMutationHandler = new PartialSyncMutationHandler<TRow>({
 					store: mutationStore,
+					partialBridge: bridgeRef,
 					sendToClient: (clientId, message) =>
 						this.sendToClient(clientId, message),
-					broadcastExcept: async (excludeClientId, message) => {
-						if (message.type === "syncBatch") {
-							await bridgeRef.pushServerChanges(
-								message.changes as SyncMessage<TRow>[],
-								{ excludeClientId: excludeClientId },
-							);
-							for (const session of this.sessions.values()) {
-								const typedSession = session as QueryableSession<TRow, TEnv>;
-								if (typedSession.clientId === excludeClientId) continue;
-								typedSession.send({
-									...message,
-									changes: [],
-								});
-							}
-							return;
-						}
-						this.broadcastExcept(excludeClientId, message);
-					},
 					collectionId,
 				});
-				this.mutationSyncBridge = mutationBridge;
+				this.partialMutationHandler = partialMutationHandler;
 			}
 
 			sessionSlot.dispatch = {
 				partialBridge: bridgeRef,
-				mutationBridge,
+				partialMutationHandler,
 			};
 			for (const message of sessionSlot.pending) {
 				await routeQueryableClientMessage(message, sessionSlot.dispatch);
@@ -380,8 +373,9 @@ export abstract class QueryableDurableObject<
 	}
 
 	/**
-	 * When overridden to return a store, `mutateBatch` / `syncHello` are handled by {@link SyncServerBridge};
-	 * range traffic stays on {@link PartialSyncServerBridge}.
+	 * When overridden to return a store, `mutateBatch` is handled by {@link PartialSyncMutationHandler}
+	 * (interest-scoped `rangePatch` + `ack` with `serverVersion: 0`). `syncHello` is not handled on this path.
+	 * Range traffic stays on {@link PartialSyncServerBridge}.
 	 */
 	protected createClientMutationSyncStore():
 		| SyncServerBridgeStore<TRow>

@@ -92,6 +92,14 @@ export type PartialSyncRangeResult<TItem> = {
 	upToDate?: boolean;
 };
 
+export type PartialSyncReconcileResult<TItem extends PartialSyncRowShape> = {
+	added: TItem[];
+	updated: TItem[];
+	staleIds: Array<string | number>;
+	movedHints: Array<{ id: string | number; hint: Record<string, unknown> }>;
+	totalCount: number;
+};
+
 export interface PartialSyncClientBridgeOptions<
 	TItem extends PartialSyncRowShape,
 > {
@@ -122,12 +130,22 @@ type InFlightRequest<TItem> = {
 	reject: (error: unknown) => void;
 };
 
+type InFlightReconcileRequest<TItem extends PartialSyncRowShape> = {
+	requestId: string;
+	resolve: (result: PartialSyncReconcileResult<TItem>) => void;
+	reject: (error: unknown) => void;
+};
+
 export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 	readonly clientId: string;
 	readonly collectionId: string;
 	#connected = false;
 	#state: PartialSyncState = { status: "offline" };
 	#inFlightRequests = new Map<string, InFlightRequest<TItem>>();
+	#inFlightReconcileRequests = new Map<
+		string,
+		InFlightReconcileRequest<TItem>
+	>();
 	#cachedIds = new Set<string | number>();
 	#cacheUtilization = 0;
 	#totalCount = 0;
@@ -275,6 +293,14 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			);
 		}
 		this.#inFlightRequests.clear();
+		for (const inflight of this.#inFlightReconcileRequests.values()) {
+			inflight.reject(
+				Object.assign(new Error("Range request aborted"), {
+					name: "AbortError",
+				}),
+			);
+		}
+		this.#inFlightReconcileRequests.clear();
 	}
 
 	/**
@@ -429,6 +455,66 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 		});
 	}
 
+	/**
+	 * Reconcile the client's cached window against the server using a row manifest (id + version ms).
+	 * Pass `manifest` to override rows; otherwise uses {@link PartialSyncClientBridge.serverConfirmedKeys} and {@link PartialSyncClientBridgeOptions.collection} `get`.
+	 */
+	requestRangeReconcile(
+		range: SyncRange,
+		manifest?: Array<{ id: string | number; version: number }>,
+	): Promise<PartialSyncReconcileResult<TItem>> {
+		this.abortRangeRequests();
+		const requestId = createClientMutationId("rc");
+		const resolvedManifest = manifest ?? this.#buildReconcileManifest();
+		this.#setState({
+			status: "fetching",
+			requestId,
+			chunksReceived: 0,
+		});
+
+		return new Promise<PartialSyncReconcileResult<TItem>>((resolve, reject) => {
+			this.#inFlightReconcileRequests.set(requestId, {
+				requestId,
+				resolve,
+				reject,
+			});
+			this.#out({
+				type: "rangeReconcile",
+				clientId: this.clientId,
+				requestId,
+				range,
+				manifest: resolvedManifest,
+			});
+		});
+	}
+
+	#buildReconcileManifest(): Array<{ id: string | number; version: number }> {
+		const get = this.options.collection.get;
+		if (get === undefined) return [];
+		const out: Array<{ id: string | number; version: number }> = [];
+		for (const key of this.#serverConfirmedKeys) {
+			let local = get(key);
+			if (local === undefined && typeof key === "number") {
+				local = get(String(key));
+			} else if (local === undefined && typeof key === "string") {
+				const asNum = Number(key);
+				if (!Number.isNaN(asNum)) {
+					local = get(asNum);
+				}
+			}
+			if (local === undefined) continue;
+			const rowId = local.id;
+			if (typeof rowId !== "string" && typeof rowId !== "number") {
+				continue;
+			}
+			out.push({
+				id: rowId,
+				version: partialSyncRowVersionWatermarkMs(local),
+			});
+		}
+		return out;
+	}
+
 	async handleServerMessage(message: SyncServerMessage<TItem>): Promise<void> {
 		const mid = message.collectionId ?? DEFAULT_SYNC_COLLECTION_ID;
 		if (mid !== this.collectionId) return;
@@ -444,6 +530,11 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			case "rangeDelta":
 				await this.#scheduleRangeFetchApply(() =>
 					this.#handleRangeDelta(message),
+				);
+				return;
+			case "rangeReconcileResult":
+				await this.#scheduleRangeFetchApply(() =>
+					this.#handleRangeReconcileResult(message),
 				);
 				return;
 			case "rangePatch":
@@ -706,6 +797,86 @@ export class PartialSyncClientBridge<TItem extends PartialSyncRowShape> {
 			hasMore: false,
 			invalidateWindow: true,
 		});
+		this.#setState({
+			status: this.#connected ? "realtime" : "partial",
+			cachedCount: this.cachedCount,
+			totalCount: this.#totalCount,
+			cacheUtilization: this.#cacheUtilization,
+		});
+	}
+
+	async #handleRangeReconcileResult(
+		message: Extract<
+			SyncServerMessage<TItem>,
+			{ type: "rangeReconcileResult" }
+		>,
+	): Promise<void> {
+		const inFlight = this.#inFlightReconcileRequests.get(message.requestId);
+		if (!inFlight) return;
+
+		const get = this.options.collection.get;
+		const toApply: SyncMessage<TItem>[] = [
+			...(message.added as SyncMessage<TItem>[]),
+			...(message.updated as SyncMessage<TItem>[]),
+		];
+
+		for (const staleKey of message.stale) {
+			let local: TItem | undefined;
+			if (get !== undefined) {
+				local = get(staleKey);
+				if (local === undefined && typeof staleKey === "number") {
+					local = get(String(staleKey));
+				} else if (local === undefined && typeof staleKey === "string") {
+					const asNum = Number(staleKey);
+					if (!Number.isNaN(asNum)) {
+						local = get(asNum);
+					}
+				}
+			}
+			if (local !== undefined) {
+				const syn: SyncMessage<TItem> = {
+					type: "update",
+					value: local,
+					previousValue: local,
+				} as SyncMessage<TItem>;
+				this.options.onViewTransition?.({ type: "exitView", change: syn });
+			}
+			toApply.push({ type: "delete", key: staleKey } as SyncMessage<TItem>);
+		}
+
+		if (toApply.length > 0) {
+			await this.#applyAndTrack(toApply);
+			if (this.#inFlightReconcileRequests.get(message.requestId) !== inFlight) {
+				return;
+			}
+			this.#mergeServerConfirmedKeysFromMessages(toApply);
+		}
+
+		this.#inFlightReconcileRequests.delete(message.requestId);
+		this.#totalCount = message.totalCount;
+
+		const addedRows: TItem[] = [];
+		for (const ch of message.added) {
+			if (ch.type === "insert") {
+				addedRows.push(ch.value);
+			}
+		}
+		const updatedRows: TItem[] = [];
+		for (const ch of message.updated) {
+			if (ch.type === "update") {
+				updatedRows.push(ch.value);
+			}
+		}
+
+		inFlight.resolve({
+			added: addedRows,
+			updated: updatedRows,
+			staleIds: [...message.stale],
+			movedHints: [...message.movedHints],
+			totalCount: message.totalCount,
+		});
+
+		this.#refreshCachedCountInState();
 		this.#setState({
 			status: this.#connected ? "realtime" : "partial",
 			cachedCount: this.cachedCount,

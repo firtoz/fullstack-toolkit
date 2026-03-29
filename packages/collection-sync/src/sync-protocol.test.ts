@@ -151,4 +151,39 @@ describe("sync protocol schemas", () => {
 			expect(patch.viewTransition).toBe("exitView");
 		}
 	});
+
+	it("parses rangeReconcile client message and rangeReconcileResult server message", () => {
+		const parsed = clientMessageSchema.parse({
+			type: "rangeReconcile",
+			clientId: "c1",
+			requestId: "rc1",
+			range: {
+				kind: "predicate",
+				conditions: [{ column: "x", op: "gte", value: 0 }],
+				limit: 50,
+			},
+			manifest: [
+				{ id: "a", version: 10 },
+				{ id: 2, version: 20 },
+			],
+		});
+		expect(parsed.type).toBe("rangeReconcile");
+		if (parsed.type === "rangeReconcile") {
+			expect(parsed.manifest.length).toBe(2);
+		}
+
+		const res = serverMessageSchema.parse({
+			type: "rangeReconcileResult",
+			requestId: "rc1",
+			added: [{ type: "insert", value: { id: "3", updatedAt: 1 } }],
+			updated: [],
+			stale: ["z"],
+			movedHints: [{ id: "z", hint: { x: 9 } }],
+			totalCount: 100,
+		});
+		expect(res.type).toBe("rangeReconcileResult");
+		if (res.type === "rangeReconcileResult") {
+			expect(res.movedHints[0]?.hint.x).toBe(9);
+		}
+	});
 });

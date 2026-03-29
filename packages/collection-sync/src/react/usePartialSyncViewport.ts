@@ -33,6 +33,7 @@ export function usePartialSyncViewport<
 	getColumnValue,
 	cacheDisplayMode = "immediate",
 	alwaysIncludeRowIds,
+	onRangeReconcile,
 }: UsePartialSyncViewportOptions<
 	TItem,
 	TViewport,
@@ -88,6 +89,26 @@ export function usePartialSyncViewport<
 
 	const collectionRef = useRef(collection);
 	collectionRef.current = collection;
+	const onRangeReconcileRef = useRef(onRangeReconcile);
+	onRangeReconcileRef.current = onRangeReconcile;
+
+	function canReconcileWithManifest(): boolean {
+		const col = collectionRef.current;
+		if (typeof col.get !== "function") return false;
+		const keys = bridgeRef.current.serverConfirmedKeys;
+		if (keys.size === 0) return false;
+		for (const k of keys) {
+			let row = col.get(k);
+			if (row === undefined && typeof k === "number") {
+				row = col.get(String(k));
+			} else if (row === undefined && typeof k === "string") {
+				const n = Number(k);
+				if (!Number.isNaN(n)) row = col.get(n);
+			}
+			if (row !== undefined) return true;
+		}
+		return false;
+	}
 
 	useLayoutEffect(() => {
 		const clearQuietTimer = () => {
@@ -115,6 +136,17 @@ export function usePartialSyncViewport<
 				sort: ad.sort,
 				limit: predicateLimitRef.current,
 			};
+			if (canReconcileWithManifest()) {
+				void bridgeRef.current
+					.requestRangeReconcile(range)
+					.then((rec) => {
+						onRangeReconcileRef.current?.(rec);
+					})
+					.catch((err: unknown) => {
+						console.error("partial sync viewport rangeReconcile failed", err);
+					});
+				return;
+			}
 			void bridgeRef.current.requestRangeQuery(range).catch((err: unknown) => {
 				console.error("partial sync viewport rangeQuery failed", err);
 			});
@@ -160,6 +192,17 @@ export function usePartialSyncViewport<
 				sort: ad.sort,
 				limit: predicateLimitRef.current,
 			};
+			if (canReconcileWithManifest()) {
+				void bridgeRef.current
+					.requestRangeReconcile(range)
+					.then((rec) => {
+						onRangeReconcileRef.current?.(rec);
+					})
+					.catch((err: unknown) => {
+						console.error("partial sync viewport rangeReconcile failed", err);
+					});
+				return;
+			}
 			void bridgeRef.current.requestRangeQuery(range).catch((err: unknown) => {
 				console.error("partial sync viewport rangeQuery failed", err);
 			});

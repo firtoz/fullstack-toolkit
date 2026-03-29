@@ -78,6 +78,7 @@ export async function dispatchPartialSyncServerMessage<
 		case "queryRangeChunk":
 		case "rangeUpToDate":
 		case "rangeDelta":
+		case "rangeReconcileResult":
 		case "rangePatch":
 		case "pong":
 			if (!forPartial) return;

@@ -8,7 +8,10 @@ import {
 } from "./partial-sync-interest";
 import { defaultPredicateColumnValue } from "./partial-sync-predicate-match";
 import type { PartialSyncRowId } from "./partial-sync-row-key";
-import { partialSyncRowKey } from "./partial-sync-row-key";
+import {
+	partialSyncRowKey,
+	partialSyncRowVersionWatermarkMs,
+} from "./partial-sync-row-key";
 
 function deliveredRowIdKey(id: PartialSyncRowId): string {
 	return String(partialSyncRowKey(id));
@@ -76,6 +79,9 @@ export interface PartialSyncServerBridgeStore<
 		sinceVersion: number;
 		chunkSize: number;
 	}) => Promise<{ changes: SyncMessage<TItem>[]; totalCount: number } | null>;
+
+	/** Authoritative row lookup (e.g. for {@link PartialSyncServerBridgeOptions.resolveMovedHint}). */
+	getRow?: (key: string | number) => Promise<TItem | undefined>;
 }
 
 export type PartialSyncPushServerChangesOptions = {
@@ -102,6 +108,14 @@ export interface PartialSyncServerBridgeOptions<
 		clientId: string,
 		requestedConditions: RangeCondition[],
 	) => RangeCondition[] | Promise<RangeCondition[]>;
+	/**
+	 * Optional hint for rows that left the client's range during `rangeReconcile`.
+	 * Return `null` to enforce fog of war (default when omitted).
+	 */
+	resolveMovedHint?: (
+		row: TItem,
+		range: SyncRange,
+	) => Record<string, unknown> | null | Promise<Record<string, unknown> | null>;
 }
 
 export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
@@ -142,9 +156,12 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 			case "rangeQuery":
 				await this.#handleRangeQuery(message);
 				return;
+			case "rangeReconcile":
+				await this.#handleRangeReconcile(message);
+				return;
 			case "syncHello":
 			case "mutateBatch":
-				// Partial sync query bridge is read-focused. Full mutation flow remains in SyncServerBridge.
+				// Partial sync query bridge is read-focused. Mutations use PartialSyncMutationHandler.
 				return;
 			default:
 				exhaustiveGuard(message);
@@ -365,6 +382,179 @@ export class PartialSyncServerBridge<TItem extends PartialSyncRowShape> {
 			return;
 		}
 		exhaustiveGuard(range);
+	}
+
+	async #handleRangeReconcile(
+		message: Extract<SyncClientMessage, { type: "rangeReconcile" }>,
+	): Promise<void> {
+		const { clientId, requestId, manifest } = message;
+		let range: SyncRange = message.range;
+		const state = this.#getOrCreateClientState(clientId);
+		if (range.kind === "predicate") {
+			this.#resetClientInterest(state);
+		} else {
+			state.predicateGroups.length = 0;
+			state.pendingPatches.length = 0;
+		}
+		if (range.kind === "predicate") {
+			const resolved =
+				this.options.resolveClientVisibility !== undefined
+					? await this.options.resolveClientVisibility(
+							clientId,
+							range.conditions,
+						)
+					: range.conditions;
+			range = { ...range, conditions: resolved };
+			state.predicateGroups.push([...resolved]);
+		}
+
+		const { rows, totalCount } = await this.#collectRowsForRange(range);
+		const byKey = new Map<string, TItem>();
+		for (const row of rows) {
+			byKey.set(deliveredRowIdKey(row.id), row);
+		}
+
+		const manifestKeys = new Set(
+			manifest.map((m) => String(partialSyncRowKey(m.id))),
+		);
+
+		const added: SyncMessage<TItem>[] = [];
+		const updated: SyncMessage<TItem>[] = [];
+		const stale: Array<string | number> = [];
+		const movedHints: Array<{
+			id: string | number;
+			hint: Record<string, unknown>;
+		}> = [];
+
+		for (const row of rows) {
+			const k = deliveredRowIdKey(row.id);
+			if (!manifestKeys.has(k)) {
+				added.push({ type: "insert", value: row });
+			}
+		}
+
+		for (const entry of manifest) {
+			const k = String(partialSyncRowKey(entry.id));
+			const serverRow = byKey.get(k);
+			if (serverRow === undefined) {
+				stale.push(entry.id);
+				const getRow = this.options.store.getRow;
+				const resolveMovedHint = this.options.resolveMovedHint;
+				if (getRow !== undefined && resolveMovedHint !== undefined) {
+					const current = await getRow(entry.id);
+					if (current !== undefined) {
+						const hint = await resolveMovedHint(current, range);
+						if (hint !== null) {
+							movedHints.push({ id: entry.id, hint });
+						}
+					}
+				}
+				continue;
+			}
+			const serverV = partialSyncRowVersionWatermarkMs(serverRow);
+			if (serverV !== entry.version) {
+				updated.push({
+					type: "update",
+					value: serverRow,
+					previousValue: {
+						...(serverRow as object),
+						updatedAt: entry.version,
+					} as TItem,
+				});
+			}
+		}
+
+		this.#syncInterestAfterReconcile(state, range, rows);
+
+		this.#emit(clientId, {
+			type: "rangeReconcileResult",
+			requestId,
+			added,
+			updated,
+			stale,
+			movedHints,
+			totalCount,
+		});
+	}
+
+	async #collectRowsForRange(
+		range: SyncRange,
+	): Promise<{ rows: TItem[]; totalCount: number }> {
+		const chunkSize = Math.max(1, this.options.queryChunkSize ?? 200);
+		if (range.kind === "predicate") {
+			const queryByPredicate = this.options.store.queryByPredicate;
+			if (!queryByPredicate) {
+				return {
+					rows: [],
+					totalCount: await this.options.store.getTotalCount(),
+				};
+			}
+			const limit = range.limit ?? chunkSize;
+			const totalCount = this.options.store.getPredicateCount
+				? await this.options.store.getPredicateCount(range.conditions)
+				: await this.options.store.getTotalCount();
+			const rows: TItem[] = [];
+			for await (const chunk of queryByPredicate({
+				conditions: range.conditions,
+				sort: range.sort,
+				limit,
+				chunkSize,
+			})) {
+				rows.push(...chunk);
+				if (rows.length >= limit) break;
+			}
+			return { rows: rows.slice(0, limit), totalCount };
+		}
+		if (range.kind === "index" && range.mode === "offset") {
+			const totalCount = await this.options.store.getTotalCount();
+			const rows: TItem[] = [];
+			for await (const chunk of this.options.store.queryByOffset({
+				sort: range.sort,
+				limit: range.limit,
+				offset: range.offset,
+				chunkSize,
+			})) {
+				rows.push(...chunk);
+				if (rows.length >= range.limit) break;
+			}
+			return { rows: rows.slice(0, range.limit), totalCount };
+		}
+		if (range.kind === "index" && range.mode === "cursor") {
+			const totalCount = await this.options.store.getTotalCount();
+			const rows: TItem[] = [];
+			for await (const chunk of this.options.store.queryRange({
+				sort: range.sort,
+				limit: range.limit,
+				afterCursor: range.afterCursor,
+				chunkSize,
+			})) {
+				rows.push(...chunk);
+				if (rows.length >= range.limit) break;
+			}
+			return { rows: rows.slice(0, range.limit), totalCount };
+		}
+		exhaustiveGuard(range);
+	}
+
+	#syncInterestAfterReconcile(
+		state: ClientQueryState<TItem>,
+		range: SyncRange,
+		rows: TItem[],
+	): void {
+		state.deliveredRowIds.clear();
+		for (const row of rows) {
+			state.deliveredRowIds.add(deliveredRowIdKey(row.id));
+		}
+		state.deliveredRanges.length = 0;
+		const sort =
+			range.kind === "index"
+				? range.sort
+				: range.kind === "predicate"
+					? range.sort
+					: undefined;
+		if (sort !== undefined && rows.length > 0) {
+			this.#trackDeliveredRange(state, sort, null, rows);
+		}
 	}
 
 	async #handleQueryPredicate(

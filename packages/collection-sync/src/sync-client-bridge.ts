@@ -262,6 +262,7 @@ export class SyncClientBridge<TItem extends PartialSyncRowShape> {
 			case "rangePatch":
 			case "rangeUpToDate":
 			case "rangeDelta":
+			case "rangeReconcileResult":
 				// Not supported by the full-sync bridge; partial sync uses PartialSyncClientBridge.
 				return;
 			default:

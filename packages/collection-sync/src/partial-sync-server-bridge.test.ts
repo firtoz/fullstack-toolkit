@@ -934,4 +934,120 @@ describe("PartialSyncServerBridge", () => {
 			),
 		).toBe(true);
 	});
+
+	it("rangeReconcile emits diff, stale ids, and movedHints when resolveMovedHint is set", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 2,
+				getSortValue: (row, column) => (row as Record<string, unknown>)[column],
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* () {
+					yield [
+						item({ id: "a", name: "a", age: 1, x: 1, y: 1, updatedAt: 100 }),
+						item({ id: "b", name: "b", age: 2, x: 2, y: 2, updatedAt: 200 }),
+					];
+				},
+				getPredicateCount: async () => 2,
+				getRow: async (key) => {
+					if (key === "c") {
+						return item({
+							id: "c",
+							name: "c",
+							age: 3,
+							x: 99,
+							y: 99,
+							updatedAt: 50,
+						});
+					}
+					return undefined;
+				},
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+			resolveMovedHint: (row) => ({ x: row.x, y: row.y }),
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeReconcile",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "rec1",
+			range: {
+				kind: "predicate",
+				conditions: [{ column: "x", op: "between", value: 0, valueTo: 10 }],
+				limit: 10,
+			},
+			manifest: [
+				{ id: "a", version: 100 },
+				{ id: "b", version: 1 },
+				{ id: "c", version: 50 },
+			],
+		});
+
+		const last = sent[sent.length - 1] as {
+			type: string;
+			requestId: string;
+			added: unknown[];
+			updated: unknown[];
+			stale: string[];
+			movedHints: Array<{ id: string; hint: Record<string, unknown> }>;
+		};
+		expect(last.type).toBe("rangeReconcileResult");
+		expect(last.requestId).toBe("rec1");
+		expect(last.added.length).toBe(0);
+		expect(last.updated.length).toBe(1);
+		expect(last.stale).toEqual(["c"]);
+		expect(last.movedHints).toEqual([{ id: "c", hint: { x: 99, y: 99 } }]);
+	});
+
+	it("rangeReconcile leaves movedHints empty without resolveMovedHint", async () => {
+		const sent: unknown[] = [];
+		const bridge = new PartialSyncServerBridge<Item>({
+			store: {
+				getTotalCount: async () => 0,
+				getSortValue: (row, column) => (row as Record<string, unknown>)[column],
+				queryRange: async function* () {
+					yield [];
+				},
+				queryByOffset: async function* () {
+					yield [];
+				},
+				queryByPredicate: async function* () {
+					yield [item({ id: "a", name: "a", age: 1, x: 1, y: 1 })];
+				},
+				getPredicateCount: async () => 1,
+				getRow: async () => item({ id: "b", name: "b", age: 2, x: 50, y: 50 }),
+			},
+			sendToClient: (_clientId, message) => sent.push(message),
+			queryChunkSize: 50,
+		});
+
+		await bridge.handleClientMessage({
+			type: "rangeReconcile",
+			collectionId: DEFAULT_SYNC_COLLECTION_ID,
+			clientId: "c1",
+			requestId: "rec2",
+			range: {
+				kind: "predicate",
+				conditions: [{ column: "x", op: "between", value: 0, valueTo: 10 }],
+				limit: 10,
+			},
+			manifest: [{ id: "b", version: 1 }],
+		});
+
+		const last = sent[sent.length - 1] as {
+			type: string;
+			movedHints: unknown[];
+			stale: string[];
+		};
+		expect(last.type).toBe("rangeReconcileResult");
+		expect(last.stale).toEqual(["b"]);
+		expect(last.movedHints).toEqual([]);
+	});
 });

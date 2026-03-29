@@ -177,6 +177,14 @@ export type SyncClientMessage =
 			requestId: string;
 			range: SyncRange;
 			fingerprint?: RangeFingerprint;
+	  }
+	| {
+			type: "rangeReconcile";
+			collectionId: string;
+			clientId: string;
+			requestId: string;
+			range: SyncRange;
+			manifest: Array<{ id: string | number; version: number }>;
 	  };
 
 export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
@@ -230,6 +238,19 @@ export function createClientMessageSchema(): z.ZodType<SyncClientMessage> {
 			requestId: z.string().min(1),
 			range: syncRangeSchema,
 			fingerprint: rangeFingerprintSchema.optional(),
+		}),
+		z.object({
+			type: z.literal("rangeReconcile"),
+			collectionId: collectionIdSchema,
+			clientId: z.string().min(1),
+			requestId: z.string().min(1),
+			range: syncRangeSchema,
+			manifest: z.array(
+				z.object({
+					id: z.union([z.string(), z.number()]),
+					version: z.number().int().nonnegative(),
+				}),
+			),
 		}),
 	]);
 }
@@ -311,6 +332,19 @@ export type SyncServerMessage<
 			totalCount: number;
 			changes: SyncMessage<TItem, TKey>[];
 			lastCursor?: unknown;
+	  }
+	| {
+			type: "rangeReconcileResult";
+			collectionId: string;
+			requestId: string;
+			added: SyncMessage<TItem, TKey>[];
+			updated: SyncMessage<TItem, TKey>[];
+			stale: Array<string | number>;
+			movedHints: Array<{
+				id: string | number;
+				hint: Record<string, unknown>;
+			}>;
+			totalCount: number;
 	  };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
@@ -401,6 +435,21 @@ export function createServerMessageSchema<
 			totalCount: z.number().int().nonnegative(),
 			changes: z.array(syncMessageSchema),
 			lastCursor: z.unknown().optional(),
+		}),
+		z.object({
+			type: z.literal("rangeReconcileResult"),
+			collectionId: collectionIdSchema,
+			requestId: z.string().min(1),
+			added: z.array(syncMessageSchema),
+			updated: z.array(syncMessageSchema),
+			stale: z.array(z.union([z.string(), z.number()])),
+			movedHints: z.array(
+				z.object({
+					id: z.union([z.string(), z.number()]),
+					hint: z.record(z.string(), z.unknown()),
+				}),
+			),
+			totalCount: z.number().int().nonnegative(),
 		}),
 	]);
 }

@@ -111,6 +111,7 @@ export class SyncServerBridge<TItem extends PartialSyncRowShape> {
 			case "queryRange":
 			case "queryByOffset":
 			case "rangeQuery":
+			case "rangeReconcile":
 				// Not supported by the full-sync bridge; partial sync uses PartialSyncServerBridge.
 				return;
 			default:
