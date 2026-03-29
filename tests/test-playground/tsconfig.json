@@ -4,6 +4,7 @@
 		"./**/*.tsx",
 		"./**/.server/**/*",
 		"./**/.client/**/*",
+		// Covers `+routes.ts` at `.react-router/types/` root and nested `+types/*` (tsc --listFilesOnly to verify).
 		"./.react-router/types/**/*"
 	],
 	"exclude": ["app/workers/**/*.worker.ts"],

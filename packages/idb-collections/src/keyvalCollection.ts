@@ -60,7 +60,12 @@ function defaultGetKey<TSchema extends StandardSchemaV1>(
 
 export function keyvalCollectionOptions<TSchema extends StandardSchemaV1>(
 	config: KeyValCollectionConfig<TSchema>,
-): CollectionConfig<InferSchemaOutput<TSchema>, string, TSchema> & {
+): CollectionConfig<
+	InferSchemaOutput<TSchema>,
+	string,
+	TSchema,
+	KeyValUtils<InferSchemaOutput<TSchema>>
+> & {
 	utils: KeyValUtils<InferSchemaOutput<TSchema>>;
 	schema: TSchema;
 } {

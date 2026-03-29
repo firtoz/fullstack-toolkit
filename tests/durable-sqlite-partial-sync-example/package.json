@@ -9,7 +9,7 @@
 		"dev": "react-router dev --port 5199 --host 127.0.0.1",
 		"typegen": "react-router typegen && bun run cf-typegen",
 		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)",
-		"typecheck": "react-router typegen && tsc --noEmit -p ./tsconfig.json",
+		"typecheck": "react-router typegen && tsgo --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write app src",
 		"lint:ci": "biome ci app src",
 		"test:e2e": "playwright test"

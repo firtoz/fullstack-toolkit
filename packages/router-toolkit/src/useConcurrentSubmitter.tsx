@@ -22,20 +22,17 @@ export type { ActionResult };
 
 type RouteParams<R extends keyof RegisterPages> = RegisterPages[R]["params"];
 
-// Mirror HrefArgs logic: empty params → omit args; optional params → args optional; required → args required
-type Equal<X, Y> =
-	(<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
-		? true
-		: false;
-
-type HasNoParams<R extends keyof RegisterPages> =
-	Equal<
-		RouteParams<R>,
-		// biome-ignore lint/complexity/noBannedTypes: Intentionally empty for route with no params
-		{}
-	> extends true
-		? true
-		: false;
+/**
+ * True when the route has no dynamic segments (`params: {}` from React Router typegen).
+ * Uses `keyof … extends never` so real empty params stay distinct from the `RegisterPages`
+ * fallback (`AnyPages` → `params: Record<string, …>` has `keyof` = `string`, not `never`).
+ * That avoids mis-resolving `submitJson(path, data)` as the route-args overload (strings only).
+ */
+type HasNoParams<R extends keyof RegisterPages> = [
+	keyof RegisterPages[R]["params"],
+] extends [never]
+	? true
+	: false;
 
 type HasOptionalParams<R extends keyof RegisterPages> =
 	HasNoParams<R> extends true

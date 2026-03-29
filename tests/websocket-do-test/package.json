@@ -7,7 +7,7 @@
 	"scripts": {
 		"test": "vitest run",
 		"test:watch": "vitest watch",
-		"typecheck": "tsc --noEmit -p ./tsconfig.json",
+		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
 		"typegen": "bun run cf-typegen",
 		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)",
 		"lint": "biome check --write src",
