@@ -1,5 +1,13 @@
 # drizzle-durable-sqlite-test
 
+## 1.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`0cd07e4`](https://github.com/firtoz/fullstack-toolkit/commit/0cd07e4e87ed6302b3de652c0a2a25e68cb41820)]:
+  - @firtoz/hono-fetcher@2.4.0
+  - @firtoz/drizzle-durable-sqlite@1.0.1
+
 ## 1.0.3
 
 ### Patch Changes

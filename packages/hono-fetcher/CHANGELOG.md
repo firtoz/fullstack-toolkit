@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.4.0
+
+### Minor Changes
+
+- [`0cd07e4`](https://github.com/firtoz/fullstack-toolkit/commit/0cd07e4e87ed6302b3de652c0a2a25e68cb41820) Thanks [@firtoz](https://github.com/firtoz)! - Add optional `query` record on fetcher requests (alongside `params` and `init`) to append URL search parameters. `null` and `undefined` values are omitted. Export `HonoFetcherQueryParams` and `HonoFetcherQueryParamValue`.
+
 ## 2.3.2
 
 ### Patch Changes
