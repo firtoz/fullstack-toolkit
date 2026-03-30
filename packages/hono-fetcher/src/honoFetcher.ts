@@ -66,6 +66,16 @@ function appendQueryString(
 	return `${url}${separator}${serialized}`;
 }
 
+/**
+ * `RequestInit` fields that honoFetcher sets must not be overwritten by spreading `...init` last.
+ */
+function restOfRequestInit(
+	init: RequestInit,
+): Omit<RequestInit, "headers" | "body" | "method"> {
+	const { headers: _h, body: _b, method: _m, ...rest } = init;
+	return rest;
+}
+
 type FetcherParams<SchemaPath extends string> =
 	HasPathParams<SchemaPath> extends true
 		? {
@@ -209,10 +219,10 @@ const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
 
 		try {
 			return await fetcher(finalUrl, {
+				...restOfRequestInit(init),
 				method: method.toUpperCase(),
 				headers: newHeaders,
 				...(body ? { body } : {}),
-				...init,
 			});
 		} catch (error) {
 			console.error(`Error ${method}ing`, error);
@@ -248,9 +258,9 @@ const createWebSocketFetcher = <T extends Hono>(
 
 		try {
 			const response = await fetcher(finalUrl, {
+				...restOfRequestInit(init),
 				method: "GET",
 				headers: newHeaders,
-				...init,
 			});
 
 			// Auto-accept the WebSocket if configured (default: true)

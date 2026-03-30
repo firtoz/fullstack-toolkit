@@ -149,6 +149,22 @@ describe("honoFetcher", () => {
 				expect(data).toEqual({ success: true, body: { item: "newItem" } });
 			});
 
+			it("should merge init.headers with JSON Content-Type on POST", async () => {
+				const response = await fetcher.post({
+					url: "/items-json",
+					body: { item: "mergedHeaders" },
+					init: {
+						headers: { "X-Custom": "v" },
+					},
+				});
+				expect(response.ok).toBe(true);
+				const data = await response.json();
+				expect(data).toEqual({
+					success: true,
+					body: { item: "mergedHeaders" },
+				});
+			});
+
 			it("should pass custom headers", async () => {
 				const customHeaderValue = "test-value";
 				const response = await fetcher.get({
