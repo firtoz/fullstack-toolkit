@@ -1,5 +1,12 @@
 # @firtoz/collection-sync
 
+## 2.0.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/websocket-do@8.0.1
+
 ## 2.0.0
 
 ### Patch Changes

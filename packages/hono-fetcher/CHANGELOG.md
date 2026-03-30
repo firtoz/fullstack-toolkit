@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.4.1
+
+### Patch Changes
+
+- [`05d3b24`](https://github.com/firtoz/fullstack-toolkit/commit/05d3b244f081c634e3128b558f0ad4cbb261fb56) Thanks [@firtoz](https://github.com/firtoz)! - Fix `RequestInit` merging: spreading `init` after computed `headers` no longer replaces merged headers (including `Content-Type` for JSON bodies) or overrides method/body. Custom `init.headers` are merged with library defaults.
+
 ## 2.4.0
 
 ### Minor Changes
