@@ -1,5 +1,13 @@
 # @firtoz/drizzle-durable-sqlite
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/websocket-do@8.0.1
+  - @firtoz/collection-sync@2.0.1
+
 ## 1.0.1
 
 ### Patch Changes
