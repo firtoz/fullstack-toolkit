@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.5.0
+
+### Minor Changes
+
+- [`fb45a10`](https://github.com/firtoz/fullstack-toolkit/commit/fb45a1056cdca508e3670b611bfcdf833efb5070) Thanks [@firtoz](https://github.com/firtoz)! - Durable Object fetchers (`honoDoFetcher`, `honoDoFetcherWithName`, `honoDoFetcherWithId`) now implement `Disposable`. Use `using api = honoDoFetcherWithName(...)` in Workers to auto-dispose RPC stubs and silence "stub not disposed" warnings.
+
 ## 2.4.1
 
 ### Patch Changes

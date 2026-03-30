@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/collection-sync",
-	"version": "2.0.1",
+	"version": "3.0.0",
 	"description": "WebSocket sync protocol and bridges for TanStack DB collections",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",

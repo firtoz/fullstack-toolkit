@@ -80,7 +80,7 @@
     },
     "packages/collection-sync": {
       "name": "@firtoz/collection-sync",
-      "version": "2.0.1",
+      "version": "3.0.0",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -122,7 +122,7 @@
     },
     "packages/drizzle-durable-sqlite": {
       "name": "@firtoz/drizzle-durable-sqlite",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -179,7 +179,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -221,7 +221,7 @@
     },
     "packages/hono-fetcher": {
       "name": "@firtoz/hono-fetcher",
-      "version": "2.4.1",
+      "version": "2.5.0",
       "devDependencies": {
         "@hono/node-server": "^1.19.11",
         "@hono/zod-validator": "catalog:",
@@ -279,7 +279,7 @@
     },
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
-      "version": "8.0.1",
+      "version": "9.0.0",
       "devDependencies": {
         "@types/react": "catalog:",
         "bun-types": "catalog:",
@@ -327,7 +327,7 @@
     },
     "tests/drizzle-durable-sqlite-test": {
       "name": "drizzle-durable-sqlite-test",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "dependencies": {
         "@firtoz/drizzle-durable-sqlite": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
@@ -482,7 +482,7 @@
     },
     "tests/websocket-do-test": {
       "name": "websocket-do-test",
-      "version": "1.2.9",
+      "version": "1.2.10",
       "dependencies": {
         "@firtoz/hono-fetcher": "^2.3.2",
         "@firtoz/websocket-do": "workspace:*",
