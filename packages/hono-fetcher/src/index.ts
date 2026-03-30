@@ -14,6 +14,8 @@ export {
 // Core fetcher functionality
 export {
 	type BaseTypedHonoFetcher,
+	type HonoFetcherQueryParamValue,
+	type HonoFetcherQueryParams,
 	type HonoSchemaKeys,
 	type HttpMethod,
 	honoFetcher,

@@ -33,14 +33,49 @@ type HasPathParams<T extends string> = T extends `${string}:${string}`
 	? true
 	: false;
 
+/**
+ * Values allowed in the optional `query` object on fetcher requests.
+ * `null` and `undefined` entries are omitted from the serialized query string.
+ */
+export type HonoFetcherQueryParamValue = string | number | boolean;
+
+export type HonoFetcherQueryParams = Record<
+	string,
+	HonoFetcherQueryParamValue | null | undefined
+>;
+
+function appendQueryString(
+	url: string,
+	query?: HonoFetcherQueryParams,
+): string {
+	if (!query) {
+		return url;
+	}
+	const searchParams = new URLSearchParams();
+	for (const [key, value] of Object.entries(query)) {
+		if (value === undefined || value === null) {
+			continue;
+		}
+		searchParams.append(key, String(value));
+	}
+	const serialized = searchParams.toString();
+	if (!serialized) {
+		return url;
+	}
+	const separator = url.includes("?") ? "&" : "?";
+	return `${url}${separator}${serialized}`;
+}
+
 type FetcherParams<SchemaPath extends string> =
 	HasPathParams<SchemaPath> extends true
 		? {
 				params: ParsePathParams<SchemaPath>;
+				query?: HonoFetcherQueryParams;
 				init?: RequestInit;
 			}
 		: {
 				params?: never;
+				query?: HonoFetcherQueryParams;
 				init?: RequestInit;
 			};
 
@@ -136,13 +171,15 @@ const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
 	return (async (request) => {
 		let finalUrl: string = request.url;
 
-		const { init = {}, params } = request;
+		const { init = {}, params, query } = request;
 
 		if (params && typeof params === "object") {
 			finalUrl = Object.entries(params).reduce((acc, [key, value]) => {
 				return acc.replace(`:${key}`, value as string);
 			}, finalUrl);
 		}
+
+		finalUrl = appendQueryString(finalUrl, query);
 
 		const requestAsOptionalFormBody = request as {
 			form?: unknown;
@@ -193,7 +230,7 @@ const createWebSocketFetcher = <T extends Hono>(
 	return (async (request) => {
 		let finalUrl: string = request.url;
 
-		const { init = {}, params, config } = request;
+		const { init = {}, params, query, config } = request;
 		const autoAccept = config?.autoAccept ?? true; // Default to true
 
 		if (params && typeof params === "object") {
@@ -201,6 +238,8 @@ const createWebSocketFetcher = <T extends Hono>(
 				return acc.replace(`:${key}`, value as string);
 			}, finalUrl);
 		}
+
+		finalUrl = appendQueryString(finalUrl, query);
 
 		const newHeaders = new Headers(
 			init.headers as unknown as ConstructorParameters<typeof Headers>[0],

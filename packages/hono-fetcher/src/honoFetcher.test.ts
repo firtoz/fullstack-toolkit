@@ -23,6 +23,21 @@ describe("honoFetcher", () => {
 		.get("/items", (c) => {
 			return c.json({ items: ["item1", "item2", "item3"] });
 		})
+		.get("/echo-query", (c) => {
+			return c.json({
+				sort: c.req.query("sort") ?? null,
+				limit: c.req.query("limit") ?? null,
+				active: c.req.query("active") ?? null,
+				extra: c.req.query("extra") ?? null,
+			});
+		})
+		.get("/users/:id/echo-query", (c) => {
+			const id = c.req.param("id");
+			return c.json({
+				id,
+				tab: c.req.query("tab") ?? null,
+			});
+		})
 		.post(
 			"/items",
 			zValidator("json", z.object({ item: z.string() })),
@@ -147,6 +162,60 @@ describe("honoFetcher", () => {
 				// We need to mock the headers check in the actual app for this test
 				// For now, we'll just check if the response is successful
 				expect(response.ok).toBe(true);
+			});
+
+			it("should append query params as a record", async () => {
+				const response = await fetcher.get({
+					url: "/echo-query",
+					query: { sort: "name", limit: 10, active: true },
+				});
+				const data = await response.json();
+				expect(data).toEqual({
+					sort: "name",
+					limit: "10",
+					active: "true",
+					extra: null,
+				});
+			});
+
+			it("should omit null and undefined query values", async () => {
+				const response = await fetcher.get({
+					url: "/echo-query",
+					query: {
+						sort: "x",
+						limit: undefined,
+						active: null,
+						extra: "present",
+					},
+				});
+				const data = await response.json();
+				expect(data).toEqual({
+					sort: "x",
+					limit: null,
+					active: null,
+					extra: "present",
+				});
+			});
+
+			it("should combine path params and query params", async () => {
+				const response = await fetcher.get({
+					url: "/users/:id/echo-query",
+					params: { id: "42" },
+					query: { tab: "settings" },
+				});
+				const data = await response.json();
+				expect(data).toEqual({ id: "42", tab: "settings" });
+			});
+
+			it("should append query params on POST requests", async () => {
+				const response = await fetcher.post({
+					url: "/items",
+					query: { source: "test" },
+					body: { item: "q" },
+				});
+				expect(response.ok).toBe(true);
+				const data = await response.json();
+				expect(data).toEqual({ success: true, item: "q" });
 			});
 		});
 	};
