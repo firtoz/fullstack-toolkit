@@ -131,17 +131,12 @@ export class ChatRoomDO extends DurableObject {
   }
 }
 
-// In your worker
+// In your worker — use `using` so the RPC stub is disposed when the block exits
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Option 1: From a stub (using new getByName API)
-    const stub = env.CHAT_ROOM.getByName('room-1');
-    const api = honoDoFetcher(stub);
-    
-    // Option 2: Directly with name (recommended)
-    const api2 = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
-    
-    // Use it!
+    // From namespace + name (recommended)
+    using api = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
+    // Or from an existing stub: using api = honoDoFetcher(env.CHAT_ROOM.getByName('room-1'));
     const response = await api.get({ url: '/messages' });
     return response;
   }
@@ -414,13 +409,16 @@ See the [ZodWebSocketClient documentation](#) for more details on type-safe WebS
 
 ## Durable Objects API
 
+Each of `honoDoFetcher`, `honoDoFetcherWithName`, and `honoDoFetcherWithId` returns a fetcher that is also a **`Disposable`**: calling `api[Symbol.dispose]()` releases the underlying Durable Object stub. In production Workers, prefer the **`using`** declaration so disposal runs when the block exits (success or throw). See [Durable Object stubs and disposal](#durable-object-stubs-and-disposal) below.
+
 ### `honoDoFetcher<T>(stub)`
 
 Creates a typed fetcher for a Durable Object stub with support for both HTTP and WebSocket connections.
 
+**Returns:** `TypedDoFetcher<T> & Disposable`
+
 ```typescript
-const stub = env.MY_DO.getByName('example');
-const api = honoDoFetcher(stub);
+using api = honoDoFetcher(env.MY_DO.getByName('example'));
 
 // HTTP requests
 await api.get({ url: '/status' });
@@ -431,10 +429,12 @@ const wsResp = await api.websocket({ url: '/ws' });
 
 ### `honoDoFetcherWithName<T>(namespace, name)`
 
-Convenience method to create a fetcher from a namespace and name.
+Convenience method to create a fetcher from a namespace and name. Uses a single stub internally and wires disposal to that stub.
+
+**Returns:** `TypedDoFetcher<DurableObjectStub<T>> & Disposable`
 
 ```typescript
-const api = honoDoFetcherWithName(env.MY_DO, 'example');
+using api = honoDoFetcherWithName(env.MY_DO, 'example');
 
 // HTTP
 await api.get({ url: '/status' });
@@ -447,10 +447,19 @@ await api.websocket({ url: '/chat' });
 
 Convenience method to create a fetcher from a namespace and hex ID string.
 
+**Returns:** `TypedDoFetcher<DurableObjectStub<T>> & Disposable`
+
 ```typescript
-const api = honoDoFetcherWithId(env.MY_DO, 'abc123...');
+using api = honoDoFetcherWithId(env.MY_DO, 'abc123...');
 await api.get({ url: '/status' });
 ```
+
+### Durable Object stubs and disposal
+
+- **Production Workers:** Durable Object stubs participate in RPC and should be released when you are done. The easiest pattern is **`using api = honoDoFetcherWithName(...)`** (or `honoDoFetcher` / `honoDoFetcherWithId`). You can also call **`api[Symbol.dispose]()`** manually (for example in a `finally` block) if you cannot use `using`.
+- **Vite SSR, some Miniflare setups, or test mocks** may expose stubs that only implement **`fetch`** and not **`Symbol.dispose`**. The library checks for a callable `Symbol.dispose` before invoking it; if it is missing, disposal is a no-op (no `TypeError`).
+- **Errors from `Symbol.dispose`:** If the runtime’s dispose implementation throws (for example during unwind after your code threw), the library catches the error and logs it with **`console.error`**. It does **not** rethrow, so your original error is not masked by a `SuppressedError`.
+- **TypeScript `using`:** Add **`"ESNext.Disposable"`** to the `compilerOptions.lib` array in your **`tsconfig.json`** (alongside your existing libs) so `using` and `Disposable` type-check. TypeScript 5.2+ is required for `using`.
 
 ## Type Exports
 
