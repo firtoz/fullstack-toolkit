@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.6.0
+
+### Minor Changes
+
+- [`9a38d77`](https://github.com/firtoz/fullstack-toolkit/commit/9a38d77c5502ea10d6104918afd3527ffbfbb82d) Thanks [@firtoz](https://github.com/firtoz)! - Document Durable Object RPC stub vs `Response` disposal (aligned with Cloudflare’s **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)**). **`TypedDoFetcher`** / full **`DurableObjectStub`**: HTTP/WebSocket results typed as **`RpcDisposableJsonResponse`** / **`Response & Disposable`** so **`using resp`** type-checks with **`"ESNext.Disposable"`** in `lib`. **`Pick<stub, "fetch">`** mocks: **`TypedHonoFetcher<Hono>`** with **no** `Disposable` on responses so typings are not faked when disposers are absent.
+
 ## 2.5.0
 
 ### Minor Changes
