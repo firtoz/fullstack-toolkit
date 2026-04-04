@@ -1,6 +1,10 @@
 import type { Hono, Schema } from "hono";
 import type { ExtractSchema } from "hono/types";
-import { honoFetcher, type TypedHonoFetcher } from "./honoFetcher";
+import {
+	honoFetcher,
+	type BaseDisposableTypedHonoFetcher,
+	type TypedHonoFetcher,
+} from "./honoFetcher";
 
 const DUMMY_URL = "http://dummy-url";
 
@@ -24,12 +28,29 @@ export type DOStubSchema<T extends DurableObjectStub> =
 			: never
 		: never;
 
-export type TypedDoFetcher<T extends DurableObjectStub> = TypedHonoFetcher<
-	// biome-ignore lint/suspicious/noExplicitAny: Generic parameter needs flexibility
-	Hono<any, DOStubSchema<T>>
->;
+/**
+ * Fetcher for a **real** `DurableObjectStub`: HTTP results are {@link RpcDisposableJsonResponse}
+ * and `websocket` returns `Response & Disposable`, matching Workers RPC when the runtime attaches
+ * disposers. Use with {@link honoDoFetcher} / {@link honoDoFetcherWithName} / {@link honoDoFetcherWithId}
+ * when `T` is a full stub—not with a minimal `Pick<stub, "fetch">` mock (that path uses plain
+ * {@link TypedHonoFetcher} responses instead).
+ *
+ * @see https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
+ */
+export type TypedDoFetcher<T extends DurableObjectStub> =
+	BaseDisposableTypedHonoFetcher<
+		// biome-ignore lint/suspicious/noExplicitAny: Generic parameter needs flexibility
+		Hono<any, DOStubSchema<T>>
+	>;
 
-/** Shape honoDoFetcher uses at runtime; full stubs or minimal mocks (e.g. tests) with only `fetch`. */
+/**
+ * Argument to {@link honoDoFetcher}: a **full** {@link DurableObjectStub} (production) or a minimal
+ * **`{ fetch }`** mock. Only the full stub is typed as {@link TypedDoFetcher} with disposable RPC
+ * responses; **`Pick<stub, "fetch">`** is typed as {@link TypedHonoFetcher} for `Hono` with ordinary
+ * `JsonResponse` / `Response` (no `Disposable` on results—matches mocks without `Symbol.dispose`).
+ *
+ * @see https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
+ */
 export type HonoDoFetcherStubInput =
 	| DurableObjectStub<DOWithHonoApp>
 	| Pick<DurableObjectStub<DOWithHonoApp>, "fetch">;
@@ -62,6 +83,22 @@ function withStubDispose<
 	});
 }
 
+/**
+ * Typed fetcher for a Durable Object stub.
+ *
+ * - **Full `DurableObjectStub`:** return type is {@link TypedDoFetcher} **`& Disposable`** — each
+ *   HTTP/WebSocket result is typed as disposable (`RpcDisposableJsonResponse` / `Response & Disposable`)
+ *   so **`using res = await …`** type-checks when `"ESNext.Disposable"` is in `lib`, matching Workers RPC
+ *   when the runtime attaches `[Symbol.dispose]` (see `@see` below).
+ * - **`Pick<stub, "fetch">` only (e.g. tests):** return type is **`TypedHonoFetcher<Hono> & Disposable`**
+ *   — same **`JsonResponse` / `Response`** shapes as {@link honoFetcher}; results are **not** typed as
+ *   `Disposable` so typings are not faked for mocks that lack RPC disposers.
+ *
+ * Disposing only the fetcher (`using api = …`) releases the **stub**; RPC **`Response`** disposal
+ * (when applicable) is separate — prefer **`using res`**, **`res[Symbol.dispose]()`**, or **`DisposableStack`**.
+ *
+ * @see https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
+ */
 export const honoDoFetcher = <const T extends HonoDoFetcherStubInput>(
 	durableObject: T,
 ): T extends DurableObjectStub<DOWithHonoApp>

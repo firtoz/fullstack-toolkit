@@ -131,14 +131,13 @@ export class ChatRoomDO extends DurableObject {
   }
 }
 
-// In your worker — use `using` so the RPC stub is disposed when the block exits
+// `using api` disposes the stub. Returning the DO `Response` directly is a common pass-through pattern;
+// if you consume the body in this worker instead, also dispose the RPC result (e.g. `using res`).
+// See https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // From namespace + name (recommended)
     using api = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
-    // Or from an existing stub: using api = honoDoFetcher(env.CHAT_ROOM.getByName('room-1'));
-    const response = await api.get({ url: '/messages' });
-    return response;
+    return api.get({ url: '/messages' });
   }
 };
 ```
@@ -409,22 +408,26 @@ See the [ZodWebSocketClient documentation](#) for more details on type-safe WebS
 
 ## Durable Objects API
 
-Each of `honoDoFetcher`, `honoDoFetcherWithName`, and `honoDoFetcherWithId` returns a fetcher that is also a **`Disposable`**: calling `api[Symbol.dispose]()` releases the underlying Durable Object stub. In production Workers, prefer the **`using`** declaration so disposal runs when the block exits (success or throw). See [Durable Object stubs and disposal](#durable-object-stubs-and-disposal) below.
+All of these return a fetcher that is also a **`Disposable`** for the **stub**: **`api[Symbol.dispose]()`** releases the Durable Object stub only.
+
+**RPC `Response` typing:** **`honoDoFetcherWithName`** / **`honoDoFetcherWithId`** (and **`honoDoFetcher`** when you pass a **full `DurableObjectStub`**) use **`TypedDoFetcher`**: HTTP results are **`RpcDisposableJsonResponse`** and **`websocket`** is **`Response & Disposable`**, so **`using res = await …`** type-checks when Workers RPC attaches disposers. If you pass only **`Pick<DurableObjectStub, "fetch">`** (minimal mock), the return type is **`TypedHonoFetcher<Hono>`** with **plain `JsonResponse` / `Response`**—**not** typed as **`Disposable`**, so we do not pretend mocks have RPC disposers. See [Durable Object stubs and disposal](#durable-object-stubs-and-disposal) and the [RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/) doc.
 
 ### `honoDoFetcher<T>(stub)`
 
 Creates a typed fetcher for a Durable Object stub with support for both HTTP and WebSocket connections.
 
-**Returns:** `TypedDoFetcher<T> & Disposable`
+**Returns:** **`TypedDoFetcher<T> & Disposable`** when **`T`** is a **full `DurableObjectStub<DOWithHonoApp>`**; **`TypedHonoFetcher<Hono> & Disposable`** when **`T`** is only **`Pick<DurableObjectStub<DOWithHonoApp>, "fetch">`** (e.g. unit tests).
 
 ```typescript
 using api = honoDoFetcher(env.MY_DO.getByName('example'));
 
-// HTTP requests
-await api.get({ url: '/status' });
+// HTTP — dispose each RPC Response (stub disposal alone is not enough)
+using res = await api.get({ url: '/status' });
+const data = await res.json();
 
-// WebSocket connections
-const wsResp = await api.websocket({ url: '/ws' });
+// WebSocket
+using wsRes = await api.websocket({ url: '/ws' });
+wsRes.webSocket?.accept();
 ```
 
 ### `honoDoFetcherWithName<T>(namespace, name)`
@@ -436,11 +439,11 @@ Convenience method to create a fetcher from a namespace and name. Uses a single 
 ```typescript
 using api = honoDoFetcherWithName(env.MY_DO, 'example');
 
-// HTTP
-await api.get({ url: '/status' });
+using res = await api.get({ url: '/status' });
+await res.json();
 
-// WebSocket
-await api.websocket({ url: '/chat' });
+using wsRes = await api.websocket({ url: '/chat' });
+wsRes.webSocket?.accept();
 ```
 
 ### `honoDoFetcherWithId<T>(namespace, id)`
@@ -451,15 +454,20 @@ Convenience method to create a fetcher from a namespace and hex ID string.
 
 ```typescript
 using api = honoDoFetcherWithId(env.MY_DO, 'abc123...');
-await api.get({ url: '/status' });
+using res = await api.get({ url: '/status' });
+await res.json();
 ```
 
 ### Durable Object stubs and disposal
 
-- **Production Workers:** Durable Object stubs participate in RPC and should be released when you are done. The easiest pattern is **`using api = honoDoFetcherWithName(...)`** (or `honoDoFetcher` / `honoDoFetcherWithId`). You can also call **`api[Symbol.dispose]()`** manually (for example in a `finally` block) if you cannot use `using`.
-- **Vite SSR, some Miniflare setups, or test mocks** may expose stubs that only implement **`fetch`** and not **`Symbol.dispose`**. The library checks for a callable `Symbol.dispose` before invoking it; if it is missing, disposal is a no-op (no `TypeError`).
+Cloudflare Workers RPC gives **separate disposers** for the **Durable Object stub** and for **non-primitive RPC results** such as the `Response` from `stub.fetch()`. Disposing only the stub can still produce *“An RPC stub was not disposed properly”* if the `Response` was not released. See the official **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)** documentation.
+
+- **Stub (`using api = honoDoFetcherWithName(...)`):** Releases the **stub** when the block ends. This does **not** release RPC **`Response`** objects from individual requests.
+- **Response (HTTP / WebSocket upgrade):** On a **real stub** (`TypedDoFetcher`), TypeScript types those results as **`Disposable`** so **`using res`** / **`using wsRes`** is valid. At runtime, **`[Symbol.dispose]`** is present when Workers RPC attaches it (often in production); **minimal `fetch`-only mocks** are typed as **non-**`Disposable` **`Response`**s because disposers are usually absent. Prefer **`using res`** when types allow it; otherwise call **`res[Symbol.dispose]()`** or use a **`DisposableStack`** as described in Cloudflare’s **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)** documentation. Reading the body does **not** implicitly dispose the RPC result in this library.
+- **Returning `Response` to the client:** **Do not** use **`using res`** on a response you **`return`** from your Worker—disposal can run on scope exit before the runtime finishes serving it. Return the value directly; see **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)** for pass-through patterns.
+- **Vite SSR, some Miniflare setups, or test mocks** may expose stubs or **`Response`** objects without **`Symbol.dispose`**; there is nothing to call in that case.
 - **Errors from `Symbol.dispose`:** If the runtime’s dispose implementation throws (for example during unwind after your code threw), the library catches the error and logs it with **`console.error`**. It does **not** rethrow, so your original error is not masked by a `SuppressedError`.
-- **TypeScript `using`:** Add **`"ESNext.Disposable"`** to the `compilerOptions.lib` array in your **`tsconfig.json`** (alongside your existing libs) so `using` and `Disposable` type-check. TypeScript 5.2+ is required for `using`.
+- **TypeScript `using`:** Add **`"ESNext.Disposable"`** to the `compilerOptions.lib` array in your **`tsconfig.json`** (alongside your existing libs) so `using` and `Disposable` type-check. TypeScript 5.2+ is required for `using`. That applies to **`TypedDoFetcher`** (full **`DurableObjectStub`** path): **`RpcDisposableJsonResponse`** / **`Response & Disposable`** on **`websocket`**. **`Pick<stub, "fetch">`** clients get ordinary **`TypedHonoFetcher`** return types without **`Disposable`** on responses. Cloudflare’s runtime rules for RPC disposal are documented under **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)**.
 
 ## Type Exports
 
@@ -485,6 +493,10 @@ import type { JsonResponse } from '@firtoz/hono-fetcher';
 const response: JsonResponse<{ id: string }> = await api.get({ url: '/user' });
 const data = await response.json(); // Type: { id: string }
 ```
+
+### `RpcDisposableJsonResponse<T>` / `BaseDisposableTypedHonoFetcher<T>` / `HonoDoFetcherStubInput`
+
+**`RpcDisposableJsonResponse<T>`** is **`JsonResponse<T> & Disposable`**. **`BaseDisposableTypedHonoFetcher<T>`** mirrors **`TypedHonoFetcher<T>`** but uses that for HTTP methods and **`Response & Disposable`** for **`websocket`**. **`TypedDoFetcher`** is **`BaseDisposableTypedHonoFetcher<Hono<…, DO schema>>`** — used only when **`honoDoFetcher`** is given a **full `DurableObjectStub`**, or when using **`honoDoFetcherWithName` / `honoDoFetcherWithId`**. **`HonoDoFetcherStubInput`** documents the **`DurableObjectStub | Pick<stub, "fetch">`** union for **`honoDoFetcher`**. Background: **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)** (official disposal / `using` / `DisposableStack` guidance).
 
 ### `WebSocketConfig`
 

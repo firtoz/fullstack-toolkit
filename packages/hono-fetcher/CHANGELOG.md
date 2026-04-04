@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- [`fb45a10`](https://github.com/firtoz/fullstack-toolkit/commit/fb45a1056cdca508e3670b611bfcdf833efb5070) Thanks [@firtoz](https://github.com/firtoz)! - Durable Object fetchers (`honoDoFetcher`, `honoDoFetcherWithName`, `honoDoFetcherWithId`) now implement `Disposable`. Use `using api = honoDoFetcherWithName(...)` in Workers to auto-dispose RPC stubs and silence "stub not disposed" warnings.
+- [`fb45a10`](https://github.com/firtoz/fullstack-toolkit/commit/fb45a1056cdca508e3670b611bfcdf833efb5070) Thanks [@firtoz](https://github.com/firtoz)! - Durable Object fetchers (`honoDoFetcher`, `honoDoFetcherWithName`, `honoDoFetcherWithId`) now implement `Disposable`. Use `using api = honoDoFetcherWithName(...)` in Workers to auto-dispose RPC stubs and silence "stub not disposed" warnings. See Cloudflare’s [Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/) for RPC `Disposable` / `using` / `DisposableStack` guidance.
 
 ## 2.4.1
 

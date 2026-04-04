@@ -1,8 +1,28 @@
 import { describe, expect, it, spyOn } from "bun:test";
+import { Hono } from "hono";
+import type { BaseDisposableTypedHonoFetcher } from "./honoFetcher";
 import { honoDoFetcher } from "./honoDoFetcher";
 import type { DOWithHonoApp } from "./honoDoFetcher";
 
+/** Minimal app shape so `TypedHonoFetcher` exposes `.get` in tests. */
+const testRouteApp = new Hono().get("/x", (c) => c.json({ ok: true }));
+type TestRouteApp = typeof testRouteApp;
+
 type TestFetchStub = Pick<DurableObjectStub<DOWithHonoApp>, "fetch">;
+
+function responseWithRpcDispose(onDispose: () => void): Response {
+	const res = new Response(JSON.stringify({ ok: true }), {
+		status: 200,
+		headers: { "Content-Type": "application/json" },
+	});
+	return Object.defineProperty(res, Symbol.dispose, {
+		value() {
+			onDispose();
+		},
+		configurable: true,
+		writable: true,
+	}) as Response;
+}
 
 describe("honoDoFetcher disposal", () => {
 	it("does not throw when stub has no Symbol.dispose (dev / mocks)", () => {
@@ -54,5 +74,26 @@ describe("honoDoFetcher disposal", () => {
 		}).not.toThrow();
 		expect(consoleError).toHaveBeenCalled();
 		consoleError.mockRestore();
+	});
+
+	it("does not dispose RPC Response until `using` unwinds (simulates full stub typing)", async () => {
+		let responseDisposeCalls = 0;
+		const stub: TestFetchStub = {
+			fetch: async () =>
+				responseWithRpcDispose(() => {
+					responseDisposeCalls += 1;
+				}),
+		};
+		await (async () => {
+			// `Pick<stub,"fetch">` is typed as plain `TypedHonoFetcher` (no `Disposable` on responses).
+			// Cast to the production stub shape to assert `using resp` + RPC dispose behavior.
+			using api = honoDoFetcher(
+				stub,
+			) as BaseDisposableTypedHonoFetcher<TestRouteApp> & Disposable;
+			using resp = await api.get({ url: "/x" });
+			await resp.json();
+			expect(responseDisposeCalls).toBe(0);
+		})();
+		expect(responseDisposeCalls).toBe(1);
 	});
 });

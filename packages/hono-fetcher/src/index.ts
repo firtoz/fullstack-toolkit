@@ -6,6 +6,7 @@ export {
 	type DOSchemaMap,
 	type DOStubSchema,
 	type DOWithHonoApp,
+	type HonoDoFetcherStubInput,
 	honoDoFetcher,
 	honoDoFetcherWithId,
 	honoDoFetcherWithName,
@@ -13,6 +14,7 @@ export {
 } from "./honoDoFetcher";
 // Core fetcher functionality
 export {
+	type BaseDisposableTypedHonoFetcher,
 	type BaseTypedHonoFetcher,
 	type HonoFetcherQueryParamValue,
 	type HonoFetcherQueryParams,
@@ -21,6 +23,8 @@ export {
 	honoFetcher,
 	type JsonResponse,
 	type ParsePathParams,
+	type RpcDisposableJsonResponse,
+	type TypedDisposableWebSocketFetcher,
 	type TypedHonoFetcher,
 	type TypedWebSocketFetcher,
 	type WebSocketConfig,

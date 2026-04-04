@@ -29,6 +29,17 @@ export type JsonResponse<T> = Omit<Response, "json"> & {
 	json: () => Promise<T>;
 };
 
+/**
+ * {@link JsonResponse} intersected with `Disposable` for Workers RPC: `Response`
+ * values from `DurableObjectStub#fetch()` may implement `[Symbol.dispose]` even
+ * though `Fetcher.fetch` is still typed as `Promise<Response>`. Use with
+ * {@link BaseDisposableTypedHonoFetcher} (and `TypedDoFetcher` from `./honoDoFetcher`) so
+ * `using resp = await api.get(...)` type-checks when `"ESNext.Disposable"` is in `lib`.
+ *
+ * @see https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
+ */
+export type RpcDisposableJsonResponse<T> = JsonResponse<T> & Disposable;
+
 type HasPathParams<T extends string> = T extends `${string}:${string}`
 	? true
 	: false;
@@ -111,6 +122,16 @@ type SchemaOutput<
 	? JsonResponse<HonoSchema<T>[M][SchemaPath][DollarM]["output"]>
 	: never;
 
+type DoSchemaOutput<
+	T extends Hono,
+	M extends HttpMethod,
+	SchemaPath extends string & keyof HonoSchema<T>[M],
+	DollarM extends `$${M}` & keyof HonoSchema<T>[M][SchemaPath] = `$${M}` &
+		keyof HonoSchema<T>[M][SchemaPath],
+> = "output" extends keyof HonoSchema<T>[M][SchemaPath][DollarM]
+	? RpcDisposableJsonResponse<HonoSchema<T>[M][SchemaPath][DollarM]["output"]>
+	: never;
+
 type BodyParams<
 	TApp extends Hono,
 	TMethod extends HttpMethod,
@@ -170,6 +191,38 @@ export type BaseTypedHonoFetcher<T extends Hono> = {
 	? // biome-ignore lint/complexity/noBannedTypes: We really do want an empty object if the get method is not available
 		{}
 	: { websocket: TypedWebSocketFetcher<T> });
+
+type TypedDisposableMethodFetcher<T extends Hono, M extends HttpMethod> = <
+	SchemaPath extends string & keyof HonoSchema<T>[M],
+>(
+	request: {
+		url: SchemaPath;
+	} & FetcherParams<SchemaPath> &
+		(M extends "get" | "delete" ? EmptyObject : BodyParams<T, M, SchemaPath>),
+) => Promise<DoSchemaOutput<T, M, SchemaPath>>;
+
+export type TypedDisposableWebSocketFetcher<T extends Hono> = <
+	SchemaPath extends string & keyof HonoSchema<T>["get"],
+>(
+	request: {
+		url: SchemaPath;
+		config?: WebSocketConfig;
+	} & FetcherParams<SchemaPath>,
+) => Promise<Response & Disposable>;
+
+/**
+ * Same shape as {@link BaseTypedHonoFetcher} but HTTP methods return
+ * {@link RpcDisposableJsonResponse} and `websocket` returns `Response & Disposable`
+ * so `using` on RPC results type-checks for Durable Object clients.
+ *
+ * @see https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
+ */
+export type BaseDisposableTypedHonoFetcher<T extends Hono> = {
+	[M in AvailableMethods<T>]: TypedDisposableMethodFetcher<T, M>;
+} & (keyof HonoSchema<T>["get"] extends never
+	? // biome-ignore lint/complexity/noBannedTypes: We really do want an empty object if the get method is not available
+		{}
+	: { websocket: TypedDisposableWebSocketFetcher<T> });
 
 const createMethodFetcher = <T extends Hono, M extends HttpMethod>(
 	fetcher: (
