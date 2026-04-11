@@ -38,6 +38,10 @@ export default [
 			"sqlite-pagination-test",
 			"routes/collections/sqlite-pagination-test.tsx",
 		),
+		route(
+			"tanstack-06-virtual-props-demo",
+			"routes/collections/tanstack-06-virtual-props-demo.tsx",
+		),
 	]),
 	...prefix("router-toolkit", [
 		route("loader-test", "routes/router-toolkit/loader-test.tsx"),

@@ -14,13 +14,12 @@ import type {
 	SyncMode,
 	LoadSubsetOptions,
 } from "@tanstack/db";
-import { DeduplicatedLoadSubset } from "@tanstack/db";
+import { BasicIndex, DeduplicatedLoadSubset } from "@tanstack/db";
 
-// WORKAROUND: DeduplicatedLoadSubset has a bug where toggling queries (e.g., isNull/isNotNull)
-// creates invalid expressions like not(or(isNull(...), not(isNull(...))))
-// See: https://github.com/TanStack/db/issues/828
-// TODO: Re-enable once the bug is fixed
-export const USE_DEDUPE = false as boolean;
+// DeduplicatedLoadSubset dedupes overlapping loadSubset calls. Previously disabled for TanStack/db#828
+// (invalid OR expressions when toggling isNull/isNotNull). Re-enabled with @tanstack/db 0.6.4; if
+// regressions appear, set back to false and add a regression test.
+export const USE_DEDUPE = true as boolean;
 
 /**
  * Base configuration for sync lifecycle management (generic, no Drizzle dependency).
@@ -646,6 +645,10 @@ export function createGenericCollectionConfig<
 		onUpdate: config.onUpdate ?? config.syncResult.onUpdate,
 		onDelete: config.onDelete ?? config.syncResult.onDelete,
 		syncMode: config.syncMode,
+		// TanStack DB 0.6+: indexing is opt-in; eager BasicIndex restores pre-0.6 behavior for
+		// orderBy/limit live queries (playground pagination, usePredicateFilteredRows, etc.).
+		defaultIndexType: BasicIndex,
+		autoIndex: "eager",
 		utils: config.syncResult.utils as CollectionUtils<
 			InferSchemaOutput<TSchema>
 		>,
