@@ -29,6 +29,7 @@
 	},
 	"files": [
 		"src/**/*.ts",
+		"src/**/*.tsx",
 		"!src/**/*.test.ts",
 		"examples/**/*.ts",
 		"skills",

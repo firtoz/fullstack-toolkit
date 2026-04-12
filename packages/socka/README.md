@@ -64,6 +64,34 @@ function App() {
 useSockaRpc(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 ```
 
+### Single connection (provider)
+
+Mount **`SockaRpcProvider`** once (for example around a route or layout) so every descendant shares one WebSocket. Call **`useSockaRpcContext(myContract)`** in child components instead of **`useSockaRpc`**—the context hook does not open new connections; it reads the same session and builds the same typed `rpc` object.
+
+```tsx
+import { SockaRpcProvider, useSockaRpcContext } from "socka/react";
+import { myContract } from "./contract";
+
+function Layout({ roomId }: { roomId: string }) {
+  return (
+    <SockaRpcProvider
+      contract={myContract}
+      deps={[roomId]}
+      url={`wss://example.com/ws/${roomId}`}
+    >
+      <Child />
+    </SockaRpcProvider>
+  );
+}
+
+function Child() {
+  const { ready, rpc } = useSockaRpcContext(myContract);
+  // ...
+}
+```
+
+Pass the **same** `contract` reference to the provider and to `useSockaRpcContext` (reference equality is checked at runtime).
+
 ## Server (Cloudflare Durable Object)
 
 ```ts
