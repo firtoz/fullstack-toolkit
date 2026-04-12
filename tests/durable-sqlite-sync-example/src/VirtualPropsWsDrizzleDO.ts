@@ -1,21 +1,16 @@
-import { ZodWebSocketDO } from "@firtoz/websocket-do";
+import { SockaWebSocketDO } from "socka/do";
 import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import migrations from "../drizzle/migrations.js";
 import * as schema from "./schema";
-import type { VpMessage, VpWsClientMsg, VpWsServerMsg } from "./vp-ws-protocol";
-import {
-	VirtualPropsWsZodSession,
-	vpWsZodSessionOptions,
-} from "./vp-ws-zod-session";
+import type { VpMessage } from "./vp-ws-protocol";
+import { VirtualPropsWsSockaSession } from "./vp-ws-zod-session";
 
 const { virtualPropsMessagesTable } = schema;
 
-export class VirtualPropsWsDrizzleDO extends ZodWebSocketDO<
-	VirtualPropsWsZodSession,
-	VpWsClientMsg,
-	VpWsServerMsg,
+export class VirtualPropsWsDrizzleDO extends SockaWebSocketDO<
+	VirtualPropsWsSockaSession,
 	Env
 > {
 	app = this.getBaseApp();
@@ -24,9 +19,8 @@ export class VirtualPropsWsDrizzleDO extends ZodWebSocketDO<
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
-			zodSessionOptions: vpWsZodSessionOptions(),
-			createZodSession: (_ctx, websocket, options) =>
-				new VirtualPropsWsZodSession(websocket, this.sessions, options, {
+			createSockaSession: (_ctx, websocket) =>
+				new VirtualPropsWsSockaSession(websocket, this.sessions, {
 					listMessages: async () => {
 						const rows = await this.db
 							.select()

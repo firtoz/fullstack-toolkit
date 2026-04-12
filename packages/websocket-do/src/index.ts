@@ -2,6 +2,8 @@ export {
 	BaseSession,
 	type BaseSessionHandlers,
 	type SessionClientMessage,
+	type SessionEnv,
+	type SessionServerMessage,
 } from "./BaseSession";
 export {
 	BaseWebSocketDO,

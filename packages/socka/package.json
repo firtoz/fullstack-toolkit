@@ -1,0 +1,99 @@
+{
+	"name": "socka",
+	"version": "0.1.0",
+	"description": "Standard Schema–first WebSocket RPC for browsers and Cloudflare Durable Objects",
+	"main": "./src/core/index.ts",
+	"module": "./src/core/index.ts",
+	"types": "./src/core/index.ts",
+	"exports": {
+		"./core": {
+			"types": "./src/core/index.ts",
+			"import": "./src/core/index.ts",
+			"require": "./src/core/index.ts"
+		},
+		"./client": {
+			"types": "./src/client/index.ts",
+			"import": "./src/client/index.ts",
+			"require": "./src/client/index.ts"
+		},
+		"./react": {
+			"types": "./src/react/index.ts",
+			"import": "./src/react/index.ts",
+			"require": "./src/react/index.ts"
+		},
+		"./do": {
+			"types": "./src/do/index.ts",
+			"import": "./src/do/index.ts",
+			"require": "./src/do/index.ts"
+		}
+	},
+	"files": [
+		"src/**/*.ts",
+		"!src/**/*.test.ts",
+		"examples/**/*.ts",
+		"skills",
+		"README.md"
+	],
+	"scripts": {
+		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
+		"example:minimal": "bun ./examples/minimal-socka.ts",
+		"test": "bun test",
+		"lint": "biome check --write src",
+		"lint:ci": "biome ci src && bun run intent:validate",
+		"format": "biome format src --write",
+		"intent:validate": "intent validate"
+	},
+	"keywords": [
+		"websocket",
+		"rpc",
+		"standard-schema",
+		"durable-objects",
+		"cloudflare",
+		"tanstack-intent"
+	],
+	"author": "Firtina Ozbalikchi <firtoz@github.com>",
+	"license": "MIT",
+	"homepage": "https://github.com/firtoz/fullstack-toolkit#readme",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/firtoz/fullstack-toolkit.git",
+		"directory": "packages/socka"
+	},
+	"bugs": {
+		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@standard-schema/spec": "catalog:"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"@firtoz/websocket-do": "workspace:*",
+		"hono": "catalog:",
+		"react": ">=18.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@firtoz/websocket-do": {
+			"optional": true
+		},
+		"hono": {
+			"optional": true
+		},
+		"react": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@tanstack/intent": "catalog:",
+		"@types/react": "catalog:",
+		"bun-types": "catalog:",
+		"typescript": "catalog:",
+		"valibot": "catalog:",
+		"zod": "catalog:"
+	}
+}

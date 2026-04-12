@@ -1,79 +1,61 @@
-import { ZodSession, type ZodSessionOptions } from "@firtoz/websocket-do";
+import { SockaDoSession, type SockaDoSessionConfig } from "socka/do";
+import { SockaError } from "socka/core";
 import {
-	handleVpWsClientMsg,
-	type VpWsClientMsg,
+	vpContract,
 	type VpWsHandlerDeps,
-	type VpWsServerMsg,
-	vpWsClientMessageSchema,
-	vpWsServerMessageSchema,
 } from "./vp-ws-protocol";
+import { VP_SLOW_INSERT_DELAY_MS } from "./vp-demo-constants";
 
 export type VpWsSessionData = Record<string, never>;
 
-export function vpWsZodSessionOptions(): ZodSessionOptions<
-	VpWsClientMsg,
-	VpWsServerMsg
-> {
-	return {
-		clientSchema: vpWsClientMessageSchema,
-		serverSchema: vpWsServerMessageSchema,
-		enableBufferMessages: false,
-	};
-}
-
-export class VirtualPropsWsZodSession extends ZodSession<
+type VpSessionConfig = SockaDoSessionConfig<
+	typeof vpContract,
 	VpWsSessionData,
-	VpWsServerMsg,
-	VpWsClientMsg,
+	Env
+>;
+
+export class VirtualPropsWsSockaSession extends SockaDoSession<
+	typeof vpContract,
+	VpWsSessionData,
 	Env
 > {
 	constructor(
 		websocket: WebSocket,
-		sessions: Map<WebSocket, VirtualPropsWsZodSession>,
-		options: ZodSessionOptions<VpWsClientMsg, VpWsServerMsg>,
-		private readonly deps: VpWsHandlerDeps,
+		sessions: Map<WebSocket, VirtualPropsWsSockaSession>,
+		deps: VpWsHandlerDeps,
 	) {
-		super(websocket, sessions, options, {
+		const config: VpSessionConfig = {
+			contract: vpContract,
 			createData: () => ({}),
-			handleValidatedMessage: async (message: VpWsClientMsg) => {
-				try {
-					const reply = await handleVpWsClientMsg(message, this.deps);
-					this.send(reply);
-				} catch (err) {
-					const text = err instanceof Error ? err.message : "Insert failed";
-					this.send({
-						type: "error",
-						id: message.id,
-						error: text,
-					});
-				}
-			},
-			handleValidationError: async (_error, originalMessage) => {
-				let id = "";
-				if (typeof originalMessage === "string") {
-					try {
-						const parsed: unknown = JSON.parse(originalMessage);
-						if (
-							parsed &&
-							typeof parsed === "object" &&
-							"id" in parsed &&
-							typeof (parsed as { id: unknown }).id === "string"
-						) {
-							id = (parsed as { id: string }).id;
-						}
-					} catch {
-						// ignore JSON errors
+			handlers: {
+				list: async () => {
+					return deps.listMessages();
+				},
+				insert: async (input) => {
+					const delayMs = input.slow === true ? VP_SLOW_INSERT_DELAY_MS : 0;
+					if (delayMs > 0) {
+						await new Promise((r) => setTimeout(r, delayMs));
 					}
-				}
-				this.send({
-					type: "error",
-					id,
-					error: "Invalid message",
-				});
+					try {
+						await deps.insertMessage(input.message);
+					} catch (err) {
+						throw err instanceof SockaError
+							? err
+							: new SockaError(
+									err instanceof Error ? err.message : String(err),
+								);
+					}
+				},
 			},
-			handleClose: async () => {
-				// no per-connection state to tear down
+			handleClose: async () => {},
+			onHandlerError: (err, rpcName) => {
+				console.error(`Handler error in ${rpcName}:`, err);
 			},
-		});
+		};
+		super(
+			websocket,
+			sessions as Map<WebSocket, SockaDoSession<typeof vpContract, VpWsSessionData, Env>>,
+			config,
+		);
 	}
 }

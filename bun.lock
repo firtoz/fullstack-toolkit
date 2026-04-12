@@ -277,6 +277,36 @@
         "zod": "catalog:",
       },
     },
+    "packages/socka": {
+      "name": "socka",
+      "version": "0.1.0",
+      "dependencies": {
+        "@standard-schema/spec": "catalog:",
+      },
+      "devDependencies": {
+        "@tanstack/intent": "catalog:",
+        "@types/react": "catalog:",
+        "bun-types": "catalog:",
+        "typescript": "catalog:",
+        "valibot": "catalog:",
+        "zod": "catalog:",
+      },
+      "peerDependencies": {
+        "@cloudflare/workers-types": "catalog:",
+        "@firtoz/websocket-do": "workspace:*",
+        "hono": "catalog:",
+        "react": ">=18.0.0",
+        "valibot": "catalog:",
+        "zod": "catalog:",
+      },
+      "optionalPeers": [
+        "@firtoz/websocket-do",
+        "hono",
+        "react",
+        "valibot",
+        "zod",
+      ],
+    },
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
       "version": "10.0.0",
@@ -294,7 +324,11 @@
         "@cloudflare/workers-types": "catalog:",
         "@firtoz/hono-fetcher": "workspace:*",
         "hono": "catalog:",
+        "react": ">=18.0.0",
       },
+      "optionalPeers": [
+        "react",
+      ],
     },
     "packages/worker-helper": {
       "name": "@firtoz/worker-helper",
@@ -415,6 +449,7 @@
         "react": "catalog:",
         "react-dom": "catalog:",
         "react-router": "catalog:",
+        "socka": "workspace:*",
         "superjson": "^2.2.6",
         "zod": "catalog:",
       },
@@ -423,6 +458,7 @@
         "@cloudflare/workers-types": "catalog:",
         "@playwright/test": "catalog:",
         "@react-router/dev": "catalog:",
+        "@standard-schema/spec": "^1.1.0",
         "@types/node": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "catalog:",
@@ -518,6 +554,7 @@
     "@standard-schema/spec": "^1.1.0",
     "@tanstack/cloudflare-durable-objects-db-sqlite-persistence": "^0.1.8",
     "@tanstack/db": "^0.6.4",
+    "@tanstack/intent": "^0.0.29",
     "@tanstack/query-core": "5.90.2",
     "@tanstack/query-db-collection": "1.0.35",
     "@tanstack/react-db": "0.1.82",
@@ -1072,6 +1109,8 @@
     "@tanstack/db-ivm": ["@tanstack/db-ivm@0.1.18", "", { "dependencies": { "fractional-indexing": "^3.2.0", "sorted-btree": "^1.8.1" }, "peerDependencies": { "typescript": ">=4.7" } }, "sha512-+pZJiRKdoKRM5Epq9T7otD9ZJl82pRFauo7LKuJGrarjVKQ7r+QQlPe3kGdN9LEKSnuNGIWjX9OOY4M8kH4eLw=="],
 
     "@tanstack/db-sqlite-persistence-core": ["@tanstack/db-sqlite-persistence-core@0.1.8", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@tanstack/db": "0.6.4" }, "peerDependencies": { "typescript": ">=4.7" } }, "sha512-HeDf5veix93e98Z6i9t8M8DHiyOLcyZBHX2CsLEUc9aEOgPrKRLx/FT3Pc1JY1Kt4KZhinTrhkiSJeYLg8YZuA=="],
+
+    "@tanstack/intent": ["@tanstack/intent@0.0.29", "", { "dependencies": { "cac": "^6.7.14", "yaml": "^2.7.0" }, "bin": { "intent": "dist/cli.mjs", "intent-library": "dist/intent-library.mjs" } }, "sha512-tJcWapEkXGRLHE7mQYvQS0xIWrzKm2n7fQ/lOy4LCdR1hX0Yxb9QnwRwd0oqmmr54ObP9/5sfiD8vELxL/r30g=="],
 
     "@tanstack/pacer-lite": ["@tanstack/pacer-lite@0.2.1", "", {}, "sha512-3PouiFjR4B6x1c969/Pl4ZIJleof1M0n6fNX8NRiC9Sqv1g06CVDlEaXUR4212ycGFyfq4q+t8Gi37Xy+z34iQ=="],
 
@@ -1771,6 +1810,8 @@
 
     "slash": ["slash@3.0.0", "", {}, "sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q=="],
 
+    "socka": ["socka@workspace:packages/socka"],
+
     "sorted-btree": ["sorted-btree@1.8.1", "", {}, "sha512-395+XIP+wqNn3USkFSrNz7G3Ss/MXlZEqesxvzCRFwL14h6e8LukDHdLBePn5pwbm5OQ9vGu8mDyz2lLDIqamQ=="],
 
     "source-map": ["source-map@0.6.1", "", {}, "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="],
@@ -1898,6 +1939,8 @@
     "y18n": ["y18n@5.0.8", "", {}, "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="],
 
     "yallist": ["yallist@3.1.1", "", {}, "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="],
+
+    "yaml": ["yaml@2.8.3", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg=="],
 
     "yargs": ["yargs@17.7.2", "", { "dependencies": { "cliui": "^8.0.1", "escalade": "^3.1.1", "get-caller-file": "^2.0.5", "require-directory": "^2.1.1", "string-width": "^4.2.3", "y18n": "^5.0.5", "yargs-parser": "^21.1.1" } }, "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w=="],
 

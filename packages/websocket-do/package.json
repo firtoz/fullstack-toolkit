@@ -15,6 +15,16 @@
 			"types": "./src/ZodWebSocketClient.ts",
 			"import": "./src/ZodWebSocketClient.ts",
 			"require": "./src/ZodWebSocketClient.ts"
+		},
+		"./rpc": {
+			"types": "./src/zod-rpc.ts",
+			"import": "./src/zod-rpc.ts",
+			"require": "./src/zod-rpc.ts"
+		},
+		"./rpc-react": {
+			"types": "./src/zod-rpc-react.ts",
+			"import": "./src/zod-rpc-react.ts",
+			"require": "./src/zod-rpc-react.ts"
 		}
 	},
 	"files": [
@@ -52,7 +62,13 @@
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:",
 		"@firtoz/hono-fetcher": "workspace:*",
-		"hono": "catalog:"
+		"hono": "catalog:",
+		"react": ">=18.0.0"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
 	},
 	"optionalDependencies": {
 		"msgpackr": "catalog:",

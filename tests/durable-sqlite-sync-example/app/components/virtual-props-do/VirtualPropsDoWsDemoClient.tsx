@@ -13,18 +13,11 @@ import {
 	queryOnce,
 	toArray,
 } from "@tanstack/db";
-import { exhaustiveGuard } from "@firtoz/maybe-error";
-import { ZodWebSocketClient } from "@firtoz/websocket-do/zod-client";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import {
-	type VpMessage,
-	type VpWsClientMsg,
-	type VpWsServerMsg,
-	vpWsClientMessageSchema,
-	vpWsServerMessageSchema,
-} from "../../../src/vp-ws-protocol";
+import type { VpMessage } from "../../../src/vp-ws-protocol";
+import { useVpWsSockaRpc } from "../../../src/vp-ws-rpc-client";
 import {
 	sortVpMessageRowsForDisplay,
 	sortVpMessagesForDisplay,
@@ -51,20 +44,6 @@ function buildWsMessagesUrl(
 	return `${proto}//${window.location.host}${path}`;
 }
 
-type PendingList = {
-	kind: "list";
-	resolve: (rows: Message[]) => void;
-	reject: (e: Error) => void;
-};
-
-type PendingInsert = {
-	kind: "insert";
-	resolve: () => void;
-	reject: (e: Error) => void;
-};
-
-type Pending = PendingList | PendingInsert;
-
 export function VirtualPropsDoWsDemoClient() {
 	const [searchParams] = useSearchParams();
 	const roomId = searchParams.get("room") ?? "main";
@@ -77,111 +56,12 @@ export function VirtualPropsDoWsDemoClient() {
 	const serverMessages = useRef<Message[]>([]);
 
 	const slowNextInsertRef = useRef(false);
-	const zodClientRef = useRef<ZodWebSocketClient<
-		VpWsClientMsg,
-		VpWsServerMsg
-	> | null>(null);
-	const pendingRef = useRef(new Map<string, Pending>());
-	const rpcSeq = useRef(0);
-	const [wsReady, setWsReady] = useState(false);
 
-	useEffect(() => {
-		let cancelled = false;
-		setWsReady(false);
-		const wsUrl = buildWsMessagesUrl(roomId, backend);
-		const client = new ZodWebSocketClient<VpWsClientMsg, VpWsServerMsg>({
-			url: wsUrl,
-			clientSchema: vpWsClientMessageSchema,
-			serverSchema: vpWsServerMessageSchema,
-			enableBufferMessages: false,
-			onMessage: (msg) => {
-				switch (msg.type) {
-					case "error": {
-						const p = pendingRef.current.get(msg.id);
-						if (p) {
-							pendingRef.current.delete(msg.id);
-							p.reject(new Error(msg.error));
-						}
-						break;
-					}
-					case "listResult": {
-						const p = pendingRef.current.get(msg.id);
-						if (p?.kind === "list") {
-							pendingRef.current.delete(msg.id);
-							p.resolve([...msg.messages]);
-						}
-						break;
-					}
-					case "insertOk": {
-						const p = pendingRef.current.get(msg.id);
-						if (p?.kind === "insert") {
-							pendingRef.current.delete(msg.id);
-							p.resolve();
-						}
-						break;
-					}
-					default:
-						exhaustiveGuard(msg);
-				}
-			},
-			onOpen: () => {
-				if (!cancelled) {
-					setWsReady(true);
-				}
-			},
-			onClose: () => {
-				if (!cancelled) {
-					setWsReady(false);
-				}
-			},
-		});
-		zodClientRef.current = client;
-		if (client.socket.readyState === WebSocket.OPEN) {
-			setWsReady(true);
-		}
-
-		return () => {
-			cancelled = true;
-			zodClientRef.current = null;
-			for (const [, p] of pendingRef.current) {
-				p.reject(new Error("WebSocket closed"));
-			}
-			pendingRef.current.clear();
-			client.close();
-		};
-	}, [roomId, backend]);
-
-	const rpcList = useCallback((): Promise<Message[]> => {
-		return new Promise((resolve, reject) => {
-			const c = zodClientRef.current;
-			if (!c || c.socket.readyState !== WebSocket.OPEN) {
-				reject(new Error("WebSocket not connected"));
-				return;
-			}
-			const id = `l-${++rpcSeq.current}`;
-			pendingRef.current.set(id, { kind: "list", resolve, reject });
-			c.send({ type: "list", id });
-		});
-	}, []);
-
-	const rpcInsert = useCallback(
-		(message: Message, slow: boolean): Promise<void> => {
-			return new Promise((resolve, reject) => {
-				const c = zodClientRef.current;
-				if (!c || c.socket.readyState !== WebSocket.OPEN) {
-					reject(new Error("WebSocket not connected"));
-					return;
-				}
-				const id = `i-${++rpcSeq.current}`;
-				pendingRef.current.set(id, { kind: "insert", resolve, reject });
-				c.send(
-					slow
-						? { type: "insert", id, message, slow: true }
-						: { type: "insert", id, message },
-				);
-			});
+	const { ready: wsReady, rpc } = useVpWsSockaRpc(
+		{
+			url: buildWsMessagesUrl(roomId, backend),
 		},
-		[],
+		[roomId, backend],
 	);
 
 	const messagesQueryKey = useMemo(
@@ -208,7 +88,7 @@ export function VirtualPropsDoWsDemoClient() {
 						queryKey: [...messagesQueryKey],
 						enabled: wsReady,
 						queryFn: async () => {
-							const list = await rpcList();
+							const list = await rpc.list();
 							serverMessages.current = list;
 							return sortVpMessagesForDisplay([...list]);
 						},
@@ -220,9 +100,9 @@ export function VirtualPropsDoWsDemoClient() {
 							const inserted: Message[] = [];
 							for (const mut of transaction.mutations) {
 								if (mut.type === "insert") {
-									const slow = slowNextInsertRef.current;
-									slowNextInsertRef.current = false;
-									await rpcInsert(mut.modified, slow);
+								const slow = slowNextInsertRef.current;
+								slowNextInsertRef.current = false;
+								await rpc.insert({ message: mut.modified, slow });
 									inserted.push(mut.modified);
 								}
 							}
@@ -249,8 +129,7 @@ export function VirtualPropsDoWsDemoClient() {
 			backend,
 			wsReady,
 			messagesQueryKey,
-			rpcList,
-			rpcInsert,
+			rpc,
 		]);
 
 	const [queryOnceLabel, setQueryOnceLabel] = useState<string>("");
