@@ -397,12 +397,17 @@
         "@firtoz/drizzle-durable-sqlite": "workspace:*",
         "@firtoz/drizzle-sqlite-wasm": "workspace:*",
         "@firtoz/drizzle-utils": "workspace:*",
+        "@firtoz/hono-fetcher": "workspace:*",
         "@firtoz/idb-collections": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
         "@firtoz/websocket-do": "workspace:*",
+        "@hono/zod-validator": "catalog:",
         "@react-router/node": "catalog:",
         "@react-router/serve": "catalog:",
+        "@tanstack/cloudflare-durable-objects-db-sqlite-persistence": "catalog:",
         "@tanstack/db": "catalog:",
+        "@tanstack/query-core": "catalog:",
+        "@tanstack/query-db-collection": "catalog:",
         "@tanstack/react-db": "catalog:",
         "drizzle-orm": "catalog:",
         "hono": "catalog:",
@@ -511,6 +516,7 @@
     "@react-router/serve": "^7.13.2",
     "@sqlite.org/sqlite-wasm": "^3.51.2-build8",
     "@standard-schema/spec": "^1.1.0",
+    "@tanstack/cloudflare-durable-objects-db-sqlite-persistence": "^0.1.8",
     "@tanstack/db": "^0.6.4",
     "@tanstack/query-core": "5.90.2",
     "@tanstack/query-db-collection": "1.0.35",
@@ -1059,9 +1065,13 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
+    "@tanstack/cloudflare-durable-objects-db-sqlite-persistence": ["@tanstack/cloudflare-durable-objects-db-sqlite-persistence@0.1.8", "", { "dependencies": { "@tanstack/db-sqlite-persistence-core": "0.1.8" }, "peerDependencies": { "typescript": ">=4.7" } }, "sha512-glmbY11LpGKnyFLiOijiNffZ8jb3bTa2Qa8HQYvkhuLFP0mph8JgzJOlaSBwuqjahrVEQWlPdo9Yi+WjOdnRQg=="],
+
     "@tanstack/db": ["@tanstack/db@0.6.4", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@tanstack/db-ivm": "0.1.18", "@tanstack/pacer-lite": "^0.2.1" }, "peerDependencies": { "typescript": ">=4.7" } }, "sha512-svDkMfYnVM4PrczZ/X0kJ+9e/1KIFyB8sS+K22tgTuPTDG7bAV7ynpBP/acG8Y0xuhQsT/HXziOK4jsy6C7dig=="],
 
     "@tanstack/db-ivm": ["@tanstack/db-ivm@0.1.18", "", { "dependencies": { "fractional-indexing": "^3.2.0", "sorted-btree": "^1.8.1" }, "peerDependencies": { "typescript": ">=4.7" } }, "sha512-+pZJiRKdoKRM5Epq9T7otD9ZJl82pRFauo7LKuJGrarjVKQ7r+QQlPe3kGdN9LEKSnuNGIWjX9OOY4M8kH4eLw=="],
+
+    "@tanstack/db-sqlite-persistence-core": ["@tanstack/db-sqlite-persistence-core@0.1.8", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@tanstack/db": "0.6.4" }, "peerDependencies": { "typescript": ">=4.7" } }, "sha512-HeDf5veix93e98Z6i9t8M8DHiyOLcyZBHX2CsLEUc9aEOgPrKRLx/FT3Pc1JY1Kt4KZhinTrhkiSJeYLg8YZuA=="],
 
     "@tanstack/pacer-lite": ["@tanstack/pacer-lite@0.2.1", "", {}, "sha512-3PouiFjR4B6x1c969/Pl4ZIJleof1M0n6fNX8NRiC9Sqv1g06CVDlEaXUR4212ycGFyfq4q+t8Gi37Xy+z34iQ=="],
 

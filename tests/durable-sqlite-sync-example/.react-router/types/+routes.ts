@@ -14,20 +14,44 @@ type Pages = {
   "/": {
     params: {};
   };
+  "/sync-todos": {
+    params: {};
+  };
+  "/virtual-props-do": {
+    params: {};
+  };
+  "/virtual-props-do-ws": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
+    page: "/" | "/sync-todos" | "/virtual-props-do" | "/virtual-props-do-ws";
+  };
+  "routes/index.tsx": {
+    id: "routes/index";
     page: "/";
   };
   "routes/home.tsx": {
     id: "routes/home";
-    page: "/";
+    page: "/sync-todos";
+  };
+  "routes/virtual-props-do.tsx": {
+    id: "routes/virtual-props-do";
+    page: "/virtual-props-do";
+  };
+  "routes/virtual-props-do-ws.tsx": {
+    id: "routes/virtual-props-do-ws";
+    page: "/virtual-props-do-ws";
   };
 };
 
 type RouteModules = {
   "root": typeof import("./app/root.tsx");
+  "routes/index": typeof import("./app/routes/index.tsx");
   "routes/home": typeof import("./app/routes/home.tsx");
+  "routes/virtual-props-do": typeof import("./app/routes/virtual-props-do.tsx");
+  "routes/virtual-props-do-ws": typeof import("./app/routes/virtual-props-do-ws.tsx");
 };

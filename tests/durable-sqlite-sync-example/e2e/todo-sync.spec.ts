@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 function roomUrl(name: string, options?: { transport?: "msgpack" }): string {
-	let q = `/?backend=memory&room=${encodeURIComponent(name)}`;
+	let q = `/sync-todos?backend=memory&room=${encodeURIComponent(name)}`;
 	if (options?.transport === "msgpack") {
 		q += "&transport=msgpack";
 	}
@@ -22,7 +22,7 @@ test("msgpack websocket transport syncs todos", async ({ page }) => {
 	await expect(
 		page.locator("li").filter({ hasText: "msgpack todo" }).first(),
 	).toBeVisible();
-	await expect(page.locator("pre")).toContainText("[msgpack");
+	await expect(page.locator("pre")).toContainText("mutateBatch");
 });
 
 test("online multi-client sync", async ({ browser }) => {
@@ -141,4 +141,109 @@ test("same-record edits converge to latest updatedAt (LWW)", async ({
 
 	await c1.close();
 	await c2.close();
+});
+
+test("virtual props + TanStack DO persistence: seed and insert", async ({
+	page,
+}) => {
+	const room = uniqueRoom("vp-tanstack");
+	await page.goto(
+		`/virtual-props-do?room=${encodeURIComponent(room)}&backend=tanstack`,
+	);
+	await expect(page.getByText("Seed message (synced)")).toBeVisible();
+	await page.getByRole("button", { name: "Insert (instant)" }).click();
+	await expect(
+		page
+			.locator("section ul > li > ul > li")
+			.filter({ hasText: /New message \d{4}-\d{2}-\d{2}T/ })
+			.first(),
+	).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByText(/^Pending: 0 —/)).toBeVisible({
+		timeout: 15_000,
+	});
+});
+
+test("virtual props slow insert shows Sending then settles", async ({
+	page,
+}) => {
+	const room = uniqueRoom("vp-slow");
+	await page.goto(
+		`/virtual-props-do?room=${encodeURIComponent(room)}&backend=tanstack`,
+	);
+	await expect(page.getByText("Seed message (synced)")).toBeVisible();
+	await page.getByRole("button", { name: "Insert (slow ~800ms)" }).click();
+	await expect(
+		page
+			.locator("section ul > li > ul > li")
+			.filter({ hasText: /New message \d{4}-\d{2}-\d{2}T/ })
+			.first()
+			.getByText("Sending…"),
+	).toBeVisible({ timeout: 3000 });
+	await expect(page.getByText(/^Pending: 0 —/)).toBeVisible({
+		timeout: 15_000,
+	});
+});
+
+test("virtual props + Drizzle DO: seed and insert", async ({ page }) => {
+	const room = uniqueRoom("vp-drizzle");
+	await page.goto(
+		`/virtual-props-do?room=${encodeURIComponent(room)}&backend=drizzle`,
+	);
+	await expect(page.getByText("Seed message (synced)")).toBeVisible();
+	await page.getByRole("button", { name: "Insert (instant)" }).click();
+	await expect(
+		page
+			.locator("section ul > li > ul > li")
+			.filter({ hasText: /New message \d{4}-\d{2}-\d{2}T/ })
+			.first(),
+	).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByText(/^Pending: 0 —/)).toBeVisible({
+		timeout: 15_000,
+	});
+});
+
+test("virtual props + WebSocket + TanStack DO: seed and insert", async ({
+	page,
+}) => {
+	const room = uniqueRoom("vp-ws-tanstack");
+	await page.goto(
+		`/virtual-props-do-ws?room=${encodeURIComponent(room)}&backend=tanstack`,
+	);
+	await expect(page.getByText("WebSocket: connected")).toBeVisible({
+		timeout: 15_000,
+	});
+	await expect(page.getByText("Seed message (synced)")).toBeVisible();
+	await page.getByRole("button", { name: "Insert (instant)" }).click();
+	await expect(
+		page
+			.locator("section ul > li > ul > li")
+			.filter({ hasText: /New message \d{4}-\d{2}-\d{2}T/ })
+			.first(),
+	).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByText(/^Pending: 0 —/)).toBeVisible({
+		timeout: 15_000,
+	});
+});
+
+test("virtual props + WebSocket + Drizzle DO: seed and insert", async ({
+	page,
+}) => {
+	const room = uniqueRoom("vp-ws-drizzle");
+	await page.goto(
+		`/virtual-props-do-ws?room=${encodeURIComponent(room)}&backend=drizzle`,
+	);
+	await expect(page.getByText("WebSocket: connected")).toBeVisible({
+		timeout: 15_000,
+	});
+	await expect(page.getByText("Seed message (synced)")).toBeVisible();
+	await page.getByRole("button", { name: "Insert (instant)" }).click();
+	await expect(
+		page
+			.locator("section ul > li > ul > li")
+			.filter({ hasText: /New message \d{4}-\d{2}-\d{2}T/ })
+			.first(),
+	).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByText(/^Pending: 0 —/)).toBeVisible({
+		timeout: 15_000,
+	});
 });

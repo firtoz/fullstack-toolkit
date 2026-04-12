@@ -14,53 +14,52 @@ import {
 	toArray,
 } from "@tanstack/db";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router";
+import * as z from "zod";
+import {
+	sortVpMessageRowsForDisplay,
+	sortVpMessagesForDisplay,
+} from "../../../src/vp-message-sort";
 
 type Thread = { id: string; title: string };
-type Message = { id: string; threadId: string; body: string };
 
-/** Match `VP_SLOW_INSERT_DELAY_MS` in durable-sqlite-sync-example `vp-demo-constants.ts`. */
-const DEMO_SLOW_INSERT_MS = 800;
+/** Validates `GET /messages` JSON from the Durable Object. */
+const messageRowSchema = z.object({
+	id: z.string(),
+	threadId: z.string(),
+	body: z.string(),
+});
+type Message = z.infer<typeof messageRowSchema>;
 
 type ThreadQueryUtils = QueryCollectionUtils<Thread, string, Thread>;
 
-export function meta() {
-	return [
-		{ title: "TanStack DB 0.6 — virtual props & APIs" },
-		{
-			name: "description",
-			content:
-				"Query collection, $synced/$origin outbox, createEffect, queryOnce, includes + toArray",
-		},
-	];
+export type VirtualPropsBackend = "tanstack" | "drizzle";
+
+function messagesUrl(roomId: string, backend: VirtualPropsBackend): string {
+	const prefix =
+		backend === "tanstack" ? `/vp/ts/${roomId}` : `/vp/drizzle/${roomId}`;
+	return `${prefix}/messages`;
 }
 
-/**
- * `useLiveQuery` uses `useSyncExternalStore` without `getServerSnapshot`, so it cannot run
- * during React 19 SSR. Gate the demo until after mount so the server and first hydrated paint match.
- */
-export default function Tanstack06VirtualPropsDemo() {
-	const [hydrated, setHydrated] = useState(false);
-	useEffect(() => {
-		setHydrated(true);
-	}, []);
-	if (!hydrated) {
-		return (
-			<div style={{ padding: "1rem", maxWidth: 720 }}>
-				<p>Loading demo…</p>
-			</div>
-		);
-	}
-	return <Tanstack06VirtualPropsDemoClient />;
-}
+export function VirtualPropsDoDemoClient() {
+	const [searchParams] = useSearchParams();
+	const roomId = searchParams.get("room") ?? "main";
+	const backendParam = searchParams.get("backend");
+	const backend: VirtualPropsBackend =
+		backendParam === "drizzle" ? "drizzle" : "tanstack";
 
-function Tanstack06VirtualPropsDemoClient() {
 	const queryClient = useMemo(() => new QueryClient(), []);
-	const slowNextInsertRef = useRef(false);
 	const serverThreads = useRef<Thread[]>([{ id: "t1", title: "Demo thread" }]);
-	const serverMessages = useRef<Message[]>([
-		{ id: "m1", threadId: "t1", body: "Seed message (synced)" },
-	]);
+	const serverMessages = useRef<Message[]>([]);
+	const slowNextInsertRef = useRef(false);
+
+	const messagesApi = messagesUrl(roomId, backend);
+
+	const messagesQueryKey = useMemo(
+		() => [`vp-do-messages-${backend}-${roomId}`] as const,
+		[backend, roomId],
+	);
 
 	const { threads: threadsCollection, messages: messagesCollection } =
 		useMemo((): {
@@ -70,7 +69,7 @@ function Tanstack06VirtualPropsDemoClient() {
 			return {
 				threads: createCollection(
 					queryCollectionOptions({
-						queryKey: ["playground-t6-threads"],
+						queryKey: [`vp-do-threads-${roomId}`],
 						queryFn: async () => [...serverThreads.current],
 						queryClient,
 						getKey: (t) => t.id,
@@ -78,36 +77,62 @@ function Tanstack06VirtualPropsDemoClient() {
 				),
 				messages: createCollection(
 					queryCollectionOptions({
-						queryKey: ["playground-t6-messages"],
-						queryFn: async () => [...serverMessages.current],
+						queryKey: [...messagesQueryKey],
+						queryFn: async () => {
+							const res = await fetch(messagesApi);
+							if (!res.ok) {
+								throw new Error(`GET messages failed: ${res.status}`);
+							}
+							const raw: unknown = await res.json();
+							const list = z.array(messageRowSchema).parse(raw);
+							serverMessages.current = list;
+							return sortVpMessagesForDisplay([...list]);
+						},
 						queryClient,
 						getKey: (m) => m.id,
-						// QueryCollectionConfig extends BaseCollectionConfig<T, TKey, TSchema> only — it does
-						// not pass TUtils, so onInsert defaults to InsertMutationFn<..., UtilsRecord> and
-						// `collection.utils` is typed as Record<string, any>. The *output* of
-						// queryCollectionOptions still attaches QueryCollectionUtils; annotate params to match.
+						// BaseCollectionConfig uses `TUtils = UtilsRecord` for handlers; at runtime this
+						// is a query collection with `refetch`. Use `InsertMutationFnParams<…, UtilsRecord>`
+						// so the signature matches `onInsert` while row type stays `Message` (tanstack-06 uses
+						// `MessageQueryUtils` only because inference supplies it from an in-memory `queryFn`).
 						onInsert: async ({
 							transaction,
-							collection,
 						}: InsertMutationFnParams<Message, string, UtilsRecord>) => {
+							const inserted: Message[] = [];
 							for (const mut of transaction.mutations) {
 								if (mut.type === "insert") {
 									const slow = slowNextInsertRef.current;
 									slowNextInsertRef.current = false;
-									if (slow) {
-										await new Promise((r) =>
-											setTimeout(r, DEMO_SLOW_INSERT_MS),
-										);
+									const url =
+										slow === true ? `${messagesApi}?slow=1` : messagesApi;
+									const res = await fetch(url, {
+										method: "POST",
+										headers: { "Content-Type": "application/json" },
+										body: JSON.stringify(mut.modified),
+									});
+									if (!res.ok) {
+										throw new Error(`POST message failed: ${res.status}`);
 									}
-									serverMessages.current.push(mut.modified);
+									inserted.push(mut.modified);
 								}
 							}
-							await collection.utils.refetch();
+							queryClient.setQueryData([...messagesQueryKey], (prev) => {
+								const base = Array.isArray(prev) ? [...prev] : [];
+								for (const row of inserted) {
+									const i = base.findIndex((x) => x.id === row.id);
+									if (i === -1) {
+										base.push(row);
+									} else {
+										base[i] = row;
+									}
+								}
+								return sortVpMessagesForDisplay(base);
+							});
+							return { refetch: false as const };
 						},
 					}),
 				),
 			};
-		}, [queryClient]);
+		}, [queryClient, roomId, backend, messagesApi, messagesQueryKey]);
 
 	const [queryOnceLabel, setQueryOnceLabel] = useState<string>("");
 	const [effectLines, setEffectLines] = useState<string[]>([]);
@@ -131,6 +156,14 @@ function Tanstack06VirtualPropsDemoClient() {
 			})),
 		[threadsCollection, messagesCollection],
 	);
+
+	const displayTree = useMemo(() => {
+		if (!tree) return tree;
+		return tree.map((t) => ({
+			...t,
+			messages: sortVpMessageRowsForDisplay(t.messages),
+		}));
+	}, [tree]);
 
 	const { data: outbox } = useLiveQuery(
 		(q) =>
@@ -183,25 +216,55 @@ function Tanstack06VirtualPropsDemoClient() {
 	};
 
 	return (
-		<div style={{ padding: "1rem", maxWidth: 720 }}>
-			<h1>TanStack DB 0.6 demo</h1>
+		<div style={{ padding: "1rem", maxWidth: 720, fontFamily: "sans-serif" }}>
+			<p style={{ marginBottom: 16 }}>
+				<Link to="/">All demos</Link>
+				{" · "}
+				<Link to="/sync-todos">WebSocket todo sync</Link>
+				{" · "}
+				<Link
+					to={`/virtual-props-do-ws?${new URLSearchParams({ room: roomId, backend }).toString()}`}
+				>
+					Same demo over WebSocket
+				</Link>
+			</p>
+			<h1>Virtual props + Durable Object</h1>
 			<p>
-				<code>@tanstack/query-db-collection</code> + <code>onInsert</code> that
-				updates the in-memory server list and refetches. Use{" "}
-				<strong>Insert (instant)</strong> or <strong>Insert (slow ~800ms)</strong>{" "}
-				to compare how long the row stays unsynced. While optimistic,{" "}
-				<code>$synced === false</code> and the message shows a{" "}
-				<strong>Sending…</strong> badge.
+				Room <code>{roomId}</code>, backend{" "}
+				<code>
+					{backend === "tanstack" ? "TanStack DO SQLite" : "Drizzle DO SQLite"}
+				</code>
+				. Switch:{" "}
+				<Link
+					to={`/virtual-props-do?${new URLSearchParams({ room: roomId, backend: "tanstack" }).toString()}`}
+				>
+					TanStack
+				</Link>
+				{" · "}
+				<Link
+					to={`/virtual-props-do?${new URLSearchParams({ room: roomId, backend: "drizzle" }).toString()}`}
+				>
+					Drizzle
+				</Link>
+				.
+			</p>
+			<p>
+				<code>@tanstack/query-db-collection</code> on the client;{" "}
+				<code>POST /messages</code> persists on the DO (instant by default, or{" "}
+				<code>?slow=1</code> for an ~800ms server delay), then{" "}
+				<code>refetch</code> clears <code>$synced</code>. While the row is still
+				optimistic, it stays in the list below with a <strong>Sending…</strong>{" "}
+				badge.
 			</p>
 
 			<section style={{ marginTop: "1.5rem" }}>
 				<h2>Messages (per thread)</h2>
 				<p style={{ color: "#444", fontSize: 14 }}>
 					Pending: {outbox?.length ?? 0} — unsynced rows show inline with an
-					amber edge and badge.
+					amber edge and badge (not a separate outbox list).
 				</p>
 				<ul>
-					{(tree ?? []).map((t) => (
+					{(displayTree ?? []).map((t) => (
 						<li key={t.id}>
 							<strong>{t.title}</strong>
 							<ul>

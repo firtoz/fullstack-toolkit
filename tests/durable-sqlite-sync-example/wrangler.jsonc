@@ -15,6 +15,22 @@
 			{
 				"name": "TODO_SYNC",
 				"class_name": "TodoSyncDO"
+			},
+			{
+				"name": "VIRTUAL_PROPS_TS_DO",
+				"class_name": "VirtualPropsTanstackDO"
+			},
+			{
+				"name": "VIRTUAL_PROPS_DRIZZLE_DO",
+				"class_name": "VirtualPropsDrizzleDO"
+			},
+			{
+				"name": "VIRTUAL_PROPS_WS_TS_DO",
+				"class_name": "VirtualPropsWsTanstackDO"
+			},
+			{
+				"name": "VIRTUAL_PROPS_WS_DRIZZLE_DO",
+				"class_name": "VirtualPropsWsDrizzleDO"
 			}
 		]
 	},
@@ -22,6 +38,20 @@
 		{
 			"tag": "v1",
 			"new_sqlite_classes": ["TodoSyncDO"]
+		},
+		{
+			"tag": "v2",
+			"new_sqlite_classes": [
+				"VirtualPropsTanstackDO",
+				"VirtualPropsDrizzleDO"
+			]
+		},
+		{
+			"tag": "v3",
+			"new_sqlite_classes": [
+				"VirtualPropsWsTanstackDO",
+				"VirtualPropsWsDrizzleDO"
+			]
 		}
 	]
 }

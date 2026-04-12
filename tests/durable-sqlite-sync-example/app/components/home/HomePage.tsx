@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { BackendSelector } from "./BackendSelector";
 import { IndexedDbTodoClient } from "./IndexedDbTodoClient";
 import { MemoryTodoClient } from "./MemoryTodoClient";
@@ -47,6 +47,9 @@ export function HomePage() {
 		<div
 			style={{ maxWidth: 900, margin: "24px auto", fontFamily: "sans-serif" }}
 		>
+			<p style={{ marginBottom: 16 }}>
+				<Link to="/">All demos</Link>
+			</p>
 			<h1>Durable SQLite Sync TodoMVC</h1>
 			<p>Client writes are optimistic; server sends canonical sync changes.</p>
 			<p style={{ fontSize: 13, color: "#444" }}>

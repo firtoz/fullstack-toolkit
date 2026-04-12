@@ -33,6 +33,7 @@
 		"react-router": "^7.13.2",
 		"vitest": "4.1.2",
 		"wrangler": "^4.78.0",
+		"@tanstack/cloudflare-durable-objects-db-sqlite-persistence": "^0.1.8",
 		"@tanstack/db": "^0.6.4",
 		"zod": "^4.3.6",
 		"@sqlite.org/sqlite-wasm": "^3.51.2-build8",
