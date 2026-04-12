@@ -9,11 +9,18 @@ import type {
 	SockaServerErrorFrame,
 	SockaServerEventFrame,
 } from "../core/envelope";
+import {
+	encodeSockaWire,
+	parseWirePayload,
+	type SockaWireFormat,
+} from "../core/wire-codec";
 
 export interface SockaWebSocketClientOptions<
 	TContract extends SockaContract<SockaContractConfig>,
 > {
 	contract: TContract;
+	/** Default `"json"` (text frames). Use `"msgpack"` for binary `ArrayBuffer` frames. */
+	wireFormat?: SockaWireFormat;
 	url?: string;
 	webSocket?: WebSocket;
 	serializeJson?: (value: unknown) => string;
@@ -35,6 +42,7 @@ export class SockaWebSocketClient<
 	TContract extends SockaContract<SockaContractConfig>,
 > {
 	private ws: WebSocket;
+	private readonly wireFormat: SockaWireFormat;
 	private readonly serializeJson: (value: unknown) => string;
 	private readonly deserializeJson: (raw: string) => unknown;
 	private readonly onResponseCb?: (frame: SockaServerResponseFrame) => void;
@@ -49,6 +57,7 @@ export class SockaWebSocketClient<
 
 	constructor(options: SockaWebSocketClientOptions<TContract>) {
 		this.contract = options.contract;
+		this.wireFormat = options.wireFormat ?? "json";
 		this.serializeJson = options.serializeJson ?? JSON.stringify;
 		this.deserializeJson = options.deserializeJson ?? JSON.parse;
 		this.onResponseCb = options.onResponse;
@@ -62,6 +71,10 @@ export class SockaWebSocketClient<
 			this.ws = new WebSocket(options.url);
 		} else {
 			throw new Error("Either 'url' or 'webSocket' must be provided");
+		}
+
+		if (this.wireFormat === "msgpack") {
+			this.ws.binaryType = "arraybuffer";
 		}
 
 		this.ws.addEventListener("open", (event) => {
@@ -83,14 +96,39 @@ export class SockaWebSocketClient<
 
 	private handleMessageEvent(event: MessageEvent): void {
 		try {
-			if (typeof event.data !== "string") {
+			const fmt = this.wireFormat;
+			let payload: string | ArrayBuffer;
+			if (fmt === "json") {
+				if (typeof event.data !== "string") {
+					this.onValidationError?.(
+						new Error("socka: expected JSON text frame"),
+						event.data,
+					);
+					return;
+				}
+				payload = event.data;
+			} else {
+				if (!(event.data instanceof ArrayBuffer)) {
+					this.onValidationError?.(
+						new Error("socka: expected ArrayBuffer msgpack frame"),
+						event.data,
+					);
+					return;
+				}
+				payload = event.data;
+			}
+
+			let parsed: unknown;
+			try {
+				parsed = parseWirePayload(payload, fmt, this.deserializeJson);
+			} catch (err) {
 				this.onValidationError?.(
-					new Error("Expected string JSON message"),
+					err instanceof Error ? err : new Error(String(err)),
 					event.data,
 				);
 				return;
 			}
-			const parsed: unknown = this.deserializeJson(event.data);
+
 			let decoded: ReturnType<typeof decodeSockaWire>;
 			try {
 				decoded = decodeSockaWire(parsed);
@@ -134,8 +172,9 @@ export class SockaWebSocketClient<
 		if (this.ws.readyState !== WebSocket.OPEN) {
 			throw new Error("WebSocket is not open");
 		}
-		const wire = encodeClientRequest(id, rpc, body);
-		this.ws.send(this.serializeJson(wire));
+		const frame = encodeClientRequest(id, rpc, body);
+		const encoded = encodeSockaWire(frame, this.wireFormat, this.serializeJson);
+		this.ws.send(encoded);
 	}
 
 	close(code?: number, reason?: string): void {

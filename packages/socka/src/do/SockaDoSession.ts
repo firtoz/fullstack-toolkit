@@ -11,7 +11,14 @@ import {
 	encodeServerResponse,
 	encodeServerError,
 	encodeServerEvent,
+	type SockaClientRequestFrame,
+	type SockaWireFrame,
 } from "../core/envelope";
+import {
+	encodeSockaWire,
+	parseWirePayload,
+	type SockaWireFormat,
+} from "../core/wire-codec";
 import { parseStandardSchema } from "../core/validate";
 import { SockaError } from "../core/socka-error";
 
@@ -21,6 +28,8 @@ export type SockaDoSessionConfig<
 	TEnv extends object,
 > = {
 	contract: TContract;
+	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
+	wireFormat?: SockaWireFormat;
 	createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
 	handlers: InferSockaHandlers<TContract>;
 	handleClose: () => Promise<void>;
@@ -44,31 +53,41 @@ export class SockaDoSession<
 	TEnv extends object = Cloudflare.Env,
 > extends BaseSession<TData, unknown, unknown, TEnv> {
 	private readonly config: SockaDoSessionConfig<TContract, TData, TEnv>;
+	private readonly wireFormat: SockaWireFormat;
 
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, SockaDoSession<TContract, TData, TEnv>>,
 		config: SockaDoSessionConfig<TContract, TData, TEnv>,
 	) {
+		const wireFormat = config.wireFormat ?? "json";
 		super(
 			websocket,
 			sessions as Map<WebSocket, BaseSession<TData, unknown, unknown, TEnv>>,
 			{
 				createData: config.createData,
 				handleMessage: async () => {
-					// Raw message handling goes through handleRawMessage
+					// Raw message handling goes through handleRawMessage / handleBufferMessage
 				},
-				handleBufferMessage: async () => {},
+				handleBufferMessage: async (message) => {
+					await this.handleInboundBuffer(message);
+				},
 				handleClose: async () => config.handleClose(),
 			},
 		);
 		this.config = config;
+		this.wireFormat = wireFormat;
 	}
 
 	public async handleRawMessage(rawMessage: string): Promise<void> {
+		if (this.wireFormat !== "json") {
+			await this.reportValidationError(
+				new Error("socka: unexpected JSON frame in msgpack mode"),
+				rawMessage,
+			);
+			return;
+		}
 		const deserialize = this.config.deserializeJson ?? JSON.parse;
-		const serialize = this.config.serializeJson ?? JSON.stringify;
-
 		let parsed: unknown;
 		try {
 			parsed = deserialize(rawMessage);
@@ -79,13 +98,40 @@ export class SockaDoSession<
 			);
 			return;
 		}
+		await this.dispatchAfterParsed(parsed, rawMessage);
+	}
 
+	private async handleInboundBuffer(buffer: ArrayBuffer): Promise<void> {
+		if (this.wireFormat !== "msgpack") {
+			await this.reportValidationError(
+				new Error("socka: unexpected binary frame in JSON mode"),
+				buffer,
+			);
+			return;
+		}
+		let parsed: unknown;
+		try {
+			parsed = parseWirePayload(buffer, "msgpack");
+		} catch (err) {
+			await this.reportValidationError(
+				err instanceof Error ? err : new Error("socka: msgpack decode failed"),
+				buffer,
+			);
+			return;
+		}
+		await this.dispatchAfterParsed(parsed, buffer);
+	}
+
+	private async dispatchAfterParsed(
+		parsed: unknown,
+		originalWire: unknown,
+	): Promise<void> {
 		let decoded: ReturnType<typeof decodeSockaWire>;
 		try {
 			decoded = decodeSockaWire(parsed);
 		} catch (err) {
 			if (err instanceof SockaWireError) {
-				await this.reportValidationError(err, rawMessage);
+				await this.reportValidationError(err, originalWire);
 				return;
 			}
 			throw err;
@@ -93,7 +139,8 @@ export class SockaDoSession<
 
 		switch (decoded.kind) {
 			case "clientRequest":
-				break;
+				await this.dispatchClientRequest(decoded.frame, originalWire);
+				return;
 			case "serverResponse":
 			case "serverError":
 			case "serverEvent":
@@ -109,8 +156,12 @@ export class SockaDoSession<
 				);
 			}
 		}
+	}
 
-		const { frame } = decoded;
+	private async dispatchClientRequest(
+		frame: SockaClientRequestFrame,
+		_originalWire: unknown,
+	): Promise<void> {
 		const rpcName = frame.rpc;
 		const procedure = this.config.contract.procedures[rpcName];
 
@@ -119,7 +170,7 @@ export class SockaDoSession<
 				frame.id,
 				`Unknown procedure: ${rpcName}`,
 			);
-			this.sendWire(serialize(errorFrame));
+			this.sendWireFrame(errorFrame);
 			return;
 		}
 
@@ -131,7 +182,7 @@ export class SockaDoSession<
 				const msg =
 					err instanceof Error ? err.message : "Input validation failed";
 				const errorFrame = encodeServerError(frame.id, msg);
-				this.sendWire(serialize(errorFrame));
+				this.sendWireFrame(errorFrame);
 				return;
 			}
 		}
@@ -155,7 +206,7 @@ export class SockaDoSession<
 							err instanceof Error ? err.message : "Handler failed",
 						);
 			const errorFrame = encodeServerError(frame.id, sockaErr.message);
-			this.sendWire(serialize(errorFrame));
+			this.sendWireFrame(errorFrame);
 			return;
 		}
 
@@ -166,7 +217,7 @@ export class SockaDoSession<
 			const msg =
 				err instanceof Error ? err.message : "Output validation failed";
 			const errorFrame = encodeServerError(frame.id, msg);
-			this.sendWire(serialize(errorFrame));
+			this.sendWireFrame(errorFrame);
 			return;
 		}
 
@@ -175,36 +226,41 @@ export class SockaDoSession<
 			rpcName,
 			validatedOutput,
 		);
-		this.sendWire(serialize(responseFrame));
+		this.sendWireFrame(responseFrame);
+	}
+
+	private encodeOutgoing(frame: SockaWireFrame): string | Uint8Array {
+		return encodeSockaWire(
+			frame,
+			this.wireFormat,
+			this.config.serializeJson ?? JSON.stringify,
+		);
+	}
+
+	private sendWireFrame(frame: SockaWireFrame): void {
+		if (this.websocket.readyState !== WebSocket.OPEN) {
+			return;
+		}
+		this.websocket.send(this.encodeOutgoing(frame));
 	}
 
 	/** Send a server event (non-RPC push) to this session. */
 	public emitEvent(event: string, body: unknown): void {
-		const serialize = this.config.serializeJson ?? JSON.stringify;
 		const frame = encodeServerEvent(event, body);
-		this.sendWire(serialize(frame));
+		this.sendWireFrame(frame);
 	}
 
-	/** Broadcast a server event to all sessions. */
+	/** Broadcast a server event to all sessions (each encodes with its own wire format). */
 	public broadcastEvent(
 		event: string,
 		body: unknown,
 		excludeSelf = false,
 	): void {
-		const serialize = this.config.serializeJson ?? JSON.stringify;
-		const frame = encodeServerEvent(event, body);
-		const wire = serialize(frame);
 		for (const session of this.sessions.values()) {
 			if (excludeSelf && session === this) continue;
 			if (session instanceof SockaDoSession) {
-				session.sendWire(wire);
+				session.emitEvent(event, body);
 			}
-		}
-	}
-
-	private sendWire(data: string): void {
-		if (this.websocket.readyState === WebSocket.OPEN) {
-			this.websocket.send(data);
 		}
 	}
 

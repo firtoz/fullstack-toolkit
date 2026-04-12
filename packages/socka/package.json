@@ -69,7 +69,8 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@standard-schema/spec": "catalog:"
+		"@standard-schema/spec": "catalog:",
+		"msgpackr": "catalog:"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:",

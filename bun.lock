@@ -282,6 +282,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@standard-schema/spec": "catalog:",
+        "msgpackr": "catalog:",
       },
       "devDependencies": {
         "@tanstack/intent": "catalog:",
@@ -296,15 +297,11 @@
         "@firtoz/websocket-do": "workspace:*",
         "hono": "catalog:",
         "react": ">=18.0.0",
-        "valibot": "catalog:",
-        "zod": "catalog:",
       },
       "optionalPeers": [
         "@firtoz/websocket-do",
         "hono",
         "react",
-        "valibot",
-        "zod",
       ],
     },
     "packages/websocket-do": {

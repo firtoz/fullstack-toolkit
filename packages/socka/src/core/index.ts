@@ -24,3 +24,8 @@ export {
 	encodeServerError,
 	encodeServerEvent,
 } from "./envelope";
+export {
+	encodeSockaWire,
+	parseWirePayload,
+	type SockaWireFormat,
+} from "./wire-codec";

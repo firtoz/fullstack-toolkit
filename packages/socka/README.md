@@ -11,9 +11,9 @@ Define your procedures with any Standard Schema v1 library (Zod, Valibot, ArkTyp
 | | Typical hand-rolled WS RPC | socka |
 |---|---------------------------|--------|
 | **Pros** | Full control over every byte and message name; fits any host (not tied to one framing); easy to start with a single `switch (msg.type)` for a tiny app; no dependency on a shared wire spec. | One **contract** drives types end-to-end; **Standard Schema** so Zod/Valibot/ArkType plug in without adapters; **socka v1** envelopes + built-in request/response correlation; **inferred** `rpc.*` and server `handlers`—fewer `unknown` / manual casts. |
-| **Cons** | Lots of boilerplate; duplicated or drifting schemas; correlation and error mapping are easy to get wrong; inference across client/server usually stops at `Promise<unknown>` unless you invest in your own types. | Opinionated **JSON wire format** (every frame is a socka envelope); helpers target **browser + Cloudflare Durable Objects**—other runtimes can speak the same JSON but you bring your own session glue; you model RPC as **named procedures**, not arbitrary free-form messages. |
+| **Cons** | Lots of boilerplate; duplicated or drifting schemas; correlation and error mapping are easy to get wrong; inference across client/server usually stops at `Promise<unknown>` unless you invest in your own types. | Opinionated **socka v1** framing (default **JSON text** frames, optional **msgpack** `ArrayBuffer` frames—both ends must use the same `wireFormat`); helpers target **browser + Cloudflare Durable Objects**—other runtimes can speak the same bytes but you bring your own session glue; you model RPC as **named procedures**, not arbitrary free-form messages. |
 
-**When to pick which:** use hand-rolled messages if you need a legacy protocol, binary frames, or maximal flexibility with zero shared library. Use socka when you want schema-first procedures, strict framing, and typed RPC without maintaining parallel type definitions and pending maps yourself.
+**When to pick which:** use hand-rolled messages if you need a legacy protocol, a custom binary layout, or maximal flexibility with zero shared library. Use socka when you want schema-first procedures, strict framing, and typed RPC without maintaining parallel type definitions and pending maps yourself.
 
 ## Install
 
@@ -59,6 +59,9 @@ function App() {
   const items = await rpc.list();           // Promise<Message[]>
   await rpc.insert({ message: newMsg });    // Promise<void>
 }
+
+// Binary frames (must match server `wireFormat: "msgpack"`)
+useSockaRpc(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 ```
 
 ## Server (Cloudflare Durable Object)
@@ -69,6 +72,7 @@ import { myContract } from "./contract";
 
 new SockaDoSession(websocket, sessions, {
   contract: myContract,
+  // wireFormat: "msgpack", // optional; default is JSON text frames
   createData: () => ({}),
   handlers: {
     list: async () => fetchMessages(),
@@ -94,7 +98,7 @@ type Handlers = InferSockaHandlers<typeof myContract>;
 
 ## Wire protocol
 
-All frames use strict socka v1 JSON envelopes:
+All frames share the same **logical** socka v1 object shape; on the wire you either send **JSON text** (default) or **msgpack** `ArrayBuffer` frames (`wireFormat: "msgpack"` on both `SockaWebSocketClient` and `SockaDoSession`). Decoding uses the same validation (`decodeSockaWire`) after `JSON.parse` or `msgpackr` unpack.
 
 - `clientRequest`: `{ socka: "clientRequest", v: 1, id, rpc, body }`
 - `serverResponse`: `{ socka: "serverResponse", v: 1, id, rpc, body }`

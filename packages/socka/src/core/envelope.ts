@@ -1,6 +1,6 @@
 /**
- * Versioned socka wire framing. Every JSON text frame must be a valid socka v1
- * envelope; procedure bodies are validated with Standard Schema on each side.
+ * Versioned socka wire framing. After JSON parse or msgpack unpack, every frame
+ * must satisfy {@link decodeSockaWire}; procedure bodies are validated with Standard Schema on each side.
  */
 
 export const SOCKA_WIRE_VERSION = 1 as const;
@@ -59,8 +59,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Decodes raw JSON from the wire. Throws {@link SockaWireError} if the payload
- * is not a valid socka v1 frame.
+ * Decodes a parsed wire object (from JSON or msgpack). Throws {@link SockaWireError}
+ * if the payload is not a valid socka v1 frame.
  */
 export function decodeSockaWire(parsed: unknown): DecodedSockaWire {
 	if (!isRecord(parsed)) {
