@@ -24,6 +24,10 @@ bun add socka
 
 `@firtoz/websocket-do` is marked optional on the package so browser-only clients do not install it; **Durable Object servers using `socka/do` must add it explicitly** (`bun add @firtoz/websocket-do`).
 
+## Full-stack examples
+
+Self-contained **tic-tac-toe** demos (each folder duplicates the contract and game logic) live under [`examples/`](../../examples/): [`tic-tac-toe-bun`](../../examples/tic-tac-toe-bun) (Bun.serve), [`tic-tac-toe-hono`](../../examples/tic-tac-toe-hono) (Hono + `@hono/node-ws`), and [`tic-tac-toe-do`](../../examples/tic-tac-toe-do) (Cloudflare Durable Objects + `wrangler dev`). Each uses **`bun run dev`** with a different default port (**3461** / **3462** / **3463**) so they do not collide with each other or common dev/test ports in this repo.
+
 ## Define a contract
 
 ```ts

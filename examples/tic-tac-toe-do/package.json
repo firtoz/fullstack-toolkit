@@ -1,0 +1,27 @@
+{
+	"name": "tic-tac-toe-do",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Minimal tic-tac-toe over socka on Cloudflare Durable Objects (self-contained example)",
+	"scripts": {
+		"dev": "bun run build:client && wrangler dev --port 3463",
+		"build:client": "bun build ./src/client.ts --outfile=public/client.js --target=browser --minify",
+		"typecheck": "tsgo --noEmit -p ./tsconfig.cloudflare.json",
+		"typegen": "bun run cf-typegen",
+		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)"
+	},
+	"dependencies": {
+		"@firtoz/websocket-do": "workspace:*",
+		"hono": "catalog:",
+		"socka": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@typescript/native-preview": "catalog:",
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "tic-tac-toe-do",
+	"main": "src/worker.ts",
+	"compatibility_date": "2025-10-01",
+	"assets": {
+		"directory": "./public"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "TIC_TAC_TOE",
+				"class_name": "TicTacToeDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["TicTacToeDO"]
+		}
+	]
+}

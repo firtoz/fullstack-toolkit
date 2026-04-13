@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tic-tac-toe (socka + Durable Objects)</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 28rem; margin: 2rem auto; }
+      #board .row { display: flex; gap: 0.25rem; margin-bottom: 0.25rem; }
+      #board button { width: 3rem; height: 3rem; font-size: 1.25rem; cursor: pointer; }
+      #log { font-size: 0.75rem; max-height: 8rem; overflow: auto; background: #f4f4f4; padding: 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Tic-tac-toe (Cloudflare DO)</h1>
+    <p>
+      Room
+      <input id="room" type="text" value="demo" />
+      <button id="connect" type="button">Connect &amp; join</button>
+    </p>
+    <p id="status">Disconnected</p>
+    <div id="board"></div>
+    <pre id="log"></pre>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>

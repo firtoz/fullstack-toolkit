@@ -5,7 +5,8 @@
 	"description": "Monorepo for fullstack-toolkit packages including router utilities, error handling, and edge computing helpers",
 	"workspaces": [
 		"packages/*",
-		"tests/*"
+		"tests/*",
+		"examples/*"
 	],
 	"catalog": {
 		"@hono/zod-validator": "^0.7.6",
