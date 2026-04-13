@@ -1,0 +1,16 @@
+{
+	"files": [],
+	"references": [
+		{
+			"path": "./tsconfig.cloudflare.json"
+		}
+	],
+	"compilerOptions": {
+		"checkJs": true,
+		"verbatimModuleSyntax": true,
+		"types": ["@cloudflare/vitest-pool-workers"],
+		"skipLibCheck": true,
+		"strict": true,
+		"noEmit": true
+	}
+}

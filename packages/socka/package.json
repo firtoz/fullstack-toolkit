@@ -31,6 +31,10 @@
 		"src/**/*.ts",
 		"src/**/*.tsx",
 		"!src/**/*.test.ts",
+		"!src/**/*.test.tsx",
+		"!src/test-utils/**",
+		"!test-setup.ts",
+		"!bunfig.toml",
 		"examples/**/*.ts",
 		"skills",
 		"README.md"
@@ -77,7 +81,7 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@firtoz/websocket-do": "workspace:*",
 		"hono": "catalog:",
-		"react": ">=18.0.0"
+		"react": "catalog:"
 	},
 	"peerDependenciesMeta": {
 		"@firtoz/websocket-do": {
@@ -91,9 +95,13 @@
 		}
 	},
 	"devDependencies": {
+		"@happy-dom/global-registrator": "^20.8.9",
 		"@tanstack/intent": "catalog:",
+		"@testing-library/react": "^16.3.2",
 		"@types/react": "catalog:",
 		"bun-types": "catalog:",
+		"happy-dom": "^20.8.9",
+		"react-dom": "19.2.4",
 		"typescript": "catalog:",
 		"valibot": "catalog:",
 		"zod": "catalog:"

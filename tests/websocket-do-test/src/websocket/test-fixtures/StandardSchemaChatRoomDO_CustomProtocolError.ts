@@ -70,7 +70,7 @@ export type SessionData = {
 	joinedAt: number;
 };
 
-class ZodChatRoomSession extends StandardSchemaSession<
+class StandardSchemaChatRoomSession_CustomProtocol extends StandardSchemaSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage,
@@ -78,7 +78,7 @@ class ZodChatRoomSession extends StandardSchemaSession<
 > {
 	constructor(
 		websocket: WebSocket,
-		sessions: Map<WebSocket, ZodChatRoomSession>,
+		sessions: Map<WebSocket, StandardSchemaChatRoomSession_CustomProtocol>,
 		options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 	) {
 		super(websocket, sessions, options, {
@@ -143,7 +143,7 @@ class ZodChatRoomSession extends StandardSchemaSession<
 	}
 }
 
-export class ZodChatRoomDO_CustomProtocolError extends StandardSchemaWebSocketDO<
+export class StandardSchemaChatRoomDO_CustomProtocolError extends StandardSchemaWebSocketDO<
 	StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
@@ -177,7 +177,11 @@ export class ZodChatRoomDO_CustomProtocolError extends StandardSchemaWebSocketDO
 				},
 			},
 			createStandardSchemaSession: (_ctx, websocket, options) => {
-				return new ZodChatRoomSession(websocket, this.sessions, options);
+				return new StandardSchemaChatRoomSession_CustomProtocol(
+					websocket,
+					this.sessions,
+					options,
+				);
 			},
 		});
 	}

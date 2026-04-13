@@ -1,0 +1,29 @@
+{
+	"name": "socka-do-test",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Integration tests for socka with Cloudflare Durable Objects (vitest-pool-workers)",
+	"type": "module",
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest watch",
+		"typecheck": "tsgo --noEmit -p ./tsconfig.cloudflare.json",
+		"typegen": "bun run cf-typegen",
+		"cf-typegen": "bun --cwd ../../packages/worker-helper cf-typegen $(pwd)",
+		"lint": "biome check --write src",
+		"lint:ci": "biome ci src",
+		"format": "biome format src --write"
+	},
+	"dependencies": {
+		"@firtoz/websocket-do": "workspace:*",
+		"hono": "catalog:",
+		"socka": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

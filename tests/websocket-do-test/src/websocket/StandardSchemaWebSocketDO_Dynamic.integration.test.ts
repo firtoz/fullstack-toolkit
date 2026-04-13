@@ -5,7 +5,7 @@ import type {
 	ClientMessage,
 	ServerMessage,
 	SessionData,
-} from "./test-fixtures/ZodChatRoomDO_Dynamic";
+} from "./test-fixtures/StandardSchemaChatRoomDO_Dynamic";
 
 // Import the worker to load it into the test environment
 import "./test-fixtures/worker";
@@ -14,7 +14,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 	describe("Query Parameter-Based Format Switching", () => {
 		it("should use JSON format when format=json query param is set", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=json",
+				"http://example.com/schema-chat-dynamic/websocket?format=json",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -64,7 +64,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 
 		it("should use buffer format when format=buffer query param is set", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
+				"http://example.com/schema-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -117,7 +117,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 
 		it("should default to JSON when no format query param is provided", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket",
+				"http://example.com/schema-chat-dynamic/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -168,7 +168,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 		it("should track the format in session data", async () => {
 			// Connect with buffer format
 			const response1 = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
+				"http://example.com/schema-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -181,7 +181,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 
 			// Connect with JSON format
 			const response2 = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=json",
+				"http://example.com/schema-chat-dynamic/websocket?format=json",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -197,7 +197,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 
 			// Check session info
 			const infoResponse = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/info",
+				"http://example.com/schema-chat-dynamic/info",
 				{
 					method: "POST",
 				},
@@ -227,7 +227,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 		it("should enforce protocol based on query param", async () => {
 			// Connect with buffer format
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
+				"http://example.com/schema-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -271,7 +271,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 		it("should allow broadcasting between sessions with different formats", async () => {
 			// Connect with buffer format
 			const response1 = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=buffer",
+				"http://example.com/schema-chat-dynamic/websocket?format=buffer",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -290,7 +290,7 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 
 			// Connect with JSON format
 			const response2 = await exports.default.fetch(
-				"http://example.com/zod-chat-dynamic/websocket?format=json",
+				"http://example.com/schema-chat-dynamic/websocket?format=json",
 				{
 					headers: {
 						Upgrade: "websocket",

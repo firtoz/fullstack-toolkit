@@ -19,6 +19,6 @@
 		"jsx": "react-jsx",
 		"types": ["bun-types", "@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*", "examples/**/*.ts"],
+	"include": ["src/**/*", "examples/**/*.ts", "test-setup.ts"],
 	"exclude": ["node_modules"]
 }

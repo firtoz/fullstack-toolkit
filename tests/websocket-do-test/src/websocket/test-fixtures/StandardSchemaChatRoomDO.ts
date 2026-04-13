@@ -64,14 +64,15 @@ export type SessionData = {
 	joinedAt: number;
 };
 
-class ZodChatRoomSession_JSON extends StandardSchemaSession<
+class StandardSchemaChatRoomSession extends StandardSchemaSession<
 	SessionData,
 	ServerMessage,
-	ClientMessage
+	ClientMessage,
+	Env
 > {
 	constructor(
 		websocket: WebSocket,
-		sessions: Map<WebSocket, ZodChatRoomSession_JSON>,
+		sessions: Map<WebSocket, StandardSchemaChatRoomSession>,
 		options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 	) {
 		super(websocket, sessions, options, {
@@ -80,7 +81,7 @@ class ZodChatRoomSession_JSON extends StandardSchemaSession<
 				name: `User-${Date.now()}`,
 				joinedAt: Date.now(),
 			}),
-			handleValidatedMessage: async (message: ClientMessage) => {
+			handleValidatedMessage: async (message) => {
 				switch (message.type) {
 					case "message":
 						// Broadcast message to all sessions
@@ -136,8 +137,7 @@ class ZodChatRoomSession_JSON extends StandardSchemaSession<
 	}
 }
 
-// StandardSchemaWebSocketDO implementation for JSON-only testing
-export class ZodChatRoomDO_JSON extends StandardSchemaWebSocketDO<
+export class StandardSchemaChatRoomDO extends StandardSchemaWebSocketDO<
 	StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
@@ -156,10 +156,14 @@ export class ZodChatRoomDO_JSON extends StandardSchemaWebSocketDO<
 			standardSchemaSessionOptions: {
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
-				enableBufferMessages: false, // JSON-only mode
+				enableBufferMessages: true, // Enable msgpack buffer messages
 			},
 			createStandardSchemaSession: (_ctx, websocket, options) => {
-				return new ZodChatRoomSession_JSON(websocket, this.sessions, options);
+				return new StandardSchemaChatRoomSession(
+					websocket,
+					this.sessions,
+					options,
+				);
 			},
 		});
 	}

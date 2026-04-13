@@ -282,14 +282,18 @@ export function connectPartialSync<
 		) {
 			const message = pendingOutbound.shift();
 			if (message !== undefined) {
-				void schemaClient.send(message);
+				void schemaClient.send(message).catch((err: unknown) => {
+					console.error("[connectPartialSync] WebSocket send failed", err);
+				});
 			}
 		}
 	};
 
 	options.setTransportSend((message) => {
 		if (schemaClient.socket.readyState === WebSocket.OPEN) {
-			void schemaClient.send(message);
+			void schemaClient.send(message).catch((err: unknown) => {
+				console.error("[connectPartialSync] WebSocket send failed", err);
+			});
 		} else {
 			pendingOutbound.push(message);
 		}

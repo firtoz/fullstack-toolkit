@@ -34,10 +34,7 @@ This package requires the following peer dependencies:
 bun add hono @firtoz/hono-fetcher
 ```
 
-**For schema validation** (StandardSchemaWebSocketClient, StandardSchemaSession):
-```bash
-bun add zod msgpackr
-```
+**For schemas:** use any [Standard Schema v1](https://standardschema.dev/) library (e.g. Zod, Valibot). **`msgpackr`** is a normal dependency of this package (buffer / msgpack mode); you do not add it separately unless your bundler needs it hoisted.
 
 For TypeScript support, use `wrangler types` to generate accurate types from your `wrangler.jsonc`:
 

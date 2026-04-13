@@ -4,11 +4,11 @@ import { assert, describe, expect, it, vi } from "vitest";
 import type {
 	ClientMessage,
 	ServerMessage,
-} from "./test-fixtures/ZodChatRoomDO";
+} from "./test-fixtures/StandardSchemaChatRoomDO";
 import {
 	ClientMessageSchema,
 	ServerMessageSchema,
-} from "./test-fixtures/ZodChatRoomDO";
+} from "./test-fixtures/StandardSchemaChatRoomDO";
 
 // Import worker to make sure it's loaded
 import "./test-fixtures/worker";
@@ -18,7 +18,7 @@ describe("StandardSchemaWebSocketClient Integration Tests", () => {
 		it("should connect and send/receive JSON messages", async () => {
 			// Get WebSocket URL from worker default export (simulating client connection)
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -45,7 +45,7 @@ describe("StandardSchemaWebSocketClient Integration Tests", () => {
 				ClientMessage,
 				ServerMessage
 			>({
-				url: "ws://example.com/zod-chat-json/websocket", // URL doesn't matter for testing
+				url: "ws://example.com/schema-chat-json/websocket", // URL doesn't matter for testing
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: false,
@@ -158,7 +158,7 @@ describe("StandardSchemaWebSocketClient Integration Tests", () => {
 		it("should connect and send/receive buffer messages", async () => {
 			// Get WebSocket URL from worker default export
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat/websocket",
+				"http://example.com/schema-chat/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -185,7 +185,7 @@ describe("StandardSchemaWebSocketClient Integration Tests", () => {
 				ClientMessage,
 				ServerMessage
 			>({
-				url: "ws://example.com/zod-chat/websocket",
+				url: "ws://example.com/schema-chat/websocket",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: true,

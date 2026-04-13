@@ -71,12 +71,8 @@
 		}
 	},
 	"dependencies": {
-		"@standard-schema/spec": "catalog:"
-	},
-	"optionalDependencies": {
-		"msgpackr": "catalog:",
-		"react": "catalog:",
-		"zod": "catalog:"
+		"@standard-schema/spec": "catalog:",
+		"msgpackr": "catalog:"
 	},
 	"engines": {
 		"node": ">=18.0.0"

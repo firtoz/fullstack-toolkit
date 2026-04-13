@@ -5,7 +5,7 @@ import type {
 	ClientMessage,
 	ServerMessage,
 	SessionData,
-} from "./test-fixtures/ZodChatRoomDO";
+} from "./test-fixtures/StandardSchemaChatRoomDO";
 
 // Import the worker to load it into the test environment
 import "./test-fixtures/worker";
@@ -14,7 +14,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 	describe("Custom Protocol Error Handling", () => {
 		it("should use custom protocol error handler when provided", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-custom-error/websocket",
+				"http://example.com/schema-chat-custom-error/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -57,7 +57,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should still use default protocol error handler when not provided", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat/websocket",
+				"http://example.com/schema-chat/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -100,7 +100,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 	describe("WebSocket Connection with Zod Validation (JSON mode)", () => {
 		it("should establish websocket connection and validate messages", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -147,7 +147,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should reject invalid messages and send error", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -189,7 +189,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should validate message content constraints", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -234,7 +234,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 	describe("Buffer Message Support with msgpack", () => {
 		it("should handle msgpack encoded messages and respond with buffers", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat/websocket",
+				"http://example.com/schema-chat/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -283,7 +283,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should reject invalid msgpack messages and respond with buffer error", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat/websocket",
+				"http://example.com/schema-chat/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -330,7 +330,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should handle corrupted buffer data gracefully", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat/websocket",
+				"http://example.com/schema-chat/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -375,7 +375,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 	describe("Protocol Enforcement", () => {
 		it("should reject JSON messages when buffer mode is enabled", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat/websocket",
+				"http://example.com/schema-chat/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -418,7 +418,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should silently ignore buffer messages when buffer mode is disabled", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -456,7 +456,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 	describe("Discriminated Union Message Types", () => {
 		it("should properly validate discriminated union types", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -517,7 +517,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 
 		it("should reject unknown message types", async () => {
 			const response = await exports.default.fetch(
-				"http://example.com/zod-chat-json/websocket",
+				"http://example.com/schema-chat-json/websocket",
 				{
 					headers: {
 						Upgrade: "websocket",
@@ -562,7 +562,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 		it("should track session info correctly", async () => {
 			// Test the /info endpoint
 			const infoResponse = await exports.default.fetch(
-				"http://example.com/zod-chat-json/info",
+				"http://example.com/schema-chat-json/info",
 				{
 					method: "POST",
 				},
@@ -582,10 +582,10 @@ describe("StandardSchemaSession Integration Tests", () => {
 		it("should handle multiple concurrent sessions with validation", async () => {
 			// Create multiple WebSocket connections
 			const connections = await Promise.all([
-				exports.default.fetch("http://example.com/zod-chat-json/websocket", {
+				exports.default.fetch("http://example.com/schema-chat-json/websocket", {
 					headers: { Upgrade: "websocket" },
 				}),
-				exports.default.fetch("http://example.com/zod-chat-json/websocket", {
+				exports.default.fetch("http://example.com/schema-chat-json/websocket", {
 					headers: { Upgrade: "websocket" },
 				}),
 			]);
@@ -619,7 +619,7 @@ describe("StandardSchemaSession Integration Tests", () => {
 			// Check session count via info endpoint (must match the websocket endpoint).
 			// With Vitest 4 pool, storage is per-test-file so the DO may already have sessions from other tests.
 			const infoResponse = await exports.default.fetch(
-				"http://example.com/zod-chat-json/info",
+				"http://example.com/schema-chat-json/info",
 				{
 					method: "POST",
 				},

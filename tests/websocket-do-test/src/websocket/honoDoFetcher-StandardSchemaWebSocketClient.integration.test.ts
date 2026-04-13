@@ -3,7 +3,7 @@
  *
  * This test file demonstrates how to combine:
  * - honoDoFetcher: Type-safe DO fetcher with WebSocket support
- * - StandardSchemaWebSocketClient: Type-safe WebSocket client with Zod validation
+ * - StandardSchemaWebSocketClient: Type-safe WebSocket client with Standard Schema validation
  *
  * Together they provide end-to-end type safety from DO connection to message validation.
  */
@@ -17,20 +17,20 @@ import {
 	ClientMessageSchema as BufferClientMessageSchema,
 	type ServerMessage as BufferServerMessage,
 	ServerMessageSchema as BufferServerMessageSchema,
-} from "./test-fixtures/ZodChatRoomDO";
+} from "./test-fixtures/StandardSchemaChatRoomDO";
 import {
 	type ClientMessage,
 	ClientMessageSchema,
 	type ServerMessage,
 	ServerMessageSchema,
-} from "./test-fixtures/ZodChatRoomDO_JSON";
+} from "./test-fixtures/StandardSchemaChatRoomDO_JSON";
 import "./test-fixtures/worker";
 
 describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 	describe("Basic Integration", () => {
 		it("should connect to DO WebSocket and use StandardSchemaWebSocketClient for type-safe communication", async () => {
 			const roomId = "test-hono-zod-integration";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			// Step 1: Use honoDoFetcher to get a WebSocket connection to the DO
 			// Note: We use config.autoAccept = false because StandardSchemaWebSocketClient
@@ -65,7 +65,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 			// Step 3: Send type-safe messages using StandardSchemaWebSocketClient
 			const messageToSend: ClientMessage = {
 				type: "message",
-				text: "Hello from Zod + honoDoFetcher!",
+				text: "Hello from StandardSchemaWebSocketClient + honoDoFetcher!",
 			};
 
 			// StandardSchemaWebSocketClient automatically validates and encodes!
@@ -79,7 +79,9 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 			const chatMessage = messages.find((m) => m.type === "message");
 			expect(chatMessage).toBeDefined();
 			if (chatMessage && chatMessage.type === "message") {
-				expect(chatMessage.text).toBe("Hello from Zod + honoDoFetcher!");
+				expect(chatMessage.text).toBe(
+					"Hello from StandardSchemaWebSocketClient + honoDoFetcher!",
+				);
 			}
 
 			// Step 4: Verify session via HTTP endpoint
@@ -92,7 +94,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 
 		it("should handle multiple clients with full type safety", async () => {
 			const roomId = "test-multi-client-zod";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			// Create two clients
 			const client1Messages: ServerMessage[] = [];
@@ -164,7 +166,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 	describe("Type Safety and Validation", () => {
 		it("should enforce message type safety with Zod schemas", async () => {
 			const roomId = "test-type-safety";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			const wsResp = await api.websocket({
 				url: "/websocket",
@@ -211,7 +213,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 
 		it("should handle validation errors gracefully", async () => {
 			const roomId = "test-validation-errors";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			const wsResp = await api.websocket({
 				url: "/websocket",
@@ -257,7 +259,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 
 		it("should validate message constraints (min/max lengths)", async () => {
 			const roomId = "test-constraints";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			const wsResp = await api.websocket({
 				url: "/websocket",
@@ -298,7 +300,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 	describe("Real-World Scenarios", () => {
 		it("should handle a complete chat flow with type safety", async () => {
 			const roomId = "test-chat-flow";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			// Alice joins the room using StandardSchemaWebSocketClient
 			const aliceResp = await api.websocket({
@@ -405,7 +407,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 			const roomId = "test-power-combo";
 
 			// Part 1: Use honoDoFetcher for type-safe DO access
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM_JSON, roomId);
 
 			// Verify room is empty via HTTP endpoint
 			const initialInfo = await api.post({ url: "/info" });
@@ -472,7 +474,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 	describe("Buffer Mode (msgpack) Integration", () => {
 		it("should work with buffer mode and msgpack serialization", async () => {
 			const roomId = "test-buffer-mode";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM, roomId);
 
 			const wsResp = await api.websocket({
 				url: "/websocket",
@@ -543,7 +545,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 
 		it("should handle multiple clients in buffer mode", async () => {
 			const roomId = "test-buffer-multi-client";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM, roomId);
 
 			// Client 1
 			const ws1Resp = await api.websocket({
@@ -608,7 +610,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 
 		it("should validate buffer messages with Zod schemas", async () => {
 			const roomId = "test-buffer-validation";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM, roomId);
 
 			const wsResp = await api.websocket({
 				url: "/websocket",
@@ -655,7 +657,7 @@ describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 
 		it("should handle chat flow in buffer mode", async () => {
 			const roomId = "test-buffer-chat-flow";
-			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM, roomId);
+			const api = honoDoFetcherWithName(env.SCHEMA_CHAT_ROOM, roomId);
 
 			// Alice connects
 			const aliceResp = await api.websocket({

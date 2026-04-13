@@ -60,8 +60,7 @@ export function useSocka<TContract extends SockaContract<SockaContractConfig>>(
 			session.rejectAllPending(new Error("WebSocket closed"));
 			session.close();
 		};
-		// biome-ignore lint/correctness/useExhaustiveDependencies: deps is the explicit contract
-	}, deps);
+	}, deps); // deps: explicit reconnect contract for useSocka (see hook docs)
 
 	return { ready, sessionRef };
 }

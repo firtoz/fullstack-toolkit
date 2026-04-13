@@ -15,8 +15,6 @@ export type UseSockaRpcOptions<
 	eventHandlers?: Partial<InferSockaEventHandlers<TContract>>;
 };
 
-type AnySockaContract = SockaContract<SockaContractConfig>;
-
 /**
  * Builds the same typed `rpc` object as {@link useSockaRpc} from a live session ref.
  * Used by {@link useSockaRpcContext} so consumers do not open extra connections.
@@ -25,7 +23,7 @@ export function createSockaRpcProxyFromSession<
 	TContract extends SockaContract<SockaContractConfig>,
 >(
 	contract: TContract,
-	sessionRef: RefObject<SockaRpc<AnySockaContract> | null>,
+	sessionRef: RefObject<SockaRpc<TContract> | null>,
 ): InferSockaRpc<TContract> {
 	const proxy: Record<string, (...args: unknown[]) => Promise<unknown>> = {};
 	for (const name of Object.keys(contract.procedures)) {

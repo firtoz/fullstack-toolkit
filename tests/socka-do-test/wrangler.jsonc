@@ -1,0 +1,24 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "socka-do-test",
+	"main": "src/fixtures/worker.ts",
+	"compatibility_date": "2025-10-01",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "SOCKA_JSON_TEST",
+				"class_name": "SockaJsonTestDO"
+			},
+			{
+				"name": "SOCKA_MSGPACK_TEST",
+				"class_name": "SockaMsgpackTestDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["SockaJsonTestDO", "SockaMsgpackTestDO"]
+		}
+	]
+}

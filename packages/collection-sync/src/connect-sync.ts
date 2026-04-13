@@ -53,7 +53,9 @@ export function connectSync<TItem extends PartialSyncRowShape>(
 	});
 
 	options.setTransportSend((message) => {
-		void schemaClient.send(message);
+		void schemaClient.send(message).catch((err: unknown) => {
+			console.error("[connectSync] WebSocket send failed", err);
+		});
 	});
 
 	bridge.setConnected(false);

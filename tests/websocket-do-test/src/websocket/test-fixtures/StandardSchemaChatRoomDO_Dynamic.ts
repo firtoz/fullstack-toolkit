@@ -65,7 +65,7 @@ export type SessionData = {
 	format: "json" | "buffer"; // Track the format used for this session
 };
 
-class ZodChatRoomSession_Dynamic extends StandardSchemaSession<
+class StandardSchemaChatRoomSession_Dynamic extends StandardSchemaSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage,
@@ -73,7 +73,7 @@ class ZodChatRoomSession_Dynamic extends StandardSchemaSession<
 > {
 	constructor(
 		websocket: WebSocket,
-		sessions: Map<WebSocket, ZodChatRoomSession_Dynamic>,
+		sessions: Map<WebSocket, StandardSchemaChatRoomSession_Dynamic>,
 		options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 	) {
 		super(websocket, sessions, options, {
@@ -140,7 +140,7 @@ class ZodChatRoomSession_Dynamic extends StandardSchemaSession<
 }
 
 // StandardSchemaWebSocketDO implementation that switches format based on query param
-export class ZodChatRoomDO_Dynamic extends StandardSchemaWebSocketDO<
+export class StandardSchemaChatRoomDO_Dynamic extends StandardSchemaWebSocketDO<
 	StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
@@ -170,7 +170,7 @@ export class ZodChatRoomDO_Dynamic extends StandardSchemaWebSocketDO<
 				};
 			},
 			createStandardSchemaSession: (_ctx, websocket, options) => {
-				return new ZodChatRoomSession_Dynamic(
+				return new StandardSchemaChatRoomSession_Dynamic(
 					websocket,
 					this.sessions,
 					options,
