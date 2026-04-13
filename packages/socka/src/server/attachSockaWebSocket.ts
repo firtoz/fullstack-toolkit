@@ -1,4 +1,5 @@
 import type { SockaContract, SockaContractConfig } from "../core/contract";
+import { reportSockaError } from "../core/socka-report-error";
 import { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
 import {
 	SockaWebSocketSession,
@@ -48,13 +49,20 @@ export function attachSockaWebSocket<
 		void (async (): Promise<void> => {
 			try {
 				await config.handleClose();
-			} catch (err) {
-				console.error("socka: handleClose error:", err);
+			} catch (error) {
+				reportSockaError(config.reportError, {
+					kind: "serverHandleClose",
+					error,
+				});
 			} finally {
 				finalize();
 			}
-		})().catch((err: unknown) => {
-			console.error("socka: shutdown error:", err);
+		})().catch((error: unknown) => {
+			reportSockaError(config.reportError, {
+				kind: "serverShutdown",
+				adapter: "attach",
+				error,
+			});
 			finalize();
 		});
 	};
@@ -62,8 +70,12 @@ export function attachSockaWebSocket<
 	const onMessage = (ev: MessageEvent): void => {
 		const wf = config.wireFormat ?? "json";
 		void dispatchSockaInboundMessage(session, wf, ev.data).catch(
-			(err: unknown) => {
-				console.error("socka: message handler error:", err);
+			(error: unknown) => {
+				reportSockaError(config.reportError, {
+					kind: "serverInboundMessage",
+					adapter: "attach",
+					error,
+				});
 			},
 		);
 	};

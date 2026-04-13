@@ -12,6 +12,8 @@ import {
 	type SockaPushSession,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
+import { reportSockaError } from "../core/socka-report-error";
+import type { SockaReportError } from "../core/socka-report-error";
 import { parseStandardSchema } from "../core/validate";
 import type { SockaWireFormat } from "../core/wire-codec";
 
@@ -58,6 +60,11 @@ export type SockaDoSessionConfig<
 		originalMessage: unknown,
 	) => Promise<void>;
 	/**
+	 * Optional sink for non-RPC failures (e.g. `onAttached`). Defaults to
+	 * `console.error`; see `SockaReportError` in `socka/core`.
+	 */
+	reportError?: (event: SockaReportError) => void;
+	/**
 	 * Called after this session is registered in the DO `sessions` map (next
 	 * microtask). Use for join broadcasts and other logic that must run only
 	 * when peers can see this connection.
@@ -80,11 +87,15 @@ function runSockaDoSessionOnAttached<
 	const cb = config.onAttached;
 	if (!cb) return;
 	try {
-		void Promise.resolve(cb(session)).catch((err: unknown) => {
-			console.error("socka: onAttached error:", err);
+		const result = cb(session);
+		void Promise.resolve(result).catch((error: unknown) => {
+			reportSockaError(config.reportError, {
+				kind: "serverOnAttached",
+				error,
+			});
 		});
-	} catch (err) {
-		console.error("socka: onAttached error:", err);
+	} catch (error) {
+		reportSockaError(config.reportError, { kind: "serverOnAttached", error });
 	}
 }
 

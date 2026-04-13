@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { SockaContract, SockaContractConfig } from "../core/contract";
+import { reportSockaError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
 import {
@@ -52,18 +53,29 @@ export function createSockaBunWebSocketHandlers<
 			const domWs = ws as unknown as WebSocket;
 			const session = sessionMap.get(domWs);
 			if (!session) return;
-			await dispatchSockaInboundMessage(
-				session,
-				wireFormat,
-				message as MessageEvent["data"],
-			);
+			try {
+				await dispatchSockaInboundMessage(
+					session,
+					wireFormat,
+					message as MessageEvent["data"],
+				);
+			} catch (error) {
+				reportSockaError(config.reportError, {
+					kind: "serverInboundMessage",
+					adapter: "bun",
+					error,
+				});
+			}
 		},
 		async close(ws: ServerWebSocket) {
 			const domWs = ws as unknown as WebSocket;
 			try {
 				await config.handleClose();
-			} catch (err) {
-				console.error("socka: handleClose error:", err);
+			} catch (error) {
+				reportSockaError(config.reportError, {
+					kind: "serverHandleClose",
+					error,
+				});
 			} finally {
 				sessionMap.delete(domWs);
 			}

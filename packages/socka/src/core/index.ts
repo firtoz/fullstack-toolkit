@@ -30,3 +30,8 @@ export {
 	parseWirePayload,
 	type SockaWireFormat,
 } from "./wire-codec";
+export {
+	defaultReportError,
+	reportSockaError,
+	type SockaReportError,
+} from "./socka-report-error";

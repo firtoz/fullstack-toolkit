@@ -5,6 +5,7 @@ import {
 	encodeServerResponse,
 } from "../core/envelope";
 import { encodeSockaWire } from "../core/wire-codec";
+import type { SockaReportError } from "../core/socka-report-error";
 import { SockaError } from "../core/socka-error";
 import { rpcTestContract } from "../test-utils/rpc-contract-for-tests";
 import { createFakeWebSocket } from "../test-utils/fake-websocket";
@@ -148,6 +149,67 @@ describe("SockaRpc", () => {
 		} finally {
 			console.error = original;
 		}
+	});
+
+	test("reportError receives clientEventValidation when event payload invalid", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const reportError = mock((_event: SockaReportError) => {});
+		new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+			eventHandlers: { notify: () => {} },
+			reportError,
+		});
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerEvent("notify", { bad: true }),
+				"json",
+			) as string,
+		);
+		await new Promise((r) => setTimeout(r, 10));
+		expect(reportError.mock.calls.length).toBe(1);
+		const ev = reportError.mock.calls[0][0];
+		expect(ev).toEqual(
+			expect.objectContaining({
+				kind: "clientEventValidation",
+				eventName: "notify",
+			}),
+		);
+		expect(ev.error).toBeInstanceOf(Error);
+	});
+
+	test("reportError receives clientEventListener when handler throws", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const reportError = mock((_event: SockaReportError) => {});
+		const rpc = new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+			reportError,
+		});
+		rpc.events.on("notify", () => {
+			throw new Error("boom");
+		});
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerEvent("notify", { msg: "e" }),
+				"json",
+			) as string,
+		);
+		await new Promise((r) => setTimeout(r, 0));
+		expect(reportError.mock.calls.length).toBe(1);
+		const ev = reportError.mock.calls[0][0];
+		expect(ev).toEqual(
+			expect.objectContaining({
+				kind: "clientEventListener",
+				eventName: "notify",
+			}),
+		);
+		if (!(ev.error instanceof Error)) {
+			throw new Error("expected listener error to be Error");
+		}
+		expect(ev.error.message).toBe("boom");
 	});
 
 	test("events.on receives validated notify payload", async () => {

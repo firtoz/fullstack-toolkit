@@ -49,6 +49,12 @@ export const myContract = defineSocka({
 });
 ```
 
+## Happy path
+
+1. **Contract** — one `defineSocka({ procedures, events? })` module shared by client and server.
+2. **Server** — `SockaWebSocketSession` or `SockaDoSession` with the same contract, `handlers`, and `handleClose`; wire inbound frames with `attachSockaWebSocket`, `socka/hono`, `socka/bun`, or your DO + `SockaWebSocketDO` routing.
+3. **Client** — `SockaRpc` (or `useSockaRpc` / `SockaRpcProvider`) with the same contract and matching `wireFormat`; call `rpc.*` procedures and use `rpc.events` when you define `events` on the contract.
+
 ## Client (React)
 
 ```ts
@@ -272,6 +278,20 @@ type Handlers = InferSockaHandlers<
 >;
 ```
 
+## Errors and observability
+
+| Concern | Hook |
+|--------|------|
+| Exceptions inside **RPC handlers** | `onHandlerError` on `SockaWebSocketSessionConfig` / `SockaDoSessionConfig` |
+| Invalid **inbound wire** payloads (before your handler runs) | `onValidationError` on the same config |
+| Everything else ( **`onAttached`** failures, adapter I/O, **client** event listener throws, **client** event payload validation) | Optional **`reportError(event)`** on `SockaWebSocketSessionConfig`, `SockaDoSessionConfig`, or `SockaRpc` / `useSockaRpc` options |
+
+Each **`event`** is **`SockaReportError`**: one discriminated union (`kind` narrows context; **`error`** is the thrown/rejected value; **`eventName`** / **`adapter`** where relevant). Export: **`socka/core`** (`defaultReportError`, `reportSockaError`). If you omit **`reportError`**, socka uses **`console.error`** with the same **`socka:`**-prefixed messages as before.
+
+## TypeScript: Durable Objects and session types
+
+`socka/do` **erases** the contract slot on **`SockaWebSocketDO`** so concrete `defineSocka(...)` contracts stay strict under TypeScript. If a generic base class rejects your session type, keep using **your** contract type from the module where you called **`defineSocka`**—do not expect an unconstrained `SockaContract<SockaContractConfig>` to accept every concrete contract without that erasure.
+
 ## Wire protocol
 
 Every frame is one logical socka **v1** object. **`decodeSockaWire`** validates shape after `JSON.parse` (text) or msgpack unpack (binary).
@@ -302,8 +322,8 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 
 | Path | Use for |
 |------|---------|
-| `socka/core` | `defineSocka`, wire helpers, `SockaError`, types |
-| `socka/client` | `SockaRpc`, `SockaWebSocketClient` |
+| `socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types |
+| `socka/client` | `SockaRpc`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
 | `socka/react` | `useSocka`, `useSockaRpc`, provider + context |
 | `socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
 | `socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastSockaEventToPeers` |

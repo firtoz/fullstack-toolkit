@@ -19,6 +19,7 @@ import {
 	parseWirePayload,
 	type SockaWireFormat,
 } from "../core/wire-codec";
+import { reportSockaError } from "../core/socka-report-error";
 import { parseStandardSchema } from "../core/validate";
 import { SockaError } from "../core/socka-error";
 import type {
@@ -349,10 +350,14 @@ export function runSockaSessionOnAttached<
 	const cb = config.onAttached;
 	if (!cb) return;
 	try {
-		void Promise.resolve(cb(session)).catch((err: unknown) => {
-			console.error("socka: onAttached error:", err);
+		const result = cb(session);
+		void Promise.resolve(result).catch((error: unknown) => {
+			reportSockaError(config.reportError, {
+				kind: "serverOnAttached",
+				error,
+			});
 		});
-	} catch (err) {
-		console.error("socka: onAttached error:", err);
+	} catch (error) {
+		reportSockaError(config.reportError, { kind: "serverOnAttached", error });
 	}
 }

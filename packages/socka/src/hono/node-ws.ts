@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import type { WSEvents } from "hono/ws";
 import type { WebSocket as NodeWebSocket } from "ws";
 import type { SockaContract, SockaContractConfig } from "../core/contract";
+import { reportSockaError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
 import {
@@ -55,8 +56,12 @@ export function sockaHonoNodeWs<
 			const session = sessions.get(domWs);
 			if (!session) return;
 			void dispatchSockaInboundMessage(session, wireFormat, evt.data).catch(
-				(err: unknown) => {
-					console.error("socka: onMessage error:", err);
+				(error: unknown) => {
+					reportSockaError(config.reportError, {
+						kind: "serverInboundMessage",
+						adapter: "hono",
+						error,
+					});
 				},
 			);
 		},
@@ -67,13 +72,20 @@ export function sockaHonoNodeWs<
 			void (async (): Promise<void> => {
 				try {
 					await config.handleClose();
-				} catch (err) {
-					console.error("socka: handleClose error:", err);
+				} catch (error) {
+					reportSockaError(config.reportError, {
+						kind: "serverHandleClose",
+						error,
+					});
 				} finally {
 					sessions.delete(domWs);
 				}
-			})().catch((err: unknown) => {
-				console.error("socka: onClose error:", err);
+			})().catch((error: unknown) => {
+				reportSockaError(config.reportError, {
+					kind: "serverShutdown",
+					adapter: "hono",
+					error,
+				});
 			});
 		},
 	});

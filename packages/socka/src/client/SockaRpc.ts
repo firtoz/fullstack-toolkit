@@ -5,6 +5,10 @@ import type {
 	InferSockaEventHandlers,
 	InferSockaEventPayload,
 } from "../core/contract";
+import {
+	reportSockaError,
+	type SockaReportError,
+} from "../core/socka-report-error";
 import { parseStandardSchema } from "../core/validate";
 import { SockaError } from "../core/socka-error";
 import type {
@@ -78,6 +82,12 @@ export type SockaRpcOptions<
 	onClose?: (event: CloseEvent) => void;
 	onError?: (event: Event) => void;
 	eventHandlers?: Partial<InferSockaEventHandlers<TContract>>;
+	/**
+	 * Optional sink for client-side event pipeline failures (listener throws,
+	 * event payload validation). Defaults to `console.error`; see
+	 * `SockaReportError` in `socka/core`.
+	 */
+	reportError?: (event: SockaReportError) => void;
 };
 
 /**
@@ -92,9 +102,11 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 	private readonly pending = new Map<string, PendingEntry>();
 	private idSeq = 0;
 	private readonly eventListeners = new Map<string, Set<EventListenerFn>>();
+	private readonly reportError?: (event: SockaReportError) => void;
 
 	constructor(options: SockaRpcOptions<TContract>) {
-		const { eventHandlers, ...clientOpts } = options;
+		const { eventHandlers, reportError, ...clientOpts } = options;
+		this.reportError = reportError;
 
 		this.client = new SockaWebSocketClient({
 			...clientOpts,
@@ -129,11 +141,24 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 			once: (name, handler) => {
 				const wrapped: EventListenerFn = (payload: unknown) => {
 					this.removeEventListener(name, wrapped);
-					void Promise.resolve(
-						(handler as (p: unknown) => void | Promise<void>)(payload),
-					).catch((err: unknown) => {
-						console.error("socka: event listener error", err);
-					});
+					try {
+						const result = (handler as (p: unknown) => void | Promise<void>)(
+							payload,
+						);
+						void Promise.resolve(result).catch((error: unknown) => {
+							reportSockaError(this.reportError, {
+								kind: "clientEventListener",
+								eventName: String(name),
+								error,
+							});
+						});
+					} catch (error) {
+						reportSockaError(this.reportError, {
+							kind: "clientEventListener",
+							eventName: String(name),
+							error,
+						});
+					}
 				};
 				this.addEventListener(name, wrapped);
 			},
@@ -249,13 +274,11 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 			return;
 		}
 
-		void Promise.resolve()
-			.then(() => parseStandardSchema(proc.output, frame.body))
-			.then(
-				(validated) => entry.resolve(validated),
-				(err) =>
-					entry.reject(err instanceof Error ? err : new Error(String(err))),
-			);
+		void parseStandardSchema(proc.output, frame.body).then(
+			(validated) => entry.resolve(validated),
+			(err) =>
+				entry.reject(err instanceof Error ? err : new Error(String(err))),
+		);
 	}
 
 	private handleServerError(frame: SockaServerErrorFrame): void {
@@ -273,12 +296,15 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 			>
 		)[frame.event];
 		if (schema) {
-			void Promise.resolve()
-				.then(() => parseStandardSchema(schema, frame.body))
-				.then(
-					(validated) => this.dispatchValidatedEvent(frame.event, validated),
-					(err) => console.error("socka: event validation error", err),
-				);
+			void parseStandardSchema(schema, frame.body).then(
+				(validated) => this.dispatchValidatedEvent(frame.event, validated),
+				(error: unknown) =>
+					reportSockaError(this.reportError, {
+						kind: "clientEventValidation",
+						eventName: frame.event,
+						error,
+					}),
+			);
 		} else {
 			this.dispatchValidatedEvent(frame.event, frame.body);
 		}
@@ -288,9 +314,23 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 		const set = this.eventListeners.get(eventName);
 		if (!set || set.size === 0) return;
 		for (const fn of [...set]) {
-			void Promise.resolve(fn(payload)).catch((err: unknown) => {
-				console.error("socka: event listener error", err);
-			});
+			// Sync throws → catch; Promise return → rejections via .catch.
+			try {
+				const result = fn(payload);
+				void Promise.resolve(result).catch((error: unknown) => {
+					reportSockaError(this.reportError, {
+						kind: "clientEventListener",
+						eventName,
+						error,
+					});
+				});
+			} catch (error) {
+				reportSockaError(this.reportError, {
+					kind: "clientEventListener",
+					eventName,
+					error,
+				});
+			}
 		}
 	}
 

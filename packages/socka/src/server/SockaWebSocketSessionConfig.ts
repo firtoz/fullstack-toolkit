@@ -3,6 +3,7 @@ import type {
 	SockaContractConfig,
 	InferSockaHandlers,
 } from "../core/contract";
+import type { SockaReportError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
@@ -53,6 +54,11 @@ export type SockaWebSocketSessionConfig<
 		error: unknown,
 		originalMessage: unknown,
 	) => Promise<void>;
+	/**
+	 * Optional sink for non-RPC failures (onAttached, adapter I/O). Defaults to
+	 * `console.error` with `socka:` prefixes; see `SockaReportError` in `socka/core`.
+	 */
+	reportError?: (event: SockaReportError) => void;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
 	/**
