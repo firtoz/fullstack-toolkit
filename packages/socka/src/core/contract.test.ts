@@ -92,17 +92,26 @@ describe("InferSockaRpc type inference", () => {
 
 describe("InferSockaHandlers type inference", () => {
 	test("handler types match contract", () => {
-		type Handlers = InferSockaHandlers<typeof contract>;
+		type Session = { readonly _sessionBrand?: unique symbol };
+		type Handlers = InferSockaHandlers<typeof contract, Session>;
 		const _typecheck: Handlers extends {
-			list: () =>
+			list: (
+				session: Session,
+			) =>
 				| { id: string; body: string }[]
 				| Promise<{ id: string; body: string }[]>;
-			echo: (input: {
-				text: string;
-			}) => { text: string } | Promise<{ text: string }>;
-			insert: (input: {
-				message: { id: string; body: string };
-			}) => void | Promise<void>;
+			echo: (
+				input: {
+					text: string;
+				},
+				session: Session,
+			) => { text: string } | Promise<{ text: string }>;
+			insert: (
+				input: {
+					message: { id: string; body: string };
+				},
+				session: Session,
+			) => void | Promise<void>;
 		}
 			? true
 			: false = true;

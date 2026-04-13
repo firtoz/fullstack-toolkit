@@ -3,6 +3,7 @@ import { upgradeWebSocket } from "hono/cloudflare-workers";
 import { sockaHonoCloudflare } from "socka/hono/cloudflare";
 import { SockaJsonTestDO } from "./SockaJsonTestDO";
 import { SockaMsgpackTestDO } from "./SockaMsgpackTestDO";
+import { SockaSessionGameTestDO } from "./SockaSessionGameTestDO";
 import { roundtripContract } from "./roundtrip-contract";
 import { roundtripHandlers } from "./roundtrip-handlers";
 
@@ -36,8 +37,17 @@ app.all("/socka-msgpack/*", async (c) => {
 	return stub.fetch(new Request(url.toString(), c.req.raw));
 });
 
+app.all("/socka-session-game/:stubName/*", async (c) => {
+	const stubName = c.req.param("stubName");
+	const stub = c.env.SOCKA_SESSION_GAME_TEST.getByName(stubName);
+	const url = new URL(c.req.url);
+	const path = url.pathname.replace(`/socka-session-game/${stubName}`, "");
+	url.pathname = path || "/";
+	return stub.fetch(new Request(url.toString(), c.req.raw));
+});
+
 app.get("/", (c) => c.text("socka-do-test worker"));
 
 export default app;
 
-export { SockaJsonTestDO, SockaMsgpackTestDO };
+export { SockaJsonTestDO, SockaMsgpackTestDO, SockaSessionGameTestDO };

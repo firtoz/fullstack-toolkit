@@ -1,6 +1,12 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["src/**/*.ts", "worker-configuration.d.ts"],
+	"include": [
+		"src/**/*.ts",
+		"worker-configuration.d.ts",
+		"../socka-server-test/src/fixtures/session-game-contract.ts",
+		"../socka-server-test/src/fixtures/session-game-state.ts",
+		"../socka-server-test/src/fixtures/session-game-flow.ts"
+	],
 	"compilerOptions": {
 		"composite": true,
 		"strict": true,

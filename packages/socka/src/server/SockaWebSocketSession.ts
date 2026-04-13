@@ -1,9 +1,5 @@
 import { exhaustiveGuard } from "@firtoz/maybe-error";
-import type {
-	SockaContract,
-	SockaContractConfig,
-	InferSockaHandlers,
-} from "../core/contract";
+import type { SockaContract, SockaContractConfig } from "../core/contract";
 import {
 	SockaWireError,
 	decodeSockaWire,
@@ -20,15 +16,15 @@ import {
 } from "../core/wire-codec";
 import { parseStandardSchema } from "../core/validate";
 import { SockaError } from "../core/socka-error";
+import type {
+	SockaWebSocketInit,
+	SockaWebSocketSessionConfig,
+} from "./SockaWebSocketSessionConfig";
 
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
 type EmptySockaSessionData = Record<string, never>;
 
-/** Optional upgrade context for {@link SockaWebSocketSession}. */
-export type SockaWebSocketInit = {
-	/** Original HTTP request for the WebSocket upgrade, when available. */
-	request?: Request;
-};
+export type { SockaWebSocketInit, SockaWebSocketSessionConfig };
 
 export type SockaEmitCapable = {
 	emitEvent(event: string, body: unknown): void;
@@ -50,32 +46,6 @@ export function broadcastSockaEventToPeers(
 		session.emitEvent(event, body);
 	}
 }
-
-type SockaWebSocketCreateData<TData> = [TData] extends [EmptySockaSessionData]
-	? {
-			createData?: (init: SockaWebSocketInit) => TData;
-		}
-	: {
-			createData: (init: SockaWebSocketInit) => TData;
-		};
-
-export type SockaWebSocketSessionConfig<
-	TContract extends SockaContract<SockaContractConfig>,
-	TData = EmptySockaSessionData,
-> = {
-	contract: TContract;
-	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
-	wireFormat?: SockaWireFormat;
-	handlers: InferSockaHandlers<TContract>;
-	handleClose: () => Promise<void>;
-	onHandlerError?: (error: unknown, rpcName: string, input: unknown) => void;
-	onValidationError?: (
-		error: unknown,
-		originalMessage: unknown,
-	) => Promise<void>;
-	serializeJson?: (value: unknown) => string;
-	deserializeJson?: (raw: string) => unknown;
-} & SockaWebSocketCreateData<TData>;
 
 /**
  * Runtime-agnostic socka server session: standard {@link WebSocket} wire
@@ -213,18 +183,22 @@ export class SockaWebSocketSession<
 			}
 		}
 
-		const handler = (
-			this.config.handlers as Record<
-				string,
-				(input: unknown) => unknown | Promise<unknown>
-			>
-		)[rpcName];
-
 		let result: unknown;
 		try {
-			result = await handler(validatedInput);
+			if (procedure.input) {
+				const handler = this.config.handlers[rpcName] as (
+					input: unknown,
+					s: SockaWebSocketSession<TContract, TData>,
+				) => unknown | Promise<unknown>;
+				result = await handler(validatedInput, this);
+			} else {
+				const handler = this.config.handlers[rpcName] as (
+					s: SockaWebSocketSession<TContract, TData>,
+				) => unknown | Promise<unknown>;
+				result = await handler(this);
+			}
 		} catch (err) {
-			this.config.onHandlerError?.(err, rpcName, validatedInput);
+			this.config.onHandlerError?.(err, rpcName, validatedInput, this);
 			const sockaErr =
 				err instanceof SockaError
 					? err

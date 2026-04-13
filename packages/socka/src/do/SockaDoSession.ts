@@ -14,6 +14,12 @@ import type { SockaWireFormat } from "../core/wire-codec";
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
 type EmptySockaSessionData = Record<string, never>;
 
+type SockaDoOuterSession<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData,
+	TEnv extends object,
+> = import("./SockaDoSession").SockaDoSession<TContract, TData, TEnv>;
+
 type SockaDoSessionCreateData<TData, TEnv extends object> = [TData] extends [
 	EmptySockaSessionData,
 ]
@@ -32,9 +38,14 @@ export type SockaDoSessionConfig<
 	contract: TContract;
 	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
 	wireFormat?: SockaWireFormat;
-	handlers: InferSockaHandlers<TContract>;
+	handlers: InferSockaHandlers<TContract, SockaDoOuterSession<TContract, TData, TEnv>>;
 	handleClose: () => Promise<void>;
-	onHandlerError?: (error: unknown, rpcName: string, input: unknown) => void;
+	onHandlerError?: (
+		error: unknown,
+		rpcName: string,
+		input: unknown,
+		session: SockaDoOuterSession<TContract, TData, TEnv>,
+	) => void;
 	onValidationError?: (
 		error: unknown,
 		originalMessage: unknown,
@@ -42,6 +53,62 @@ export type SockaDoSessionConfig<
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
 } & SockaDoSessionCreateData<TData, TEnv>;
+
+/** Inner wire engine (narrow surface) — avoids invariant contract clashes on private fields. */
+type SockaInnerWireEngine = {
+	handleRawMessage(rawMessage: string): Promise<void>;
+	handleBinaryMessage(buffer: ArrayBuffer): Promise<void>;
+	emitEvent(event: string, body: unknown): void;
+};
+
+function wrapHandlersForInnerSockaEngine<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData,
+	TEnv extends object,
+>(
+	contract: TContract,
+	userHandlers: InferSockaHandlers<TContract, SockaDoSession<TContract, TData, TEnv>>,
+	outer: SockaDoSession<TContract, TData, TEnv>,
+): InferSockaHandlers<TContract, SockaWebSocketSession<TContract, EmptySockaSessionData>> {
+	const procedures = contract.procedures;
+	const out: Record<
+		string,
+		| ((
+				input: unknown,
+				inner: SockaWebSocketSession<TContract, EmptySockaSessionData>,
+		  ) => unknown | Promise<unknown>)
+		| ((
+				inner: SockaWebSocketSession<TContract, EmptySockaSessionData>,
+		  ) => unknown | Promise<unknown>)
+	> = {};
+
+	for (const key of Object.keys(procedures) as Array<keyof typeof procedures & string>) {
+		const proc = procedures[key];
+		const userFn = userHandlers[key as keyof typeof userHandlers];
+		if (proc.input) {
+			out[key] = (
+				input,
+				_inner: SockaWebSocketSession<TContract, EmptySockaSessionData>,
+			) =>
+				(
+					userFn as (
+						i: unknown,
+						s: SockaDoSession<TContract, TData, TEnv>,
+					) => unknown | Promise<unknown>
+				)(input, outer);
+		} else {
+			out[key] = (_inner: SockaWebSocketSession<TContract, EmptySockaSessionData>) =>
+				(userFn as (s: SockaDoSession<TContract, TData, TEnv>) => unknown | Promise<unknown>)(
+					outer,
+				);
+		}
+	}
+
+	return out as InferSockaHandlers<
+		TContract,
+		SockaWebSocketSession<TContract, EmptySockaSessionData>
+	>;
+}
 
 /**
  * Durable Object WebSocket session driven by a socka contract.
@@ -53,10 +120,7 @@ export class SockaDoSession<
 	TData = EmptySockaSessionData,
 	TEnv extends object = Cloudflare.Env,
 > extends BaseSession<TData, unknown, unknown, TEnv> {
-	private readonly socka: SockaWebSocketSession<
-		TContract,
-		EmptySockaSessionData
-	>;
+	private socka!: SockaInnerWireEngine;
 
 	constructor(
 		websocket: WebSocket,
@@ -64,29 +128,6 @@ export class SockaDoSession<
 		config: SockaDoSessionConfig<TContract, TData, TEnv>,
 	) {
 		const wireFormat = config.wireFormat ?? "json";
-		const sockaConfig: SockaWebSocketSessionConfig<
-			TContract,
-			EmptySockaSessionData
-		> = {
-			contract: config.contract,
-			wireFormat,
-			handlers: config.handlers,
-			handleClose: async () => {
-				// BaseSession invokes `handleClose` from DO; wire engine has its own no-op.
-			},
-			onHandlerError: config.onHandlerError,
-			onValidationError: config.onValidationError,
-			serializeJson: config.serializeJson,
-			deserializeJson: config.deserializeJson,
-		};
-		const socka = new SockaWebSocketSession(
-			websocket,
-			sessions as unknown as Map<
-				WebSocket,
-				SockaWebSocketSession<TContract, EmptySockaSessionData>
-			>,
-			sockaConfig,
-		);
 		super(
 			websocket,
 			sessions as Map<WebSocket, BaseSession<TData, unknown, unknown, TEnv>>,
@@ -98,12 +139,39 @@ export class SockaDoSession<
 					// Raw message handling goes through handleRawMessage / handleBufferMessage
 				},
 				handleBufferMessage: async (message) => {
-					await socka.handleBinaryMessage(message);
+					await this.socka.handleBinaryMessage(message);
 				},
 				handleClose: async () => config.handleClose(),
 			},
 		);
-		this.socka = socka;
+		const sockaConfig: SockaWebSocketSessionConfig<TContract, EmptySockaSessionData> = {
+			contract: config.contract,
+			wireFormat,
+			handlers: wrapHandlersForInnerSockaEngine(
+				config.contract,
+				config.handlers,
+				this,
+			),
+			handleClose: async () => {
+				// BaseSession invokes `handleClose` from DO; wire engine has its own no-op.
+			},
+			onHandlerError: config.onHandlerError
+				? (err, rpcName, input, _inner) => {
+						config.onHandlerError?.(err, rpcName, input, this);
+					}
+				: undefined,
+			onValidationError: config.onValidationError,
+			serializeJson: config.serializeJson,
+			deserializeJson: config.deserializeJson,
+		};
+		this.socka = new SockaWebSocketSession(
+			websocket,
+			sessions as unknown as Map<
+				WebSocket,
+				SockaWebSocketSession<TContract, EmptySockaSessionData>
+			>,
+			sockaConfig,
+		);
 	}
 
 	public async handleRawMessage(rawMessage: string): Promise<void> {

@@ -104,14 +104,14 @@ new SockaDoSession(websocket, sessions, {
   contract: myContract,
   // wireFormat: "msgpack", // optional; default JSON text — must match client
   handlers: {
-    list: async () => fetchMessages(),
-    insert: async (input) => saveMessage(input.message),
+    list: async (session) => fetchMessages(),
+    insert: async (input, session) => saveMessage(input.message),
   },
   handleClose: async () => {},
 });
 ```
 
-Handler types come from **`InferSockaHandlers<typeof myContract>`**. Throw **`SockaError`** for domain failures so the client can recognize them.
+Handler types come from **`InferSockaHandlers<typeof myContract, SockaDoSession<typeof myContract, …>>`**. Throw **`SockaError`** for domain failures so the client can recognize them.
 
 For routing WebSockets to sessions, use **`SockaWebSocketDO`** and **`createSockaSession`** — see `socka/do`.
 
@@ -138,8 +138,8 @@ attachSockaWebSocket(
   {
     contract: myContract,
     handlers: {
-      list: async () => fetchMessages(),
-      insert: async (input) => saveMessage(input.message),
+      list: async (session) => fetchMessages(),
+      insert: async (input, session) => saveMessage(input.message),
     },
     handleClose: async () => {},
   },
@@ -147,7 +147,7 @@ attachSockaWebSocket(
 );
 ```
 
-Optional fourth argument **`{ request }`** is passed to **`createData`** when you define per-connection state. **`InferSockaHandlers<typeof myContract>`** applies unchanged.
+Optional fourth argument **`{ request }`** is passed to **`createData`** when you define per-connection state. Use **`InferSockaHandlers<typeof myContract, SockaWebSocketSession<typeof myContract, YourData>>`** (or omit the second generic and let inference fill it from your handlers).
 
 **Inbound frames without `attachSockaWebSocket`** — use **`dispatchSockaInboundMessage(session, wireFormat, data)`** with the same `data` shape as a DOM **`MessageEvent`** (`string`, **`ArrayBuffer`**, **`Blob`**, **`ArrayBufferView`**, or **`Buffer`** on Node/Bun). This is what **`attachSockaWebSocket`** uses internally.
 
@@ -158,12 +158,12 @@ Optional fourth argument **`{ request }`** is passed to **`createData`** when yo
 | **`SockaWebSocketSession`** (`socka/server`, Bun, Hono, …) | Session constructor | **`SockaWebSocketInit`** (e.g. **`{ request }`** from the upgrade) | **`session.data`** |
 | **`SockaDoSession`** / **`BaseSession`** (`socka/do`, **`@firtoz/websocket-do`**) | **`startFresh(ctx)`** when the DO accepts a socket | Hono **`Context`** | **`session.data`**, also serialized to the **DO WebSocket attachment** for **hibernation** |
 
-Handlers stay **`(input) => output`**. To use **`session.data`** (user id, room id, game state), **close over `session`** when you build **`handlers`**, or use a **subclass** of **`SockaWebSocketSession`** / **`SockaDoSession`** so methods can read **`this.data`**.
+Procedures **with** an input schema use **`(input, session) => output`**. Procedures **without** input use **`(session) => output`** only (no `undefined` first argument). The **`session`** argument is the full **`SockaWebSocketSession`** or **`SockaDoSession`** instance, so you can read **`session.data`**, call **`session.emitEvent`**, **`session.broadcastEvent`**, etc.
 
-**Example — read and update `session.data` via closure** (handlers reference a **`session`** variable you assign immediately after building the object; no RPC receives the session as an argument):
+**Example — `session.data` on a portable server:**
 
 ```ts
-import { defineSocka, type InferSockaHandlers } from "socka/core";
+import { defineSocka } from "socka/core";
 import { SockaWebSocketSession } from "socka/server";
 import * as z from "zod";
 
@@ -181,20 +181,16 @@ const gameContract = defineSocka({
 
 type GameData = { health: number };
 
-let session!: SockaWebSocketSession<typeof gameContract, GameData>;
-
-const handlers: InferSockaHandlers<typeof gameContract> = {
-  getHealth: async () => ({ health: session.data.health }),
-  damage: async (input) => {
-    session.data.health = Math.max(0, session.data.health - input.amount);
-    return { health: session.data.health };
-  },
-};
-
-session = new SockaWebSocketSession(websocket, sessions, {
+const session = new SockaWebSocketSession(websocket, sessions, {
   contract: gameContract,
   createData: () => ({ health: 100 }),
-  handlers,
+  handlers: {
+    getHealth: async (s) => ({ health: s.data.health }),
+    damage: async (input, s) => {
+      s.data.health = Math.max(0, s.data.health - input.amount);
+      return { health: s.data.health };
+    },
+  },
   handleClose: async () => {},
 });
 sessions.set(websocket, session);
@@ -252,7 +248,10 @@ export const myContract = defineSocka({
 import type { InferSockaRpc, InferSockaHandlers } from "socka/core";
 
 type Rpc = InferSockaRpc<typeof myContract>;
-type Handlers = InferSockaHandlers<typeof myContract>;
+type Handlers = InferSockaHandlers<
+  typeof myContract,
+  SockaWebSocketSession<typeof myContract>
+>;
 ```
 
 ## Wire protocol

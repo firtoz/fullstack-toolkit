@@ -44,24 +44,26 @@ export type InferSockaRpc<C extends SockaContract> = {
 	[K in keyof C["procedures"]]: RpcFn<C["procedures"][K]>;
 };
 
-type HandlerFn<P extends SockaProcedureDef> = P extends {
+type HandlerOut<P extends SockaProcedureDef> =
+	| StandardSchemaV1.InferOutput<P["output"]>
+	| Promise<StandardSchemaV1.InferOutput<P["output"]>>;
+
+type HandlerFn<P extends SockaProcedureDef, TSession> = P extends {
 	input: infer I extends StandardSchemaV1;
 }
 	? (
-			input: StandardSchemaV1.InferOutput<I>,
-		) =>
-			| StandardSchemaV1.InferInput<P["output"]>
-			| Promise<StandardSchemaV1.InferInput<P["output"]>>
-	: () =>
-			| StandardSchemaV1.InferInput<P["output"]>
-			| Promise<StandardSchemaV1.InferInput<P["output"]>>;
+			input: StandardSchemaV1.InferInput<I>,
+			session: TSession,
+		) => HandlerOut<P>
+	: (session: TSession) => HandlerOut<P>;
 
 /**
- * Infers the typed server handler map for a contract. Each handler receives the
- * validated input and returns the output that will be validated before sending.
+ * Infers the typed server handler map for a contract. Handlers with an input
+ * schema take `(input, session)`; procedures without input take `(session)` only.
+ * Each handler returns the output that will be validated before sending.
  */
-export type InferSockaHandlers<C extends SockaContract> = {
-	[K in keyof C["procedures"]]: HandlerFn<C["procedures"][K]>;
+export type InferSockaHandlers<C extends SockaContract, TSession> = {
+	[K in keyof C["procedures"]]: HandlerFn<C["procedures"][K], TSession>;
 };
 
 type InferEventPayload<S extends StandardSchemaV1> =
