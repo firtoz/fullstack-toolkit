@@ -17,6 +17,7 @@ bun add socka
 | `socka/core`, `socka/client` | `@cloudflare/workers-types` (or your Workers types setup) |
 | `socka/react` | `react` **≥ 18** |
 | `socka/do` | **`@firtoz/websocket-do`** (same major as `socka`), `@cloudflare/workers-types`, **`hono`** |
+| `socka/server` | None beyond `socka/core` (standard **`WebSocket`** + same contract types) |
 
 `@firtoz/websocket-do` is marked optional on the package so browser-only clients do not install it; **Durable Object servers using `socka/do` must add it explicitly** (`bun add @firtoz/websocket-do`).
 
@@ -111,6 +112,46 @@ Handler types come from **`InferSockaHandlers<typeof myContract>`**. Throw **`So
 
 For routing WebSockets to sessions, use **`SockaWebSocketDO`** and **`createSockaSession`** — see `socka/do`.
 
+## Server (Hono, Node `ws`, Bun — without Durable Objects)
+
+For a **normal** [`WebSocket`](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) (no Cloudflare DO hibernation APIs), use **`socka/server`**. You pass the same **`contract`**, **`handlers`**, and **`handleClose`** as with `SockaDoSession`; wire the socket with **`attachSockaWebSocket`** or call **`handleRawMessage`** / **`handleBinaryMessage`** on **`SockaWebSocketSession`** yourself.
+
+```ts
+import {
+  attachSockaWebSocket,
+  type SockaWebSocketSession,
+} from "socka/server";
+import { myContract } from "./contract";
+
+const sessions = new Map<
+  WebSocket,
+  SockaWebSocketSession<typeof myContract>
+>();
+
+// After the upgrade (shape depends on runtime — see below):
+attachSockaWebSocket(
+  websocket,
+  sessions,
+  {
+    contract: myContract,
+    handlers: {
+      list: async () => fetchMessages(),
+      insert: async (input) => saveMessage(input.message),
+    },
+    handleClose: async () => {},
+  },
+  { request: upgradeRequest },
+);
+```
+
+Optional fourth argument **`{ request }`** is passed to **`createData`** when you define per-connection state. **`InferSockaHandlers<typeof myContract>`** applies unchanged.
+
+**Hono** — use your runtime’s WebSocket helper ([Node](https://hono.dev/docs/helpers/websocket), [Bun](https://hono.dev/docs/helpers/websocket), [Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers)) and call **`attachSockaWebSocket`** from the socket **`open`** callback (or equivalent) once you hold the **`WebSocket`** instance.
+
+**Node with [`ws`](https://github.com/websockets/ws)** — in the **`connection`** handler, pass the socket into **`attachSockaWebSocket`**. The `ws` package’s socket is not always identical to the browser **`WebSocket`** type; if TypeScript complains, cast to the global **`WebSocket`** type your build targets, or prefer **`@hono/node-ws`** / **Bun** where the global **`WebSocket`** matches **`socka/server`** expectations. **`attachSockaWebSocket`** accepts JSON frames delivered as UTF-8 **`ArrayBuffer`** slices (some runtimes send text that way) as well as strings.
+
+**Bun** — `Bun.serve` uses **`ServerWebSocket`**, which does **not** implement **`addEventListener`**, so **`attachSockaWebSocket`** does not apply. Create a **`SockaWebSocketSession`** in **`websocket.open`** and route **`websocket.message`** / **`close`** to **`handleRawMessage`** / **`handleBinaryMessage`** (see the **`socka-server-test`** Bun integration test in this repo).
+
 ## Events (server push)
 
 ```ts
@@ -157,7 +198,7 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 |---:|---|
 | **Contract** | `defineSocka({ procedures, events? })` — Zod, Valibot, ArkType, or any [Standard Schema v1](https://standardschema.dev/) |
 | **Client** | `SockaRpc` / `useSockaRpc` / `SockaRpcProvider` + `useSockaRpcContext` |
-| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects |
+| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects, or **`socka/server`** on any standard WebSocket |
 | **Wire** | JSON text frames by default; optional **msgpack** binary — same logical frames, both ends must use the same `wireFormat` |
 
 **Imports**
@@ -168,6 +209,7 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 | `socka/client` | `SockaRpc`, `SockaWebSocketClient` |
 | `socka/react` | `useSocka`, `useSockaRpc`, provider + context |
 | `socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
+| `socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket` |
 
 ---
 
@@ -178,6 +220,6 @@ Most apps model messages as large discriminated unions (`type` + `id`), validate
 | | Typical custom protocol | socka |
 |---|------------------------|--------|
 | **Strengths** | Total control; any framing; no shared spec | One contract drives **client + server** types; **Standard Schema** everywhere; socka v1 **envelopes** + correlation built in; inferred **`rpc`** / **`handlers`** |
-| **Tradeoffs** | Boilerplate, duplicated schemas, `Promise<unknown>` unless you invest | Opinionated **socka v1** shape; **named procedures** (not a free-form message bus); first-class path is **browser + Cloudflare DO** (other runtimes can speak the same bytes with your own session glue) |
+| **Tradeoffs** | Boilerplate, duplicated schemas, `Promise<unknown>` unless you invest | Opinionated **socka v1** shape; **named procedures** (not a free-form message bus); first-class paths are **browser + Cloudflare DO** and **`socka/server` on a standard WebSocket** |
 
 Use a custom protocol when you must match legacy bytes or a bespoke binary layout. Use socka when you want **schema-first RPC** with strict framing and end-to-end inference.

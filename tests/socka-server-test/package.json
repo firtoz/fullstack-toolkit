@@ -1,0 +1,23 @@
+{
+	"name": "socka-server-test",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Integration tests for socka/server over real Node ws WebSockets",
+	"type": "module",
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
+		"lint": "biome check --write src",
+		"lint:ci": "biome ci src"
+	},
+	"dependencies": {
+		"socka": "workspace:*",
+		"ws": "^8.18.0",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@types/ws": "^8.18.1",
+		"bun-types": "catalog:",
+		"typescript": "catalog:"
+	}
+}

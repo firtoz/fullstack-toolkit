@@ -174,7 +174,13 @@ export class SockaWebSocketClient<
 		}
 		const frame = encodeClientRequest(id, rpc, body);
 		const encoded = encodeSockaWire(frame, this.wireFormat, this.serializeJson);
-		this.ws.send(encoded);
+		if (typeof encoded === "string") {
+			this.ws.send(encoded);
+			return;
+		}
+		const copy = new Uint8Array(encoded.byteLength);
+		copy.set(encoded);
+		this.ws.send(copy.buffer);
 	}
 
 	close(code?: number, reason?: string): void {

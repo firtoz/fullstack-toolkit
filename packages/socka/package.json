@@ -25,6 +25,11 @@
 			"types": "./src/do/index.ts",
 			"import": "./src/do/index.ts",
 			"require": "./src/do/index.ts"
+		},
+		"./server": {
+			"types": "./src/server/index.ts",
+			"import": "./src/server/index.ts",
+			"require": "./src/server/index.ts"
 		}
 	},
 	"files": [
@@ -74,6 +79,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@firtoz/maybe-error": "workspace:*",
 		"@standard-schema/spec": "catalog:",
 		"msgpackr": "catalog:"
 	},

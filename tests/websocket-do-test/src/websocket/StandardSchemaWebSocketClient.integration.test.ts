@@ -13,6 +13,65 @@ import {
 // Import worker to make sure it's loaded
 import "./test-fixtures/worker";
 
+/**
+ * Minimal WebSocket stand-in that forwards `send` to the worker's accepted socket.
+ * Overriding `send` on a native Cloudflare WebSocket via `defineProperty` is unreliable
+ * in vitest-pool-workers, so integration tests use this bridge instead of `new WebSocket(url)`.
+ */
+function createBridgedClientWebSocket(serverWs: WebSocket): WebSocket {
+	const listenerMap = new Map<
+		string,
+		Set<EventListenerOrEventListenerObject>
+	>();
+
+	const stub = {
+		binaryType: "blob" as BinaryType,
+		readyState: WebSocket.OPEN,
+		addEventListener(
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+		) {
+			let set = listenerMap.get(type);
+			if (!set) {
+				set = new Set();
+				listenerMap.set(type, set);
+			}
+			set.add(listener);
+		},
+		removeEventListener(
+			type: string,
+			listener: EventListenerOrEventListenerObject,
+		) {
+			listenerMap.get(type)?.delete(listener);
+		},
+		dispatchEvent(event: Event): boolean {
+			const set = listenerMap.get(event.type);
+			if (!set) {
+				return true;
+			}
+			for (const l of set) {
+				if (typeof l === "function") {
+					l.call(stub as unknown as EventTarget, event);
+				} else {
+					l.handleEvent(event);
+				}
+			}
+			return true;
+		},
+		send(data: string | ArrayBuffer | Blob | ArrayBufferView): void {
+			if (data instanceof Blob) {
+				throw new Error("Unexpected Blob in bridged send");
+			}
+			serverWs.send(data);
+		},
+		close(_code?: number, _reason?: string): void {
+			// no-op for this test harness
+		},
+	};
+
+	return stub as unknown as WebSocket;
+}
+
 describe("StandardSchemaWebSocketClient Integration Tests", () => {
 	describe("JSON Mode Client", () => {
 		it("should connect and send/receive JSON messages", async () => {
@@ -39,43 +98,16 @@ describe("StandardSchemaWebSocketClient Integration Tests", () => {
 
 			serverWs.accept();
 
-			// Create client (using the server WebSocket as a mock client)
-			const clientMessages: ServerMessage[] = [];
 			const client = new StandardSchemaWebSocketClient<
 				ClientMessage,
 				ServerMessage
 			>({
-				url: "ws://example.com/schema-chat-json/websocket", // URL doesn't matter for testing
+				webSocket: createBridgedClientWebSocket(serverWs),
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: false,
-				onMessage: (msg) => clientMessages.push(msg),
 			});
 
-			// Replace the client's WebSocket with our test WebSocket
-			// This simulates a real bidirectional connection
-			const clientWs = client.socket;
-
-			// Connect client's socket to server
-			clientWs.addEventListener("message", (event) => {
-				if (typeof event.data === "string") {
-					const msg = JSON.parse(event.data) as ServerMessage;
-					clientMessages.push(msg);
-				}
-			});
-
-			// Mock the client accepting (for test purposes)
-			Object.defineProperty(clientWs, "readyState", {
-				value: WebSocket.OPEN,
-				writable: true,
-			});
-			Object.defineProperty(clientWs, "send", {
-				value: (data: string) => {
-					serverWs.send(data);
-				},
-			});
-
-			// Send message using client
 			await client.send({
 				type: "message",
 				text: "Hello from client!",
@@ -179,30 +211,14 @@ describe("StandardSchemaWebSocketClient Integration Tests", () => {
 
 			serverWs.accept();
 
-			// Create client
-			const clientMessages: ServerMessage[] = [];
 			const client = new StandardSchemaWebSocketClient<
 				ClientMessage,
 				ServerMessage
 			>({
-				url: "ws://example.com/schema-chat/websocket",
+				webSocket: createBridgedClientWebSocket(serverWs),
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: true,
-				onMessage: (msg) => clientMessages.push(msg),
-			});
-
-			// Mock the client's WebSocket
-			const clientWs = client.socket;
-
-			Object.defineProperty(clientWs, "readyState", {
-				value: WebSocket.OPEN,
-				writable: true,
-			});
-			Object.defineProperty(clientWs, "send", {
-				value: (data: ArrayBuffer) => {
-					serverWs.send(data);
-				},
 			});
 
 			// Send buffer message using client
