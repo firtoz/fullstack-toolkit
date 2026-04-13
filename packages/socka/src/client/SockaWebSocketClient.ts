@@ -23,6 +23,12 @@ export interface SockaWebSocketClientOptions<
 	wireFormat?: SockaWireFormat;
 	url?: string;
 	webSocket?: WebSocket;
+	/**
+	 * When `false`, the socket is not created until {@link SockaWebSocketClient.connect}
+	 * (or the first operation that implicitly opens, e.g. {@link SockaRpc} `call`).
+	 * Default `true`.
+	 */
+	autoConnect?: boolean;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
 	onOpen?: (event: Event) => void;
@@ -41,7 +47,8 @@ export interface SockaWebSocketClientOptions<
 export class SockaWebSocketClient<
 	TContract extends SockaContract<SockaContractConfig>,
 > {
-	private ws: WebSocket;
+	private ws: WebSocket | undefined;
+	private readonly opts: SockaWebSocketClientOptions<TContract>;
 	private readonly wireFormat: SockaWireFormat;
 	private readonly serializeJson: (value: unknown) => string;
 	private readonly deserializeJson: (raw: string) => unknown;
@@ -56,6 +63,7 @@ export class SockaWebSocketClient<
 	readonly contract: TContract;
 
 	constructor(options: SockaWebSocketClientOptions<TContract>) {
+		this.opts = options;
 		this.contract = options.contract;
 		this.wireFormat = options.wireFormat ?? "json";
 		this.serializeJson = options.serializeJson ?? JSON.stringify;
@@ -65,32 +73,41 @@ export class SockaWebSocketClient<
 		this.onEventCb = options.onEvent;
 		this.onValidationError = options.onValidationError;
 
-		if (options.webSocket) {
-			this.ws = options.webSocket;
-		} else if (options.url) {
-			this.ws = new WebSocket(options.url);
-		} else {
-			throw new Error("Either 'url' or 'webSocket' must be provided");
+		if (options.autoConnect !== false) {
+			this.attachSocket(this.createSocket());
 		}
+	}
 
+	private createSocket(): WebSocket {
+		if (this.opts.webSocket) {
+			return this.opts.webSocket;
+		}
+		if (this.opts.url) {
+			return new WebSocket(this.opts.url);
+		}
+		throw new Error("Either 'url' or 'webSocket' must be provided");
+	}
+
+	private attachSocket(ws: WebSocket): void {
+		this.ws = ws;
 		if (this.wireFormat === "msgpack") {
-			this.ws.binaryType = "arraybuffer";
+			ws.binaryType = "arraybuffer";
 		}
 
-		this.ws.addEventListener("open", (event) => {
-			options.onOpen?.(event);
+		ws.addEventListener("open", (event) => {
+			this.opts.onOpen?.(event);
 		});
 
-		this.ws.addEventListener("message", (event) => {
+		ws.addEventListener("message", (event) => {
 			this.handleMessageEvent(event);
 		});
 
-		this.ws.addEventListener("close", (event) => {
-			options.onClose?.(event);
+		ws.addEventListener("close", (event) => {
+			this.opts.onClose?.(event);
 		});
 
-		this.ws.addEventListener("error", (event) => {
-			options.onError?.(event);
+		ws.addEventListener("error", (event) => {
+			this.opts.onError?.(event);
 		});
 	}
 
@@ -168,8 +185,19 @@ export class SockaWebSocketClient<
 		}
 	}
 
+	/**
+	 * Creates the WebSocket (when {@link SockaWebSocketClientOptions.autoConnect}
+	 * was `false`) and waits until the connection is open.
+	 */
+	async connect(): Promise<void> {
+		if (!this.ws) {
+			this.attachSocket(this.createSocket());
+		}
+		await this.waitForOpen();
+	}
+
 	sendRequest(id: string, rpc: string, body: Record<string, unknown>): void {
-		if (this.ws.readyState !== WebSocket.OPEN) {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
 			throw new Error("WebSocket is not open");
 		}
 		const frame = encodeClientRequest(id, rpc, body);
@@ -184,19 +212,30 @@ export class SockaWebSocketClient<
 	}
 
 	close(code?: number, reason?: string): void {
-		this.ws.close(code, reason);
+		this.ws?.close(code, reason);
 	}
 
 	get readyState(): number {
-		return this.ws.readyState;
+		return this.ws?.readyState ?? WebSocket.CONNECTING;
 	}
 
 	get socket(): WebSocket {
+		if (!this.ws) {
+			throw new Error(
+				"socka: WebSocket not created yet; call connect() first or use autoConnect: true",
+			);
+		}
 		return this.ws;
 	}
 
 	async waitForOpen(): Promise<void> {
-		if (this.ws.readyState === WebSocket.OPEN) {
+		const ws = this.ws;
+		if (!ws) {
+			throw new Error(
+				"socka: WebSocket not created yet; call connect() first or use autoConnect: true",
+			);
+		}
+		if (ws.readyState === WebSocket.OPEN) {
 			return;
 		}
 		return new Promise((resolve, reject) => {
@@ -205,7 +244,7 @@ export class SockaWebSocketClient<
 			const cleanup = () => {
 				abortController.abort();
 			};
-			this.ws.addEventListener(
+			ws.addEventListener(
 				"open",
 				() => {
 					cleanup();
@@ -213,7 +252,7 @@ export class SockaWebSocketClient<
 				},
 				{ signal },
 			);
-			this.ws.addEventListener(
+			ws.addEventListener(
 				"error",
 				() => {
 					cleanup();

@@ -5,6 +5,7 @@ import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
 import {
 	SockaWebSocketSession,
+	runSockaSessionOnAttached,
 	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
@@ -43,6 +44,7 @@ export function sockaHonoCloudflare<
 				const init = options?.sockaInit?.(c);
 				session = new SockaWebSocketSession(domWs, sessions, config, init);
 				sessions.set(domWs, session);
+				runSockaSessionOnAttached(config, session);
 			}
 			void dispatchSockaInboundMessage(session, wireFormat, evt.data).catch(
 				(err: unknown) => {

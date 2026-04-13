@@ -6,6 +6,7 @@ export {
 	type InferSockaRpc,
 	type InferSockaHandlers,
 	type InferSockaEventHandlers,
+	type InferSockaEventPayload,
 } from "./contract";
 export { parseStandardSchema } from "./validate";
 export { SockaError } from "./socka-error";

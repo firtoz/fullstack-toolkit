@@ -18,7 +18,7 @@ export class SockaSessionGameSession extends SockaDoSession<
 		wireFormat: SockaWireFormat,
 		world: SessionGameWorld,
 	) {
-		const { handlers, createData } =
+		const { handlers, createData, onAttached } =
 			createSessionGameHandlers<
 				SockaDoSession<typeof sessionGameContract, SessionGameSessionData, Env>
 			>(world);
@@ -28,6 +28,7 @@ export class SockaSessionGameSession extends SockaDoSession<
 			handlers,
 			handleClose: async () => {},
 			createData: (_ctx) => createData(),
+			onAttached,
 		});
 	}
 }

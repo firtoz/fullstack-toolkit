@@ -21,6 +21,20 @@ describe("SockaWebSocketClient", () => {
 		).toThrow("Either 'url' or 'webSocket' must be provided");
 	});
 
+	test("autoConnect false defers socket until connect()", async () => {
+		const { socket, dispatchOpen } = createFakeWebSocket(WebSocket.CONNECTING);
+		const client = new SockaWebSocketClient({
+			contract: rpcTestContract,
+			webSocket: socket,
+			autoConnect: false,
+		});
+		expect(() => client.socket).toThrow("connect()");
+		const p = client.connect();
+		dispatchOpen();
+		await p;
+		expect(client.socket).toBe(socket);
+	});
+
 	test("JSON: routes serverResponse to onResponse", () => {
 		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
 		const responses: unknown[] = [];

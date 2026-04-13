@@ -34,6 +34,8 @@ describe("useSockaRpc", () => {
 		});
 		await waitFor(() => expect(result.current.ready).toBe(true));
 		const echoPromise = result.current.rpc.echo({ text: "hi" });
+		await Promise.resolve();
+		await Promise.resolve();
 		const id = (JSON.parse(sent[0] as string) as { id: string }).id;
 		dispatchMessage(
 			encodeSockaWire(

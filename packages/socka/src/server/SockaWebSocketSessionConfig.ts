@@ -38,7 +38,10 @@ export type SockaWebSocketSessionConfig<
 	contract: TContract;
 	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
 	wireFormat?: SockaWireFormat;
-	handlers: InferSockaHandlers<TContract, SockaSessionForHandlers<TContract, TData>>;
+	handlers: InferSockaHandlers<
+		TContract,
+		SockaSessionForHandlers<TContract, TData>
+	>;
 	handleClose: () => Promise<void>;
 	onHandlerError?: (
 		error: unknown,
@@ -52,4 +55,11 @@ export type SockaWebSocketSessionConfig<
 	) => Promise<void>;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
+	/**
+	 * Called once after this session is registered in the shared `sessions` map
+	 * (safe to broadcast to peers). Sync or async; async rejections are logged.
+	 */
+	onAttached?: (
+		session: SockaSessionForHandlers<TContract, TData>,
+	) => void | Promise<void>;
 } & SockaWebSocketCreateData<TData>;

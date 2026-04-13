@@ -15,8 +15,7 @@ export type SessionGameExpectFn = (actual: unknown) => {
 
 /**
  * Builds the second client only after the one-player snapshot so both sockets
- * are not connecting concurrently before `listPlayers` (which would already
- * show two joined players).
+ * are not connecting concurrently before the second player appears in the roster.
  */
 export async function assertSessionGameRosterGrowth(
 	rpcA: SockaRpc<typeof sessionGameContract>,
@@ -105,9 +104,9 @@ export function createSessionGameEventCollector(): {
 }
 
 /**
- * Witness lists first (alone), then `createRpcPeer` runs so the peer does not
- * connect until after that snapshot; the witness should receive `playerJoined`
- * when the peer lists (witness must pass collector `handlers` into {@link SockaRpc}).
+ * Witness lists first (alone), then the peer connects; `onAttached` broadcasts
+ * `playerJoined` to peers before the peer's first `listPlayers` (witness must
+ * pass collector `eventHandlers` into {@link SockaRpc}).
  */
 export async function assertSessionGamePlayerJoinedEvent(
 	rpcWitness: SockaRpc<typeof sessionGameContract>,
@@ -122,6 +121,8 @@ export async function assertSessionGamePlayerJoinedEvent(
 
 	const rpcPeer = await Promise.resolve(createRpcPeer());
 	await rpcPeer.client.waitForOpen();
+	await Promise.resolve();
+	await Promise.resolve();
 	const peerFirst = await rpcPeer.rpc.listPlayers();
 	expect(witnessJoined).toEqual([{ playerId: peerFirst.self }]);
 	return rpcPeer;

@@ -11,15 +11,17 @@ import { createFakeWebSocket } from "../test-utils/fake-websocket";
 import { SockaRpc } from "./SockaRpc";
 
 describe("SockaRpc", () => {
-	test("rejects call when WebSocket is not open", async () => {
-		const { socket } = createFakeWebSocket(WebSocket.CONNECTING);
+	test("rejects call when connection fails before open", async () => {
+		const { socket, dispatchError } = createFakeWebSocket(WebSocket.CONNECTING);
 		const rpc = new SockaRpc({
 			contract: rpcTestContract,
 			webSocket: socket,
 		});
-		await expect(rpc.rpc.echo({ text: "a" })).rejects.toThrow(
-			"WebSocket not connected",
-		);
+		const p = rpc.rpc.echo({ text: "a" });
+		queueMicrotask(() => {
+			dispatchError();
+		});
+		await expect(p).rejects.toThrow("WebSocket connection failed");
 	});
 
 	test("full echo round-trip with captured request id", async () => {
@@ -32,6 +34,8 @@ describe("SockaRpc", () => {
 		});
 
 		const p = rpc.rpc.echo({ text: "hello" });
+		await Promise.resolve();
+		await Promise.resolve();
 		expect(sent.length).toBe(1);
 		const req = JSON.parse(sent[0] as string);
 		expect(req.socka).toBe("clientRequest");
@@ -53,6 +57,8 @@ describe("SockaRpc", () => {
 		dispatchOpen();
 		const rpc = new SockaRpc({ contract: rpcTestContract, webSocket: socket });
 		const p = rpc.rpc.ping();
+		await Promise.resolve();
+		await Promise.resolve();
 		const req = JSON.parse(sent[0] as string);
 		const id = req.id as string;
 		dispatchMessage(
@@ -70,6 +76,8 @@ describe("SockaRpc", () => {
 		dispatchOpen();
 		const rpc = new SockaRpc({ contract: rpcTestContract, webSocket: socket });
 		const p = rpc.rpc.echo({ text: "a" });
+		await Promise.resolve();
+		await Promise.resolve();
 		const id = (JSON.parse(sent[0] as string) as { id: string }).id;
 		dispatchMessage(
 			encodeSockaWire(
@@ -142,15 +150,113 @@ describe("SockaRpc", () => {
 		}
 	});
 
+	test("events.on receives validated notify payload", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		let seen: unknown;
+		const rpc = new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+		});
+		rpc.events.on("notify", (payload) => {
+			seen = payload;
+		});
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerEvent("notify", { msg: "e" }),
+				"json",
+			) as string,
+		);
+		await new Promise((r) => setTimeout(r, 0));
+		expect(seen).toEqual({ msg: "e" });
+	});
+
+	test("events.once fires only once", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		let count = 0;
+		const rpc = new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+		});
+		rpc.events.once("notify", () => {
+			count += 1;
+		});
+		const wire = encodeSockaWire(
+			encodeServerEvent("notify", { msg: "a" }),
+			"json",
+		) as string;
+		dispatchMessage(wire);
+		dispatchMessage(wire);
+		await new Promise((r) => setTimeout(r, 0));
+		expect(count).toBe(1);
+	});
+
+	test("events.waitForEvent resolves with payload", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const rpc = new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+		});
+		const p = rpc.events.waitForEvent("notify");
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerEvent("notify", { msg: "w" }),
+				"json",
+			) as string,
+		);
+		await expect(p).resolves.toEqual({ msg: "w" });
+	});
+
+	test("events.waitForEvent respects predicate", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const rpc = new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+		});
+		const p = rpc.events.waitForEvent("notify", {
+			predicate: (x) => x.msg === "b",
+		});
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerEvent("notify", { msg: "a" }),
+				"json",
+			) as string,
+		);
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerEvent("notify", { msg: "b" }),
+				"json",
+			) as string,
+		);
+		await expect(p).resolves.toEqual({ msg: "b" });
+	});
+
+	test("events.waitForEvent aborts with signal", async () => {
+		const { socket, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const rpc = new SockaRpc({
+			contract: rpcTestContract,
+			webSocket: socket,
+		});
+		const ac = new AbortController();
+		const p = rpc.events.waitForEvent("notify", { signal: ac.signal });
+		ac.abort();
+		await expect(p).rejects.toBeInstanceOf(DOMException);
+	});
+
 	test("rejectAllPending rejects all pending calls", async () => {
 		const { socket, dispatchOpen, sent } = createFakeWebSocket();
 		dispatchOpen();
 		const rpc = new SockaRpc({ contract: rpcTestContract, webSocket: socket });
 		const p1 = rpc.rpc.echo({ text: "a" });
 		const p2 = rpc.rpc.ping();
+		await Promise.resolve();
+		await Promise.resolve();
 		expect(sent.length).toBe(2);
 		rpc.rejectAllPending(new Error("bye"));
-		await expect(p1).rejects.toThrow("bye");
-		await expect(p2).rejects.toThrow("bye");
+		await expect(Promise.all([p1, p2])).rejects.toThrow("bye");
 	});
 });

@@ -6,9 +6,13 @@ import type { SockaDoSession } from "./SockaDoSession";
 
 export type SockaWebSocketDOOptions<
 	TEnv extends object,
+	// `any` contract slot: concrete sessions use `defineSocka` contracts that do
+	// not assign to `SockaContract<SockaContractConfig>` under strict generics.
 	TSession extends SockaDoSession<
-		SockaContract<SockaContractConfig>,
-		unknown,
+		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
+		any,
+		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
+		any,
 		TEnv
 	>,
 > = {
@@ -24,13 +28,19 @@ export type SockaWebSocketDOOptions<
  */
 export abstract class SockaWebSocketDO<
 	TSession extends SockaDoSession<
+		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
+		any,
+		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
+		any,
+		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
+		any
+	> = SockaDoSession<
 		SockaContract<SockaContractConfig>,
 		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
 		any,
 		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
 		any
-		// biome-ignore lint/suspicious/noExplicitAny: session family type erasure
-	> = SockaDoSession<SockaContract<SockaContractConfig>, any, any>,
+	>,
 	TEnv extends SessionEnv<TSession> = SessionEnv<TSession>,
 > extends BaseWebSocketDO<TSession, TEnv> {
 	constructor(

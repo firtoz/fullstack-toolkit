@@ -1,14 +1,18 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Context } from "hono";
 import { BaseSession } from "@firtoz/websocket-do";
 import type {
+	InferSockaEventPayload,
 	SockaContract,
 	SockaContractConfig,
 	InferSockaHandlers,
 } from "../core/contract";
 import {
 	SockaWebSocketSession,
+	type SockaPushSession,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
+import { parseStandardSchema } from "../core/validate";
 import type { SockaWireFormat } from "../core/wire-codec";
 
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
@@ -38,7 +42,10 @@ export type SockaDoSessionConfig<
 	contract: TContract;
 	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
 	wireFormat?: SockaWireFormat;
-	handlers: InferSockaHandlers<TContract, SockaDoOuterSession<TContract, TData, TEnv>>;
+	handlers: InferSockaHandlers<
+		TContract,
+		SockaDoOuterSession<TContract, TData, TEnv>
+	>;
 	handleClose: () => Promise<void>;
 	onHandlerError?: (
 		error: unknown,
@@ -50,16 +57,36 @@ export type SockaDoSessionConfig<
 		error: unknown,
 		originalMessage: unknown,
 	) => Promise<void>;
+	/**
+	 * Called after this session is registered in the DO `sessions` map (next
+	 * microtask). Use for join broadcasts and other logic that must run only
+	 * when peers can see this connection.
+	 */
+	onAttached?: (
+		session: SockaDoOuterSession<TContract, TData, TEnv>,
+	) => void | Promise<void>;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
 } & SockaDoSessionCreateData<TData, TEnv>;
 
-/** Inner wire engine (narrow surface) — avoids invariant contract clashes on private fields. */
-type SockaInnerWireEngine = {
-	handleRawMessage(rawMessage: string): Promise<void>;
-	handleBinaryMessage(buffer: ArrayBuffer): Promise<void>;
-	emitEvent(event: string, body: unknown): void;
-};
+function runSockaDoSessionOnAttached<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData,
+	TEnv extends object,
+>(
+	config: SockaDoSessionConfig<TContract, TData, TEnv>,
+	session: SockaDoSession<TContract, TData, TEnv>,
+): void {
+	const cb = config.onAttached;
+	if (!cb) return;
+	try {
+		void Promise.resolve(cb(session)).catch((err: unknown) => {
+			console.error("socka: onAttached error:", err);
+		});
+	} catch (err) {
+		console.error("socka: onAttached error:", err);
+	}
+}
 
 function wrapHandlersForInnerSockaEngine<
 	TContract extends SockaContract<SockaContractConfig>,
@@ -67,9 +94,15 @@ function wrapHandlersForInnerSockaEngine<
 	TEnv extends object,
 >(
 	contract: TContract,
-	userHandlers: InferSockaHandlers<TContract, SockaDoSession<TContract, TData, TEnv>>,
+	userHandlers: InferSockaHandlers<
+		TContract,
+		SockaDoSession<TContract, TData, TEnv>
+	>,
 	outer: SockaDoSession<TContract, TData, TEnv>,
-): InferSockaHandlers<TContract, SockaWebSocketSession<TContract, EmptySockaSessionData>> {
+): InferSockaHandlers<
+	TContract,
+	SockaWebSocketSession<TContract, EmptySockaSessionData>
+> {
 	const procedures = contract.procedures;
 	const out: Record<
 		string,
@@ -82,7 +115,9 @@ function wrapHandlersForInnerSockaEngine<
 		  ) => unknown | Promise<unknown>)
 	> = {};
 
-	for (const key of Object.keys(procedures) as Array<keyof typeof procedures & string>) {
+	for (const key of Object.keys(procedures) as Array<
+		keyof typeof procedures & string
+	>) {
 		const proc = procedures[key];
 		const userFn = userHandlers[key as keyof typeof userHandlers];
 		if (proc.input) {
@@ -97,10 +132,14 @@ function wrapHandlersForInnerSockaEngine<
 					) => unknown | Promise<unknown>
 				)(input, outer);
 		} else {
-			out[key] = (_inner: SockaWebSocketSession<TContract, EmptySockaSessionData>) =>
-				(userFn as (s: SockaDoSession<TContract, TData, TEnv>) => unknown | Promise<unknown>)(
-					outer,
-				);
+			out[key] = (
+				_inner: SockaWebSocketSession<TContract, EmptySockaSessionData>,
+			) =>
+				(
+					userFn as (
+						s: SockaDoSession<TContract, TData, TEnv>,
+					) => unknown | Promise<unknown>
+				)(outer);
 		}
 	}
 
@@ -116,11 +155,15 @@ function wrapHandlersForInnerSockaEngine<
  * input/output via Standard Schema, and auto-sends response/error frames.
  */
 export class SockaDoSession<
-	TContract extends SockaContract<SockaContractConfig>,
-	TData = EmptySockaSessionData,
-	TEnv extends object = Cloudflare.Env,
-> extends BaseSession<TData, unknown, unknown, TEnv> {
-	private socka!: SockaInnerWireEngine;
+		TContract extends SockaContract<SockaContractConfig>,
+		TData = EmptySockaSessionData,
+		TEnv extends object = Cloudflare.Env,
+	>
+	extends BaseSession<TData, unknown, unknown, TEnv>
+	implements SockaPushSession<TContract>
+{
+	private socka!: SockaWebSocketSession<TContract, EmptySockaSessionData>;
+	private readonly contract: TContract;
 
 	constructor(
 		websocket: WebSocket,
@@ -144,7 +187,11 @@ export class SockaDoSession<
 				handleClose: async () => config.handleClose(),
 			},
 		);
-		const sockaConfig: SockaWebSocketSessionConfig<TContract, EmptySockaSessionData> = {
+		this.contract = config.contract;
+		const sockaConfig: SockaWebSocketSessionConfig<
+			TContract,
+			EmptySockaSessionData
+		> = {
 			contract: config.contract,
 			wireFormat,
 			handlers: wrapHandlersForInnerSockaEngine(
@@ -172,28 +219,51 @@ export class SockaDoSession<
 			>,
 			sockaConfig,
 		);
+		// Defer past the outer `await createSession()` continuation so
+		// `BaseSession.startFresh` has run and `session.data` exists (single
+		// `queueMicrotask` runs before that continuation).
+		queueMicrotask(() => {
+			queueMicrotask(() => {
+				runSockaDoSessionOnAttached(config, this);
+			});
+		});
 	}
 
 	public async handleRawMessage(rawMessage: string): Promise<void> {
 		return this.socka.handleRawMessage(rawMessage);
 	}
 
-	/** Send a server event (non-RPC push) to this session. */
-	public emitEvent(event: string, body: unknown): void {
-		this.socka.emitEvent(event, body);
+	public emitWireEvent(event: string, body: unknown): void {
+		this.socka.emitWireEvent(event, body);
 	}
 
-	/** Broadcast a server event to all sessions (each encodes with its own wire format). */
-	public broadcastEvent(
-		event: string,
-		body: unknown,
+	public emitContractEvent<K extends keyof TContract["events"] & string>(
+		name: K,
+		body: InferSockaEventPayload<TContract, K>,
+	): Promise<void> {
+		return this.socka.emitContractEvent(name, body);
+	}
+
+	public async broadcastContractEvent<
+		K extends keyof TContract["events"] & string,
+	>(
+		name: K,
+		body: InferSockaEventPayload<TContract, K>,
 		excludeSelf = false,
-	): void {
+	): Promise<void> {
+		const schema = this.contract.events[name];
+		if (!schema) {
+			throw new Error(`socka: unknown event ${String(name)}`);
+		}
+		const validated = await parseStandardSchema(
+			schema as StandardSchemaV1<unknown, InferSockaEventPayload<TContract, K>>,
+			body,
+		);
 		for (const session of this.sessions.values()) {
 			if (excludeSelf && session === this) continue;
-			(session as SockaDoSession<TContract, TData, TEnv>).emitEvent(
-				event,
-				body,
+			(session as SockaDoSession<TContract, TData, TEnv>).emitWireEvent(
+				name,
+				validated,
 			);
 		}
 	}

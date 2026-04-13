@@ -158,7 +158,9 @@ Optional fourth argument **`{ request }`** is passed to **`createData`** when yo
 | **`SockaWebSocketSession`** (`socka/server`, Bun, Hono, …) | Session constructor | **`SockaWebSocketInit`** (e.g. **`{ request }`** from the upgrade) | **`session.data`** |
 | **`SockaDoSession`** / **`BaseSession`** (`socka/do`, **`@firtoz/websocket-do`**) | **`startFresh(ctx)`** when the DO accepts a socket | Hono **`Context`** | **`session.data`**, also serialized to the **DO WebSocket attachment** for **hibernation** |
 
-Procedures **with** an input schema use **`(input, session) => output`**. Procedures **without** input use **`(session) => output`** only (no `undefined` first argument). The **`session`** argument is the full **`SockaWebSocketSession`** or **`SockaDoSession`** instance, so you can read **`session.data`**, call **`session.emitEvent`**, **`session.broadcastEvent`**, etc.
+Procedures **with** an input schema use **`(input, session) => output`**. Procedures **without** input use **`(session) => output`** only (no `undefined` first argument). The **`session`** argument is the full **`SockaWebSocketSession`** or **`SockaDoSession`** instance, so you can read **`session.data`**, call **`await session.emitContractEvent`**, **`await session.broadcastContractEvent`** (payloads are validated against the contract event schemas before send).
+
+**`onAttached`** — optional on **`SockaWebSocketSessionConfig`** and **`SockaDoSessionConfig`**. Runs after the session is registered in the shared map (safe to broadcast to peers). On Durable Objects, user code runs after **`startFresh`** so **`session.data`** is available (see implementation notes in `socka/do`).
 
 **Example — `session.data` on a portable server:**
 
@@ -238,9 +240,25 @@ export const myContract = defineSocka({
   },
 });
 
-// Server: session.emitEvent("itemsChanged", payload)
-// Client: eventHandlers: { itemsChanged: (payload) => ... } on useSockaRpc / useSocka
+// Server — contract-keyed emit (Standard Schema validation before send):
+await session.broadcastContractEvent("itemsChanged", payload);
+
+// Client — optional `eventHandlers` on SockaRpc / useSockaRpc (same as rpc.events.on(...))
+// Or subscribe imperatively:
+rpc.events.on("itemsChanged", (payload) => { /* ... */ });
+rpc.events.once("itemsChanged", (payload) => { /* ... */ });
+const payload = await rpc.events.waitForEvent("itemsChanged", {
+  timeoutMs: 5000,
+  signal: ac.signal,
+  predicate: (p) => p.length > 0,
+});
 ```
+
+Use **`InferSockaEventPayload<typeof myContract, "itemsChanged">`** (from **`socka/core`**) for typed payloads.
+
+## Deferred WebSocket connect
+
+Use **`autoConnect: false`** on **`SockaWebSocketClient`** / **`SockaRpc`** when you want to open the socket later (e.g. after user action). Call **`await rpc.connect()`** or **`await client.connect()`** before RPCs; **`SockaRpc`** **`call()`** also awaits connect automatically.
 
 ## Type inference
 

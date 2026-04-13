@@ -68,7 +68,8 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 	});
 
 	beforeAll(async () => {
-		const { handlers, createData } = createSessionGameHandlers(world);
+		const { handlers, createData, onAttached } =
+			createSessionGameHandlers(world);
 
 		const started = await listenWss();
 		wss = started.wss;
@@ -81,6 +82,7 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 				handlers,
 				createData,
 				handleClose: async () => {},
+				onAttached,
 			});
 		});
 	});

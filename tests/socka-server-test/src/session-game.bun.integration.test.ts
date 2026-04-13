@@ -18,7 +18,7 @@ function startSessionGameBunServer(wireFormat: SockaWireFormat): {
 	world: ReturnType<typeof createSessionGameWorld>;
 } {
 	const world = createSessionGameWorld();
-	const { handlers, createData } = createSessionGameHandlers(world);
+	const { handlers, createData, onAttached } = createSessionGameHandlers(world);
 
 	const { websocket } = createSockaBunWebSocketHandlers({
 		contract: sessionGameContract,
@@ -26,6 +26,7 @@ function startSessionGameBunServer(wireFormat: SockaWireFormat): {
 		handlers,
 		createData,
 		handleClose: async () => {},
+		onAttached,
 	});
 
 	const server = Bun.serve({

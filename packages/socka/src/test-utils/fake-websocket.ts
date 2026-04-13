@@ -11,6 +11,7 @@ export function createFakeWebSocket(
 	dispatchMessage: (data: string | ArrayBuffer) => void;
 	dispatchOpen: () => void;
 	dispatchClose: () => void;
+	dispatchError: () => void;
 	setReadyState: (state: number) => void;
 } {
 	const sent: (string | ArrayBuffer | Blob)[] = [];
@@ -96,6 +97,11 @@ export function createFakeWebSocket(
 		socket.dispatchEvent(new CloseEvent("close", { code: 1000 }));
 	};
 
+	const dispatchError = (): void => {
+		readyState = WebSocket.CLOSED;
+		socket.dispatchEvent(new Event("error"));
+	};
+
 	const setReadyState = (state: number): void => {
 		readyState = state;
 	};
@@ -106,6 +112,7 @@ export function createFakeWebSocket(
 		dispatchMessage,
 		dispatchOpen,
 		dispatchClose,
+		dispatchError,
 		setReadyState,
 	};
 }

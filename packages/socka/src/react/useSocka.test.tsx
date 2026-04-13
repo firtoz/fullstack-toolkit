@@ -37,6 +37,8 @@ describe("useSocka", () => {
 			throw new Error("expected session");
 		}
 		const pending = session.rpc.echo({ text: "x" });
+		await Promise.resolve();
+		await Promise.resolve();
 		expect(sent.length).toBe(1);
 		unmount();
 		await expect(pending).rejects.toThrow("WebSocket closed");

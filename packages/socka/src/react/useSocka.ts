@@ -50,9 +50,16 @@ export function useSocka<TContract extends SockaContract<SockaContractConfig>>(
 		});
 
 		sessionRef.current = session;
-		if (session.client.socket.readyState === WebSocket.OPEN) {
-			setReady(true);
-		}
+		void session.client.connect().then(
+			() => {
+				if (!cancelled) {
+					setReady(true);
+				}
+			},
+			() => {
+				/* connect failure: onError / onClose handle UX */
+			},
+		);
 
 		return () => {
 			cancelled = true;

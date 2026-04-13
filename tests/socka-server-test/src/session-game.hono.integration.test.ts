@@ -21,7 +21,7 @@ function startSessionGameHonoServer(wireFormat: SockaWireFormat): {
 	world: ReturnType<typeof createSessionGameWorld>;
 } {
 	const world = createSessionGameWorld();
-	const { handlers, createData } = createSessionGameHandlers(world);
+	const { handlers, createData, onAttached } = createSessionGameHandlers(world);
 
 	const app = new Hono();
 	const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
@@ -35,6 +35,7 @@ function startSessionGameHonoServer(wireFormat: SockaWireFormat): {
 				handlers,
 				createData,
 				handleClose: async () => {},
+				onAttached,
 			}),
 		),
 	);

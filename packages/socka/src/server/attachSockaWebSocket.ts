@@ -2,6 +2,7 @@ import type { SockaContract, SockaContractConfig } from "../core/contract";
 import { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
 import {
 	SockaWebSocketSession,
+	runSockaSessionOnAttached,
 	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "./SockaWebSocketSession";
@@ -31,6 +32,7 @@ export function attachSockaWebSocket<
 ): AttachedSockaWebSocket<TContract, TData> {
 	const session = new SockaWebSocketSession(websocket, sessions, config, init);
 	sessions.set(websocket, session);
+	runSockaSessionOnAttached(config, session);
 
 	let shuttingDown = false;
 

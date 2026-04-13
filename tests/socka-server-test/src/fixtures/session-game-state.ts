@@ -1,12 +1,7 @@
 import { SockaError } from "socka/core";
 import type { InferSockaHandlers } from "socka/core";
+import type { SockaPushSession } from "socka/server";
 import type { SockaWebSocketSession } from "socka/server";
-
-/** Both portable and DO sessions expose {@link broadcastEvent} for server pushes. */
-export type SessionGameBroadcastSession = {
-	data: SessionGameSessionData;
-	broadcastEvent(event: string, body: unknown, excludeSelf?: boolean): void;
-};
 import type {
 	SessionGameContract,
 	SessionGamePlayerId,
@@ -26,11 +21,6 @@ export type SessionGameWorld = {
 	reset(): void;
 	/** Append a new player with fresh health; returns their id (call from `createData`). */
 	join(): SessionGamePlayerId;
-	/**
-	 * First `listPlayers` for this id returns `true` so the server can broadcast
-	 * `playerJoined` to peers (subsequent calls return `false`).
-	 */
-	takeJoinBroadcastTurn(playerId: SessionGamePlayerId): boolean;
 };
 
 export function createSessionGameWorld(options?: {
@@ -39,7 +29,6 @@ export function createSessionGameWorld(options?: {
 }): SessionGameWorld {
 	const idPrefix = options?.idPrefix ?? "p";
 	const players: SessionGamePlayer[] = [];
-	const joinBroadcastDone = new Set<SessionGamePlayerId>();
 	let seq = 0;
 
 	return {
@@ -47,18 +36,12 @@ export function createSessionGameWorld(options?: {
 		reset(): void {
 			players.length = 0;
 			seq = 0;
-			joinBroadcastDone.clear();
 		},
 		join(): SessionGamePlayerId {
 			seq += 1;
 			const id = `${idPrefix}${seq}`;
 			players.push({ id, health: SESSION_GAME_START_HEALTH });
 			return id;
-		},
-		takeJoinBroadcastTurn(playerId: SessionGamePlayerId): boolean {
-			if (joinBroadcastDone.has(playerId)) return false;
-			joinBroadcastDone.add(playerId);
-			return true;
 		},
 	};
 }
@@ -72,6 +55,24 @@ export function sessionGameCreateData(
 	return () => ({ playerId: world.join() });
 }
 
+/**
+ * After the session is registered, broadcast `playerJoined` to peers (exclude self).
+ * Pass as {@link SockaWebSocketSessionConfig.onAttached} or {@link SockaDoSessionConfig.onAttached}.
+ */
+export function createSessionGameOnAttached(_world: SessionGameWorld): (
+	session: SockaPushSession<SessionGameContract> & {
+		data: SessionGameSessionData;
+	},
+) => void | Promise<void> {
+	return (session) => {
+		void session.broadcastContractEvent(
+			"playerJoined",
+			{ playerId: session.data.playerId },
+			true,
+		);
+	};
+}
+
 function findPlayer(
 	world: SessionGameWorld,
 	id: SessionGamePlayerId,
@@ -80,28 +81,29 @@ function findPlayer(
 }
 
 export function createSessionGameHandlers<
-	TSession extends SessionGameBroadcastSession = SockaWebSocketSession<
-		SessionGameContract,
-		SessionGameSessionData
-	>,
+	TSession extends SockaPushSession<SessionGameContract> & {
+		data: SessionGameSessionData;
+	} = SockaWebSocketSession<SessionGameContract, SessionGameSessionData>,
 >(
 	world: SessionGameWorld,
 ): {
 	handlers: InferSockaHandlers<SessionGameContract, TSession>;
 	createData: () => SessionGameSessionData;
+	onAttached: (
+		session: SockaPushSession<SessionGameContract> & {
+			data: SessionGameSessionData;
+		},
+	) => void | Promise<void>;
 } {
 	const handlers: InferSockaHandlers<SessionGameContract, TSession> = {
-		listPlayers(session) {
+		async listPlayers(session) {
 			const self = session.data.playerId;
-			if (world.takeJoinBroadcastTurn(self)) {
-				session.broadcastEvent("playerJoined", { playerId: self }, true);
-			}
 			return {
 				self,
 				players: world.players.map((p) => ({ id: p.id, health: p.health })),
 			};
 		},
-		attack(input, session) {
+		async attack(input, session) {
 			const self = session.data.playerId;
 			if (input.target === self) {
 				throw new SockaError("cannot attack self");
@@ -114,7 +116,7 @@ export function createSessionGameHandlers<
 			target.health = Math.max(0, target.health - SESSION_GAME_DAMAGE);
 			const gameOver = target.health === 0;
 			if (gameOver) {
-				session.broadcastEvent(
+				await session.broadcastContractEvent(
 					"playerEliminated",
 					{ playerId: input.target, eliminatedBy: self },
 					false,
@@ -132,5 +134,6 @@ export function createSessionGameHandlers<
 	return {
 		handlers,
 		createData: sessionGameCreateData(world),
+		onAttached: createSessionGameOnAttached(world),
 	};
 }

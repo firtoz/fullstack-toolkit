@@ -1,5 +1,10 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type {
+	InferSockaEventPayload,
+	SockaContract,
+	SockaContractConfig,
+} from "../core/contract";
 import {
 	SockaWireError,
 	decodeSockaWire,
@@ -26,13 +31,31 @@ type EmptySockaSessionData = Record<string, never>;
 
 export type { SockaWebSocketInit, SockaWebSocketSessionConfig };
 
+/** Session that can send a wire-level server event (already validated). */
 export type SockaEmitCapable = {
-	emitEvent(event: string, body: unknown): void;
+	emitWireEvent(event: string, body: unknown): void;
 };
 
 /**
+ * Contract-typed session surface for handlers that push server events.
+ */
+export interface SockaPushSession<
+	TContract extends SockaContract<SockaContractConfig>,
+> {
+	emitContractEvent<K extends keyof TContract["events"] & string>(
+		name: K,
+		body: InferSockaEventPayload<TContract, K>,
+	): Promise<void>;
+	broadcastContractEvent<K extends keyof TContract["events"] & string>(
+		name: K,
+		body: InferSockaEventPayload<TContract, K>,
+		excludeSelf?: boolean,
+	): Promise<void>;
+}
+
+/**
  * Broadcast a socka server event to every session in the map (optionally
- * excluding the caller).
+ * excluding the caller). Payload must already be contract-validated.
  */
 export function broadcastSockaEventToPeers(
 	sessions: Map<WebSocket, SockaEmitCapable>,
@@ -43,7 +66,7 @@ export function broadcastSockaEventToPeers(
 ): void {
 	for (const session of sessions.values()) {
 		if (excludeSelf && session === self) continue;
-		session.emitEvent(event, body);
+		session.emitWireEvent(event, body);
 	}
 }
 
@@ -54,7 +77,8 @@ export function broadcastSockaEventToPeers(
 export class SockaWebSocketSession<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData = EmptySockaSessionData,
-> {
+> implements SockaPushSession<TContract>
+{
 	private readonly config: SockaWebSocketSessionConfig<TContract, TData>;
 	private readonly wireFormat: SockaWireFormat;
 	private _data!: TData;
@@ -251,23 +275,50 @@ export class SockaWebSocketSession<
 		this.websocket.send(copy.buffer);
 	}
 
-	/** Send a server event (non-RPC push) to this session. */
-	public emitEvent(event: string, body: unknown): void {
+	/**
+	 * Send a server event frame (wire). Prefer {@link emitContractEvent} so
+	 * payloads are validated against the contract.
+	 */
+	public emitWireEvent(event: string, body: unknown): void {
 		const frame = encodeServerEvent(event, body);
 		this.sendWireFrame(frame);
 	}
 
-	/** Broadcast a server event to all sessions (each encodes with its own wire format). */
-	public broadcastEvent(
-		event: string,
-		body: unknown,
+	public async emitContractEvent<K extends keyof TContract["events"] & string>(
+		name: K,
+		body: InferSockaEventPayload<TContract, K>,
+	): Promise<void> {
+		const schema = this.config.contract.events[name];
+		if (!schema) {
+			throw new Error(`socka: unknown event ${String(name)}`);
+		}
+		const validated = await parseStandardSchema(
+			schema as StandardSchemaV1<unknown, InferSockaEventPayload<TContract, K>>,
+			body,
+		);
+		this.emitWireEvent(name, validated);
+	}
+
+	public async broadcastContractEvent<
+		K extends keyof TContract["events"] & string,
+	>(
+		name: K,
+		body: InferSockaEventPayload<TContract, K>,
 		excludeSelf = false,
-	): void {
+	): Promise<void> {
+		const schema = this.config.contract.events[name];
+		if (!schema) {
+			throw new Error(`socka: unknown event ${String(name)}`);
+		}
+		const validated = await parseStandardSchema(
+			schema as StandardSchemaV1<unknown, InferSockaEventPayload<TContract, K>>,
+			body,
+		);
 		broadcastSockaEventToPeers(
 			this.sessions as Map<WebSocket, SockaEmitCapable>,
 			this,
-			event,
-			body,
+			name,
+			validated,
 			excludeSelf,
 		);
 	}
@@ -281,5 +332,27 @@ export class SockaWebSocketSession<
 		} else {
 			console.error("socka: validation error:", error, originalMessage);
 		}
+	}
+}
+
+/**
+ * Invoke {@link SockaWebSocketSessionConfig.onAttached} after the session is
+ * registered in the shared map.
+ */
+export function runSockaSessionOnAttached<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData,
+>(
+	config: SockaWebSocketSessionConfig<TContract, TData>,
+	session: SockaWebSocketSession<TContract, TData>,
+): void {
+	const cb = config.onAttached;
+	if (!cb) return;
+	try {
+		void Promise.resolve(cb(session)).catch((err: unknown) => {
+			console.error("socka: onAttached error:", err);
+		});
+	} catch (err) {
+		console.error("socka: onAttached error:", err);
 	}
 }

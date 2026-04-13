@@ -51,10 +51,7 @@ type HandlerOut<P extends SockaProcedureDef> =
 type HandlerFn<P extends SockaProcedureDef, TSession> = P extends {
 	input: infer I extends StandardSchemaV1;
 }
-	? (
-			input: StandardSchemaV1.InferInput<I>,
-			session: TSession,
-		) => HandlerOut<P>
+	? (input: StandardSchemaV1.InferInput<I>, session: TSession) => HandlerOut<P>
 	: (session: TSession) => HandlerOut<P>;
 
 /**
@@ -68,6 +65,16 @@ export type InferSockaHandlers<C extends SockaContract, TSession> = {
 
 type InferEventPayload<S extends StandardSchemaV1> =
 	StandardSchemaV1.InferOutput<S>;
+
+/**
+ * Payload type for a contract event (output of the event's Standard Schema).
+ */
+export type InferSockaEventPayload<
+	C extends SockaContract<SockaContractConfig>,
+	K extends keyof C["events"],
+> = C["events"][K] extends StandardSchemaV1
+	? InferEventPayload<C["events"][K]>
+	: never;
 
 /**
  * Infers the typed event handler map for a contract's events.

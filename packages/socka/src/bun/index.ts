@@ -4,6 +4,7 @@ import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
 import {
 	SockaWebSocketSession,
+	runSockaSessionOnAttached,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
 
@@ -45,6 +46,7 @@ export function createSockaBunWebSocketHandlers<
 			const domWs = ws as unknown as WebSocket;
 			const session = new SockaWebSocketSession(domWs, sessionMap, config);
 			sessionMap.set(domWs, session);
+			runSockaSessionOnAttached(config, session);
 		},
 		async message(ws: ServerWebSocket, message: unknown) {
 			const domWs = ws as unknown as WebSocket;
