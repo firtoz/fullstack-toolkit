@@ -319,6 +319,7 @@
         "@types/react": "catalog:",
         "bun-types": "catalog:",
         "typescript": "catalog:",
+        "zod": "catalog:",
       },
       "peerDependencies": {
         "@cloudflare/workers-types": "catalog:",
