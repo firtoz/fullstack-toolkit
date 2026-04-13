@@ -1,11 +1,11 @@
 /**
- * Example: Using ZodWebSocketClient with msgpack buffer messages
+ * Example: Using StandardSchemaWebSocketClient with msgpack buffer messages
  *
- * This file demonstrates various patterns for using ZodWebSocketClient,
+ * This file demonstrates various patterns for using StandardSchemaWebSocketClient,
  * including integration with honoDoFetcher for Cloudflare Durable Objects.
  */
 
-import { ZodWebSocketClient } from "@firtoz/websocket-do";
+import { StandardSchemaWebSocketClient } from "@firtoz/websocket-do";
 import { honoDoFetcherWithName } from "@firtoz/hono-fetcher";
 import { z } from "zod";
 import { useEffect, useState } from "react";
@@ -58,7 +58,7 @@ type ServerMessage = z.infer<typeof ServerMessageSchema>;
 // @ts-expect-error - this is only an example
 // biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function createBufferClient() {
-	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+	const client = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 		url: "wss://your-server.com/websocket",
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
@@ -88,7 +88,7 @@ function createBufferClient() {
 		onOpen: () => {
 			console.log("Connected!");
 			// Send a message after connecting
-			client.send({ type: "setName", name: "Alice" });
+			void client.send({ type: "setName", name: "Alice" });
 		},
 
 		onClose: (event) => {
@@ -112,7 +112,7 @@ function createBufferClient() {
 // @ts-expect-error - this is only an example
 // biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function createJsonClient() {
-	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+	const client = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 		url: "wss://your-server.com/websocket",
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
@@ -134,7 +134,7 @@ function createJsonClient() {
 // @ts-expect-error - this is only an example
 // biome-ignore lint/correctness/noUnusedVariables: this is only an example
 async function exampleAsyncUsage() {
-	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+	const client = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 		url: "wss://your-server.com/websocket",
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
@@ -147,8 +147,8 @@ async function exampleAsyncUsage() {
 	console.log("Connection established!");
 
 	// Send messages
-	client.send({ type: "setName", name: "Bob" });
-	client.send({ type: "message", text: "Hello, everyone!" });
+	await client.send({ type: "setName", name: "Bob" });
+	await client.send({ type: "message", text: "Hello, everyone!" });
 
 	// Later, close the connection
 	setTimeout(() => {
@@ -166,15 +166,15 @@ async function connectToDurableObject(env: any, roomName: string) {
 	// @ts-expect-error - this is only an example
 	const wsResp = await api.websocket({
 		url: "/websocket",
-		config: { autoAccept: false }, // Let ZodWebSocketClient control acceptance
+		config: { autoAccept: false }, // Let StandardSchemaWebSocketClient control acceptance
 	});
 
 	if (!wsResp.webSocket) {
 		throw new Error("Failed to establish WebSocket connection");
 	}
 
-	// Step 2: Wrap with ZodWebSocketClient for type-safe messaging
-	const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+	// Step 2: Wrap with StandardSchemaWebSocketClient for type-safe messaging
+	const client = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 		webSocket: wsResp.webSocket, // Use existing WebSocket!
 		clientSchema: ClientMessageSchema,
 		serverSchema: ServerMessageSchema,
@@ -213,8 +213,8 @@ async function connectToDurableObject(env: any, roomName: string) {
 	console.log("🔗 Connected to Durable Object:", roomName);
 
 	// Step 5: Send type-safe messages
-	client.send({ type: "setName", name: "Alice" });
-	client.send({ type: "message", text: "Hello from typed client!" });
+	await client.send({ type: "setName", name: "Alice" });
+	await client.send({ type: "message", text: "Hello from typed client!" });
 
 	return client;
 }
@@ -224,13 +224,13 @@ async function connectToDurableObject(env: any, roomName: string) {
 // biome-ignore lint/correctness/noUnusedVariables: this is only an example
 function useWebSocketChat(url: string) {
 	const [messages, setMessages] = useState<ServerMessage[]>([]);
-	const [client, setClient] = useState<ZodWebSocketClient<
+	const [client, setClient] = useState<StandardSchemaWebSocketClient<
 		ClientMessage,
 		ServerMessage
 	> | null>(null);
 
 	useEffect(() => {
-		const ws = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+		const ws = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 			url,
 			clientSchema: ClientMessageSchema,
 			serverSchema: ServerMessageSchema,
@@ -249,11 +249,11 @@ function useWebSocketChat(url: string) {
 	}, [url]);
 
 	const sendMessage = (text: string) => {
-		client?.send({ type: "message", text });
+		void client?.send({ type: "message", text });
 	};
 
 	const setName = (name: string) => {
-		client?.send({ type: "setName", name });
+		void client?.send({ type: "setName", name });
 	};
 
 	return { messages, sendMessage, setName, client };
@@ -265,7 +265,7 @@ function useWebSocketChat(url: string) {
 // biome-ignore lint/suspicious/noExplicitAny: this is only an example
 function useDurableObjectChat(env: any, roomName: string) {
 	const [messages, setMessages] = useState<ServerMessage[]>([]);
-	const [client, setClient] = useState<ZodWebSocketClient<
+	const [client, setClient] = useState<StandardSchemaWebSocketClient<
 		ClientMessage,
 		ServerMessage
 	> | null>(null);
@@ -286,8 +286,8 @@ function useDurableObjectChat(env: any, roomName: string) {
 
 				if (!mounted || !wsResp.webSocket) return;
 
-				// Wrap with ZodWebSocketClient
-				const ws = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+				// Wrap with StandardSchemaWebSocketClient
+				const ws = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 					webSocket: wsResp.webSocket,
 					clientSchema: ClientMessageSchema,
 					serverSchema: ServerMessageSchema,
@@ -332,11 +332,11 @@ function useDurableObjectChat(env: any, roomName: string) {
 	}, [env, roomName]);
 
 	const sendMessage = (text: string) => {
-		client?.send({ type: "message", text });
+		void client?.send({ type: "message", text });
 	};
 
 	const setName = (name: string) => {
-		client?.send({ type: "setName", name });
+		void client?.send({ type: "setName", name });
 	};
 
 	return { messages, sendMessage, setName, client, isConnected };
@@ -349,8 +349,8 @@ function createRobustClient() {
 	let reconnectAttempts = 0;
 	const maxReconnectAttempts = 5;
 
-	function connect(): ZodWebSocketClient<ClientMessage, ServerMessage> {
-		const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+	function connect(): StandardSchemaWebSocketClient<ClientMessage, ServerMessage> {
+		const client = new StandardSchemaWebSocketClient<ClientMessage, ServerMessage>({
 			url: "wss://your-server.com/websocket",
 			clientSchema: ClientMessageSchema,
 			serverSchema: ServerMessageSchema,

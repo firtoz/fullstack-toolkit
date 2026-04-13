@@ -1,7 +1,7 @@
 import {
-	ZodSession,
-	type ZodSessionOptions,
-	ZodWebSocketDO,
+	StandardSchemaSession,
+	type StandardSchemaSessionOptions,
+	StandardSchemaWebSocketDO,
 } from "@firtoz/websocket-do";
 import { z } from "zod";
 
@@ -64,7 +64,7 @@ export type SessionData = {
 	joinedAt: number;
 };
 
-class ZodChatRoomSession_JSON extends ZodSession<
+class ZodChatRoomSession_JSON extends StandardSchemaSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage
@@ -72,7 +72,7 @@ class ZodChatRoomSession_JSON extends ZodSession<
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, ZodChatRoomSession_JSON>,
-		options: ZodSessionOptions<ClientMessage, ServerMessage>,
+		options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 	) {
 		super(websocket, sessions, options, {
 			createData: (_ctx) => ({
@@ -136,9 +136,9 @@ class ZodChatRoomSession_JSON extends ZodSession<
 	}
 }
 
-// ZodWebSocketDO implementation for JSON-only testing
-export class ZodChatRoomDO_JSON extends ZodWebSocketDO<
-	ZodSession<SessionData, ServerMessage, ClientMessage, Env>
+// StandardSchemaWebSocketDO implementation for JSON-only testing
+export class ZodChatRoomDO_JSON extends StandardSchemaWebSocketDO<
+	StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
@@ -153,12 +153,12 @@ export class ZodChatRoomDO_JSON extends ZodWebSocketDO<
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
-			zodSessionOptions: {
+			standardSchemaSessionOptions: {
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: false, // JSON-only mode
 			},
-			createZodSession: (_ctx, websocket, options) => {
+			createStandardSchemaSession: (_ctx, websocket, options) => {
 				return new ZodChatRoomSession_JSON(websocket, this.sessions, options);
 			},
 		});

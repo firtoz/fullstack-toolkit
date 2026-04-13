@@ -1,26 +1,36 @@
 ---
 name: socka/core-rpc
-description: Correlated WebSocket RPC with defineSockaProtocol or defineSockaRpcSpec, socka v1 wire frames, SockaError, and useSockaRpc.
+description: Standard Schema socka contracts (defineSocka), v1 wire envelopes, SockaRpc/SockaWebSocketClient, React useSockaRpc and SockaRpcProvider, SockaError.
 ---
 
 # Socka core: RPC
 
-## Preferred path
+## Contract
 
-- **`defineSockaProtocol`** in **`socka/core`**: bundles Standard Schema client/server + the same procedure table as **`defineSockaRpcSpec`** (`name`, `prefix`, `build`, `successType`, `extractResult`).
-- **`useSockaRpc`** in **`socka/react`**: pass **`protocol`**; returns **`rpc`** with typed methods (`rpc.list()`, etc.) plus **`SockaError`** on correlated failures (`instanceof SockaError`).
-- **`serverPushHandlers`** (optional) on **`useSockaRpc`** for server-initiated messages keyed by `msg.type`.
+- **`defineSocka`** in **`socka/core`**: pass **`procedures`** (and optional **`events`**) with **`StandardSchemaV1`** `input` / `output` per procedure. Types flow from **`InferSockaRpc`**, **`InferSockaHandlers`**, **`InferSockaEventHandlers`**.
+- There is **no** `defineSockaProtocol` / `defineSockaRpcSpec` in socka—those names belong to other stacks; use **`defineSocka`** only.
+
+## Browser client
+
+- **`SockaWebSocketClient`** / **`SockaRpc`** in **`socka/client`**: constructed with **`contract`**, **`url`** or **`webSocket`**, optional **`wireFormat`**: **`"json"`** (default, text frames) or **`"msgpack"`** (binary `ArrayBuffer`—must match the server). Optional **`eventHandlers`** for server **`serverEvent`** frames (typed from the contract).
+- **`SockaError`**: thrown on correlated RPC failures when using **`SockaRpc`** (check **`instanceof SockaError`**).
+
+## React
+
+- **`useSockaRpc(contract, options, deps)`** in **`socka/react`**: returns **`{ ready, rpc, sessionRef }`**. **`rpc`** exposes typed procedure methods (e.g. **`rpc.list()`**). Pass **`eventHandlers`** in **`options`** for contract **events** (not a separate “server push” table).
+- **`useSocka(options, deps)`**: lower level; **`sessionRef`** to **`SockaRpc`** if you build **`rpc`** yourself.
+- **Single shared socket**: wrap the tree with **`SockaRpcProvider`** (same props as **`useSockaRpc`** plus **`children`**), then call **`useSockaRpcContext(contract)`** in descendants. Pass the **same `contract` reference** as the provider; the hook checks reference equality.
 
 ## Wire
 
-- Every **JSON text** frame on the socket must be a **socka v1** envelope (`socka`, `v: 1`, …). Invalid payloads surface as **`SockaWireError`** (or your **`onValidationError`** handler on the client).
-- RPC success uses **`serverResponse`**; RPC failure uses **`serverError`**; other server→client domain messages use **`serverEvent`** with the full domain object in **`body`**.
+- Every frame is a **socka v1** object validated by **`decodeSockaWire`** (`socka`, **`v`**, discriminators, **`id`**, **`rpc`**, **`body`**, …). Invalid payloads become **`SockaWireError`** (or **`onValidationError`** on the client).
+- RPC success → **`serverResponse`**; RPC failure → **`serverError`**; server pushes → **`serverEvent`** with event name + **`body`**.
+- **JSON vs msgpack** is a transport choice only; the logical shape is identical. **Client and DO must use the same `wireFormat`.**
 
-## Low-level (advanced)
+## Durable Objects
 
-- **`defineProcedures`**, **`createRpc`**, **`rejectPending`**, **`rejectPendingSocka`**, **`RpcSessionLike`** when you need full control.
+- **`SockaDoSession`** / **`SockaWebSocketDO`** in **`socka/do`**—see **`socka/do-session`** skill.
 
-## Types
+## Low-level
 
-- Client and server message types should include `{ type: string; id: string }` where RPC uses correlation ids.
-- Error wire uses `{ type: "error"; id: string; error: string }` for **`SockaError`** mapping.
+- Use **`socka/core`** helpers (**`encodeClientRequest`**, **`decodeSockaWire`**, **`encodeSockaWire`**, **`parseWirePayload`**) only if you bypass **`SockaRpc`** / **`SockaDoSession`**.

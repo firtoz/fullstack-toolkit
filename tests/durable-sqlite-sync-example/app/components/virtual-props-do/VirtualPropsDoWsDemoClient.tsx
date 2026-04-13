@@ -100,9 +100,9 @@ export function VirtualPropsDoWsDemoClient() {
 							const inserted: Message[] = [];
 							for (const mut of transaction.mutations) {
 								if (mut.type === "insert") {
-								const slow = slowNextInsertRef.current;
-								slowNextInsertRef.current = false;
-								await rpc.insert({ message: mut.modified, slow });
+									const slow = slowNextInsertRef.current;
+									slowNextInsertRef.current = false;
+									await rpc.insert({ message: mut.modified, slow });
 									inserted.push(mut.modified);
 								}
 							}
@@ -123,14 +123,7 @@ export function VirtualPropsDoWsDemoClient() {
 					}),
 				),
 			};
-		}, [
-			queryClient,
-			roomId,
-			backend,
-			wsReady,
-			messagesQueryKey,
-			rpc,
-		]);
+		}, [queryClient, roomId, backend, wsReady, messagesQueryKey, rpc]);
 
 	const [queryOnceLabel, setQueryOnceLabel] = useState<string>("");
 	const [effectLines, setEffectLines] = useState<string[]>([]);

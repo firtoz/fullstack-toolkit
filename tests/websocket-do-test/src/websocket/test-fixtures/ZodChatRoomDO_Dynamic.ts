@@ -1,7 +1,7 @@
 import {
-	ZodSession,
-	type ZodSessionOptions,
-	ZodWebSocketDO,
+	StandardSchemaSession,
+	type StandardSchemaSessionOptions,
+	StandardSchemaWebSocketDO,
 } from "@firtoz/websocket-do";
 import { z } from "zod";
 
@@ -65,7 +65,7 @@ export type SessionData = {
 	format: "json" | "buffer"; // Track the format used for this session
 };
 
-class ZodChatRoomSession_Dynamic extends ZodSession<
+class ZodChatRoomSession_Dynamic extends StandardSchemaSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage,
@@ -74,7 +74,7 @@ class ZodChatRoomSession_Dynamic extends ZodSession<
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, ZodChatRoomSession_Dynamic>,
-		options: ZodSessionOptions<ClientMessage, ServerMessage>,
+		options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 	) {
 		super(websocket, sessions, options, {
 			createData: (_ctx) => ({
@@ -139,9 +139,9 @@ class ZodChatRoomSession_Dynamic extends ZodSession<
 	}
 }
 
-// ZodWebSocketDO implementation that switches format based on query param
-export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<
-	ZodSession<SessionData, ServerMessage, ClientMessage, Env>
+// StandardSchemaWebSocketDO implementation that switches format based on query param
+export class ZodChatRoomDO_Dynamic extends StandardSchemaWebSocketDO<
+	StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
@@ -158,7 +158,7 @@ export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
 			// Pass a function that determines the format based on the query parameter
-			zodSessionOptions: (honoCtx, _websocket) => {
+			standardSchemaSessionOptions: (honoCtx, _websocket) => {
 				// Check query parameter to determine format
 				const format = honoCtx?.req.query("format") ?? "json";
 				const enableBufferMessages = format === "buffer";
@@ -169,7 +169,7 @@ export class ZodChatRoomDO_Dynamic extends ZodWebSocketDO<
 					enableBufferMessages,
 				};
 			},
-			createZodSession: (_ctx, websocket, options) => {
+			createStandardSchemaSession: (_ctx, websocket, options) => {
 				return new ZodChatRoomSession_Dynamic(
 					websocket,
 					this.sessions,

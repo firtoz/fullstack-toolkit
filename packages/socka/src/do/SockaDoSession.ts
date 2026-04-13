@@ -22,6 +22,19 @@ import {
 import { parseStandardSchema } from "../core/validate";
 import { SockaError } from "../core/socka-error";
 
+/** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
+type EmptySockaSessionData = Record<string, never>;
+
+type SockaDoSessionCreateData<TData, TEnv extends object> = [TData] extends [
+	EmptySockaSessionData,
+]
+	? {
+			createData?: (ctx: Context<{ Bindings: TEnv }>) => TData;
+		}
+	: {
+			createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
+		};
+
 export type SockaDoSessionConfig<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
@@ -30,7 +43,6 @@ export type SockaDoSessionConfig<
 	contract: TContract;
 	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
 	wireFormat?: SockaWireFormat;
-	createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
 	handlers: InferSockaHandlers<TContract>;
 	handleClose: () => Promise<void>;
 	onHandlerError?: (error: unknown, rpcName: string, input: unknown) => void;
@@ -40,7 +52,7 @@ export type SockaDoSessionConfig<
 	) => Promise<void>;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
-};
+} & SockaDoSessionCreateData<TData, TEnv>;
 
 /**
  * Durable Object WebSocket session driven by a socka contract.
@@ -49,7 +61,7 @@ export type SockaDoSessionConfig<
  */
 export class SockaDoSession<
 	TContract extends SockaContract<SockaContractConfig>,
-	TData,
+	TData = EmptySockaSessionData,
 	TEnv extends object = Cloudflare.Env,
 > extends BaseSession<TData, unknown, unknown, TEnv> {
 	private readonly config: SockaDoSessionConfig<TContract, TData, TEnv>;
@@ -65,7 +77,9 @@ export class SockaDoSession<
 			websocket,
 			sessions as Map<WebSocket, BaseSession<TData, unknown, unknown, TEnv>>,
 			{
-				createData: config.createData,
+				createData:
+					config.createData ??
+					((_ctx: Context<{ Bindings: TEnv }>) => ({}) as TData),
 				handleMessage: async () => {
 					// Raw message handling goes through handleRawMessage / handleBufferMessage
 				},

@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/websocket-do",
-	"version": "10.0.0",
+	"version": "11.0.0",
 	"description": "Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
@@ -11,20 +11,20 @@
 			"import": "./src/index.ts",
 			"require": "./src/index.ts"
 		},
-		"./zod-client": {
-			"types": "./src/ZodWebSocketClient.ts",
-			"import": "./src/ZodWebSocketClient.ts",
-			"require": "./src/ZodWebSocketClient.ts"
+		"./schema-client": {
+			"types": "./src/StandardSchemaWebSocketClient.ts",
+			"import": "./src/StandardSchemaWebSocketClient.ts",
+			"require": "./src/StandardSchemaWebSocketClient.ts"
 		},
 		"./rpc": {
-			"types": "./src/zod-rpc.ts",
-			"import": "./src/zod-rpc.ts",
-			"require": "./src/zod-rpc.ts"
+			"types": "./src/standardSchemaRpc.ts",
+			"import": "./src/standardSchemaRpc.ts",
+			"require": "./src/standardSchemaRpc.ts"
 		},
 		"./rpc-react": {
-			"types": "./src/zod-rpc-react.ts",
-			"import": "./src/zod-rpc-react.ts",
-			"require": "./src/zod-rpc-react.ts"
+			"types": "./src/standardSchemaRpcReact.ts",
+			"import": "./src/standardSchemaRpcReact.ts",
+			"require": "./src/standardSchemaRpcReact.ts"
 		}
 	},
 	"files": [
@@ -69,6 +69,9 @@
 		"react": {
 			"optional": true
 		}
+	},
+	"dependencies": {
+		"@standard-schema/spec": "catalog:"
 	},
 	"optionalDependencies": {
 		"msgpackr": "catalog:",

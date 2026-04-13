@@ -10,7 +10,7 @@ import type {
 // Import the worker to load it into the test environment
 import "./test-fixtures/worker";
 
-describe("ZodSession Integration Tests", () => {
+describe("StandardSchemaSession Integration Tests", () => {
 	describe("Custom Protocol Error Handling", () => {
 		it("should use custom protocol error handler when provided", async () => {
 			const response = await exports.default.fetch(

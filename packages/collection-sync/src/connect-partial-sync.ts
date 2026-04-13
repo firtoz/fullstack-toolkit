@@ -1,6 +1,6 @@
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type { SyncMessage } from "@firtoz/db-helpers";
-import { ZodWebSocketClient } from "@firtoz/websocket-do/zod-client";
+import { StandardSchemaWebSocketClient } from "@firtoz/websocket-do/schema-client";
 import type { PartialSyncClientBridge } from "./partial-sync-client-bridge";
 import type { SyncClientBridge } from "./sync-client-bridge";
 import {
@@ -241,7 +241,7 @@ export function connectPartialSync<
 		await drainRangePatchCoalesceBuffer();
 	};
 
-	const zodClient = new ZodWebSocketClient({
+	const schemaClient = new StandardSchemaWebSocketClient({
 		url: options.url,
 		clientSchema,
 		serverSchema,
@@ -278,18 +278,18 @@ export function connectPartialSync<
 	const flushPendingOutbound = () => {
 		while (
 			pendingOutbound.length > 0 &&
-			zodClient.socket.readyState === WebSocket.OPEN
+			schemaClient.socket.readyState === WebSocket.OPEN
 		) {
 			const message = pendingOutbound.shift();
 			if (message !== undefined) {
-				zodClient.send(message);
+				void schemaClient.send(message);
 			}
 		}
 	};
 
 	options.setTransportSend((message) => {
-		if (zodClient.socket.readyState === WebSocket.OPEN) {
-			zodClient.send(message);
+		if (schemaClient.socket.readyState === WebSocket.OPEN) {
+			void schemaClient.send(message);
 		} else {
 			pendingOutbound.push(message);
 		}
@@ -308,10 +308,10 @@ export function connectPartialSync<
 		mutationBridge?.setConnected(false);
 	};
 
-	zodClient.socket.addEventListener("open", onOpen);
-	zodClient.socket.addEventListener("close", onClose);
+	schemaClient.socket.addEventListener("open", onOpen);
+	schemaClient.socket.addEventListener("close", onClose);
 
-	if (zodClient.socket.readyState === WebSocket.OPEN) {
+	if (schemaClient.socket.readyState === WebSocket.OPEN) {
 		onOpen();
 	}
 
@@ -338,12 +338,12 @@ export function connectPartialSync<
 		cancelCoalescedRangePatchDeferredFlush();
 		inboundWorkQueue.length = 0;
 		rangePatchCoalesceBuffer = [];
-		zodClient.socket.removeEventListener("open", onOpen);
-		zodClient.socket.removeEventListener("close", onClose);
+		schemaClient.socket.removeEventListener("open", onOpen);
+		schemaClient.socket.removeEventListener("close", onClose);
 		pendingOutbound.length = 0;
 		bridge.setConnected(false);
 		mutationBridge?.setConnected(false);
 		options.setTransportSend(() => {});
-		zodClient.close();
+		schemaClient.close();
 	};
 }

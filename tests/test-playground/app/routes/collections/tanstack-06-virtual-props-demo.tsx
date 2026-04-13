@@ -188,10 +188,10 @@ function Tanstack06VirtualPropsDemoClient() {
 			<p>
 				<code>@tanstack/query-db-collection</code> + <code>onInsert</code> that
 				updates the in-memory server list and refetches. Use{" "}
-				<strong>Insert (instant)</strong> or <strong>Insert (slow ~800ms)</strong>{" "}
-				to compare how long the row stays unsynced. While optimistic,{" "}
-				<code>$synced === false</code> and the message shows a{" "}
-				<strong>Sending…</strong> badge.
+				<strong>Insert (instant)</strong> or{" "}
+				<strong>Insert (slow ~800ms)</strong> to compare how long the row stays
+				unsynced. While optimistic, <code>$synced === false</code> and the
+				message shows a <strong>Sending…</strong> badge.
 			</p>
 
 			<section style={{ marginTop: "1.5rem" }}>

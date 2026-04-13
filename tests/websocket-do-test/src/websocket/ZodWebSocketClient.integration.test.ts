@@ -1,5 +1,5 @@
 import { exports } from "cloudflare:workers";
-import { ZodWebSocketClient } from "@firtoz/websocket-do";
+import { StandardSchemaWebSocketClient } from "@firtoz/websocket-do";
 import { assert, describe, expect, it, vi } from "vitest";
 import type {
 	ClientMessage,
@@ -13,7 +13,7 @@ import {
 // Import worker to make sure it's loaded
 import "./test-fixtures/worker";
 
-describe("ZodWebSocketClient Integration Tests", () => {
+describe("StandardSchemaWebSocketClient Integration Tests", () => {
 	describe("JSON Mode Client", () => {
 		it("should connect and send/receive JSON messages", async () => {
 			// Get WebSocket URL from worker default export (simulating client connection)
@@ -41,7 +41,10 @@ describe("ZodWebSocketClient Integration Tests", () => {
 
 			// Create client (using the server WebSocket as a mock client)
 			const clientMessages: ServerMessage[] = [];
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/zod-chat-json/websocket", // URL doesn't matter for testing
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -73,7 +76,7 @@ describe("ZodWebSocketClient Integration Tests", () => {
 			});
 
 			// Send message using client
-			client.send({
+			await client.send({
 				type: "message",
 				text: "Hello from client!",
 			});
@@ -92,8 +95,11 @@ describe("ZodWebSocketClient Integration Tests", () => {
 			});
 		});
 
-		it("should validate outgoing messages", () => {
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+		it("should validate outgoing messages", async () => {
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -108,18 +114,20 @@ describe("ZodWebSocketClient Integration Tests", () => {
 				value: vi.fn(),
 			});
 
-			// Should throw on invalid message
-			expect(() => {
+			await expect(
 				client.send({
 					type: "message",
 					// Missing 'text' field
-				} as ClientMessage);
-			}).toThrow();
+				} as ClientMessage),
+			).rejects.toThrow();
 		});
 
 		it("should handle validation errors on incoming messages", async () => {
 			const validationErrors: { error: Error; rawMessage: unknown }[] = [];
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -173,7 +181,10 @@ describe("ZodWebSocketClient Integration Tests", () => {
 
 			// Create client
 			const clientMessages: ServerMessage[] = [];
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/zod-chat/websocket",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -195,7 +206,7 @@ describe("ZodWebSocketClient Integration Tests", () => {
 			});
 
 			// Send buffer message using client
-			client.send({
+			await client.send({
 				type: "message",
 				text: "Hello from buffer client!",
 			});
@@ -213,7 +224,10 @@ describe("ZodWebSocketClient Integration Tests", () => {
 
 		it("should reject JSON messages in buffer mode", () => {
 			const validationErrors: { error: Error; rawMessage: unknown }[] = [];
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -236,7 +250,10 @@ describe("ZodWebSocketClient Integration Tests", () => {
 
 	describe("Client Utilities", () => {
 		it("should expose readyState", () => {
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -247,7 +264,10 @@ describe("ZodWebSocketClient Integration Tests", () => {
 		});
 
 		it("should allow closing connection", () => {
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -260,7 +280,10 @@ describe("ZodWebSocketClient Integration Tests", () => {
 		});
 
 		it("should wait for connection to open", async () => {
-			const client = new ZodWebSocketClient<ClientMessage, ServerMessage>({
+			const client = new StandardSchemaWebSocketClient<
+				ClientMessage,
+				ServerMessage
+			>({
 				url: "ws://example.com/test",
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,

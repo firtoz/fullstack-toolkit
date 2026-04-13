@@ -1,7 +1,11 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { pack, unpack } from "msgpackr";
-import type { ZodType } from "zod";
+import { parseStandardSchema } from "./parseStandardSchema";
 
-export interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
+export interface StandardSchemaWebSocketClientOptions<
+	TClientMessage,
+	TServerMessage,
+> {
 	/**
 	 * URL to connect to (required if webSocket not provided)
 	 */
@@ -11,8 +15,8 @@ export interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
 	 * Useful when getting a WebSocket from honoDoFetcher
 	 */
 	webSocket?: WebSocket;
-	clientSchema: ZodType<TClientMessage>;
-	serverSchema: ZodType<TServerMessage>;
+	clientSchema: StandardSchemaV1<unknown, TClientMessage>;
+	serverSchema: StandardSchemaV1<unknown, TServerMessage>;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
 	enableBufferMessages?: boolean;
@@ -23,10 +27,10 @@ export interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
 	onValidationError?: (error: Error, rawMessage: unknown) => void;
 }
 
-export class ZodWebSocketClient<TClientMessage, TServerMessage> {
+export class StandardSchemaWebSocketClient<TClientMessage, TServerMessage> {
 	private ws: WebSocket;
-	private readonly clientSchema: ZodType<TClientMessage>;
-	private readonly serverSchema: ZodType<TServerMessage>;
+	private readonly clientSchema: StandardSchemaV1<unknown, TClientMessage>;
+	private readonly serverSchema: StandardSchemaV1<unknown, TServerMessage>;
 	private readonly serializeJson: (value: unknown) => string;
 	private readonly deserializeJson: (raw: string) => unknown;
 	private readonly enableBufferMessages: boolean;
@@ -37,7 +41,10 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 	) => void;
 
 	constructor(
-		options: ZodWebSocketClientOptions<TClientMessage, TServerMessage>,
+		options: StandardSchemaWebSocketClientOptions<
+			TClientMessage,
+			TServerMessage
+		>,
 	) {
 		this.clientSchema = options.clientSchema;
 		this.serverSchema = options.serverSchema;
@@ -47,29 +54,24 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 		this.onMessageCallback = options.onMessage;
 		this.onValidationError = options.onValidationError;
 
-		// Use provided WebSocket or create new one from URL
 		if (options.webSocket) {
-			// Use existing WebSocket (e.g., from honoDoFetcher)
 			this.ws = options.webSocket;
 		} else if (options.url) {
-			// Create new WebSocket from URL
 			this.ws = new WebSocket(options.url);
 		} else {
 			throw new Error("Either 'url' or 'webSocket' must be provided");
 		}
 
-		// Set binary type for buffer messages
 		if (this.enableBufferMessages) {
 			this.ws.binaryType = "arraybuffer";
 		}
 
-		// Setup event handlers
 		this.ws.addEventListener("open", (event) => {
 			options.onOpen?.(event);
 		});
 
 		this.ws.addEventListener("message", (event) => {
-			this.handleMessage(event);
+			void this.handleMessageEvent(event);
 		});
 
 		this.ws.addEventListener("close", (event) => {
@@ -81,12 +83,11 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 		});
 	}
 
-	private handleMessage(event: MessageEvent): void {
+	private async handleMessageEvent(event: MessageEvent): Promise<void> {
 		try {
 			let parsedMessage: TServerMessage;
 
 			if (this.enableBufferMessages) {
-				// Buffer mode: expect ArrayBuffer
 				if (!(event.data instanceof ArrayBuffer)) {
 					console.error(
 						"Expected ArrayBuffer but received:",
@@ -99,11 +100,9 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 					return;
 				}
 
-				// Unpack and validate
 				const unpacked = unpack(new Uint8Array(event.data));
-				parsedMessage = this.serverSchema.parse(unpacked);
+				parsedMessage = await parseStandardSchema(this.serverSchema, unpacked);
 			} else {
-				// JSON mode: expect string
 				if (typeof event.data !== "string") {
 					console.error("Expected string but received:", typeof event.data);
 					this.onValidationError?.(
@@ -113,12 +112,10 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 					return;
 				}
 
-				// Parse and validate
 				const parsed = this.deserializeJson(event.data);
-				parsedMessage = this.serverSchema.parse(parsed);
+				parsedMessage = await parseStandardSchema(this.serverSchema, parsed);
 			}
 
-			// Call message handler
 			this.onMessageCallback?.(parsedMessage);
 		} catch (error) {
 			console.error("Failed to process message:", error);
@@ -130,51 +127,34 @@ export class ZodWebSocketClient<TClientMessage, TServerMessage> {
 	}
 
 	/**
-	 * Send a message (automatically encodes based on mode)
+	 * Send a message (automatically encodes based on mode).
 	 */
-	send(message: TClientMessage): void {
-		try {
-			// Validate message
-			const validatedMessage = this.clientSchema.parse(message);
+	async send(message: TClientMessage): Promise<void> {
+		const validatedMessage = await parseStandardSchema(
+			this.clientSchema,
+			message,
+		);
 
-			if (this.enableBufferMessages) {
-				// Encode as msgpack (ensure ArrayBufferView for WebSocket.send)
-				const packed = pack(validatedMessage);
-				this.ws.send(new Uint8Array(packed));
-			} else {
-				// Encode as JSON
-				this.ws.send(this.serializeJson(validatedMessage));
-			}
-		} catch (error) {
-			console.error("Failed to send message:", error);
-			throw error;
+		if (this.enableBufferMessages) {
+			const packed = pack(validatedMessage);
+			this.ws.send(new Uint8Array(packed));
+		} else {
+			this.ws.send(this.serializeJson(validatedMessage));
 		}
 	}
 
-	/**
-	 * Close the WebSocket connection
-	 */
 	close(code?: number, reason?: string): void {
 		this.ws.close(code, reason);
 	}
 
-	/**
-	 * Get the current WebSocket ready state
-	 */
 	get readyState(): number {
 		return this.ws.readyState;
 	}
 
-	/**
-	 * Get the underlying WebSocket instance (use with caution)
-	 */
 	get socket(): WebSocket {
 		return this.ws;
 	}
 
-	/**
-	 * Wait for the connection to open
-	 */
 	async waitForOpen(): Promise<void> {
 		if (this.ws.readyState === WebSocket.OPEN) {
 			return;

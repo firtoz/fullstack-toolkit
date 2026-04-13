@@ -1,25 +1,53 @@
 # socka
 
-Standard Schema-first WebSocket RPC for browsers and Cloudflare Durable Objects.
+**Standard Schema–first WebSocket RPC** for browsers and [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/).
 
-Define your procedures with any Standard Schema v1 library (Zod, Valibot, ArkType, etc.) and get fully typed RPC methods on the client and typed handlers on the server. No adapters, no wire message unions, no boilerplate.
+One contract describes your procedures (and optional server-push events). You get inferred **`rpc.*`** on the client, inferred **`handlers`** on the server, socka v1 envelopes with built-in correlation, and **no** hand-rolled message unions or duplicate schema layers.
 
-## Compared to the usual WebSocket RPC setup
+---
 
-**What’s common today:** you define client/server message shapes (often big discriminated unions with `type` + `id`), validate with Zod or similar on each side, and hand-roll correlation—allocate an id, stash a `Promise` in a `Map`, match replies by `id`, map errors yourself, and repeat for every procedure. Pushes are often separate ad hoc shapes or string event names with loosely typed payloads.
+## At a glance
 
-| | Typical hand-rolled WS RPC | socka |
-|---|---------------------------|--------|
-| **Pros** | Full control over every byte and message name; fits any host (not tied to one framing); easy to start with a single `switch (msg.type)` for a tiny app; no dependency on a shared wire spec. | One **contract** drives types end-to-end; **Standard Schema** so Zod/Valibot/ArkType plug in without adapters; **socka v1** envelopes + built-in request/response correlation; **inferred** `rpc.*` and server `handlers`—fewer `unknown` / manual casts. |
-| **Cons** | Lots of boilerplate; duplicated or drifting schemas; correlation and error mapping are easy to get wrong; inference across client/server usually stops at `Promise<unknown>` unless you invest in your own types. | Opinionated **socka v1** framing (default **JSON text** frames, optional **msgpack** `ArrayBuffer` frames—both ends must use the same `wireFormat`); helpers target **browser + Cloudflare Durable Objects**—other runtimes can speak the same bytes but you bring your own session glue; you model RPC as **named procedures**, not arbitrary free-form messages. |
+| | |
+|---:|---|
+| **Contract** | `defineSocka({ procedures, events? })` — Zod, Valibot, ArkType, or any [Standard Schema v1](https://standardschema.dev/) |
+| **Client** | `SockaRpc` / `useSockaRpc` / `SockaRpcProvider` + `useSockaRpcContext` |
+| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects |
+| **Wire** | JSON text frames by default; optional **msgpack** binary — same logical frames, both ends must use the same `wireFormat` |
 
-**When to pick which:** use hand-rolled messages if you need a legacy protocol, a custom binary layout, or maximal flexibility with zero shared library. Use socka when you want schema-first procedures, strict framing, and typed RPC without maintaining parallel type definitions and pending maps yourself.
+**Imports**
+
+| Path | Use for |
+|------|---------|
+| `socka/core` | `defineSocka`, wire helpers, `SockaError`, types |
+| `socka/client` | `SockaRpc`, `SockaWebSocketClient` |
+| `socka/react` | `useSocka`, `useSockaRpc`, provider + context |
+| `socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
+
+---
+
+## Compared to hand-rolled WebSocket RPC
+
+Most apps model messages as large discriminated unions (`type` + `id`), validate twice, and maintain a pending `Map` for every RPC. That works, but types drift and correlation is easy to get wrong.
+
+| | Typical custom protocol | socka |
+|---|------------------------|--------|
+| **Strengths** | Total control; any framing; no shared spec | One contract drives **client + server** types; **Standard Schema** everywhere; socka v1 **envelopes** + correlation built in; inferred **`rpc`** / **`handlers`** |
+| **Tradeoffs** | Boilerplate, duplicated schemas, `Promise<unknown>` unless you invest | Opinionated **socka v1** shape; **named procedures** (not a free-form message bus); first-class path is **browser + Cloudflare DO** (other runtimes can speak the same bytes with your own session glue) |
+
+Use a custom protocol when you must match legacy bytes or a bespoke binary layout. Use socka when you want **schema-first RPC** with strict framing and end-to-end inference.
+
+---
 
 ## Install
 
 ```bash
 bun add socka
 ```
+
+Peer: **React 18+** (optional, for `socka/react`), **@cloudflare/workers-types** / **@firtoz/websocket-do** as needed for DO apps.
+
+---
 
 ## Define a contract
 
@@ -46,6 +74,8 @@ export const myContract = defineSocka({
 });
 ```
 
+---
+
 ## Client (React)
 
 ```ts
@@ -55,18 +85,17 @@ import { myContract } from "./contract";
 function App() {
   const { ready, rpc } = useSockaRpc(myContract, { url: "ws://..." }, []);
 
-  // Fully typed — no casts needed
-  const items = await rpc.list();           // Promise<Message[]>
-  await rpc.insert({ message: newMsg });    // Promise<void>
+  const items = await rpc.list();
+  await rpc.insert({ message: newMsg });
 }
 
-// Binary frames (must match server `wireFormat: "msgpack"`)
+// Binary on the wire — set the same wireFormat on the DO session
 useSockaRpc(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 ```
 
-### Single connection (provider)
+### One WebSocket for the whole tree
 
-Mount **`SockaRpcProvider`** once (for example around a route or layout) so every descendant shares one WebSocket. Call **`useSockaRpcContext(myContract)`** in child components instead of **`useSockaRpc`**—the context hook does not open new connections; it reads the same session and builds the same typed `rpc` object.
+If many components need `rpc`, avoid calling `useSockaRpc` in each one (each call owns a connection). Mount a provider once and read the session from context:
 
 ```tsx
 import { SockaRpcProvider, useSockaRpcContext } from "socka/react";
@@ -90,7 +119,9 @@ function Child() {
 }
 ```
 
-Pass the **same** `contract` reference to the provider and to `useSockaRpcContext` (reference equality is checked at runtime).
+Use the **same `contract` reference** on the provider and in `useSockaRpcContext` (checked at runtime).
+
+---
 
 ## Server (Cloudflare Durable Object)
 
@@ -100,8 +131,7 @@ import { myContract } from "./contract";
 
 new SockaDoSession(websocket, sessions, {
   contract: myContract,
-  // wireFormat: "msgpack", // optional; default is JSON text frames
-  createData: () => ({}),
+  // wireFormat: "msgpack", // optional; default JSON text — must match client
   handlers: {
     list: async () => fetchMessages(),
     insert: async (input) => saveMessage(input.message),
@@ -110,7 +140,11 @@ new SockaDoSession(websocket, sessions, {
 });
 ```
 
-Handlers are fully typed via `InferSockaHandlers<typeof myContract>`.
+Handler types come from **`InferSockaHandlers<typeof myContract>`**. Throw **`SockaError`** for domain failures so the client can recognize them.
+
+For routing WebSockets to sessions, use **`SockaWebSocketDO`** and **`createSockaSession`** — see `socka/do`.
+
+---
 
 ## Type inference
 
@@ -118,42 +152,40 @@ Handlers are fully typed via `InferSockaHandlers<typeof myContract>`.
 import type { InferSockaRpc, InferSockaHandlers } from "socka/core";
 
 type Rpc = InferSockaRpc<typeof myContract>;
-// { list: () => Promise<Message[]>; insert: (input: { message: Message }) => Promise<void> }
-
 type Handlers = InferSockaHandlers<typeof myContract>;
-// { list: () => Message[] | Promise<Message[]>; insert: (input: { message: Message }) => void | Promise<void> }
 ```
+
+---
 
 ## Wire protocol
 
-All frames share the same **logical** socka v1 object shape; on the wire you either send **JSON text** (default) or **msgpack** `ArrayBuffer` frames (`wireFormat: "msgpack"` on both `SockaWebSocketClient` and `SockaDoSession`). Decoding uses the same validation (`decodeSockaWire`) after `JSON.parse` or `msgpackr` unpack.
+Every frame is one logical socka **v1** object. **`decodeSockaWire`** validates shape after `JSON.parse` (text) or msgpack unpack (binary).
 
-- `clientRequest`: `{ socka: "clientRequest", v: 1, id, rpc, body }`
-- `serverResponse`: `{ socka: "serverResponse", v: 1, id, rpc, body }`
-- `serverError`: `{ socka: "serverError", v: 1, id, error }`
-- `serverEvent`: `{ socka: "serverEvent", v: 1, event, body }`
+| Kind | Role |
+|------|------|
+| `clientRequest` | Client → server RPC (`id`, `rpc`, `body`) |
+| `serverResponse` | Success reply |
+| `serverError` | Correlated failure (`id`, `error`) |
+| `serverEvent` | Server push (`event`, `body`) |
 
-## Events (server pushes)
+---
+
+## Events (server push)
 
 ```ts
 export const myContract = defineSocka({
-  procedures: { ... },
+  procedures: { /* ... */ },
   events: {
     itemsChanged: z.array(messageSchema),
   },
 });
 
-// Server: session.emitEvent("itemsChanged", items)
-// Client: pass eventHandlers to useSockaRpc options
+// Server: session.emitEvent("itemsChanged", payload)
+// Client: eventHandlers: { itemsChanged: (payload) => ... } on useSockaRpc / useSocka
 ```
 
-## Schema library support
+---
 
-Socka accepts any library that implements Standard Schema v1:
+## Schema libraries
 
-- **Zod** (v3.24+ / v4) — schemas work directly
-- **Valibot** (v1+) — schemas work directly
-- **ArkType** — schemas work directly
-- **Custom** — implement `StandardSchemaV1` interface
-
-No `fromZod()` or `fromValibot()` adapters needed.
+Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, **ArkType**, or a custom implementation. Pass schemas straight into **`defineSocka`**; no adapter helpers required.

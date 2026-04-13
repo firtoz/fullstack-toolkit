@@ -57,7 +57,11 @@ export type BaseSessionHandlers<
 	TClientMessage,
 	TEnv extends object = Cloudflare.Env,
 > = {
-	createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
+	/**
+	 * Per-connection state. If omitted, `startFresh` initializes `data` as `{}`
+	 * (use empty `TData`, e.g. `Record<string, never>`).
+	 */
+	createData?: (ctx: Context<{ Bindings: TEnv }>) => TData;
 	handleMessage: (message: TClientMessage) => Promise<void>;
 	handleBufferMessage: (message: ArrayBuffer) => Promise<void>;
 	handleClose: () => Promise<void>;
@@ -100,7 +104,10 @@ export class BaseSession<
 	}
 
 	public startFresh(ctx: Context<{ Bindings: TEnv }>) {
-		this.data = this.handlers.createData(ctx);
+		this.data =
+			this.handlers.createData !== undefined
+				? this.handlers.createData(ctx)
+				: ({} as TData);
 		this.wrapper.serializeAttachment(this.data);
 	}
 

@@ -18,9 +18,9 @@ import type {
 	TableWithRequiredFields,
 } from "@firtoz/drizzle-utils";
 import {
-	ZodSession,
-	ZodWebSocketDO,
-	type ZodSessionOptions,
+	StandardSchemaSession,
+	StandardSchemaWebSocketDO,
+	type StandardSchemaSessionOptions,
 } from "@firtoz/websocket-do";
 import {
 	durableSqliteCollectionOptions,
@@ -46,7 +46,7 @@ function createSessionCodecOptions<TItem extends PartialSyncRowShape>(
 	enableBufferMessages: boolean,
 	serializeJson?: (value: unknown) => string,
 	deserializeJson?: (raw: string) => unknown,
-): ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>> {
+): StandardSchemaSessionOptions<SyncClientMessage, SyncServerMessage<TItem>> {
 	const clientSchema = createClientMessageSchema();
 	const serverSchema = createServerMessageSchema<TItem>();
 	if (!enableBufferMessages) {
@@ -69,7 +69,7 @@ function createSessionCodecOptions<TItem extends PartialSyncRowShape>(
 class SyncTableSession<
 	TItem extends PartialSyncRowShape,
 	TEnv extends Cloudflare.Env,
-> extends ZodSession<
+> extends StandardSchemaSession<
 	SessionData,
 	SyncServerMessage<TItem>,
 	SyncClientMessage,
@@ -80,7 +80,10 @@ class SyncTableSession<
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, SyncTableSession<TItem, TEnv>>,
-		options: ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>>,
+		options: StandardSchemaSessionOptions<
+			SyncClientMessage,
+			SyncServerMessage<TItem>
+		>,
 		bridge: SyncServerBridge<TItem>,
 	) {
 		const generatedClientId = crypto.randomUUID();
@@ -115,8 +118,8 @@ export abstract class SyncableDurableObject<
 	TSchema extends Record<string, unknown>,
 	TTableName extends ValidTableNames<TSchema>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
-> extends ZodWebSocketDO<
-	// biome-ignore lint/suspicious/noExplicitAny: ZodWebSocketDO session generic is internal; row type is fixed in constructor.
+> extends StandardSchemaWebSocketDO<
+	// biome-ignore lint/suspicious/noExplicitAny: StandardSchemaWebSocketDO session generic is internal; row type is fixed in constructor.
 	any,
 	SyncClientMessage,
 	SyncServerMessage<unknown>,
@@ -143,7 +146,7 @@ export abstract class SyncableDurableObject<
 		let bridgeRef!: SyncServerBridge<TRow>;
 
 		super(ctx, env, {
-			zodSessionOptions: (
+			standardSchemaSessionOptions: (
 				sessionCtx: Context<{ Bindings: TEnv }> | undefined,
 			) => {
 				const useMsgpack =
@@ -156,10 +159,10 @@ export abstract class SyncableDurableObject<
 					config.deserializeJson,
 				);
 			},
-			createZodSession: (
+			createStandardSchemaSession: (
 				_sessionCtx: Context<{ Bindings: TEnv }> | undefined,
 				websocket: WebSocket,
-				options: ZodSessionOptions<
+				options: StandardSchemaSessionOptions<
 					SyncClientMessage,
 					SyncServerMessage<unknown>
 				>,
@@ -167,7 +170,7 @@ export abstract class SyncableDurableObject<
 				return new SyncTableSession<TRow, TEnv>(
 					websocket,
 					this.sessions as Map<WebSocket, SyncTableSession<TRow, TEnv>>,
-					options as ZodSessionOptions<
+					options as StandardSchemaSessionOptions<
 						SyncClientMessage,
 						SyncServerMessage<TRow>
 					>,

@@ -371,23 +371,23 @@ const wsResp = await api.websocket({
 });
 ```
 
-### Integration with ZodWebSocketClient
+### Integration with StandardSchemaWebSocketClient
 
-For even better type safety, combine with `@firtoz/websocket-do`'s `ZodWebSocketClient`:
+For even better type safety, combine with `@firtoz/websocket-do`'s `StandardSchemaWebSocketClient`:
 
 ```typescript
-import { ZodWebSocketClient } from '@firtoz/websocket-do';
+import { StandardSchemaWebSocketClient } from '@firtoz/websocket-do';
 import { honoDoFetcherWithName } from '@firtoz/hono-fetcher';
 
 // 1. Connect to DO WebSocket
 const api = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
 const wsResp = await api.websocket({
   url: '/websocket',
-  config: { autoAccept: false }, // Let ZodWebSocketClient handle acceptance
+  config: { autoAccept: false }, // Let StandardSchemaWebSocketClient handle acceptance
 });
 
 // 2. Wrap with type-safe client
-const client = new ZodWebSocketClient({
+const client = new StandardSchemaWebSocketClient({
   webSocket: wsResp.webSocket,
   clientSchema: ClientMessageSchema,
   serverSchema: ServerMessageSchema,
@@ -401,10 +401,10 @@ const client = new ZodWebSocketClient({
 wsResp.webSocket?.accept();
 
 // 4. Send type-safe messages
-client.send({ type: 'chat', text: 'Hello!' }); // Validated with Zod!
+await client.send({ type: 'chat', text: 'Hello!' }); // Validated with Standard Schema
 ```
 
-See the [ZodWebSocketClient documentation](#) for more details on type-safe WebSocket communication.
+See the `@firtoz/websocket-do` README for more details on type-safe WebSocket communication.
 
 ## Durable Objects API
 
@@ -513,7 +513,7 @@ await api.websocket({ url: '/ws', config });
 ```
 
 **Options:**
-- `autoAccept?: boolean` - Whether to automatically call `accept()` on the WebSocket. Defaults to `true` for convenience. Set to `false` if you need manual control over when the WebSocket is accepted (e.g., when using with `ZodWebSocketClient`).
+- `autoAccept?: boolean` - Whether to automatically call `accept()` on the WebSocket. Defaults to `true` for convenience. Set to `false` if you need manual control over when the WebSocket is accepted (e.g., when using with `StandardSchemaWebSocketClient`).
 
 ### `ParsePathParams<T>`
 

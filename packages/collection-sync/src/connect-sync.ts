@@ -1,4 +1,4 @@
-import { ZodWebSocketClient } from "@firtoz/websocket-do/zod-client";
+import { StandardSchemaWebSocketClient } from "@firtoz/websocket-do/schema-client";
 import type { SyncClientBridge } from "./sync-client-bridge";
 import type { PartialSyncRowShape } from "./partial-sync-row-key";
 import {
@@ -25,7 +25,7 @@ export type ConnectSyncOptions<TItem = unknown> = {
 };
 
 /**
- * Connects a {@link SyncClientBridge} to a WebSocket using the same codec as {@link ZodSession} on the server.
+ * Connects a {@link SyncClientBridge} to a WebSocket using the same codec as `StandardSchemaSession` (`@firtoz/websocket-do`) on the server.
  */
 export function connectSync<TItem extends PartialSyncRowShape>(
 	bridge: SyncClientBridge<TItem>,
@@ -35,7 +35,7 @@ export function connectSync<TItem extends PartialSyncRowShape>(
 	const serverSchema = createServerMessageSchema<TItem>();
 	const useMsgpack = options.transport === "msgpack";
 
-	const zodClient = new ZodWebSocketClient({
+	const schemaClient = new StandardSchemaWebSocketClient({
 		url: options.url,
 		clientSchema,
 		serverSchema,
@@ -53,7 +53,7 @@ export function connectSync<TItem extends PartialSyncRowShape>(
 	});
 
 	options.setTransportSend((message) => {
-		zodClient.send(message);
+		void schemaClient.send(message);
 	});
 
 	bridge.setConnected(false);
@@ -65,18 +65,18 @@ export function connectSync<TItem extends PartialSyncRowShape>(
 		bridge.setConnected(false);
 	};
 
-	zodClient.socket.addEventListener("open", onOpen);
-	zodClient.socket.addEventListener("close", onClose);
+	schemaClient.socket.addEventListener("open", onOpen);
+	schemaClient.socket.addEventListener("close", onClose);
 
-	if (zodClient.socket.readyState === WebSocket.OPEN) {
+	if (schemaClient.socket.readyState === WebSocket.OPEN) {
 		onOpen();
 	}
 
 	return () => {
-		zodClient.socket.removeEventListener("open", onOpen);
-		zodClient.socket.removeEventListener("close", onClose);
+		schemaClient.socket.removeEventListener("open", onOpen);
+		schemaClient.socket.removeEventListener("close", onClose);
 		bridge.setConnected(false);
 		options.setTransportSend(() => {});
-		zodClient.close();
+		schemaClient.close();
 	};
 }

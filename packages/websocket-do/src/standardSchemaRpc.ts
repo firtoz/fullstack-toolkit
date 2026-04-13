@@ -1,43 +1,50 @@
 import {
-	type ZodWebSocketClientOptions,
-	ZodWebSocketClient,
-} from "./ZodWebSocketClient";
+	type StandardSchemaWebSocketClientOptions,
+	StandardSchemaWebSocketClient,
+} from "./StandardSchemaWebSocketClient";
 
-export type ZodWebSocketRpcSessionConstructorOptions<
+export type StandardSchemaWebSocketRpcSessionConstructorOptions<
 	TClientMsg,
 	TServerMsg,
 	TPending extends { reject: (error: Error) => void },
-> = Omit<ZodWebSocketClientOptions<TClientMsg, TServerMsg>, "onMessage"> & {
+> = Omit<
+	StandardSchemaWebSocketClientOptions<TClientMsg, TServerMsg>,
+	"onMessage"
+> & {
 	onMessage: (
 		message: TServerMsg,
-		session: ZodWebSocketRpcSession<TClientMsg, TServerMsg, TPending>,
+		session: StandardSchemaWebSocketRpcSession<
+			TClientMsg,
+			TServerMsg,
+			TPending
+		>,
 	) => void;
 };
 
 /**
  * WebSocket client session with a pending map for request/response RPC and a
- * monotonic id helper. Wire formats stay in your Zod schemas; you dispatch
+ * monotonic id helper. Wire formats stay in your Standard Schema schemas; you dispatch
  * {@link TServerMsg} in `onMessage` (typically with `switch` + `exhaustiveGuard`)
  * and resolve/reject entries in {@link pending}.
  */
-export class ZodWebSocketRpcSession<
+export class StandardSchemaWebSocketRpcSession<
 	TClientMsg,
 	TServerMsg,
 	TPending extends { reject: (error: Error) => void },
 > {
 	readonly pending = new Map<string, TPending>();
-	readonly client: ZodWebSocketClient<TClientMsg, TServerMsg>;
+	readonly client: StandardSchemaWebSocketClient<TClientMsg, TServerMsg>;
 	private idSeq = 0;
 
 	constructor(
-		options: ZodWebSocketRpcSessionConstructorOptions<
+		options: StandardSchemaWebSocketRpcSessionConstructorOptions<
 			TClientMsg,
 			TServerMsg,
 			TPending
 		>,
 	) {
 		const { onMessage, ...clientOptions } = options;
-		this.client = new ZodWebSocketClient({
+		this.client = new StandardSchemaWebSocketClient({
 			...clientOptions,
 			onMessage: (message) => {
 				onMessage(message, this);
@@ -61,16 +68,16 @@ export class ZodWebSocketRpcSession<
 	}
 }
 
-export function createZodWebSocketRpcSession<
+export function createStandardSchemaWebSocketRpcSession<
 	TClientMsg,
 	TServerMsg,
 	TPending extends { reject: (error: Error) => void },
 >(
-	options: ZodWebSocketRpcSessionConstructorOptions<
+	options: StandardSchemaWebSocketRpcSessionConstructorOptions<
 		TClientMsg,
 		TServerMsg,
 		TPending
 	>,
-): ZodWebSocketRpcSession<TClientMsg, TServerMsg, TPending> {
-	return new ZodWebSocketRpcSession(options);
+): StandardSchemaWebSocketRpcSession<TClientMsg, TServerMsg, TPending> {
+	return new StandardSchemaWebSocketRpcSession(options);
 }

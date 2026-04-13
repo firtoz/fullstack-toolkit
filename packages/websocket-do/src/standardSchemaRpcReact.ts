@@ -1,20 +1,24 @@
 import type { DependencyList, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-	type ZodWebSocketRpcSession,
-	type ZodWebSocketRpcSessionConstructorOptions,
-	createZodWebSocketRpcSession,
-} from "./zod-rpc";
+	type StandardSchemaWebSocketRpcSession,
+	type StandardSchemaWebSocketRpcSessionConstructorOptions,
+	createStandardSchemaWebSocketRpcSession,
+} from "./standardSchemaRpc";
 
-/** Options for {@link useZodWebSocketRpc} (same as {@link ZodWebSocketRpcSessionConstructorOptions}). */
-export type UseZodWebSocketRpcOptions<
+/** Options for {@link useStandardSchemaWebSocketRpc} (same as constructor options for {@link StandardSchemaWebSocketRpcSession}). */
+export type UseStandardSchemaWebSocketRpcOptions<
 	TClientMsg,
 	TServerMsg,
 	TPending extends { reject: (error: Error) => void },
-> = ZodWebSocketRpcSessionConstructorOptions<TClientMsg, TServerMsg, TPending>;
+> = StandardSchemaWebSocketRpcSessionConstructorOptions<
+	TClientMsg,
+	TServerMsg,
+	TPending
+>;
 
 /**
- * Connects a {@link ZodWebSocketRpcSession} in an effect: rejects all pending
+ * Connects a {@link StandardSchemaWebSocketRpcSession} in an effect: rejects all pending
  * RPCs and closes the socket on cleanup or when `deps` change.
  *
  * Callback refs keep the latest `onMessage` / `onOpen` / `onClose` without
@@ -23,16 +27,20 @@ export type UseZodWebSocketRpcOptions<
  * Pass `deps` as the second argument; keep it aligned with values used to
  * build `url` / `webSocket`.
  */
-export function useZodWebSocketRpc<
+export function useStandardSchemaWebSocketRpc<
 	TClientMsg,
 	TServerMsg,
 	TPending extends { reject: (error: Error) => void },
 >(
-	options: UseZodWebSocketRpcOptions<TClientMsg, TServerMsg, TPending>,
+	options: UseStandardSchemaWebSocketRpcOptions<
+		TClientMsg,
+		TServerMsg,
+		TPending
+	>,
 	deps: DependencyList,
 ): {
 	ready: boolean;
-	sessionRef: RefObject<ZodWebSocketRpcSession<
+	sessionRef: RefObject<StandardSchemaWebSocketRpcSession<
 		TClientMsg,
 		TServerMsg,
 		TPending
@@ -48,7 +56,7 @@ export function useZodWebSocketRpc<
 	onCloseRef.current = onClose;
 
 	const [ready, setReady] = useState(false);
-	const sessionRef = useRef<ZodWebSocketRpcSession<
+	const sessionRef = useRef<StandardSchemaWebSocketRpcSession<
 		TClientMsg,
 		TServerMsg,
 		TPending
@@ -58,7 +66,7 @@ export function useZodWebSocketRpc<
 		let cancelled = false;
 		setReady(false);
 
-		const session = createZodWebSocketRpcSession<
+		const session = createStandardSchemaWebSocketRpcSession<
 			TClientMsg,
 			TServerMsg,
 			TPending

@@ -11,7 +11,7 @@ Type-safe WebSocket session management for Cloudflare Durable Objects with Hono 
 ## Features
 
 - 🔒 **Type-safe** - Full TypeScript support with generic types for messages and session data
-- ✨ **Zod Validation** - Runtime message validation with `ZodWebSocketClient` and `ZodSession`
+- ✨ **Standard Schema validation** - Runtime message validation with `StandardSchemaWebSocketClient` and `StandardSchemaSession` (Zod, Valibot, ArkType, …)
 - 🌐 **WebSocket Management** - Built on Cloudflare Durable Objects for stateful WebSocket connections
 - 🎯 **Session-based** - Abstract session class for easy implementation of custom WebSocket logic
 - 🔄 **State Persistence** - Automatic serialization/deserialization of session data
@@ -34,7 +34,7 @@ This package requires the following peer dependencies:
 bun add hono @firtoz/hono-fetcher
 ```
 
-**For Zod validation features** (ZodWebSocketClient, ZodSession):
+**For schema validation** (StandardSchemaWebSocketClient, StandardSchemaSession):
 ```bash
 bun add zod msgpackr
 ```
@@ -214,13 +214,13 @@ export default {
 };
 ```
 
-## ZodWebSocketClient (Type-Safe Client)
+## StandardSchemaWebSocketClient (Type-Safe Client)
 
-`ZodWebSocketClient` provides a type-safe WebSocket client with automatic Zod validation for both incoming and outgoing messages.
+`StandardSchemaWebSocketClient` provides a type-safe WebSocket client with automatic validation (Standard Schema v1) for both incoming and outgoing messages.
 
 ### Features
 
-- ✅ **Automatic validation** - All messages validated with Zod schemas
+- ✅ **Automatic validation** - All messages validated with your Standard Schema–compatible schemas
 - 🎯 **Full type inference** - TypeScript types automatically inferred from schemas
 - 📦 **Dual mode** - Supports both JSON and msgpack (buffer) serialization
 - 🔗 **DO Integration** - Works seamlessly with `honoDoFetcher` WebSocket connections
@@ -229,7 +229,7 @@ export default {
 ### Basic Usage
 
 ```typescript
-import { ZodWebSocketClient } from '@firtoz/websocket-do';
+import { StandardSchemaWebSocketClient } from '@firtoz/websocket-do';
 import { z } from 'zod';
 
 // Define your message schemas
@@ -249,8 +249,8 @@ type ServerMessage = z.infer<typeof ServerMessageSchema>;
 // Create WebSocket connection (regular or via honoDoFetcher)
 const ws = new WebSocket('wss://example.com/chat');
 
-// Wrap with ZodWebSocketClient
-const client = new ZodWebSocketClient({
+// Wrap with StandardSchemaWebSocketClient
+const client = new StandardSchemaWebSocketClient({
   webSocket: ws, // Can also use 'url' instead
   clientSchema: ClientMessageSchema,
   serverSchema: ServerMessageSchema,
@@ -272,7 +272,7 @@ Perfect for connecting to Durable Objects:
 
 ```typescript
 import { honoDoFetcherWithName } from '@firtoz/hono-fetcher';
-import { ZodWebSocketClient } from '@firtoz/websocket-do';
+import { StandardSchemaWebSocketClient } from '@firtoz/websocket-do';
 
 // 1. Connect to DO via honoDoFetcher
 const api = honoDoFetcherWithName(env.CHAT_ROOM, 'room-1');
@@ -281,8 +281,8 @@ const wsResp = await api.websocket({
   config: { autoAccept: false }, // Let client control acceptance
 });
 
-// 2. Wrap with ZodWebSocketClient for type safety!
-const client = new ZodWebSocketClient({
+// 2. Wrap with StandardSchemaWebSocketClient for type safety!
+const client = new StandardSchemaWebSocketClient({
   webSocket: wsResp.webSocket,
   clientSchema: ClientMessageSchema,
   serverSchema: ServerMessageSchema,
@@ -307,7 +307,7 @@ client.send({ type: 'chat', text: 'Hello from typed client!' });
 For better performance and smaller payloads, use buffer mode with msgpack:
 
 ```typescript
-const client = new ZodWebSocketClient({
+const client = new StandardSchemaWebSocketClient({
   webSocket: ws,
   clientSchema: ClientMessageSchema,
   serverSchema: ServerMessageSchema,
@@ -327,14 +327,16 @@ client.send({ type: 'chat', text: 'Efficient binary message!' });
 #### Constructor Options
 
 ```typescript
-interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
+import type { StandardSchemaV1 } from "@standard-schema/spec";
+
+interface StandardSchemaWebSocketClientOptions<TClientMessage, TServerMessage> {
   // Connection (provide one)
   url?: string;                    // Create new WebSocket
   webSocket?: WebSocket;           // Use existing WebSocket (e.g., from honoDoFetcher)
   
   // Schemas (required)
-  clientSchema: z.ZodType<TClientMessage>;
-  serverSchema: z.ZodType<TServerMessage>;
+  clientSchema: StandardSchemaV1<unknown, TClientMessage>;
+  serverSchema: StandardSchemaV1<unknown, TServerMessage>;
   
   // Serialization
   enableBufferMessages?: boolean;  // Use msgpack instead of JSON (default: false)
@@ -350,18 +352,18 @@ interface ZodWebSocketClientOptions<TClientMessage, TServerMessage> {
 
 #### Methods
 
-- `send(message: TClientMessage): void` - Send a validated message
+- `send(message: TClientMessage): Promise<void>` - Send a validated message (async Standard Schema validation)
 - `close(code?: number, reason?: string): void` - Close the connection
 - `waitForOpen(): Promise<void>` - Wait for connection to open
 
-## ZodSession (Validated Sessions)
+## StandardSchemaSession (Validated Sessions)
 
-`ZodSession` extends `BaseSession` with automatic Zod validation for incoming messages.
+`StandardSchemaSession` extends `BaseSession` with automatic validation for incoming messages.
 
 ### Basic Usage
 
 ```typescript
-import { ZodSession } from '@firtoz/websocket-do';
+import { StandardSchemaSession } from '@firtoz/websocket-do';
 import { z } from 'zod';
 
 // Define schemas
@@ -384,7 +386,7 @@ interface SessionData {
 }
 
 // Implement validated session
-class ChatSession extends ZodSession<
+class ChatSession extends StandardSchemaSession<
   SessionData,
   ServerMessage,
   ClientMessage,
@@ -393,7 +395,7 @@ class ChatSession extends ZodSession<
   constructor(
     websocket: WebSocket,
     sessions: Map<WebSocket, ChatSession>,
-    options: ZodSessionOptions<ClientMessage, ServerMessage>
+    options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>
   ) {
     super(websocket, sessions, options, {
       createData: (ctx) => ({ name: 'Anonymous' }),
@@ -425,10 +427,10 @@ class ChatSession extends ZodSession<
 }
 ```
 
-### Buffer Mode with ZodSession
+### Buffer Mode with StandardSchemaSession
 
 ```typescript
-class ChatSession extends ZodSession<...> {
+class ChatSession extends StandardSchemaSession<...> {
   constructor(
     websocket: WebSocket,
     sessions: Map<WebSocket, ChatSession>
@@ -521,12 +523,14 @@ constructor(
 
 ```typescript
 type BaseSessionHandlers<TData, TServerMessage, TClientMessage, TEnv> = {
-  createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
+  createData?: (ctx: Context<{ Bindings: TEnv }>) => TData;
   handleMessage: (message: TClientMessage) => Promise<void>;
   handleBufferMessage: (message: ArrayBuffer) => Promise<void>;
   handleClose: () => Promise<void>;
 };
 ```
+
+If `createData` is omitted, `startFresh` sets `data` to `{}` (use an empty `TData` such as `Record<string, never>`).
 
 #### Methods
 
@@ -537,7 +541,7 @@ type BaseSessionHandlers<TData, TServerMessage, TClientMessage, TEnv> = {
   - Send message to all connected sessions
 
 - `startFresh(ctx: Context): void`
-  - Initialize new session (called automatically)
+  - Initialize new session (called automatically). Uses `createData` when provided; otherwise `{}`.
 
 - `resume(): void`
   - Resume existing session after hibernation (called automatically)
@@ -693,22 +697,22 @@ This package exports the following:
 ### Classes
 - `BaseWebSocketDO` - Base class for WebSocket Durable Objects (composition-based)
 - `BaseSession` - Concrete session class with handler injection
-- `ZodWebSocketClient` - Type-safe WebSocket client with Zod validation
-- `ZodSession` - Concrete session class with Zod validation and handler injection
-- `ZodWebSocketDO` - Base class for WebSocket DOs with Zod validation
+- `StandardSchemaWebSocketClient` - Type-safe WebSocket client with Standard Schema validation
+- `StandardSchemaSession` - Concrete session class with validation and handler injection
+- `StandardSchemaWebSocketDO` - Base class for WebSocket DOs with Standard Schema sessions
 - `WebsocketWrapper` - Low-level WebSocket wrapper with typed attachments
 
 ### Types
 - `BaseSessionHandlers` - Handler interface for `BaseSession`
 - `BaseWebSocketDOOptions` - Options interface for `BaseWebSocketDO`
-- `ZodSessionHandlers` - Handler interface for `ZodSession`
-- `ZodSessionOptions` - Options interface for `ZodSession`
-- `ZodSessionOptionsOrFactory` - Options or factory function for `ZodSession`
-- `ZodWebSocketDOOptions` - Options interface for `ZodWebSocketDO`
-- `ZodWebSocketClientOptions` - Options interface for `ZodWebSocketClient`
+- `StandardSchemaSessionHandlers` - Handler interface for `StandardSchemaSession`
+- `StandardSchemaSessionOptions` - Options interface for `StandardSchemaSession`
+- `StandardSchemaSessionOptionsOrFactory` - Options or factory function for `StandardSchemaSession`
+- `StandardSchemaWebSocketDOOptions` - Options interface for `StandardSchemaWebSocketDO`
+- `StandardSchemaWebSocketClientOptions` - Options interface for `StandardSchemaWebSocketClient`
 
 ### Utilities
-- `zodMsgpack` - Msgpack encode/decode with Zod validation
+- `standardSchemaMsgpack` - Msgpack encode/decode with Standard Schema validation
 
 ## Complete Example
 
@@ -734,7 +738,7 @@ export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
 
 // do.ts - Server-side (Durable Object)
-import { BaseWebSocketDO, ZodSession, type ZodSessionOptions } from '@firtoz/websocket-do';
+import { BaseWebSocketDO, StandardSchemaSession, type StandardSchemaSessionOptions } from '@firtoz/websocket-do';
 import { ClientMessageSchema, ServerMessageSchema } from './schemas';
 
 interface SessionData {
@@ -742,11 +746,11 @@ interface SessionData {
   joinedAt: number;
 }
 
-class ChatSession extends ZodSession<SessionData, ServerMessage, ClientMessage, Env> {
+class ChatSession extends StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env> {
   constructor(
     websocket: WebSocket,
     sessions: Map<WebSocket, ChatSession>,
-    options: ZodSessionOptions<ClientMessage, ServerMessage>
+    options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>
   ) {
     super(websocket, sessions, options, {
       createData: () => ({
@@ -806,7 +810,7 @@ export class ChatRoomDO extends BaseWebSocketDO<ChatSession, Env> {
 }
 
 // client.ts - Client-side
-import { ZodWebSocketClient } from '@firtoz/websocket-do';
+import { StandardSchemaWebSocketClient } from '@firtoz/websocket-do';
 import { honoDoFetcherWithName } from '@firtoz/hono-fetcher';
 import { ClientMessageSchema, ServerMessageSchema } from './schemas';
 
@@ -818,8 +822,8 @@ async function connectToChat(env: Env, roomName: string) {
     config: { autoAccept: false },
   });
 
-  // 2. Wrap with ZodWebSocketClient
-  const client = new ZodWebSocketClient({
+  // 2. Wrap with StandardSchemaWebSocketClient
+  const client = new StandardSchemaWebSocketClient({
     webSocket: wsResp.webSocket,
     clientSchema: ClientMessageSchema,
     serverSchema: ServerMessageSchema,
@@ -868,8 +872,8 @@ This package includes comprehensive integration tests in a separate test package
 - ✅ Real-time WebSocket message exchange
 - ✅ WebSocket session management
 - ✅ Type-safe DO client integration
-- ✅ Zod validation in both JSON and msgpack modes
-- ✅ Integration between honoDoFetcher and ZodWebSocketClient
+- ✅ Standard Schema validation in both JSON and msgpack modes
+- ✅ Integration between honoDoFetcher and StandardSchemaWebSocketClient
 
 For detailed information about testing capabilities, example implementations, comprehensive test coverage, and setup instructions, see the [websocket-do-test](../../tests/websocket-do-test/) package.
 

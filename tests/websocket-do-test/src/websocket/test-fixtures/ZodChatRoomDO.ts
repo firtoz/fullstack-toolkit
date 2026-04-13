@@ -1,7 +1,7 @@
 import {
-	ZodSession,
-	type ZodSessionOptions,
-	ZodWebSocketDO,
+	StandardSchemaSession,
+	type StandardSchemaSessionOptions,
+	StandardSchemaWebSocketDO,
 } from "@firtoz/websocket-do";
 import { z } from "zod";
 
@@ -64,7 +64,7 @@ export type SessionData = {
 	joinedAt: number;
 };
 
-class ZodChatRoomSession extends ZodSession<
+class ZodChatRoomSession extends StandardSchemaSession<
 	SessionData,
 	ServerMessage,
 	ClientMessage,
@@ -73,7 +73,7 @@ class ZodChatRoomSession extends ZodSession<
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, ZodChatRoomSession>,
-		options: ZodSessionOptions<ClientMessage, ServerMessage>,
+		options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 	) {
 		super(websocket, sessions, options, {
 			createData: (_ctx) => ({
@@ -137,8 +137,8 @@ class ZodChatRoomSession extends ZodSession<
 	}
 }
 
-export class ZodChatRoomDO extends ZodWebSocketDO<
-	ZodSession<SessionData, ServerMessage, ClientMessage, Env>
+export class ZodChatRoomDO extends StandardSchemaWebSocketDO<
+	StandardSchemaSession<SessionData, ServerMessage, ClientMessage, Env>
 > {
 	app = this.getBaseApp().post("/info", (c) => {
 		return c.json({
@@ -153,12 +153,12 @@ export class ZodChatRoomDO extends ZodWebSocketDO<
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
-			zodSessionOptions: {
+			standardSchemaSessionOptions: {
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				enableBufferMessages: true, // Enable msgpack buffer messages
 			},
-			createZodSession: (_ctx, websocket, options) => {
+			createStandardSchemaSession: (_ctx, websocket, options) => {
 				return new ZodChatRoomSession(websocket, this.sessions, options);
 			},
 		});

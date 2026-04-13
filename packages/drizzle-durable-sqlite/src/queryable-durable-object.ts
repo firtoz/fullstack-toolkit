@@ -15,9 +15,9 @@ import {
 } from "@firtoz/collection-sync";
 import type { SyncMessage } from "@firtoz/db-helpers";
 import {
-	ZodSession,
-	ZodWebSocketDO,
-	type ZodSessionOptions,
+	StandardSchemaSession,
+	StandardSchemaWebSocketDO,
+	type StandardSchemaSessionOptions,
 } from "@firtoz/websocket-do";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -42,7 +42,7 @@ function createSessionCodecOptions<TItem extends PartialSyncRowShape>(
 	enableBufferMessages: boolean,
 	serializeJson?: (value: unknown) => string,
 	deserializeJson?: (raw: string) => unknown,
-): ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>> {
+): StandardSchemaSessionOptions<SyncClientMessage, SyncServerMessage<TItem>> {
 	const clientSchema = createClientMessageSchema();
 	const serverSchema = createServerMessageSchema<TItem>();
 	if (!enableBufferMessages) {
@@ -87,7 +87,7 @@ async function routeQueryableClientMessage<TRow extends MutationSyncRow>(
 class QueryableSession<
 	TItem extends PartialSyncRowShape,
 	TEnv extends Cloudflare.Env,
-> extends ZodSession<
+> extends StandardSchemaSession<
 	SessionData,
 	SyncServerMessage<TItem>,
 	SyncClientMessage,
@@ -98,7 +98,10 @@ class QueryableSession<
 	constructor(
 		websocket: WebSocket,
 		sessions: Map<WebSocket, QueryableSession<TItem, TEnv>>,
-		options: ZodSessionOptions<SyncClientMessage, SyncServerMessage<TItem>>,
+		options: StandardSchemaSessionOptions<
+			SyncClientMessage,
+			SyncServerMessage<TItem>
+		>,
 		private readonly sessionSlot: SessionSlot<TItem>,
 	) {
 		const generatedClientId = crypto.randomUUID();
@@ -169,7 +172,7 @@ export abstract class QueryableDurableObject<
 	TRow extends PartialSyncRowShape,
 	TSchema extends Record<string, unknown>,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
-> extends ZodWebSocketDO<
+> extends StandardSchemaWebSocketDO<
 	QueryableSession<TRow, TEnv>,
 	SyncClientMessage,
 	SyncServerMessage<TRow>,
@@ -189,7 +192,7 @@ export abstract class QueryableDurableObject<
 		let bridgeRef!: PartialSyncServerBridge<TRow>;
 		const sessionSlot: SessionSlot<TRow> = { pending: [] };
 		super(ctx, env, {
-			zodSessionOptions: (
+			standardSchemaSessionOptions: (
 				sessionCtx: Context<{ Bindings: TEnv }> | undefined,
 			) => {
 				const useMsgpack =
@@ -202,10 +205,10 @@ export abstract class QueryableDurableObject<
 					config.deserializeJson,
 				);
 			},
-			createZodSession: (
+			createStandardSchemaSession: (
 				_sessionCtx: Context<{ Bindings: TEnv }> | undefined,
 				websocket: WebSocket,
-				options: ZodSessionOptions<
+				options: StandardSchemaSessionOptions<
 					SyncClientMessage,
 					SyncServerMessage<unknown>
 				>,
@@ -213,7 +216,7 @@ export abstract class QueryableDurableObject<
 				new QueryableSession<TRow, TEnv>(
 					websocket,
 					this.sessions as Map<WebSocket, QueryableSession<TRow, TEnv>>,
-					options as ZodSessionOptions<
+					options as StandardSchemaSessionOptions<
 						SyncClientMessage,
 						SyncServerMessage<TRow>
 					>,

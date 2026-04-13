@@ -1,16 +1,16 @@
 /**
- * Unit tests for ZodWebSocketDO hibernation logic by mocking the base class
+ * Unit tests for StandardSchemaWebSocketDO hibernation logic by mocking the base class
  */
 
 import type {
-	ZodSessionOptions,
-	ZodSessionOptionsOrFactory,
+	StandardSchemaSessionOptions,
+	StandardSchemaSessionOptionsOrFactory,
 } from "@firtoz/websocket-do";
 import type { Context } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
+describe("StandardSchemaWebSocketDO Constructor Hibernation Unit Tests", () => {
 	const ClientMessageSchema = z.object({ type: z.literal("test") });
 	const ServerMessageSchema = z.object({ type: z.literal("response") });
 	type ClientMessage = z.infer<typeof ClientMessageSchema>;
@@ -38,7 +38,7 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 
 		const mockEnv = {} as Env;
 
-		const staticOptions: ZodSessionOptionsOrFactory<
+		const staticOptions: StandardSchemaSessionOptionsOrFactory<
 			ClientMessage,
 			ServerMessage,
 			Env
@@ -48,10 +48,10 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			enableBufferMessages: true,
 		};
 
-		const createZodSessionCalls: Array<{
+		const createStandardSchemaSessionCalls: Array<{
 			ctx: Context<{ Bindings: Env }> | undefined;
 			websocket: WebSocket;
-			options: ZodSessionOptions<ClientMessage, ServerMessage>;
+			options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>;
 		}> = [];
 
 		// Mock base class
@@ -65,14 +65,14 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		// Mock ZodWebSocketDO
-		class TestZodWebSocketDO extends MockDurableObject {
+		// Mock StandardSchemaWebSocketDO
+		class TestStandardSchemaWebSocketDO extends MockDurableObject {
 			protected readonly sessions = new Map<WebSocket, unknown>();
 
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions: ZodSessionOptionsOrFactory<
+				protected standardSchemaSessionOptions: StandardSchemaSessionOptionsOrFactory<
 					ClientMessage,
 					ServerMessage,
 					Env
@@ -97,23 +97,23 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 				websocket: WebSocket,
 			) {
 				const options =
-					typeof this.zodSessionOptions === "function"
-						? this.zodSessionOptions(ctx, websocket)
-						: this.zodSessionOptions;
+					typeof this.standardSchemaSessionOptions === "function"
+						? this.standardSchemaSessionOptions(ctx, websocket)
+						: this.standardSchemaSessionOptions;
 
 				if (!options) {
-					throw new Error("zodSessionOptions must be provided");
+					throw new Error("standardSchemaSessionOptions must be provided");
 				}
 
-				return this.createZodSession(ctx, websocket, options);
+				return this.createStandardSchemaSession(ctx, websocket, options);
 			}
 
-			protected createZodSession(
+			protected createStandardSchemaSession(
 				ctx: Context<{ Bindings: Env }> | undefined,
 				websocket: WebSocket,
-				options: ZodSessionOptions<ClientMessage, ServerMessage>,
+				options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 			) {
-				createZodSessionCalls.push({ ctx, websocket, options });
+				createStandardSchemaSessionCalls.push({ ctx, websocket, options });
 
 				return {
 					websocket,
@@ -125,15 +125,17 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		new TestZodWebSocketDO(mockState, mockEnv, staticOptions);
+		new TestStandardSchemaWebSocketDO(mockState, mockEnv, staticOptions);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
-		// Verify createZodSession was called correctly
-		expect(createZodSessionCalls).toHaveLength(1);
-		expect(createZodSessionCalls[0]?.ctx).toBeUndefined();
-		expect(createZodSessionCalls[0]?.websocket).toBe(mockWebSocket);
-		expect(createZodSessionCalls[0]?.options).toBe(staticOptions);
-		expect(createZodSessionCalls[0]?.options.enableBufferMessages).toBe(true);
+		// Verify createStandardSchemaSession was called correctly
+		expect(createStandardSchemaSessionCalls).toHaveLength(1);
+		expect(createStandardSchemaSessionCalls[0]?.ctx).toBeUndefined();
+		expect(createStandardSchemaSessionCalls[0]?.websocket).toBe(mockWebSocket);
+		expect(createStandardSchemaSessionCalls[0]?.options).toBe(staticOptions);
+		expect(
+			createStandardSchemaSessionCalls[0]?.options.enableBufferMessages,
+		).toBe(true);
 	});
 
 	it("should call options factory with undefined ctx for hibernated connections", async () => {
@@ -182,13 +184,13 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		class TestZodWebSocketDO extends MockDurableObject {
+		class TestStandardSchemaWebSocketDO extends MockDurableObject {
 			protected readonly sessions = new Map<WebSocket, unknown>();
 
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions: typeof optionsFactory,
+				protected standardSchemaSessionOptions: typeof optionsFactory,
 			) {
 				super(ctx, env);
 
@@ -209,21 +211,21 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 				websocket: WebSocket,
 			) {
 				const options =
-					typeof this.zodSessionOptions === "function"
-						? this.zodSessionOptions(ctx, websocket)
-						: this.zodSessionOptions;
+					typeof this.standardSchemaSessionOptions === "function"
+						? this.standardSchemaSessionOptions(ctx, websocket)
+						: this.standardSchemaSessionOptions;
 
 				if (!options) {
-					throw new Error("zodSessionOptions must be provided");
+					throw new Error("standardSchemaSessionOptions must be provided");
 				}
 
-				return this.createZodSession(ctx, websocket, options);
+				return this.createStandardSchemaSession(ctx, websocket, options);
 			}
 
-			protected createZodSession(
+			protected createStandardSchemaSession(
 				_ctx: Context<{ Bindings: Env }> | undefined,
 				websocket: WebSocket,
-				_options: ZodSessionOptions<ClientMessage, ServerMessage>,
+				_options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 			) {
 				return {
 					websocket,
@@ -235,7 +237,7 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		new TestZodWebSocketDO(mockState, mockEnv, optionsFactory);
+		new TestStandardSchemaWebSocketDO(mockState, mockEnv, optionsFactory);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Verify factory was called with undefined ctx (hibernation path)
@@ -262,7 +264,7 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 
 		const mockEnv = {} as Env;
 
-		const optionsFromFactory: ZodSessionOptions<
+		const optionsFromFactory: StandardSchemaSessionOptions<
 			ClientMessage,
 			ServerMessage
 		>[] = [];
@@ -272,7 +274,10 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			ctx: Context<{ Bindings: Env }> | undefined,
 			_websocket: WebSocket,
 		) => {
-			const options: ZodSessionOptions<ClientMessage, ServerMessage> = {
+			const options: StandardSchemaSessionOptions<
+				ClientMessage,
+				ServerMessage
+			> = {
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
 				// For hibernated connections (ctx === undefined), default to buffer mode
@@ -293,13 +298,13 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		class TestZodWebSocketDO extends MockDurableObject {
+		class TestStandardSchemaWebSocketDO extends MockDurableObject {
 			protected readonly sessions = new Map<WebSocket, unknown>();
 
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions: typeof optionsFactory,
+				protected standardSchemaSessionOptions: typeof optionsFactory,
 			) {
 				super(ctx, env);
 
@@ -319,27 +324,27 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 				websocket: WebSocket,
 			) {
 				const options =
-					typeof this.zodSessionOptions === "function"
-						? this.zodSessionOptions(ctx, websocket)
-						: this.zodSessionOptions;
+					typeof this.standardSchemaSessionOptions === "function"
+						? this.standardSchemaSessionOptions(ctx, websocket)
+						: this.standardSchemaSessionOptions;
 
 				if (!options) {
-					throw new Error("zodSessionOptions must be provided");
+					throw new Error("standardSchemaSessionOptions must be provided");
 				}
 
-				return this.createZodSession(ctx, websocket, options);
+				return this.createStandardSchemaSession(ctx, websocket, options);
 			}
 
-			protected createZodSession(
+			protected createStandardSchemaSession(
 				_ctx: Context<{ Bindings: Env }> | undefined,
 				websocket: WebSocket,
-				_options: ZodSessionOptions<ClientMessage, ServerMessage>,
+				_options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 			) {
 				return { websocket, data: null };
 			}
 		}
 
-		new TestZodWebSocketDO(mockState, mockEnv, optionsFactory);
+		new TestStandardSchemaWebSocketDO(mockState, mockEnv, optionsFactory);
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Verify the options were generated for hibernated connection
@@ -393,13 +398,13 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		class TestZodWebSocketDO extends MockDurableObject {
+		class TestStandardSchemaWebSocketDO extends MockDurableObject {
 			protected readonly sessions = new Map<WebSocket, unknown>();
 
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions: typeof optionsFactory,
+				protected standardSchemaSessionOptions: typeof optionsFactory,
 			) {
 				super(ctx, env);
 
@@ -419,23 +424,23 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 				websocket: WebSocket,
 			) {
 				const options =
-					typeof this.zodSessionOptions === "function"
-						? this.zodSessionOptions(ctx, websocket)
-						: this.zodSessionOptions;
+					typeof this.standardSchemaSessionOptions === "function"
+						? this.standardSchemaSessionOptions(ctx, websocket)
+						: this.standardSchemaSessionOptions;
 
-				return this.createZodSession(ctx, websocket, options);
+				return this.createStandardSchemaSession(ctx, websocket, options);
 			}
 
-			protected createZodSession(
+			protected createStandardSchemaSession(
 				_ctx: Context<{ Bindings: Env }> | undefined,
 				websocket: WebSocket,
-				_options: ZodSessionOptions<ClientMessage, ServerMessage>,
+				_options: StandardSchemaSessionOptions<ClientMessage, ServerMessage>,
 			) {
 				return { websocket, data: null };
 			}
 		}
 
-		const doInstance = new TestZodWebSocketDO(
+		const doInstance = new TestStandardSchemaWebSocketDO(
 			mockState,
 			mockEnv,
 			optionsFactory,
@@ -476,14 +481,18 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 			}
 		}
 
-		class TestZodWebSocketDO extends MockDurableObject {
+		class TestStandardSchemaWebSocketDO extends MockDurableObject {
 			protected readonly sessions = new Map<WebSocket, unknown>();
 
 			constructor(
 				ctx: typeof mockState,
 				env: typeof mockEnv,
-				protected zodSessionOptions?:
-					| ZodSessionOptionsOrFactory<ClientMessage, ServerMessage, Env>
+				protected standardSchemaSessionOptions?:
+					| StandardSchemaSessionOptionsOrFactory<
+							ClientMessage,
+							ServerMessage,
+							Env
+					  >
 					| undefined,
 			) {
 				super(ctx, env);
@@ -503,13 +512,13 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 				_websocket: WebSocket,
 			) {
 				const options =
-					typeof this.zodSessionOptions === "function"
-						? this.zodSessionOptions(_ctx, _websocket)
-						: this.zodSessionOptions;
+					typeof this.standardSchemaSessionOptions === "function"
+						? this.standardSchemaSessionOptions(_ctx, _websocket)
+						: this.standardSchemaSessionOptions;
 
 				if (!options) {
 					throw new Error(
-						"zodSessionOptions must be provided either in constructor or via getZodOptions override",
+						"standardSchemaSessionOptions must be provided either in constructor or via getStandardSchemaSessionOptions override",
 					);
 				}
 
@@ -535,7 +544,7 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 		});
 
 		try {
-			new TestZodWebSocketDO(mockState, mockEnv, undefined);
+			new TestStandardSchemaWebSocketDO(mockState, mockEnv, undefined);
 			await new Promise((resolve) => setTimeout(resolve, 50));
 		} catch {
 			// Error is expected
@@ -544,7 +553,7 @@ describe("ZodWebSocketDO Constructor Hibernation Unit Tests", () => {
 		// Verify the error was thrown
 		expect(errorHandler).toHaveBeenCalled();
 		expect(thrownError?.message).toContain(
-			"zodSessionOptions must be provided",
+			"standardSchemaSessionOptions must be provided",
 		);
 	});
 });

@@ -5,62 +5,65 @@ import type {
 	SessionServerMessage,
 } from "./BaseSession";
 import { BaseWebSocketDO } from "./BaseWebSocketDO";
-import type { ZodSession, ZodSessionOptions } from "./ZodSession";
+import type {
+	StandardSchemaSession,
+	StandardSchemaSessionOptions,
+} from "./StandardSchemaSession";
 
-export type ZodSessionOptionsOrFactory<
+export type StandardSchemaSessionOptionsOrFactory<
 	TClientMessage,
 	TServerMessage,
 	TEnv extends Cloudflare.Env = Cloudflare.Env,
 > =
-	| ZodSessionOptions<TClientMessage, TServerMessage>
+	| StandardSchemaSessionOptions<TClientMessage, TServerMessage>
 	| ((
 			ctx: Context<{ Bindings: TEnv }> | undefined,
 			websocket: WebSocket,
-	  ) => ZodSessionOptions<TClientMessage, TServerMessage>);
+	  ) => StandardSchemaSessionOptions<TClientMessage, TServerMessage>);
 
-export type ZodWebSocketDOOptions<
+export type StandardSchemaWebSocketDOOptions<
 	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
-	TSession extends ZodSession<any, any, any, any>,
+	TSession extends StandardSchemaSession<any, any, any, any>,
 	TClientMessage,
 	TServerMessage,
 	TEnv extends SessionEnv<TSession>,
 > = {
-	zodSessionOptions: ZodSessionOptionsOrFactory<
+	standardSchemaSessionOptions: StandardSchemaSessionOptionsOrFactory<
 		TClientMessage,
 		TServerMessage,
 		TEnv
 	>;
-	createZodSession: (
+	createStandardSchemaSession: (
 		ctx: Context<{ Bindings: TEnv }> | undefined,
 		websocket: WebSocket,
-		options: ZodSessionOptions<TClientMessage, TServerMessage>,
+		options: StandardSchemaSessionOptions<TClientMessage, TServerMessage>,
 	) => TSession | Promise<TSession>;
 };
 
-export abstract class ZodWebSocketDO<
+export abstract class StandardSchemaWebSocketDO<
 	// biome-ignore lint/suspicious/noExplicitAny: We are using any on purpose to allow any type of session.
-	TSession extends ZodSession<any, any, any, any>,
+	TSession extends StandardSchemaSession<any, any, any, any>,
 	TClientMessage extends
 		SessionClientMessage<TSession> = SessionClientMessage<TSession>,
 	TServerMessage extends
 		SessionServerMessage<TSession> = SessionServerMessage<TSession>,
 	TEnv extends SessionEnv<TSession> = SessionEnv<TSession>,
 > extends BaseWebSocketDO<TSession, TEnv> {
-	protected readonly zodSessionOptions: ZodSessionOptionsOrFactory<
+	protected readonly standardSchemaSessionOptions: StandardSchemaSessionOptionsOrFactory<
 		TClientMessage,
 		TServerMessage,
 		TEnv
 	>;
-	protected readonly createZodSessionFn: (
+	protected readonly createStandardSchemaSessionFn: (
 		ctx: Context<{ Bindings: TEnv }> | undefined,
 		websocket: WebSocket,
-		options: ZodSessionOptions<TClientMessage, TServerMessage>,
+		options: StandardSchemaSessionOptions<TClientMessage, TServerMessage>,
 	) => TSession | Promise<TSession>;
 
 	constructor(
 		ctx: DurableObjectState,
 		env: TEnv,
-		options: ZodWebSocketDOOptions<
+		options: StandardSchemaWebSocketDOOptions<
 			TSession,
 			TClientMessage,
 			TServerMessage,
@@ -69,15 +72,19 @@ export abstract class ZodWebSocketDO<
 	) {
 		super(ctx, env, {
 			createSession: (ctx, websocket) => {
-				const zodOptions =
-					typeof options.zodSessionOptions === "function"
-						? options.zodSessionOptions(ctx, websocket)
-						: options.zodSessionOptions;
+				const schemaOptions =
+					typeof options.standardSchemaSessionOptions === "function"
+						? options.standardSchemaSessionOptions(ctx, websocket)
+						: options.standardSchemaSessionOptions;
 
-				return options.createZodSession(ctx, websocket, zodOptions);
+				return options.createStandardSchemaSession(
+					ctx,
+					websocket,
+					schemaOptions,
+				);
 			},
 		});
-		this.zodSessionOptions = options.zodSessionOptions;
-		this.createZodSessionFn = options.createZodSession;
+		this.standardSchemaSessionOptions = options.standardSchemaSessionOptions;
+		this.createStandardSchemaSessionFn = options.createStandardSchemaSession;
 	}
 }

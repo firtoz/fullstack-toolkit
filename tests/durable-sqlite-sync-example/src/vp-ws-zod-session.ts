@@ -1,9 +1,6 @@
 import { SockaDoSession, type SockaDoSessionConfig } from "socka/do";
 import { SockaError } from "socka/core";
-import {
-	vpContract,
-	type VpWsHandlerDeps,
-} from "./vp-ws-protocol";
+import { vpContract, type VpWsHandlerDeps } from "./vp-ws-protocol";
 import { VP_SLOW_INSERT_DELAY_MS } from "./vp-demo-constants";
 
 export type VpWsSessionData = Record<string, never>;
@@ -26,7 +23,6 @@ export class VirtualPropsWsSockaSession extends SockaDoSession<
 	) {
 		const config: VpSessionConfig = {
 			contract: vpContract,
-			createData: () => ({}),
 			handlers: {
 				list: async () => {
 					return deps.listMessages();
@@ -54,7 +50,10 @@ export class VirtualPropsWsSockaSession extends SockaDoSession<
 		};
 		super(
 			websocket,
-			sessions as Map<WebSocket, SockaDoSession<typeof vpContract, VpWsSessionData, Env>>,
+			sessions as Map<
+				WebSocket,
+				SockaDoSession<typeof vpContract, VpWsSessionData, Env>
+			>,
 			config,
 		);
 	}

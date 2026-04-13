@@ -36,10 +36,10 @@ Type-safe Hono API client with full TypeScript inference for routes, params, and
 
 ### [@firtoz/websocket-do](./packages/websocket-do)
 
-Type-safe WebSocket session management for Cloudflare Durable Objects with Zod validation.
+Type-safe WebSocket session management for Cloudflare Durable Objects with Standard Schema validation.
 
 - 🔒 **Type-safe** - Full TypeScript support with generic types for messages and session data
-- ✨ **Zod Validation** - Runtime message validation with `ZodWebSocketClient` and `ZodSession`
+- ✨ **Schema validation** - Runtime message validation with `StandardSchemaWebSocketClient` and `StandardSchemaSession` (Zod, Valibot, ArkType, …)
 - 🌐 **WebSocket Management** - Built on Cloudflare Durable Objects for stateful connections
 - 🎯 **Session-based** - Abstract session class for custom WebSocket logic
 - 🔄 **State Persistence** - Automatic serialization/deserialization of session data

@@ -1,5 +1,11 @@
 # @firtoz/websocket-do
 
+## 11.0.0
+
+### Major Changes
+
+- **Standard Schema v1** replaces Zod-only APIs: `StandardSchemaSession`, `StandardSchemaWebSocketClient`, `StandardSchemaWebSocketDO`, `standardSchemaMsgpack`, and `parseStandardSchema`. Schemas are `StandardSchemaV1` from `@standard-schema/spec` (Zod 4, Valibot, ArkType, etc.). Subpath **`./zod-client` is removed**; use **`./schema-client`**. **`StandardSchemaWebSocketClient.send`** is now **`async`** (`Promise<void>`).
+
 ## 10.0.0
 
 ### Patch Changes

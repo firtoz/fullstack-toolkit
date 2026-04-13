@@ -10,7 +10,7 @@ import type {
 // Import the worker to load it into the test environment
 import "./test-fixtures/worker";
 
-describe("ZodWebSocketDO_Dynamic Integration Tests", () => {
+describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () => {
 	describe("Query Parameter-Based Format Switching", () => {
 		it("should use JSON format when format=json query param is set", async () => {
 			const response = await exports.default.fetch(

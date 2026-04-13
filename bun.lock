@@ -307,6 +307,9 @@
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
       "version": "10.0.0",
+      "dependencies": {
+        "@standard-schema/spec": "catalog:",
+      },
       "devDependencies": {
         "@types/react": "catalog:",
         "bun-types": "catalog:",

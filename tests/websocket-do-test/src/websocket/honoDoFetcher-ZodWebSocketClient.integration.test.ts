@@ -1,16 +1,16 @@
 /**
- * Integration tests for honoDoFetcher + ZodWebSocketClient
+ * Integration tests for honoDoFetcher + StandardSchemaWebSocketClient
  *
  * This test file demonstrates how to combine:
  * - honoDoFetcher: Type-safe DO fetcher with WebSocket support
- * - ZodWebSocketClient: Type-safe WebSocket client with Zod validation
+ * - StandardSchemaWebSocketClient: Type-safe WebSocket client with Zod validation
  *
  * Together they provide end-to-end type safety from DO connection to message validation.
  */
 
 import { env } from "cloudflare:workers";
 import { honoDoFetcherWithName } from "@firtoz/hono-fetcher";
-import { ZodWebSocketClient } from "@firtoz/websocket-do";
+import { StandardSchemaWebSocketClient } from "@firtoz/websocket-do";
 import { describe, expect, it, vi } from "vitest";
 import {
 	type ClientMessage as BufferClientMessage,
@@ -26,14 +26,14 @@ import {
 } from "./test-fixtures/ZodChatRoomDO_JSON";
 import "./test-fixtures/worker";
 
-describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
+describe("honoDoFetcher + StandardSchemaWebSocketClient Integration", () => {
 	describe("Basic Integration", () => {
-		it("should connect to DO WebSocket and use ZodWebSocketClient for type-safe communication", async () => {
+		it("should connect to DO WebSocket and use StandardSchemaWebSocketClient for type-safe communication", async () => {
 			const roomId = "test-hono-zod-integration";
 			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
 
 			// Step 1: Use honoDoFetcher to get a WebSocket connection to the DO
-			// Note: We use config.autoAccept = false because ZodWebSocketClient
+			// Note: We use config.autoAccept = false because StandardSchemaWebSocketClient
 			// needs to set up listeners before the connection is fully established
 			const wsResp = await api.websocket({
 				url: "/websocket",
@@ -46,10 +46,10 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
 			const ws = wsResp.webSocket;
 
-			// Step 2: Wrap the existing WebSocket with ZodWebSocketClient!
+			// Step 2: Wrap the existing WebSocket with StandardSchemaWebSocketClient!
 			const messages: ServerMessage[] = [];
 
-			const client = new ZodWebSocketClient({
+			const client = new StandardSchemaWebSocketClient({
 				webSocket: ws, // Use the existing WebSocket from honoDoFetcher
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -62,14 +62,14 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			// Now accept the WebSocket
 			ws.accept();
 
-			// Step 3: Send type-safe messages using ZodWebSocketClient
+			// Step 3: Send type-safe messages using StandardSchemaWebSocketClient
 			const messageToSend: ClientMessage = {
 				type: "message",
 				text: "Hello from Zod + honoDoFetcher!",
 			};
 
-			// ZodWebSocketClient automatically validates and encodes!
-			client.send(messageToSend);
+			// StandardSchemaWebSocketClient automatically validates and encodes!
+			await client.send(messageToSend);
 
 			// Wait for the message to be received
 			await vi.waitFor(() => {
@@ -98,14 +98,14 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			const client1Messages: ServerMessage[] = [];
 			const client2Messages: ServerMessage[] = [];
 
-			// Connect first client with ZodWebSocketClient
+			// Connect first client with StandardSchemaWebSocketClient
 			const ws1Resp = await api.websocket({
 				url: "/websocket",
 				config: { autoAccept: false },
 			});
 			if (!ws1Resp.webSocket) throw new Error("Expected WebSocket 1");
 
-			const client1 = new ZodWebSocketClient({
+			const client1 = new StandardSchemaWebSocketClient({
 				webSocket: ws1Resp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -113,14 +113,14 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			ws1Resp.webSocket.accept();
 
-			// Connect second client with ZodWebSocketClient
+			// Connect second client with StandardSchemaWebSocketClient
 			const ws2Resp = await api.websocket({
 				url: "/websocket",
 				config: { autoAccept: false },
 			});
 			if (!ws2Resp.webSocket) throw new Error("Expected WebSocket 2");
 
-			const client2 = new ZodWebSocketClient({
+			const client2 = new StandardSchemaWebSocketClient({
 				webSocket: ws2Resp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -128,12 +128,12 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			ws2Resp.webSocket.accept();
 
-			// Client 1 sends a message using ZodWebSocketClient
+			// Client 1 sends a message using StandardSchemaWebSocketClient
 			const msg1: ClientMessage = {
 				type: "message",
 				text: "Message from client 1",
 			};
-			client1.send(msg1); // Automatic validation and encoding!
+			await client1.send(msg1); // Automatic validation and encoding!
 
 			// Wait for both clients to receive the message
 			await vi.waitFor(() => {
@@ -175,7 +175,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			const messages: ServerMessage[] = [];
 			const errors: unknown[] = [];
 
-			const client = new ZodWebSocketClient({
+			const client = new StandardSchemaWebSocketClient({
 				webSocket: wsResp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -185,12 +185,12 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 
 			wsResp.webSocket.accept();
 
-			// Send a valid message using ZodWebSocketClient
+			// Send a valid message using StandardSchemaWebSocketClient
 			const validMsg: ClientMessage = {
 				type: "setName",
 				name: "ValidName",
 			};
-			client.send(validMsg); // Automatic validation!
+			await client.send(validMsg); // Automatic validation!
 
 			// Wait for nameChanged message
 			await vi.waitFor(() => {
@@ -222,7 +222,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			const validMessages: ServerMessage[] = [];
 			const validationErrors: unknown[] = [];
 
-			const client = new ZodWebSocketClient({
+			const client = new StandardSchemaWebSocketClient({
 				webSocket: wsResp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -238,10 +238,8 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				// Missing 'text' field - should fail validation
 			} as ClientMessage;
 
-			// ZodWebSocketClient.send() will throw on invalid messages
-			expect(() => {
-				client.send(invalidMsg);
-			}).toThrow();
+			// StandardSchemaWebSocketClient.send() rejects on invalid messages
+			await expect(client.send(invalidMsg)).rejects.toThrow();
 
 			// We can manually send an invalid message to test server-side validation
 			wsResp.webSocket.send(JSON.stringify(invalidMsg));
@@ -302,7 +300,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			const roomId = "test-chat-flow";
 			const api = honoDoFetcherWithName(env.ZOD_CHAT_ROOM_JSON, roomId);
 
-			// Alice joins the room using ZodWebSocketClient
+			// Alice joins the room using StandardSchemaWebSocketClient
 			const aliceResp = await api.websocket({
 				url: "/websocket",
 				config: { autoAccept: false },
@@ -310,7 +308,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!aliceResp.webSocket) throw new Error("Expected WebSocket");
 
 			const aliceMessages: ServerMessage[] = [];
-			const alice = new ZodWebSocketClient({
+			const alice = new StandardSchemaWebSocketClient({
 				webSocket: aliceResp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -318,13 +316,13 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			aliceResp.webSocket.accept();
 
-			// Alice sets her name using ZodWebSocketClient
-			alice.send({
+			// Alice sets her name using StandardSchemaWebSocketClient
+			await alice.send({
 				type: "setName",
 				name: "Alice",
 			});
 
-			// Bob joins the room using ZodWebSocketClient
+			// Bob joins the room using StandardSchemaWebSocketClient
 			const bobResp = await api.websocket({
 				url: "/websocket",
 				config: { autoAccept: false },
@@ -332,7 +330,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!bobResp.webSocket) throw new Error("Expected WebSocket");
 
 			const bobMessages: ServerMessage[] = [];
-			const bob = new ZodWebSocketClient({
+			const bob = new StandardSchemaWebSocketClient({
 				webSocket: bobResp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -340,14 +338,14 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			bobResp.webSocket.accept();
 
-			// Bob sets his name using ZodWebSocketClient
-			bob.send({
+			// Bob sets his name using StandardSchemaWebSocketClient
+			await bob.send({
 				type: "setName",
 				name: "Bob",
 			});
 
-			// Alice sends a message using ZodWebSocketClient
-			alice.send({
+			// Alice sends a message using StandardSchemaWebSocketClient
+			await alice.send({
 				type: "message",
 				text: "Hello Bob!",
 			});
@@ -369,8 +367,8 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				expect(bobReceivedMsg.from).toBe("Alice");
 			}
 
-			// Bob replies using ZodWebSocketClient
-			bob.send({
+			// Bob replies using StandardSchemaWebSocketClient
+			await bob.send({
 				type: "message",
 				text: "Hi Alice!",
 			});
@@ -421,9 +419,9 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			if (!wsResp.webSocket) throw new Error("Expected WebSocket");
 
-			// Part 3: Wrap with ZodWebSocketClient for automatic validation
+			// Part 3: Wrap with StandardSchemaWebSocketClient for automatic validation
 			const messages: ServerMessage[] = [];
-			const client = new ZodWebSocketClient({
+			const client = new StandardSchemaWebSocketClient({
 				webSocket: wsResp.webSocket,
 				clientSchema: ClientMessageSchema,
 				serverSchema: ServerMessageSchema,
@@ -436,7 +434,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				type: "message",
 				text: "Type safety FTW!",
 			};
-			client.send(msg); // No manual JSON.stringify or validation needed!
+			await client.send(msg); // No manual JSON.stringify or validation needed!
 
 			// Part 5: Verify via HTTP that session exists
 			const afterInfo = await api.post({ url: "/info" });
@@ -490,7 +488,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			const messages: BufferServerMessage[] = [];
 
 			// Enable buffer messages for msgpack!
-			const client = new ZodWebSocketClient({
+			const client = new StandardSchemaWebSocketClient({
 				webSocket: ws,
 				clientSchema: BufferClientMessageSchema,
 				serverSchema: BufferServerMessageSchema,
@@ -507,7 +505,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				type: "setName",
 				name: "BufferUser",
 			};
-			client.send(setNameMsg);
+			await client.send(setNameMsg);
 
 			// Wait for nameChanged message
 			await vi.waitFor(() => {
@@ -525,7 +523,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				type: "message",
 				text: "Hello from msgpack!",
 			};
-			client.send(chatMsg);
+			await client.send(chatMsg);
 
 			await vi.waitFor(() => {
 				expect(
@@ -555,7 +553,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!ws1Resp.webSocket) throw new Error("Expected WebSocket 1");
 
 			const client1Messages: BufferServerMessage[] = [];
-			const client1 = new ZodWebSocketClient({
+			const client1 = new StandardSchemaWebSocketClient({
 				webSocket: ws1Resp.webSocket,
 				clientSchema: BufferClientMessageSchema,
 				serverSchema: BufferServerMessageSchema,
@@ -572,7 +570,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!ws2Resp.webSocket) throw new Error("Expected WebSocket 2");
 
 			const client2Messages: BufferServerMessage[] = [];
-			const client2 = new ZodWebSocketClient({
+			const client2 = new StandardSchemaWebSocketClient({
 				webSocket: ws2Resp.webSocket,
 				clientSchema: BufferClientMessageSchema,
 				serverSchema: BufferServerMessageSchema,
@@ -586,7 +584,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				type: "message",
 				text: "Buffer broadcast!",
 			};
-			client1.send(msg);
+			await client1.send(msg);
 
 			// Both clients should receive it
 			await vi.waitFor(() => {
@@ -621,7 +619,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			const messages: BufferServerMessage[] = [];
 			const errors: unknown[] = [];
 
-			const client = new ZodWebSocketClient({
+			const client = new StandardSchemaWebSocketClient({
 				webSocket: wsResp.webSocket,
 				clientSchema: BufferClientMessageSchema,
 				serverSchema: BufferServerMessageSchema,
@@ -637,7 +635,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 				type: "setName",
 				name: "ValidBufferUser",
 			};
-			client.send(validMsg);
+			await client.send(validMsg);
 
 			await vi.waitFor(() => {
 				expect(messages.length).toBeGreaterThan(0);
@@ -667,7 +665,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!aliceResp.webSocket) throw new Error("Expected WebSocket");
 
 			const aliceMessages: BufferServerMessage[] = [];
-			const alice = new ZodWebSocketClient({
+			const alice = new StandardSchemaWebSocketClient({
 				webSocket: aliceResp.webSocket,
 				clientSchema: BufferClientMessageSchema,
 				serverSchema: BufferServerMessageSchema,
@@ -676,7 +674,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			aliceResp.webSocket.accept();
 
-			alice.send({
+			await alice.send({
 				type: "setName",
 				name: "Alice",
 			});
@@ -689,7 +687,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			if (!bobResp.webSocket) throw new Error("Expected WebSocket");
 
 			const bobMessages: BufferServerMessage[] = [];
-			const bob = new ZodWebSocketClient({
+			const bob = new StandardSchemaWebSocketClient({
 				webSocket: bobResp.webSocket,
 				clientSchema: BufferClientMessageSchema,
 				serverSchema: BufferServerMessageSchema,
@@ -698,13 +696,13 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			});
 			bobResp.webSocket.accept();
 
-			bob.send({
+			await bob.send({
 				type: "setName",
 				name: "Bob",
 			});
 
 			// Alice sends message
-			alice.send({
+			await alice.send({
 				type: "message",
 				text: "Hi Bob via msgpack!",
 			});
@@ -727,7 +725,7 @@ describe("honoDoFetcher + ZodWebSocketClient Integration", () => {
 			}
 
 			// Bob replies
-			bob.send({
+			await bob.send({
 				type: "message",
 				text: "Hey Alice, msgpack works!",
 			});
