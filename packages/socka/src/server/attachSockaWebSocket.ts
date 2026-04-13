@@ -1,4 +1,5 @@
 import type { SockaContract, SockaContractConfig } from "../core/contract";
+import { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
 import {
 	SockaWebSocketSession,
 	type SockaWebSocketInit,
@@ -57,44 +58,12 @@ export function attachSockaWebSocket<
 	};
 
 	const onMessage = (ev: MessageEvent): void => {
-		const run = async (): Promise<void> => {
-			const wf = config.wireFormat ?? "json";
-			const data = ev.data;
-			if (typeof data === "string") {
-				await session.handleRawMessage(data);
-				return;
-			}
-			if (data instanceof ArrayBuffer) {
-				if (wf === "json") {
-					await session.handleRawMessage(new TextDecoder().decode(data));
-					return;
-				}
-				await session.handleBinaryMessage(data);
-				return;
-			}
-			if (data instanceof Blob) {
-				if (wf === "json") {
-					await session.handleRawMessage(await data.text());
-				} else {
-					await session.handleBinaryMessage(await data.arrayBuffer());
-				}
-				return;
-			}
-			if (ArrayBuffer.isView(data)) {
-				const v = data;
-				const view = new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
-				if (wf === "json") {
-					await session.handleRawMessage(new TextDecoder().decode(view));
-					return;
-				}
-				const copy = new Uint8Array(view.length);
-				copy.set(view);
-				await session.handleBinaryMessage(copy.buffer);
-			}
-		};
-		void run().catch((err: unknown) => {
-			console.error("socka: message handler error:", err);
-		});
+		const wf = config.wireFormat ?? "json";
+		void dispatchSockaInboundMessage(session, wf, ev.data).catch(
+			(err: unknown) => {
+				console.error("socka: message handler error:", err);
+			},
+		);
 	};
 
 	const onClose = (): void => {

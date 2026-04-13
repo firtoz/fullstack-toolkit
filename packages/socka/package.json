@@ -30,6 +30,21 @@
 			"types": "./src/server/index.ts",
 			"import": "./src/server/index.ts",
 			"require": "./src/server/index.ts"
+		},
+		"./bun": {
+			"types": "./src/bun/index.ts",
+			"import": "./src/bun/index.ts",
+			"require": "./src/bun/index.ts"
+		},
+		"./hono": {
+			"types": "./src/hono/index.ts",
+			"import": "./src/hono/index.ts",
+			"require": "./src/hono/index.ts"
+		},
+		"./hono/cloudflare": {
+			"types": "./src/hono/cloudflare-workers.ts",
+			"import": "./src/hono/cloudflare-workers.ts",
+			"require": "./src/hono/cloudflare-workers.ts"
 		}
 	},
 	"files": [
@@ -86,11 +101,20 @@
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:",
 		"@firtoz/websocket-do": "workspace:*",
-		"hono": "catalog:",
-		"react": "catalog:"
+		"@hono/node-server": "^1.19.2",
+		"@hono/node-ws": "^1.3.0",
+		"hono": "^4.12.9",
+		"react": "catalog:",
+		"ws": "^8.18.0"
 	},
 	"peerDependenciesMeta": {
 		"@firtoz/websocket-do": {
+			"optional": true
+		},
+		"@hono/node-server": {
+			"optional": true
+		},
+		"@hono/node-ws": {
 			"optional": true
 		},
 		"hono": {
@@ -98,13 +122,19 @@
 		},
 		"react": {
 			"optional": true
+		},
+		"ws": {
+			"optional": true
 		}
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^20.8.9",
+		"@hono/node-server": "^1.19.2",
+		"@hono/node-ws": "^1.3.0",
 		"@tanstack/intent": "catalog:",
 		"@testing-library/react": "^16.3.2",
 		"@types/react": "catalog:",
+		"@types/ws": "^8.18.1",
 		"bun-types": "catalog:",
 		"happy-dom": "^20.8.9",
 		"react-dom": "19.2.4",

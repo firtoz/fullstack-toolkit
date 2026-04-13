@@ -77,6 +77,28 @@ describe("socka DO round-trip", () => {
 		expect(errors[0]).toContain("Unknown procedure");
 	});
 
+	it("Hono Cloudflare Workers (socka/hono/cloudflare): JSON echo and ping", async () => {
+		const response = await exports.default.fetch(
+			"http://example.com/hono-socka-ws",
+			{ headers: { Upgrade: "websocket" } },
+		);
+		const ws = response.webSocket;
+		if (!ws) throw new Error("expected webSocket");
+		ws.accept();
+
+		const rpc = new SockaRpc({
+			contract: roundtripContract,
+			webSocket: ws,
+			wireFormat: "json",
+		});
+		await rpc.client.waitForOpen();
+
+		await expect(rpc.rpc.echo({ text: "hono" })).resolves.toEqual({
+			text: "hono",
+		});
+		await expect(rpc.rpc.ping()).resolves.toEqual({ pong: true });
+	});
+
 	it("msgpack: echo", async () => {
 		const response = await exports.default.fetch(
 			"http://example.com/socka-msgpack/websocket",

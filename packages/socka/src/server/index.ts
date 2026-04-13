@@ -9,3 +9,4 @@ export {
 	attachSockaWebSocket,
 	type AttachedSockaWebSocket,
 } from "./attachSockaWebSocket";
+export { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";

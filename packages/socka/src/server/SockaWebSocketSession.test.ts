@@ -4,6 +4,7 @@ import { encodeSockaWire, parseWirePayload } from "../core/wire-codec";
 import { rpcTestContract } from "../test-utils/rpc-contract-for-tests";
 import { createFakeWebSocket } from "../test-utils/fake-websocket";
 import { attachSockaWebSocket } from "./attachSockaWebSocket";
+import { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
 import { SockaWebSocketSession } from "./SockaWebSocketSession";
 
 describe("SockaWebSocketSession", () => {
@@ -138,5 +139,98 @@ describe("attachSockaWebSocket", () => {
 		await new Promise((r) => setTimeout(r, 10));
 		expect(onClose).toHaveBeenCalled();
 		expect(sessions.size).toBe(0);
+	});
+});
+
+describe("dispatchSockaInboundMessage", () => {
+	test("JSON string routes to serverResponse", async () => {
+		const { socket, dispatchOpen, sent } = createFakeWebSocket();
+		dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		const session = new SockaWebSocketSession(socket, sessions, {
+			contract: rpcTestContract,
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(socket, session);
+
+		const req = encodeClientRequest("r1", "echo", { text: "via-dispatch" });
+		const wire = encodeSockaWire(req, "json") as string;
+		await dispatchSockaInboundMessage(session, "json", wire);
+
+		expect(sent.length).toBe(1);
+		const out = JSON.parse(sent[0] as string);
+		expect(out.socka).toBe("serverResponse");
+		expect(out.body).toEqual({ text: "via-dispatch" });
+	});
+
+	test("JSON ArrayBuffer decodes UTF-8 like attachSockaWebSocket", async () => {
+		const { socket, dispatchOpen, sent } = createFakeWebSocket();
+		dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		const session = new SockaWebSocketSession(socket, sessions, {
+			contract: rpcTestContract,
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(socket, session);
+
+		const req = encodeClientRequest("r1", "ping", {});
+		const wire = encodeSockaWire(req, "json") as string;
+		const buf = new TextEncoder().encode(wire);
+		await dispatchSockaInboundMessage(session, "json", buf.buffer);
+
+		expect(sent.length).toBe(1);
+		expect(JSON.parse(sent[0] as string).socka).toBe("serverResponse");
+	});
+
+	test("msgpack binary routes to serverResponse", async () => {
+		const { socket, dispatchOpen, sent } = createFakeWebSocket();
+		dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		const session = new SockaWebSocketSession(socket, sessions, {
+			contract: rpcTestContract,
+			wireFormat: "msgpack",
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(socket, session);
+
+		const req = encodeClientRequest("r1", "echo", { text: "bin" });
+		const wire = encodeSockaWire(req, "msgpack") as Uint8Array;
+		const exact = new Uint8Array(wire.length);
+		exact.set(wire);
+		await dispatchSockaInboundMessage(session, "msgpack", exact.buffer);
+
+		expect(sent.length).toBe(1);
+		const first = sent[0];
+		if (!(first instanceof ArrayBuffer) && !(first instanceof Uint8Array)) {
+			throw new Error("expected binary frame");
+		}
+		const u8 = first instanceof Uint8Array ? first : new Uint8Array(first);
+		const parsed = parseWirePayload(u8, "msgpack");
+		const decoded = decodeSockaWire(parsed);
+		expect(decoded.kind).toBe("serverResponse");
+		if (decoded.kind === "serverResponse") {
+			expect(decoded.frame.body).toEqual({ text: "bin" });
+		}
 	});
 });

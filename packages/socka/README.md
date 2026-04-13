@@ -18,6 +18,9 @@ bun add socka
 | `socka/react` | `react` **≥ 18** |
 | `socka/do` | **`@firtoz/websocket-do`** (same major as `socka`), `@cloudflare/workers-types`, **`hono`** |
 | `socka/server` | None beyond `socka/core` (standard **`WebSocket`** + same contract types) |
+| `socka/bun` | Same as `socka/server` ( **`bun-types`** for TypeScript) |
+| `socka/hono` | **`hono`**, **`@hono/node-ws`**, **`@hono/node-server`**, **`ws`** (runtime + types) |
+| `socka/hono/cloudflare` | **`hono`** ( **`upgradeWebSocket`** from `hono/cloudflare-workers`) |
 
 `@firtoz/websocket-do` is marked optional on the package so browser-only clients do not install it; **Durable Object servers using `socka/do` must add it explicitly** (`bun add @firtoz/websocket-do`).
 
@@ -114,7 +117,7 @@ For routing WebSockets to sessions, use **`SockaWebSocketDO`** and **`createSock
 
 ## Server (Hono, Node `ws`, Bun — without Durable Objects)
 
-For a **normal** [`WebSocket`](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) (no Cloudflare DO hibernation APIs), use **`socka/server`**. You pass the same **`contract`**, **`handlers`**, and **`handleClose`** as with `SockaDoSession`; wire the socket with **`attachSockaWebSocket`** or call **`handleRawMessage`** / **`handleBinaryMessage`** on **`SockaWebSocketSession`** yourself.
+For a **normal** [`WebSocket`](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) (no Cloudflare DO hibernation APIs), use **`socka/server`**. You pass the same **`contract`**, **`handlers`**, and **`handleClose`** as with `SockaDoSession`; wire the socket with **`attachSockaWebSocket`**, or call **`dispatchSockaInboundMessage`** / **`handleRawMessage`** / **`handleBinaryMessage`** on **`SockaWebSocketSession`** yourself.
 
 ```ts
 import {
@@ -146,11 +149,88 @@ attachSockaWebSocket(
 
 Optional fourth argument **`{ request }`** is passed to **`createData`** when you define per-connection state. **`InferSockaHandlers<typeof myContract>`** applies unchanged.
 
-**Hono** — use your runtime’s WebSocket helper ([Node](https://hono.dev/docs/helpers/websocket), [Bun](https://hono.dev/docs/helpers/websocket), [Cloudflare Workers](https://hono.dev/docs/getting-started/cloudflare-workers)) and call **`attachSockaWebSocket`** from the socket **`open`** callback (or equivalent) once you hold the **`WebSocket`** instance.
+**Inbound frames without `attachSockaWebSocket`** — use **`dispatchSockaInboundMessage(session, wireFormat, data)`** with the same `data` shape as a DOM **`MessageEvent`** (`string`, **`ArrayBuffer`**, **`Blob`**, **`ArrayBufferView`**, or **`Buffer`** on Node/Bun). This is what **`attachSockaWebSocket`** uses internally.
 
-**Node with [`ws`](https://github.com/websockets/ws)** — in the **`connection`** handler, pass the socket into **`attachSockaWebSocket`**. The `ws` package’s socket is not always identical to the browser **`WebSocket`** type; if TypeScript complains, cast to the global **`WebSocket`** type your build targets, or prefer **`@hono/node-ws`** / **Bun** where the global **`WebSocket`** matches **`socka/server`** expectations. **`attachSockaWebSocket`** accepts JSON frames delivered as UTF-8 **`ArrayBuffer`** slices (some runtimes send text that way) as well as strings.
+### `createData` and session-only state
 
-**Bun** — `Bun.serve` uses **`ServerWebSocket`**, which does **not** implement **`addEventListener`**, so **`attachSockaWebSocket`** does not apply. Create a **`SockaWebSocketSession`** in **`websocket.open`** and route **`websocket.message`** / **`close`** to **`handleRawMessage`** / **`handleBinaryMessage`** (see the **`socka-server-test`** Bun integration test in this repo).
+| Where | When `createData` runs | You receive | Stored in |
+|------|-------------------------|-------------|-----------|
+| **`SockaWebSocketSession`** (`socka/server`, Bun, Hono, …) | Session constructor | **`SockaWebSocketInit`** (e.g. **`{ request }`** from the upgrade) | **`session.data`** |
+| **`SockaDoSession`** / **`BaseSession`** (`socka/do`, **`@firtoz/websocket-do`**) | **`startFresh(ctx)`** when the DO accepts a socket | Hono **`Context`** | **`session.data`**, also serialized to the **DO WebSocket attachment** for **hibernation** |
+
+Handlers stay **`(input) => output`**. To use **`session.data`** (user id, room id, game state), **close over `session`** when you build **`handlers`**, or use a **subclass** of **`SockaWebSocketSession`** / **`SockaDoSession`** so methods can read **`this.data`**.
+
+**Example — read and update `session.data` via closure** (handlers reference a **`session`** variable you assign immediately after building the object; no RPC receives the session as an argument):
+
+```ts
+import { defineSocka, type InferSockaHandlers } from "socka/core";
+import { SockaWebSocketSession } from "socka/server";
+import * as z from "zod";
+
+const gameContract = defineSocka({
+  procedures: {
+    getHealth: {
+      output: z.object({ health: z.number() }),
+    },
+    damage: {
+      input: z.object({ amount: z.number() }),
+      output: z.object({ health: z.number() }),
+    },
+  },
+});
+
+type GameData = { health: number };
+
+let session!: SockaWebSocketSession<typeof gameContract, GameData>;
+
+const handlers: InferSockaHandlers<typeof gameContract> = {
+  getHealth: async () => ({ health: session.data.health }),
+  damage: async (input) => {
+    session.data.health = Math.max(0, session.data.health - input.amount);
+    return { health: session.data.health };
+  },
+};
+
+session = new SockaWebSocketSession(websocket, sessions, {
+  contract: gameContract,
+  createData: () => ({ health: 100 }),
+  handlers,
+  handleClose: async () => {},
+});
+sessions.set(websocket, session);
+```
+
+**Durable Objects (`SockaDoSession`):** use the same **`handlers`** pattern. After mutating **`session.data`**, call **`await session.update()`** (from **`@firtoz/websocket-do`**) so the attachment is rewritten for **hibernation**; otherwise **resume** can see stale values (see **`BaseSession`**). For large or authoritative state, keep a **stable id** in **`session.data`** and use **D1 / KV / SQLite** as the source of truth.
+
+**Portable servers** — **`session.data`** is process memory unless you persist it yourself.
+
+### `socka/bun` (Bun.serve)
+
+**Bun** `Bun.serve` uses **`ServerWebSocket`**, which does **not** implement **`addEventListener`**, so **`attachSockaWebSocket`** does not apply. Use **`createSockaBunWebSocketHandlers`** and pass the returned **`websocket`** into **`Bun.serve`**:
+
+```ts
+import { createSockaBunWebSocketHandlers } from "socka/bun";
+
+const { websocket } = createSockaBunWebSocketHandlers({
+  contract: myContract,
+  handlers: { /* ... */ },
+  handleClose: async () => {},
+});
+
+Bun.serve({ fetch, websocket });
+```
+
+### `socka/hono` (Node — `@hono/node-ws`)
+
+Use **`createNodeWebSocket`** from [**`@hono/node-ws`**](https://github.com/honojs/middleware/tree/main/packages/node-ws) with **`serve`** from **`@hono/node-server`**, then **`upgradeWebSocket(sockaHonoNodeWs({ contract, handlers, handleClose }))`**. **`sockaHonoNodeWs`** returns the callback Hono expects for **`upgradeWebSocket`**.
+
+### `socka/hono/cloudflare` (Workers)
+
+Use **`upgradeWebSocket`** from **`hono/cloudflare-workers`** with **`sockaHonoCloudflare({ contract, handlers, handleClose })`**. The session is created on the first **`onMessage`** (Workers helpers omit **`onOpen`**).
+
+**Node with [`ws`](https://github.com/websockets/ws)** — in the **`connection`** handler, pass the socket into **`attachSockaWebSocket`**. The `ws` package’s socket is not always identical to the browser **`WebSocket`** type; if TypeScript complains, cast to the global **`WebSocket`** type your build targets. **`attachSockaWebSocket`** and **`dispatchSockaInboundMessage`** accept JSON frames delivered as UTF-8 **`ArrayBuffer`** slices (some runtimes send text that way) as well as strings.
+
+**Integration tests in this repo:** [`tests/socka-server-test`](https://github.com/firtoz/fullstack-toolkit/tree/main/tests/socka-server-test) (Node **`ws`**, **Bun.serve**, **Hono + `@hono/node-ws`**), [`tests/socka-do-test`](https://github.com/firtoz/fullstack-toolkit/tree/main/tests/socka-do-test) (Durable Objects + **Hono Cloudflare Workers** WebSocket route).
 
 ## Events (server push)
 
@@ -198,7 +278,7 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 |---:|---|
 | **Contract** | `defineSocka({ procedures, events? })` — Zod, Valibot, ArkType, or any [Standard Schema v1](https://standardschema.dev/) |
 | **Client** | `SockaRpc` / `useSockaRpc` / `SockaRpcProvider` + `useSockaRpcContext` |
-| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects, or **`socka/server`** on any standard WebSocket |
+| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects, or **`socka/server`** / **`socka/bun`** / **`socka/hono`** on any supported runtime |
 | **Wire** | JSON text frames by default; optional **msgpack** binary — same logical frames, both ends must use the same `wireFormat` |
 
 **Imports**
@@ -209,7 +289,10 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 | `socka/client` | `SockaRpc`, `SockaWebSocketClient` |
 | `socka/react` | `useSocka`, `useSockaRpc`, provider + context |
 | `socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
-| `socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket` |
+| `socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastSockaEventToPeers` |
+| `socka/bun` | `createSockaBunWebSocketHandlers` for **`Bun.serve`** |
+| `socka/hono` | `sockaHonoNodeWs` for **`@hono/node-ws`** |
+| `socka/hono/cloudflare` | `sockaHonoCloudflare` for **`hono/cloudflare-workers`** |
 
 ---
 

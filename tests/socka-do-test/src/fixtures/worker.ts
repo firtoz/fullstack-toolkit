@@ -1,8 +1,24 @@
 import { Hono } from "hono";
+import { upgradeWebSocket } from "hono/cloudflare-workers";
+import { sockaHonoCloudflare } from "socka/hono/cloudflare";
 import { SockaJsonTestDO } from "./SockaJsonTestDO";
 import { SockaMsgpackTestDO } from "./SockaMsgpackTestDO";
+import { roundtripContract } from "./roundtrip-contract";
+import { roundtripHandlers } from "./roundtrip-handlers";
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.get(
+	"/hono-socka-ws",
+	upgradeWebSocket(
+		sockaHonoCloudflare({
+			contract: roundtripContract,
+			handlers: roundtripHandlers,
+			handleClose: async () => {},
+			createData: () => ({}),
+		}),
+	),
+);
 
 app.all("/socka-json/*", async (c) => {
 	const stub = c.env.SOCKA_JSON_TEST.getByName("socka-json-test");

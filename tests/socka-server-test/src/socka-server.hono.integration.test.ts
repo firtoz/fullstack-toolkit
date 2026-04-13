@@ -1,59 +1,65 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { serve } from "@hono/node-server";
+import { createNodeWebSocket } from "@hono/node-ws";
+import { Hono } from "hono";
 import { SockaError } from "socka/core";
 import type { SockaWireFormat } from "socka/core";
 import { SockaRpc } from "socka/client";
-import { createSockaBunWebSocketHandlers } from "socka/bun";
+import { sockaHonoNodeWs } from "socka/hono";
 import { roundtripContract } from "./fixtures/roundtrip-contract";
 import { roundtripHandlers } from "./fixtures/roundtrip-handlers";
 
-function startBunSockaServer(wireFormat: SockaWireFormat): {
-	server: ReturnType<typeof Bun.serve>;
+function startHonoSockaServer(wireFormat: SockaWireFormat): {
+	server: ReturnType<typeof serve>;
 	port: number;
 } {
-	const { websocket } = createSockaBunWebSocketHandlers({
-		contract: roundtripContract,
-		wireFormat,
-		handlers: roundtripHandlers,
-		handleClose: async () => {},
-		createData: () => ({}),
-	});
+	const app = new Hono();
+	const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
 
-	const server = Bun.serve({
+	app.get(
+		"/ws",
+		upgradeWebSocket(
+			sockaHonoNodeWs({
+				contract: roundtripContract,
+				wireFormat,
+				handlers: roundtripHandlers,
+				handleClose: async () => {},
+				createData: () => ({}),
+			}),
+		),
+	);
+
+	const server = serve({
+		fetch: app.fetch,
 		port: 0,
-		fetch(req, srv) {
-			if (srv.upgrade(req)) {
-				return;
-			}
-			return new Response("not found", { status: 404 });
-		},
-		websocket,
 	});
+	injectWebSocket(server);
 
-	const port = server.port;
-	if (port === undefined) {
-		throw new Error("Bun.serve: expected port");
+	const addr = server.address();
+	if (addr === null || typeof addr === "string") {
+		throw new Error("expected bound address with port");
 	}
-	return { server, port };
+	return { server, port: addr.port };
 }
 
-describe("socka/server e2e (Bun.serve)", () => {
-	let json: ReturnType<typeof startBunSockaServer>;
-	let msgpack: ReturnType<typeof startBunSockaServer>;
+describe("socka/hono (Node @hono/node-ws)", () => {
+	let json: ReturnType<typeof startHonoSockaServer>;
+	let msgpack: ReturnType<typeof startHonoSockaServer>;
 
 	beforeAll(() => {
-		json = startBunSockaServer("json");
-		msgpack = startBunSockaServer("msgpack");
+		json = startHonoSockaServer("json");
+		msgpack = startHonoSockaServer("msgpack");
 	});
 
 	afterAll(() => {
-		json.server.stop();
-		msgpack.server.stop();
+		json.server.close();
+		msgpack.server.close();
 	});
 
 	test("JSON: echo and ping", async () => {
 		const rpc = new SockaRpc({
 			contract: roundtripContract,
-			url: `ws://127.0.0.1:${json.port}`,
+			url: `ws://127.0.0.1:${json.port}/ws`,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
@@ -69,7 +75,7 @@ describe("socka/server e2e (Bun.serve)", () => {
 	test("JSON: handler SockaError surfaces on client", async () => {
 		const rpc = new SockaRpc({
 			contract: roundtripContract,
-			url: `ws://127.0.0.1:${json.port}`,
+			url: `ws://127.0.0.1:${json.port}/ws`,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
@@ -84,7 +90,7 @@ describe("socka/server e2e (Bun.serve)", () => {
 	test("msgpack: echo and ping", async () => {
 		const rpc = new SockaRpc({
 			contract: roundtripContract,
-			url: `ws://127.0.0.1:${msgpack.port}`,
+			url: `ws://127.0.0.1:${msgpack.port}/ws`,
 			wireFormat: "msgpack",
 		});
 		await rpc.client.waitForOpen();
