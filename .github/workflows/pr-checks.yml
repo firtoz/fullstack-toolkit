@@ -71,10 +71,16 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.58.2-noble
       # Browsers + OS deps are in the image; see https://playwright.dev/docs/ci#via-containers
       # --ipc=host: avoid Chromium OOM in Docker (https://playwright.dev/docs/docker#recommended-docker-configuration)
-      options: --ipc=host --init --user 1001
+      # Do not set --user: runner must be root here so we can `apt-get install unzip`
+      # (required by oven-sh/setup-bun to extract the Bun zip). Browser dirs are world-readable in the image.
+      options: --ipc=host --init
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+
+      # setup-bun downloads bun-linux-x64.zip and shells out to `unzip`; minimal images omit it.
+      - name: Install unzip (for setup-bun)
+        run: apt-get update && apt-get install -y unzip
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
