@@ -57,16 +57,20 @@ export interface SockaPushSession<
 /**
  * Broadcast a socka server event to every session in the map (optionally
  * excluding the caller). Payload must already be contract-validated.
+ *
+ * Exclusion uses the **WebSocket** identity (`self.websocket`), not the session
+ * object reference, so the same `sessions` map can hold `SockaDoSession` while
+ * `broadcastPush` runs on `this.socka` (inner {@link SockaWebSocketSession}).
  */
 export function broadcastSockaEventToPeers(
 	sessions: Map<WebSocket, SockaEmitCapable>,
-	self: SockaEmitCapable,
+	self: SockaEmitCapable & { readonly websocket: WebSocket },
 	event: string,
 	body: unknown,
 	excludeSelf = false,
 ): void {
-	for (const session of sessions.values()) {
-		if (excludeSelf && session === self) continue;
+	for (const [ws, session] of sessions) {
+		if (excludeSelf && ws === self.websocket) continue;
 		session.emitWireEvent(event, body);
 	}
 }

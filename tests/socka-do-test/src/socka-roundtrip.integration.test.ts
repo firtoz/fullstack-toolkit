@@ -74,7 +74,7 @@ describe("socka DO round-trip", () => {
 			},
 			{ timeout: 2000, interval: 20 },
 		);
-		expect(errors[0]).toContain("Unknown procedure");
+		expect(errors[0]).toContain("Unknown call");
 	});
 
 	it("Hono Cloudflare Workers (socka/hono/cloudflare): JSON echo and ping", async () => {
