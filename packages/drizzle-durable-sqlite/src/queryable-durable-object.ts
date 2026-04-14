@@ -215,7 +215,7 @@ export abstract class QueryableDurableObject<
 			) =>
 				new QueryableSession<TRow, TEnv>(
 					websocket,
-					this.sessions as Map<WebSocket, QueryableSession<TRow, TEnv>>,
+					this.sessions,
 					options as StandardSchemaSessionOptions<
 						SyncClientMessage,
 						SyncServerMessage<TRow>

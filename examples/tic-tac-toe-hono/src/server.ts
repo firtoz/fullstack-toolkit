@@ -18,6 +18,7 @@ type SessionData = { roomId: string };
 type RoomBundle = {
 	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof ticTacToeContract, SessionData>>;
 	game: TicTacToeGame;
+	config: SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData>;
 };
 
 const rooms = new Map<string, RoomBundle>();
@@ -25,36 +26,22 @@ const rooms = new Map<string, RoomBundle>();
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "../public");
 
-function getOrCreateRoom(roomId: string): RoomBundle {
-	let r = rooms.get(roomId);
-	if (!r) {
-		r = {
-			sessionMap: new Map(),
-			game: new TicTacToeGame(),
-		};
-		rooms.set(roomId, r);
-	}
-	return r;
-}
-
-function makeConfigForConnection(
-	room: RoomBundle,
+function makeRoomConfig(
+	game: TicTacToeGame,
 	roomId: string,
 ): SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData> {
-	const game = room.game;
-	let socketRef: WebSocket | null = null;
 	return {
 		contract: ticTacToeContract,
 		handlers: {
 			join: async (session) => {
 				const { player } = game.join(session.websocket);
 				const snap = game.snapshot();
-				await session.broadcastContractEvent("stateChanged", snap);
+				await session.broadcastPush("stateChanged", snap);
 				return { ...snap, you: player };
 			},
 			move: async (input, session) => {
 				const snap = game.move(session.websocket, input.row, input.col);
-				await session.broadcastContractEvent("stateChanged", snap);
+				await session.broadcastPush("stateChanged", snap);
 				return snap;
 			},
 		},
@@ -65,13 +52,22 @@ function makeConfigForConnection(
 				parts.length >= 2 && parts[0] === "ws" ? parts[1] : roomId;
 			return { roomId: rid };
 		},
-		handleClose: async () => {
-			if (socketRef) game.release(socketRef);
-		},
-		onAttached: async (session) => {
-			socketRef = session.websocket;
+		handleClose: async (session) => {
+			game.release(session.websocket);
 		},
 	};
+}
+
+function getOrCreateRoom(roomId: string): RoomBundle {
+	let r = rooms.get(roomId);
+	if (!r) {
+		const game = new TicTacToeGame();
+		const sessionMap: RoomBundle["sessionMap"] = new Map();
+		const config = makeRoomConfig(game, roomId);
+		r = { sessionMap, game, config };
+		rooms.set(roomId, r);
+	}
+	return r;
 }
 
 const app = new Hono();
@@ -82,8 +78,7 @@ app.get(
 	upgradeWebSocket((c) => {
 		const roomId = c.req.param("roomId") ?? "default";
 		const room = getOrCreateRoom(roomId);
-		const config = makeConfigForConnection(room, roomId);
-		return sockaHonoNodeWs(config, { sessions: room.sessionMap })(c);
+		return sockaHonoNodeWs(room.config, { sessions: room.sessionMap })(c);
 	}),
 );
 

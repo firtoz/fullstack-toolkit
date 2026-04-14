@@ -25,7 +25,7 @@ export interface SockaWebSocketClientOptions<
 	webSocket?: WebSocket;
 	/**
 	 * When `false`, the socket is not created until {@link SockaWebSocketClient.connect}
-	 * (or the first operation that implicitly opens, e.g. {@link SockaRpc} `call`).
+	 * (or the first operation that implicitly opens, e.g. {@link SockaSession} `send`).
 	 * Default `true`.
 	 */
 	autoConnect?: boolean;

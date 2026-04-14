@@ -1,6 +1,6 @@
 import { SockaError } from "socka/core";
 import type { z } from "zod";
-import { boardSchema } from "./contract";
+import type { boardSchema } from "./contract";
 
 export type Board = z.infer<typeof boardSchema>;
 
@@ -26,7 +26,9 @@ function emptyBoard(): Board {
 }
 
 function checkWinner(board: Board, m: "X" | "O"): boolean {
-	return LINES.some(([a, b, c]) => board[a] === m && board[b] === m && board[c] === m);
+	return LINES.some(
+		([a, b, c]) => board[a] === m && board[b] === m && board[c] === m,
+	);
 }
 
 function boardFull(board: Board): boolean {

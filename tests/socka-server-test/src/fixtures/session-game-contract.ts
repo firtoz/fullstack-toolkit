@@ -5,7 +5,7 @@ const playerIdSchema = z.string().min(1);
 
 /** Multi-session arena: list snapshot + attack by player id (used for session integration tests). */
 export const sessionGameContract = defineSocka({
-	procedures: {
+	calls: {
 		listPlayers: {
 			output: z.object({
 				self: playerIdSchema,
@@ -27,7 +27,7 @@ export const sessionGameContract = defineSocka({
 			}),
 		},
 	},
-	events: {
+	pushes: {
 		/** Emitted to other sockets the first time this player runs `listPlayers` (join presence). */
 		playerJoined: z.object({ playerId: playerIdSchema }),
 		/** Emitted to every socket when a player is reduced to 0 health (including the victim). */

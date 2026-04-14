@@ -1,7 +1,8 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { ReservedSockaProcedureName } from "./reserved-procedure-names";
 
 /**
- * Defines one RPC procedure: an optional input schema and a required output schema.
+ * Defines one client-initiated call: an optional input schema and a required output schema.
  * Both must be Standard Schema v1 compliant (Zod v4, Valibot, ArkType, etc.).
  */
 export type SockaProcedureDef = {
@@ -11,20 +12,34 @@ export type SockaProcedureDef = {
 
 /** Configuration object accepted by {@link defineSocka}. */
 export type SockaContractConfig = {
-	readonly procedures: Record<string, SockaProcedureDef>;
-	readonly events?: Record<string, StandardSchemaV1>;
+	readonly calls: Record<string, SockaProcedureDef>;
+	readonly pushes?: Record<string, StandardSchemaV1>;
 };
+
+/**
+ * When call keys are a **narrow** object type, rejects keys in
+ * {@link ReservedSockaProcedureName} (thenable / `Object.prototype` hazards on
+ * `session.send`). Wide `Record<string, SockaProcedureDef>` is unchanged so
+ * dynamic maps still typecheck; use runtime validation (see {@link SockaSession}
+ * `send`).
+ */
+export type ValidateSockaCallKeys<P extends Record<string, SockaProcedureDef>> =
+	string extends keyof P
+		? P
+		: keyof P & ReservedSockaProcedureName extends never
+			? P
+			: never;
 
 /** Runtime contract returned by {@link defineSocka}, preserving full generic types. */
 export type SockaContract<T extends SockaContractConfig = SockaContractConfig> =
 	{
-		readonly procedures: T["procedures"];
-		readonly events: T extends { events: Record<string, StandardSchemaV1> }
-			? T["events"]
+		readonly calls: T["calls"];
+		readonly pushes: T extends { pushes: Record<string, StandardSchemaV1> }
+			? T["pushes"]
 			: Record<string, never>;
 	};
 
-type RpcFn<P extends SockaProcedureDef> = P extends {
+type CallFn<P extends SockaProcedureDef> = P extends {
 	input: infer I extends StandardSchemaV1;
 }
 	? (
@@ -33,15 +48,10 @@ type RpcFn<P extends SockaProcedureDef> = P extends {
 	: () => Promise<StandardSchemaV1.InferOutput<P["output"]>>;
 
 /**
- * Infers the typed RPC method map for a contract.
- *
- * ```ts
- * type MyRpc = InferSockaRpc<typeof myContract>;
- * // { list: () => Promise<Item[]>; insert: (input: { item: Item }) => Promise<void> }
- * ```
+ * Infers the typed `session.send.*` method map for a contract.
  */
-export type InferSockaRpc<C extends SockaContract> = {
-	[K in keyof C["procedures"]]: RpcFn<C["procedures"][K]>;
+export type InferSockaSend<C extends SockaContract> = {
+	[K in keyof C["calls"]]: CallFn<C["calls"][K]>;
 };
 
 type HandlerOut<P extends SockaProcedureDef> =
@@ -56,53 +66,56 @@ type HandlerFn<P extends SockaProcedureDef, TSession> = P extends {
 
 /**
  * Infers the typed server handler map for a contract. Handlers with an input
- * schema take `(input, session)`; procedures without input take `(session)` only.
+ * schema take `(input, session)`; calls without input take `(session)` only.
  * Each handler returns the output that will be validated before sending.
  */
 export type InferSockaHandlers<C extends SockaContract, TSession> = {
-	[K in keyof C["procedures"]]: HandlerFn<C["procedures"][K], TSession>;
+	[K in keyof C["calls"]]: HandlerFn<C["calls"][K], TSession>;
 };
 
-type InferEventPayload<S extends StandardSchemaV1> =
+type InferPushPayload<S extends StandardSchemaV1> =
 	StandardSchemaV1.InferOutput<S>;
 
 /**
- * Payload type for a contract event (output of the event's Standard Schema).
+ * Payload type for a contract push (output of the push's Standard Schema).
  */
-export type InferSockaEventPayload<
+export type InferSockaPushPayload<
 	C extends SockaContract<SockaContractConfig>,
-	K extends keyof C["events"],
-> = C["events"][K] extends StandardSchemaV1
-	? InferEventPayload<C["events"][K]>
+	K extends keyof C["pushes"],
+> = C["pushes"][K] extends StandardSchemaV1
+	? InferPushPayload<C["pushes"][K]>
 	: never;
 
 /**
- * Infers the typed event handler map for a contract's events.
+ * Infers the typed push subscription handler map for a contract's `pushes`.
  */
-export type InferSockaEventHandlers<C extends SockaContract> = {
-	[K in keyof C["events"]]: C["events"][K] extends StandardSchemaV1
-		? (payload: InferEventPayload<C["events"][K]>) => void | Promise<void>
+export type InferSockaPushHandlers<C extends SockaContract> = {
+	[K in keyof C["pushes"]]: C["pushes"][K] extends StandardSchemaV1
+		? (payload: InferPushPayload<C["pushes"][K]>) => void | Promise<void>
 		: never;
 };
 
 /**
- * Creates a socka contract from procedure and event definitions. Pass Zod, Valibot,
+ * Creates a socka contract from call and push definitions. Pass Zod, Valibot,
  * ArkType, or any Standard Schema v1 schemas directly — no adapters needed.
  *
  * ```ts
  * export const myContract = defineSocka({
- *   procedures: {
+ *   calls: {
  *     list: { output: z.array(itemSchema) },
  *     insert: { input: z.object({ item: itemSchema }), output: z.void() },
  *   },
  * });
  * ```
+ *
+ * Call names must not be {@link ReservedSockaProcedureName} — they would make
+ * `session.send` thenable or unsafe as a plain method bag.
  */
 export function defineSocka<const T extends SockaContractConfig>(
-	config: T,
+	config: T & { calls: ValidateSockaCallKeys<T["calls"]> },
 ): SockaContract<T> {
 	return {
-		procedures: config.procedures,
-		events: (config.events ?? {}) as SockaContract<T>["events"],
+		calls: config.calls,
+		pushes: (config.pushes ?? {}) as SockaContract<T>["pushes"],
 	};
 }

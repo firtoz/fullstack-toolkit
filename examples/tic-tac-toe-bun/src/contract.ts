@@ -30,7 +30,7 @@ const snapshotSchema = z.object({
 
 /** Self-contained contract for this example (duplicated in other `tic-tac-toe-*` folders). */
 export const ticTacToeContract = defineSocka({
-	procedures: {
+	calls: {
 		join: {
 			output: snapshotSchema.extend({
 				you: z.enum(["X", "O"]),
@@ -44,7 +44,7 @@ export const ticTacToeContract = defineSocka({
 			output: snapshotSchema,
 		},
 	},
-	events: {
+	pushes: {
 		stateChanged: snapshotSchema,
 	},
 });

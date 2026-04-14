@@ -53,7 +53,7 @@ export type SessionEnv<
 
 export type BaseSessionHandlers<
 	TData,
-	_TServerMessage,
+	TServerMessage,
 	TClientMessage,
 	TEnv extends object = Cloudflare.Env,
 > = {
@@ -64,7 +64,10 @@ export type BaseSessionHandlers<
 	createData?: (ctx: Context<{ Bindings: TEnv }>) => TData;
 	handleMessage: (message: TClientMessage) => Promise<void>;
 	handleBufferMessage: (message: ArrayBuffer) => Promise<void>;
-	handleClose: () => Promise<void>;
+	/** Called when this connection closes; `session` is this {@link BaseSession} instance. */
+	handleClose: (
+		session: BaseSession<TData, TServerMessage, TClientMessage, TEnv>,
+	) => Promise<void>;
 };
 
 export class BaseSession<
@@ -144,6 +147,6 @@ export class BaseSession<
 	}
 
 	async handleClose(): Promise<void> {
-		return this.handlers.handleClose();
+		return this.handlers.handleClose(this);
 	}
 }

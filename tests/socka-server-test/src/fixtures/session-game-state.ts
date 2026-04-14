@@ -65,7 +65,7 @@ export function createSessionGameOnAttached(_world: SessionGameWorld): (
 	},
 ) => void | Promise<void> {
 	return (session) => {
-		void session.broadcastContractEvent(
+		void session.broadcastPush(
 			"playerJoined",
 			{ playerId: session.data.playerId },
 			true,
@@ -116,7 +116,7 @@ export function createSessionGameHandlers<
 			target.health = Math.max(0, target.health - SESSION_GAME_DAMAGE);
 			const gameOver = target.health === 0;
 			if (gameOver) {
-				await session.broadcastContractEvent(
+				await session.broadcastPush(
 					"playerEliminated",
 					{ playerId: input.target, eliminatedBy: self },
 					false,

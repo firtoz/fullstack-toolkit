@@ -1,15 +1,15 @@
 import type { DependencyList, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { SockaContract, SockaContractConfig } from "../core/contract";
-import { SockaRpc, type SockaRpcOptions } from "../client/SockaRpc";
+import { SockaSession, type SockaSessionOptions } from "../client/SockaSession";
 
 /** Options for {@link useSocka}. */
 export type UseSockaOptions<
 	TContract extends SockaContract<SockaContractConfig>,
-> = SockaRpcOptions<TContract>;
+> = SockaSessionOptions<TContract>;
 
 /**
- * Connects a {@link SockaRpc} in an effect: rejects all pending RPCs and closes
+ * Connects a {@link SockaSession} in an effect: rejects all pending calls and closes
  * the socket on cleanup or when `deps` change.
  */
 export function useSocka<TContract extends SockaContract<SockaContractConfig>>(
@@ -17,7 +17,7 @@ export function useSocka<TContract extends SockaContract<SockaContractConfig>>(
 	deps: DependencyList,
 ): {
 	ready: boolean;
-	sessionRef: RefObject<SockaRpc<TContract> | null>;
+	sessionRef: RefObject<SockaSession<TContract> | null>;
 } {
 	const { onOpen, onClose, ...restOptions } = options;
 
@@ -27,13 +27,13 @@ export function useSocka<TContract extends SockaContract<SockaContractConfig>>(
 	onCloseRef.current = onClose;
 
 	const [ready, setReady] = useState(false);
-	const sessionRef = useRef<SockaRpc<TContract> | null>(null);
+	const sessionRef = useRef<SockaSession<TContract> | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
 		setReady(false);
 
-		const session = new SockaRpc<TContract>({
+		const session = new SockaSession({
 			...restOptions,
 			onOpen: (event) => {
 				if (!cancelled) {

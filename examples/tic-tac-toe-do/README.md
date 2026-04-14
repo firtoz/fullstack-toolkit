@@ -4,6 +4,8 @@ Self-contained example: duplicated contract and game logic, a **worker** that ro
 
 The DO extends [`SockaWebSocketDO`](../../packages/socka/src/do/SockaWebSocketDO.ts); game state lives on the DO instance (two players per room).
 
+**Wrangler / bindings / typegen** — Follow the **[Cloudflare Worker checklist](../../packages/socka/docs/durable-objects.md#cloudflare-worker-checklist)** in the socka docs (same steps this example uses: `wrangler dev`, `cf-typegen`, DO binding).
+
 ## Run
 
 ```bash
@@ -20,4 +22,4 @@ bun run dev
 - `typecheck` — `tsgo` over worker/DO sources (`tsconfig.cloudflare.json`)
 - `typegen` / `cf-typegen` — regenerate `worker-configuration.d.ts` after changing `wrangler.jsonc` or bindings (see [`@firtoz/worker-helper`](../../packages/worker-helper)); **do not hand-edit** the generated env file.
 
-See the main [`socka` package README](../../packages/socka/README.md) for API details.
+See [`socka`](../../packages/socka/README.md), **[Getting started](../../packages/socka/docs/getting-started.md)** (pick your stack), and the [documentation hub](../../packages/socka/docs/README.md).

@@ -17,7 +17,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import type { VpMessage } from "../../../src/vp-ws-protocol";
-import { useVpWsSockaRpc } from "../../../src/vp-ws-rpc-client";
+import { useVpWsSockaSession } from "../../../src/vp-ws-rpc-client";
 import {
 	sortVpMessageRowsForDisplay,
 	sortVpMessagesForDisplay,
@@ -57,7 +57,7 @@ export function VirtualPropsDoWsDemoClient() {
 
 	const slowNextInsertRef = useRef(false);
 
-	const { ready: wsReady, rpc } = useVpWsSockaRpc(
+	const { ready: wsReady, send } = useVpWsSockaSession(
 		{
 			url: buildWsMessagesUrl(roomId, backend),
 		},
@@ -88,7 +88,7 @@ export function VirtualPropsDoWsDemoClient() {
 						queryKey: [...messagesQueryKey],
 						enabled: wsReady,
 						queryFn: async () => {
-							const list = await rpc.list();
+							const list = await send.list();
 							serverMessages.current = list;
 							return sortVpMessagesForDisplay([...list]);
 						},
@@ -102,7 +102,7 @@ export function VirtualPropsDoWsDemoClient() {
 								if (mut.type === "insert") {
 									const slow = slowNextInsertRef.current;
 									slowNextInsertRef.current = false;
-									await rpc.insert({ message: mut.modified, slow });
+									await send.insert({ message: mut.modified, slow });
 									inserted.push(mut.modified);
 								}
 							}
@@ -123,7 +123,7 @@ export function VirtualPropsDoWsDemoClient() {
 					}),
 				),
 			};
-		}, [queryClient, roomId, backend, wsReady, messagesQueryKey, rpc]);
+		}, [queryClient, roomId, backend, wsReady, messagesQueryKey, send]);
 
 	const [queryOnceLabel, setQueryOnceLabel] = useState<string>("");
 	const [effectLines, setEffectLines] = useState<string[]>([]);

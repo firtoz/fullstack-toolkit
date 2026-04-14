@@ -10,7 +10,7 @@ export const vpMessageSchema = z.object({
 export type VpMessage = z.infer<typeof vpMessageSchema>;
 
 export const vpContract = defineSocka({
-	procedures: {
+	calls: {
 		list: {
 			output: z.array(vpMessageSchema),
 		},

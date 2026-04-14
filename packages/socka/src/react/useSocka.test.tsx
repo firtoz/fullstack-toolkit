@@ -36,7 +36,7 @@ describe("useSocka", () => {
 		if (session === null) {
 			throw new Error("expected session");
 		}
-		const pending = session.rpc.echo({ text: "x" });
+		const pending = session.send.echo({ text: "x" });
 		await Promise.resolve();
 		await Promise.resolve();
 		expect(sent.length).toBe(1);

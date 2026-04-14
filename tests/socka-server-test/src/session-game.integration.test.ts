@@ -7,7 +7,7 @@ import {
 	test,
 } from "bun:test";
 import type { AddressInfo } from "node:net";
-import { SockaRpc } from "socka/client";
+import { SockaSession } from "socka/client";
 import { attachSockaWebSocket } from "socka/server";
 import type { SockaWebSocketSession } from "socka/server";
 import type { WebSocket as NodeWebSocket } from "ws";
@@ -92,7 +92,7 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 	});
 
 	test("roster grows as each socket joins (empty → one → two)", async () => {
-		const rpcA = new SockaRpc({
+		const rpcA = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${port}`,
 			wireFormat: "json",
@@ -101,7 +101,7 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 		const rpcB = await assertSessionGameRosterGrowth(
 			rpcA,
 			() =>
-				new SockaRpc({
+				new SockaSession({
 					contract: sessionGameContract,
 					url: `ws://127.0.0.1:${port}`,
 					wireFormat: "json",
@@ -114,12 +114,12 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 	});
 
 	test("two joined players: distinct self; shared health updates until knockout", async () => {
-		const rpcA = new SockaRpc({
+		const rpcA = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${port}`,
 			wireFormat: "json",
 		});
-		const rpcB = new SockaRpc({
+		const rpcB = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${port}`,
 			wireFormat: "json",
@@ -133,17 +133,17 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 
 	test("server events: witness hears playerJoined when peer lists", async () => {
 		const witnessEv = createSessionGameEventCollector();
-		const rpcWitness = new SockaRpc({
+		const rpcWitness = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${port}`,
 			wireFormat: "json",
-			eventHandlers: witnessEv.handlers,
+			pushHandlers: witnessEv.handlers,
 		});
 
 		const rpcPeer = await assertSessionGamePlayerJoinedEvent(
 			rpcWitness,
 			() =>
-				new SockaRpc({
+				new SockaSession({
 					contract: sessionGameContract,
 					url: `ws://127.0.0.1:${port}`,
 					wireFormat: "json",
@@ -158,7 +158,7 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 
 	test("server events: third player hears playerEliminated when another is knocked out", async () => {
 		const witnessEv = createSessionGameEventCollector();
-		const rpcAttacker = new SockaRpc({
+		const rpcAttacker = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${port}`,
 			wireFormat: "json",
@@ -168,17 +168,17 @@ describe("socka/server session + shared state (dynamic roster) — Node ws", () 
 			await assertSessionGameEliminationWitnessed(
 				rpcAttacker,
 				() =>
-					new SockaRpc({
+					new SockaSession({
 						contract: sessionGameContract,
 						url: `ws://127.0.0.1:${port}`,
 						wireFormat: "json",
 					}),
 				() =>
-					new SockaRpc({
+					new SockaSession({
 						contract: sessionGameContract,
 						url: `ws://127.0.0.1:${port}`,
 						wireFormat: "json",
-						eventHandlers: witnessEv.handlers,
+						pushHandlers: witnessEv.handlers,
 					}),
 				witnessEv.playerEliminated,
 				expect,

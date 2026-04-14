@@ -169,7 +169,7 @@ export abstract class SyncableDurableObject<
 			) => {
 				return new SyncTableSession<TRow, TEnv>(
 					websocket,
-					this.sessions as Map<WebSocket, SyncTableSession<TRow, TEnv>>,
+					this.sessions,
 					options as StandardSchemaSessionOptions<
 						SyncClientMessage,
 						SyncServerMessage<TRow>

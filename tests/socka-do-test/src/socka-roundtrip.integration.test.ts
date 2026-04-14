@@ -1,7 +1,7 @@
 import { exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 import { SockaError } from "socka/core";
-import { SockaRpc, SockaWebSocketClient } from "socka/client";
+import { SockaSession, SockaWebSocketClient } from "socka/client";
 import { roundtripContract } from "./fixtures/roundtrip-contract";
 import "./fixtures/worker";
 
@@ -15,17 +15,17 @@ describe("socka DO round-trip", () => {
 		if (!ws) throw new Error("expected webSocket");
 		ws.accept();
 
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			webSocket: ws,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
 
-		await expect(rpc.rpc.echo({ text: "hello" })).resolves.toEqual({
+		await expect(rpc.send.echo({ text: "hello" })).resolves.toEqual({
 			text: "hello",
 		});
-		await expect(rpc.rpc.ping()).resolves.toEqual({ pong: true });
+		await expect(rpc.send.ping()).resolves.toEqual({ pong: true });
 	});
 
 	it("JSON: handler SockaError surfaces on client", async () => {
@@ -37,14 +37,14 @@ describe("socka DO round-trip", () => {
 		if (!ws) throw new Error("expected webSocket");
 		ws.accept();
 
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			webSocket: ws,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
 
-		const err = await rpc.rpc.fail().catch((e: unknown) => e);
+		const err = await rpc.send.fail().catch((e: unknown) => e);
 		expect(err).toBeInstanceOf(SockaError);
 		expect((err as SockaError).message).toBe("intentional failure");
 	});
@@ -86,17 +86,17 @@ describe("socka DO round-trip", () => {
 		if (!ws) throw new Error("expected webSocket");
 		ws.accept();
 
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			webSocket: ws,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
 
-		await expect(rpc.rpc.echo({ text: "hono" })).resolves.toEqual({
+		await expect(rpc.send.echo({ text: "hono" })).resolves.toEqual({
 			text: "hono",
 		});
-		await expect(rpc.rpc.ping()).resolves.toEqual({ pong: true });
+		await expect(rpc.send.ping()).resolves.toEqual({ pong: true });
 	});
 
 	it("msgpack: echo", async () => {
@@ -108,14 +108,14 @@ describe("socka DO round-trip", () => {
 		if (!ws) throw new Error("expected webSocket");
 		ws.accept();
 
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			webSocket: ws,
 			wireFormat: "msgpack",
 		});
 		await rpc.client.waitForOpen();
 
-		await expect(rpc.rpc.echo({ text: "bin" })).resolves.toEqual({
+		await expect(rpc.send.echo({ text: "bin" })).resolves.toEqual({
 			text: "bin",
 		});
 	});

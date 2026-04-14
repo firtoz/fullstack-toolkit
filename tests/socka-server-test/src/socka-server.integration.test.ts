@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { AddressInfo } from "node:net";
 import { SockaError } from "socka/core";
-import { SockaRpc } from "socka/client";
+import { SockaSession } from "socka/client";
 import { attachSockaWebSocket } from "socka/server";
 import type { SockaWebSocketSession } from "socka/server";
 import type { WebSocket as NodeWebSocket } from "ws";
@@ -88,30 +88,30 @@ describe("socka/server e2e (ws)", () => {
 	});
 
 	test("JSON: echo and ping", async () => {
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			url: `ws://127.0.0.1:${portJson}`,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
 
-		await expect(rpc.rpc.echo({ text: "hello" })).resolves.toEqual({
+		await expect(rpc.send.echo({ text: "hello" })).resolves.toEqual({
 			text: "hello",
 		});
-		await expect(rpc.rpc.ping()).resolves.toEqual({ pong: true });
+		await expect(rpc.send.ping()).resolves.toEqual({ pong: true });
 
 		rpc.client.close();
 	});
 
 	test("JSON: handler SockaError surfaces on client", async () => {
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			url: `ws://127.0.0.1:${portJson}`,
 			wireFormat: "json",
 		});
 		await rpc.client.waitForOpen();
 
-		const err = await rpc.rpc.fail().catch((e: unknown) => e);
+		const err = await rpc.send.fail().catch((e: unknown) => e);
 		expect(err).toBeInstanceOf(SockaError);
 		expect((err as SockaError).message).toBe("intentional failure");
 
@@ -119,17 +119,17 @@ describe("socka/server e2e (ws)", () => {
 	});
 
 	test("msgpack: echo and ping", async () => {
-		const rpc = new SockaRpc({
+		const rpc = new SockaSession({
 			contract: roundtripContract,
 			url: `ws://127.0.0.1:${portMsgpack}`,
 			wireFormat: "msgpack",
 		});
 		await rpc.client.waitForOpen();
 
-		await expect(rpc.rpc.echo({ text: "bin" })).resolves.toEqual({
+		await expect(rpc.send.echo({ text: "bin" })).resolves.toEqual({
 			text: "bin",
 		});
-		await expect(rpc.rpc.ping()).resolves.toEqual({ pong: true });
+		await expect(rpc.send.ping()).resolves.toEqual({ pong: true });
 
 		rpc.client.close();
 	});

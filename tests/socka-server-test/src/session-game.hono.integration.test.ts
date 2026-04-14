@@ -3,7 +3,7 @@ import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { Hono } from "hono";
 import type { SockaWireFormat } from "socka/core";
-import { SockaRpc } from "socka/client";
+import { SockaSession } from "socka/client";
 import { sockaHonoNodeWs } from "socka/hono";
 import { sessionGameContract } from "./fixtures/session-game-contract";
 import {
@@ -69,7 +69,7 @@ describe("socka/server session + shared state (dynamic roster) — Hono @hono/no
 
 	test("JSON: roster grows; combat until knockout", async () => {
 		json.world.reset();
-		const rpcA = new SockaRpc({
+		const rpcA = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${json.port}/ws`,
 			wireFormat: "json",
@@ -77,7 +77,7 @@ describe("socka/server session + shared state (dynamic roster) — Hono @hono/no
 		const rpcB = await assertSessionGameRosterGrowth(
 			rpcA,
 			() =>
-				new SockaRpc({
+				new SockaSession({
 					contract: sessionGameContract,
 					url: `ws://127.0.0.1:${json.port}/ws`,
 					wireFormat: "json",
@@ -88,12 +88,12 @@ describe("socka/server session + shared state (dynamic roster) — Hono @hono/no
 		rpcB.client.close();
 
 		json.world.reset();
-		const rpcA2 = new SockaRpc({
+		const rpcA2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${json.port}/ws`,
 			wireFormat: "json",
 		});
-		const rpcB2 = new SockaRpc({
+		const rpcB2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${json.port}/ws`,
 			wireFormat: "json",
@@ -105,7 +105,7 @@ describe("socka/server session + shared state (dynamic roster) — Hono @hono/no
 
 	test("msgpack: roster grows; combat until knockout", async () => {
 		msgpack.world.reset();
-		const rpcA = new SockaRpc({
+		const rpcA = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${msgpack.port}/ws`,
 			wireFormat: "msgpack",
@@ -113,7 +113,7 @@ describe("socka/server session + shared state (dynamic roster) — Hono @hono/no
 		const rpcB = await assertSessionGameRosterGrowth(
 			rpcA,
 			() =>
-				new SockaRpc({
+				new SockaSession({
 					contract: sessionGameContract,
 					url: `ws://127.0.0.1:${msgpack.port}/ws`,
 					wireFormat: "msgpack",
@@ -124,12 +124,12 @@ describe("socka/server session + shared state (dynamic roster) — Hono @hono/no
 		rpcB.client.close();
 
 		msgpack.world.reset();
-		const rpcA2 = new SockaRpc({
+		const rpcA2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${msgpack.port}/ws`,
 			wireFormat: "msgpack",
 		});
-		const rpcB2 = new SockaRpc({
+		const rpcB2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${msgpack.port}/ws`,
 			wireFormat: "msgpack",

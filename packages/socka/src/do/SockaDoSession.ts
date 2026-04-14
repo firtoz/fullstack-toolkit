@@ -1,8 +1,7 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Context } from "hono";
 import { BaseSession } from "@firtoz/websocket-do";
 import type {
-	InferSockaEventPayload,
+	InferSockaPushPayload,
 	SockaContract,
 	SockaContractConfig,
 	InferSockaHandlers,
@@ -14,7 +13,6 @@ import {
 } from "../server/SockaWebSocketSession";
 import { reportSockaError } from "../core/socka-report-error";
 import type { SockaReportError } from "../core/socka-report-error";
-import { parseStandardSchema } from "../core/validate";
 import type { SockaWireFormat } from "../core/wire-codec";
 
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
@@ -48,7 +46,9 @@ export type SockaDoSessionConfig<
 		TContract,
 		SockaDoOuterSession<TContract, TData, TEnv>
 	>;
-	handleClose: () => Promise<void>;
+	handleClose: (
+		session: SockaDoOuterSession<TContract, TData, TEnv>,
+	) => Promise<void>;
 	onHandlerError?: (
 		error: unknown,
 		rpcName: string,
@@ -114,7 +114,7 @@ function wrapHandlersForInnerSockaEngine<
 	TContract,
 	SockaWebSocketSession<TContract, EmptySockaSessionData>
 > {
-	const procedures = contract.procedures;
+	const calls = contract.calls;
 	const out: Record<
 		string,
 		| ((
@@ -126,10 +126,8 @@ function wrapHandlersForInnerSockaEngine<
 		  ) => unknown | Promise<unknown>)
 	> = {};
 
-	for (const key of Object.keys(procedures) as Array<
-		keyof typeof procedures & string
-	>) {
-		const proc = procedures[key];
+	for (const key of Object.keys(calls) as Array<keyof typeof calls & string>) {
+		const proc = calls[key];
 		const userFn = userHandlers[key as keyof typeof userHandlers];
 		if (proc.input) {
 			out[key] = (
@@ -174,7 +172,6 @@ export class SockaDoSession<
 	implements SockaPushSession<TContract>
 {
 	private socka!: SockaWebSocketSession<TContract, EmptySockaSessionData>;
-	private readonly contract: TContract;
 
 	constructor(
 		websocket: WebSocket,
@@ -195,10 +192,13 @@ export class SockaDoSession<
 				handleBufferMessage: async (message) => {
 					await this.socka.handleBinaryMessage(message);
 				},
-				handleClose: async () => config.handleClose(),
+				handleClose: async (baseSession) => {
+					await config.handleClose(
+						baseSession as SockaDoSession<TContract, TData, TEnv>,
+					);
+				},
 			},
 		);
-		this.contract = config.contract;
 		const sockaConfig: SockaWebSocketSessionConfig<
 			TContract,
 			EmptySockaSessionData
@@ -211,7 +211,7 @@ export class SockaDoSession<
 				this,
 			),
 			handleClose: async () => {
-				// BaseSession invokes `handleClose` from DO; wire engine has its own no-op.
+				// Outer DO lifecycle uses SockaDoSessionConfig.handleClose; inner engine no-op.
 			},
 			onHandlerError: config.onHandlerError
 				? (err, rpcName, input, _inner) => {
@@ -248,34 +248,18 @@ export class SockaDoSession<
 		this.socka.emitWireEvent(event, body);
 	}
 
-	public emitContractEvent<K extends keyof TContract["events"] & string>(
+	public emitPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		body: InferSockaEventPayload<TContract, K>,
+		body: InferSockaPushPayload<TContract, K>,
 	): Promise<void> {
-		return this.socka.emitContractEvent(name, body);
+		return this.socka.emitPush(name, body);
 	}
 
-	public async broadcastContractEvent<
-		K extends keyof TContract["events"] & string,
-	>(
+	public broadcastPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		body: InferSockaEventPayload<TContract, K>,
+		body: InferSockaPushPayload<TContract, K>,
 		excludeSelf = false,
 	): Promise<void> {
-		const schema = this.contract.events[name];
-		if (!schema) {
-			throw new Error(`socka: unknown event ${String(name)}`);
-		}
-		const validated = await parseStandardSchema(
-			schema as StandardSchemaV1<unknown, InferSockaEventPayload<TContract, K>>,
-			body,
-		);
-		for (const session of this.sessions.values()) {
-			if (excludeSelf && session === this) continue;
-			(session as SockaDoSession<TContract, TData, TEnv>).emitWireEvent(
-				name,
-				validated,
-			);
-		}
+		return this.socka.broadcastPush(name, body, excludeSelf);
 	}
 }

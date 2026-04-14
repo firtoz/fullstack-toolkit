@@ -16,7 +16,7 @@ export class SockaSessionGameTestDO extends SockaWebSocketDO<
 			createSockaSession: (_ctx, websocket) =>
 				new SockaSessionGameSession(
 					websocket,
-					this.sessions as Map<WebSocket, SockaSessionGameSession>,
+					this.sessions,
 					"json",
 					this.world,
 				),

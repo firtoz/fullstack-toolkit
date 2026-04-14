@@ -3,9 +3,9 @@ import * as z from "zod";
 import * as v from "valibot";
 import {
 	defineSocka,
-	type InferSockaRpc,
+	type InferSockaSend,
 	type InferSockaHandlers,
-	type InferSockaEventHandlers,
+	type InferSockaPushHandlers,
 } from "./contract";
 
 const messageSchema = z.object({
@@ -14,7 +14,7 @@ const messageSchema = z.object({
 });
 
 const contract = defineSocka({
-	procedures: {
+	calls: {
 		list: {
 			output: z.array(messageSchema),
 		},
@@ -27,41 +27,48 @@ const contract = defineSocka({
 			output: z.void(),
 		},
 	},
-	events: {
+	pushes: {
 		itemsChanged: z.array(messageSchema),
 	},
 });
 
 describe("defineSocka", () => {
-	test("preserves procedure definitions at runtime", () => {
-		expect(Object.keys(contract.procedures)).toEqual([
-			"list",
-			"echo",
-			"insert",
-		]);
-		expect(contract.procedures.list.output).toBeDefined();
-		expect(contract.procedures.echo.input).toBeDefined();
-		expect(contract.procedures.echo.output).toBeDefined();
+	test("preserves call definitions at runtime", () => {
+		expect(Object.keys(contract.calls)).toEqual(["list", "echo", "insert"]);
+		expect(contract.calls.list.output).toBeDefined();
+		expect(contract.calls.echo.input).toBeDefined();
+		expect(contract.calls.echo.output).toBeDefined();
 	});
 
-	test("preserves event definitions at runtime", () => {
-		expect(Object.keys(contract.events)).toEqual(["itemsChanged"]);
+	test("preserves push definitions at runtime", () => {
+		expect(Object.keys(contract.pushes)).toEqual(["itemsChanged"]);
 	});
 
-	test("events defaults to empty object when omitted", () => {
-		const noEvents = defineSocka({
-			procedures: {
+	test("allows call names that match SockaSession field names (they live under send)", () => {
+		const c = defineSocka({
+			calls: {
+				close: { output: z.void() },
+				client: { output: z.string() },
+				send: { output: z.number() },
+			},
+		});
+		expect(Object.keys(c.calls).sort()).toEqual(["client", "close", "send"]);
+	});
+
+	test("pushes defaults to empty object when omitted", () => {
+		const noPushes = defineSocka({
+			calls: {
 				ping: { output: z.void() },
 			},
 		});
-		expect(Object.keys(noEvents.events)).toEqual([]);
+		expect(Object.keys(noPushes.pushes)).toEqual([]);
 	});
 });
 
-describe("InferSockaRpc type inference", () => {
-	test("zero-arg function for procedure without input", () => {
-		type Rpc = InferSockaRpc<typeof contract>;
-		const _typecheck: Rpc["list"] extends () => Promise<
+describe("InferSockaSend type inference", () => {
+	test("zero-arg function for call without input", () => {
+		type Send = InferSockaSend<typeof contract>;
+		const _typecheck: Send["list"] extends () => Promise<
 			{ id: string; body: string }[]
 		>
 			? true
@@ -69,9 +76,9 @@ describe("InferSockaRpc type inference", () => {
 		expect(_typecheck).toBe(true);
 	});
 
-	test("typed input and output for procedure with input", () => {
-		type Rpc = InferSockaRpc<typeof contract>;
-		const _typecheck: Rpc["echo"] extends (input: {
+	test("typed input and output for call with input", () => {
+		type Send = InferSockaSend<typeof contract>;
+		const _typecheck: Send["echo"] extends (input: {
 			text: string;
 		}) => Promise<{ text: string }>
 			? true
@@ -79,9 +86,9 @@ describe("InferSockaRpc type inference", () => {
 		expect(_typecheck).toBe(true);
 	});
 
-	test("void output for procedure returning void", () => {
-		type Rpc = InferSockaRpc<typeof contract>;
-		const _typecheck: Rpc["insert"] extends (input: {
+	test("void output for call returning void", () => {
+		type Send = InferSockaSend<typeof contract>;
+		const _typecheck: Send["insert"] extends (input: {
 			message: { id: string; body: string };
 		}) => Promise<void>
 			? true
@@ -119,10 +126,10 @@ describe("InferSockaHandlers type inference", () => {
 	});
 });
 
-describe("InferSockaEventHandlers type inference", () => {
-	test("event handler types match contract", () => {
-		type EventHandlers = InferSockaEventHandlers<typeof contract>;
-		const _typecheck: EventHandlers extends {
+describe("InferSockaPushHandlers type inference", () => {
+	test("push handler types match contract", () => {
+		type PushHandlers = InferSockaPushHandlers<typeof contract>;
+		const _typecheck: PushHandlers extends {
 			itemsChanged: (
 				payload: { id: string; body: string }[],
 			) => void | Promise<void>;
@@ -136,17 +143,17 @@ describe("InferSockaEventHandlers type inference", () => {
 describe("Valibot schemas work as Standard Schema", () => {
 	test("contract accepts Valibot schemas directly", () => {
 		const vContract = defineSocka({
-			procedures: {
+			calls: {
 				greet: {
 					input: v.object({ name: v.string() }),
 					output: v.object({ greeting: v.string() }),
 				},
 			},
 		});
-		expect(Object.keys(vContract.procedures)).toEqual(["greet"]);
+		expect(Object.keys(vContract.calls)).toEqual(["greet"]);
 
-		type Rpc = InferSockaRpc<typeof vContract>;
-		const _typecheck: Rpc["greet"] extends (input: {
+		type Send = InferSockaSend<typeof vContract>;
+		const _typecheck: Send["greet"] extends (input: {
 			name: string;
 		}) => Promise<{ greeting: string }>
 			? true

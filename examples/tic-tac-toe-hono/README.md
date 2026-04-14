@@ -18,4 +18,4 @@ Default HTTP port is **3462** (distinct from the Bun and DO examples in this rep
 - `build:client` — emit `public/client.js`
 - `typecheck` — `tsgo` over `src/`
 
-See the main [`socka` package README](../../packages/socka/README.md) for API details.
+See [`socka`](../../packages/socka/README.md), **[Getting started](../../packages/socka/docs/getting-started.md)** (pick your stack), and the [documentation hub](../../packages/socka/docs/README.md).

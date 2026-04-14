@@ -1,7 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type {
-	InferSockaEventPayload,
+	InferSockaPushPayload,
 	SockaContract,
 	SockaContractConfig,
 } from "../core/contract";
@@ -38,18 +38,18 @@ export type SockaEmitCapable = {
 };
 
 /**
- * Contract-typed session surface for handlers that push server events.
+ * Contract-typed session surface for handlers that push to clients.
  */
 export interface SockaPushSession<
 	TContract extends SockaContract<SockaContractConfig>,
 > {
-	emitContractEvent<K extends keyof TContract["events"] & string>(
+	emitPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		body: InferSockaEventPayload<TContract, K>,
+		body: InferSockaPushPayload<TContract, K>,
 	): Promise<void>;
-	broadcastContractEvent<K extends keyof TContract["events"] & string>(
+	broadcastPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		body: InferSockaEventPayload<TContract, K>,
+		body: InferSockaPushPayload<TContract, K>,
 		excludeSelf?: boolean,
 	): Promise<void>;
 }
@@ -102,6 +102,15 @@ export class SockaWebSocketSession<
 
 	public get data(): TData {
 		return this._data;
+	}
+
+	/**
+	 * Invokes the user {@link typeof SockaWebSocketSessionConfig.handleClose} callback.
+	 * Server adapters should call this when the WebSocket closes, **before** deleting
+	 * this session from the shared `sessions` map.
+	 */
+	public async invokeHandleClose(): Promise<void> {
+		await this.config.handleClose(this);
 	}
 
 	public async handleRawMessage(rawMessage: string): Promise<void> {
@@ -184,12 +193,12 @@ export class SockaWebSocketSession<
 		_originalWire: unknown,
 	): Promise<void> {
 		const rpcName = frame.rpc;
-		const procedure = this.config.contract.procedures[rpcName];
+		const procedure = this.config.contract.calls[rpcName];
 
 		if (!procedure) {
 			const errorFrame = encodeServerError(
 				frame.id,
-				`Unknown procedure: ${rpcName}`,
+				`Unknown call: ${rpcName}`,
 			);
 			this.sendWireFrame(errorFrame);
 			return;
@@ -277,7 +286,7 @@ export class SockaWebSocketSession<
 	}
 
 	/**
-	 * Send a server event frame (wire). Prefer {@link emitContractEvent} so
+	 * Send a server event frame (wire). Prefer {@link emitPush} so
 	 * payloads are validated against the contract.
 	 */
 	public emitWireEvent(event: string, body: unknown): void {
@@ -285,38 +294,36 @@ export class SockaWebSocketSession<
 		this.sendWireFrame(frame);
 	}
 
-	public async emitContractEvent<K extends keyof TContract["events"] & string>(
+	public async emitPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		body: InferSockaEventPayload<TContract, K>,
+		body: InferSockaPushPayload<TContract, K>,
 	): Promise<void> {
-		const schema = this.config.contract.events[name];
+		const schema = this.config.contract.pushes[name];
 		if (!schema) {
-			throw new Error(`socka: unknown event ${String(name)}`);
+			throw new Error(`socka: unknown push ${String(name)}`);
 		}
 		const validated = await parseStandardSchema(
-			schema as StandardSchemaV1<unknown, InferSockaEventPayload<TContract, K>>,
+			schema as StandardSchemaV1<unknown, InferSockaPushPayload<TContract, K>>,
 			body,
 		);
 		this.emitWireEvent(name, validated);
 	}
 
-	public async broadcastContractEvent<
-		K extends keyof TContract["events"] & string,
-	>(
+	public async broadcastPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		body: InferSockaEventPayload<TContract, K>,
+		body: InferSockaPushPayload<TContract, K>,
 		excludeSelf = false,
 	): Promise<void> {
-		const schema = this.config.contract.events[name];
+		const schema = this.config.contract.pushes[name];
 		if (!schema) {
-			throw new Error(`socka: unknown event ${String(name)}`);
+			throw new Error(`socka: unknown push ${String(name)}`);
 		}
 		const validated = await parseStandardSchema(
-			schema as StandardSchemaV1<unknown, InferSockaEventPayload<TContract, K>>,
+			schema as StandardSchemaV1<unknown, InferSockaPushPayload<TContract, K>>,
 			body,
 		);
 		broadcastSockaEventToPeers(
-			this.sessions as Map<WebSocket, SockaEmitCapable>,
+			this.sessions,
 			this,
 			name,
 			validated,

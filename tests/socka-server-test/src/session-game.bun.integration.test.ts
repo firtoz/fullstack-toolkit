@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { SockaWireFormat } from "socka/core";
-import { SockaRpc } from "socka/client";
+import { SockaSession } from "socka/client";
 import { createSockaBunWebSocketHandlers } from "socka/bun";
 import { sessionGameContract } from "./fixtures/session-game-contract";
 import {
@@ -63,7 +63,7 @@ describe("socka/server session + shared state (dynamic roster) — Bun.serve", (
 
 	test("JSON: roster grows; combat until knockout", async () => {
 		json.world.reset();
-		const rpcA = new SockaRpc({
+		const rpcA = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${json.port}`,
 			wireFormat: "json",
@@ -71,7 +71,7 @@ describe("socka/server session + shared state (dynamic roster) — Bun.serve", (
 		const rpcB = await assertSessionGameRosterGrowth(
 			rpcA,
 			() =>
-				new SockaRpc({
+				new SockaSession({
 					contract: sessionGameContract,
 					url: `ws://127.0.0.1:${json.port}`,
 					wireFormat: "json",
@@ -82,12 +82,12 @@ describe("socka/server session + shared state (dynamic roster) — Bun.serve", (
 		rpcB.client.close();
 
 		json.world.reset();
-		const rpcA2 = new SockaRpc({
+		const rpcA2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${json.port}`,
 			wireFormat: "json",
 		});
-		const rpcB2 = new SockaRpc({
+		const rpcB2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${json.port}`,
 			wireFormat: "json",
@@ -99,7 +99,7 @@ describe("socka/server session + shared state (dynamic roster) — Bun.serve", (
 
 	test("msgpack: roster grows; combat until knockout", async () => {
 		msgpack.world.reset();
-		const rpcA = new SockaRpc({
+		const rpcA = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${msgpack.port}`,
 			wireFormat: "msgpack",
@@ -107,7 +107,7 @@ describe("socka/server session + shared state (dynamic roster) — Bun.serve", (
 		const rpcB = await assertSessionGameRosterGrowth(
 			rpcA,
 			() =>
-				new SockaRpc({
+				new SockaSession({
 					contract: sessionGameContract,
 					url: `ws://127.0.0.1:${msgpack.port}`,
 					wireFormat: "msgpack",
@@ -118,12 +118,12 @@ describe("socka/server session + shared state (dynamic roster) — Bun.serve", (
 		rpcB.client.close();
 
 		msgpack.world.reset();
-		const rpcA2 = new SockaRpc({
+		const rpcA2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${msgpack.port}`,
 			wireFormat: "msgpack",
 		});
-		const rpcB2 = new SockaRpc({
+		const rpcB2 = new SockaSession({
 			contract: sessionGameContract,
 			url: `ws://127.0.0.1:${msgpack.port}`,
 			wireFormat: "msgpack",

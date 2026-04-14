@@ -1,10 +1,9 @@
-import { reportSockaError } from "socka/core";
-import {
+import type { ServerWebSocket } from "bun";
+import { createSockaBunWebSocketHandlers } from "socka/bun";
+import type {
+	SockaWebSocketInit,
 	SockaWebSocketSession,
-	dispatchSockaInboundMessage,
-	runSockaSessionOnAttached,
-	type SockaWebSocketInit,
-	type SockaWebSocketSessionConfig,
+	SockaWebSocketSessionConfig,
 } from "socka/server";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
@@ -20,32 +19,34 @@ type RoomBundle = {
 const rooms = new Map<string, RoomBundle>();
 
 function makeRoomConfig(
-	_game: TicTacToeGame,
+	game: TicTacToeGame,
+	roomId: string,
 ): SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData> {
-	const game = _game;
 	return {
 		contract: ticTacToeContract,
 		handlers: {
 			join: async (session) => {
 				const { player } = game.join(session.websocket);
 				const snap = game.snapshot();
-				await session.broadcastContractEvent("stateChanged", snap);
+				await session.broadcastPush("stateChanged", snap);
 				return { ...snap, you: player };
 			},
 			move: async (input, session) => {
 				const snap = game.move(session.websocket, input.row, input.col);
-				await session.broadcastContractEvent("stateChanged", snap);
+				await session.broadcastPush("stateChanged", snap);
 				return snap;
 			},
 		},
 		createData: (init: SockaWebSocketInit) => {
 			const u = new URL(init.request?.url ?? "http://_/ws/default");
 			const parts = u.pathname.split("/").filter(Boolean);
-			const roomId =
-				parts.length >= 2 && parts[0] === "ws" ? parts[1] : "default";
-			return { roomId };
+			const rid =
+				parts.length >= 2 && parts[0] === "ws" ? parts[1] : roomId;
+			return { roomId: rid };
 		},
-		handleClose: async () => {},
+		handleClose: async (session) => {
+			game.release(session.websocket);
+		},
 	};
 }
 
@@ -54,14 +55,20 @@ function getOrCreateRoom(roomId: string): RoomBundle {
 	if (!r) {
 		const game = new TicTacToeGame();
 		const sessionMap: RoomBundle["sessionMap"] = new Map();
-		const config = makeRoomConfig(game);
+		const config = makeRoomConfig(game, roomId);
 		r = { sessionMap, game, config };
 		rooms.set(roomId, r);
 	}
 	return r;
 }
 
-const wireFormat = "json" as const;
+const { websocket } = createSockaBunWebSocketHandlers({
+	resolveScope(ws: ServerWebSocket<{ roomId: string }>) {
+		const { roomId } = ws.data;
+		const room = getOrCreateRoom(roomId);
+		return { sessionMap: room.sessionMap, config: room.config };
+	},
+});
 
 const server = Bun.serve<{ roomId: string }>({
 	port: Number(process.env.PORT ?? 3461),
@@ -88,57 +95,7 @@ const server = Bun.serve<{ roomId: string }>({
 		}
 		return new Response("Not found", { status: 404 });
 	},
-	websocket: {
-		open(ws) {
-			const { roomId } = ws.data;
-			const room = getOrCreateRoom(roomId);
-			const domWs = ws as unknown as WebSocket;
-			const init: SockaWebSocketInit = {
-				request: new Request(`http://localhost/ws/${roomId}`),
-			};
-			const session = new SockaWebSocketSession(
-				domWs,
-				room.sessionMap,
-				room.config,
-				init,
-			);
-			room.sessionMap.set(domWs, session);
-			runSockaSessionOnAttached(room.config, session);
-		},
-		async message(ws, message) {
-			const { roomId } = ws.data;
-			const room = rooms.get(roomId);
-			if (!room) return;
-			const domWs = ws as unknown as WebSocket;
-			const session = room.sessionMap.get(domWs);
-			if (!session) return;
-			try {
-				await dispatchSockaInboundMessage(session, wireFormat, message);
-			} catch (error) {
-				reportSockaError(room.config.reportError, {
-					kind: "serverInboundMessage",
-					adapter: "bun",
-					error,
-				});
-			}
-		},
-		async close(ws) {
-			const { roomId } = ws.data;
-			const room = rooms.get(roomId);
-			if (!room) return;
-			const domWs = ws as unknown as WebSocket;
-			room.sessionMap.delete(domWs);
-			room.game.release(domWs);
-			try {
-				await room.config.handleClose();
-			} catch (error) {
-				reportSockaError(room.config.reportError, {
-					kind: "serverHandleClose",
-					error,
-				});
-			}
-		},
-	},
+	websocket,
 });
 
 console.log(

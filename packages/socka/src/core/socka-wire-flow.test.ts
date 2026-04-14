@@ -9,10 +9,10 @@ import {
 	SockaWireError,
 } from "./envelope";
 import { parseStandardSchema } from "./validate";
-import { defineSocka, type InferSockaRpc } from "./contract";
+import { defineSocka, type InferSockaSend } from "./contract";
 
 const contract = defineSocka({
-	procedures: {
+	calls: {
 		list: {
 			output: z.array(z.object({ id: z.string(), text: z.string() })),
 		},
@@ -21,7 +21,7 @@ const contract = defineSocka({
 			output: z.void(),
 		},
 	},
-	events: {
+	pushes: {
 		notify: z.object({ count: z.number() }),
 	},
 });
@@ -46,7 +46,7 @@ describe("socka wire flow (integration)", () => {
 		expect(decoded.kind).toBe("serverResponse");
 		if (decoded.kind === "serverResponse") {
 			const validated = await parseStandardSchema(
-				contract.procedures.list.output,
+				contract.calls.list.output,
 				decoded.frame.body,
 			);
 			expect(validated).toEqual(body);
@@ -61,7 +61,7 @@ describe("socka wire flow (integration)", () => {
 		if (decoded.kind === "serverEvent") {
 			expect(decoded.frame.event).toBe("notify");
 			const validated = await parseStandardSchema(
-				contract.events.notify,
+				contract.pushes.notify,
 				decoded.frame.body,
 			);
 			expect(validated).toEqual({ count: 3 });
@@ -85,23 +85,23 @@ describe("socka wire flow (integration)", () => {
 	});
 
 	test("input validation rejects bad data", async () => {
-		const proc = contract.procedures.insert;
+		const proc = contract.calls.insert;
 		if (!proc.input) throw new Error("insert should have input");
 		await expect(
 			parseStandardSchema(proc.input, { text: 42 }),
 		).rejects.toThrow();
 	});
 
-	test("InferSockaRpc produces correct function types", () => {
-		type Rpc = InferSockaRpc<typeof contract>;
+	test("InferSockaSend produces correct function types", () => {
+		type Send = InferSockaSend<typeof contract>;
 
-		const _listCheck: Rpc["list"] extends () => Promise<
+		const _listCheck: Send["list"] extends () => Promise<
 			{ id: string; text: string }[]
 		>
 			? true
 			: false = true;
 
-		const _insertCheck: Rpc["insert"] extends (input: {
+		const _insertCheck: Send["insert"] extends (input: {
 			text: string;
 		}) => Promise<void>
 			? true

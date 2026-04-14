@@ -5,7 +5,7 @@ import * as z from "zod";
 import { defineSocka } from "../core/contract";
 
 export const rpcTestContract = defineSocka({
-	procedures: {
+	calls: {
 		echo: {
 			input: z.object({ text: z.string() }),
 			output: z.object({ text: z.string() }),
@@ -14,7 +14,7 @@ export const rpcTestContract = defineSocka({
 			output: z.object({ pong: z.literal(true) }),
 		},
 	},
-	events: {
+	pushes: {
 		notify: z.object({ msg: z.string() }),
 	},
 });

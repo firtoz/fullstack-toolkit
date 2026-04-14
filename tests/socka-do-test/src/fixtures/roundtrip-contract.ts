@@ -2,7 +2,7 @@ import * as z from "zod";
 import { defineSocka } from "socka/core";
 
 export const roundtripContract = defineSocka({
-	procedures: {
+	calls: {
 		echo: {
 			input: z.object({ text: z.string() }),
 			output: z.object({ text: z.string() }),

@@ -18,7 +18,7 @@ export type StandardSchemaSessionOptions<TClientMessage, TServerMessage> = {
 
 export type StandardSchemaSessionHandlers<
 	TData,
-	_TServerMessage,
+	TServerMessage,
 	TClientMessage,
 	TEnv extends object,
 > = {
@@ -28,7 +28,9 @@ export type StandardSchemaSessionHandlers<
 		error: unknown,
 		originalMessage: unknown,
 	) => Promise<void>;
-	handleClose: () => Promise<void>;
+	handleClose: (
+		session: StandardSchemaSession<TData, TServerMessage, TClientMessage, TEnv>,
+	) => Promise<void>;
 };
 
 export class StandardSchemaSession<
@@ -70,8 +72,17 @@ export class StandardSchemaSession<
 			handleBufferMessage: async (message) => {
 				return this._internalHandleBufferMessage(message);
 			},
-			handleClose: async () => {
-				return schemaHandlers.handleClose();
+			handleClose: async (
+				session: BaseSession<TData, TServerMessage, TClientMessage, TEnv>,
+			) => {
+				return schemaHandlers.handleClose(
+					session as StandardSchemaSession<
+						TData,
+						TServerMessage,
+						TClientMessage,
+						TEnv
+					>,
+				);
 			},
 		});
 

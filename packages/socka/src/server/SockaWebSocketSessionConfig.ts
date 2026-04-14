@@ -43,7 +43,10 @@ export type SockaWebSocketSessionConfig<
 		TContract,
 		SockaSessionForHandlers<TContract, TData>
 	>;
-	handleClose: () => Promise<void>;
+	/** Called when this WebSocket closes, before the socket is removed from `sessions`. */
+	handleClose: (
+		session: SockaSessionForHandlers<TContract, TData>,
+	) => Promise<void>;
 	onHandlerError?: (
 		error: unknown,
 		rpcName: string,

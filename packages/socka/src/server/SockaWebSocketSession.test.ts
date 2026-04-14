@@ -71,7 +71,7 @@ describe("SockaWebSocketSession", () => {
 		}
 	});
 
-	test("broadcastContractEvent reaches peer session", async () => {
+	test("broadcastPush reaches peer session", async () => {
 		const a = createFakeWebSocket();
 		const b = createFakeWebSocket();
 		a.dispatchOpen();
@@ -99,7 +99,7 @@ describe("SockaWebSocketSession", () => {
 		sessions.set(a.socket, sa);
 		sessions.set(b.socket, sb);
 
-		await sa.broadcastContractEvent("notify", { msg: "x" });
+		await sa.broadcastPush("notify", { msg: "x" });
 		expect(a.sent.length).toBe(1);
 		expect(b.sent.length).toBe(1);
 		const ev = JSON.parse(b.sent[0] as string);
@@ -118,14 +118,18 @@ describe("attachSockaWebSocket", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const onClose = mock(() => Promise.resolve());
-		attachSockaWebSocket(socket, sessions, {
-			contract: rpcTestContract,
-			handlers: {
-				echo: async (input) => ({ text: input.text }),
-				ping: async () => ({ pong: true as const }),
+		const { session: attachedSession } = attachSockaWebSocket(
+			socket,
+			sessions,
+			{
+				contract: rpcTestContract,
+				handlers: {
+					echo: async (input) => ({ text: input.text }),
+					ping: async () => ({ pong: true as const }),
+				},
+				handleClose: onClose,
 			},
-			handleClose: onClose,
-		});
+		);
 
 		const req = encodeClientRequest("r2", "ping", {});
 		const wire = encodeSockaWire(req, "json") as string;
@@ -137,7 +141,8 @@ describe("attachSockaWebSocket", () => {
 
 		dispatchClose();
 		await new Promise((r) => setTimeout(r, 10));
-		expect(onClose).toHaveBeenCalled();
+		expect(onClose).toHaveBeenCalledTimes(1);
+		expect(onClose).toHaveBeenCalledWith(attachedSession);
 		expect(sessions.size).toBe(0);
 	});
 

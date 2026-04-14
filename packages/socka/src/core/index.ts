@@ -3,11 +3,16 @@ export {
 	type SockaContract,
 	type SockaContractConfig,
 	type SockaProcedureDef,
-	type InferSockaRpc,
+	type ValidateSockaCallKeys,
+	type InferSockaSend,
 	type InferSockaHandlers,
-	type InferSockaEventHandlers,
-	type InferSockaEventPayload,
+	type InferSockaPushHandlers,
+	type InferSockaPushPayload,
 } from "./contract";
+export {
+	RESERVED_SOCKA_PROCEDURE_NAMES,
+	type ReservedSockaProcedureName,
+} from "./reserved-procedure-names";
 export { parseStandardSchema } from "./validate";
 export { SockaError } from "./socka-error";
 export {

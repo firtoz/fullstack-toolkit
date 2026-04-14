@@ -1,9 +1,9 @@
 import type {
 	SockaContract,
 	SockaContractConfig,
-	InferSockaRpc,
-	InferSockaEventHandlers,
-	InferSockaEventPayload,
+	InferSockaSend,
+	InferSockaPushHandlers,
+	InferSockaPushPayload,
 } from "../core/contract";
 import {
 	reportSockaError,
@@ -20,6 +20,7 @@ import {
 	SockaWebSocketClient,
 	type SockaWebSocketClientOptions,
 } from "./SockaWebSocketClient";
+import { RESERVED_SOCKA_PROCEDURE_NAMES } from "../core/reserved-procedure-names";
 
 type PendingEntry = {
 	rpc: string;
@@ -27,52 +28,55 @@ type PendingEntry = {
 	reject: (error: Error) => void;
 };
 
-type EventListenerFn = (payload: unknown) => void | Promise<void>;
+type PushListenerFn = (payload: unknown) => void | Promise<void>;
 
-export type SockaRpcEventWaitOptions<
+/** Same strings as `RESERVED_SOCKA_PROCEDURE_NAMES` (core) for O(1) lookup on `send`. */
+const RESERVED_CALL_NAMES = new Set<string>(RESERVED_SOCKA_PROCEDURE_NAMES);
+
+export type SockaSessionPushWaitOptions<
 	TContract extends SockaContract<SockaContractConfig>,
-	K extends keyof TContract["events"] & string,
+	K extends keyof TContract["pushes"] & string,
 > = {
 	signal?: AbortSignal;
 	timeoutMs?: number;
-	predicate?: (payload: InferSockaEventPayload<TContract, K>) => boolean;
+	predicate?: (payload: InferSockaPushPayload<TContract, K>) => boolean;
 };
 
-export type SockaRpcEventsApi<
+export type SockaSessionSubscribeApi<
 	TContract extends SockaContract<SockaContractConfig>,
 > = {
-	on<K extends keyof TContract["events"] & string>(
+	on<K extends keyof TContract["pushes"] & string>(
 		name: K,
 		handler: (
-			payload: InferSockaEventPayload<TContract, K>,
+			payload: InferSockaPushPayload<TContract, K>,
 		) => void | Promise<void>,
 	): void;
-	off<K extends keyof TContract["events"] & string>(
+	off<K extends keyof TContract["pushes"] & string>(
 		name: K,
 		handler: (
-			payload: InferSockaEventPayload<TContract, K>,
+			payload: InferSockaPushPayload<TContract, K>,
 		) => void | Promise<void>,
 	): void;
-	once<K extends keyof TContract["events"] & string>(
+	once<K extends keyof TContract["pushes"] & string>(
 		name: K,
 		handler: (
-			payload: InferSockaEventPayload<TContract, K>,
+			payload: InferSockaPushPayload<TContract, K>,
 		) => void | Promise<void>,
 	): void;
-	waitForEvent<K extends keyof TContract["events"] & string>(
+	waitForPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		options?: SockaRpcEventWaitOptions<TContract, K>,
-	): Promise<InferSockaEventPayload<TContract, K>>;
+		options?: SockaSessionPushWaitOptions<TContract, K>,
+	): Promise<InferSockaPushPayload<TContract, K>>;
 };
 
-function waitForEventAbortError(): Error {
+function waitForPushAbortError(): Error {
 	if (typeof DOMException !== "undefined") {
-		return new DOMException("waitForEvent aborted", "AbortError");
+		return new DOMException("waitForPush aborted", "AbortError");
 	}
-	return new Error("socka: waitForEvent aborted");
+	return new Error("socka: waitForPush aborted");
 }
 
-export type SockaRpcOptions<
+export type SockaSessionOptions<
 	TContract extends SockaContract<SockaContractConfig>,
 > = Omit<
 	SockaWebSocketClientOptions<TContract>,
@@ -81,31 +85,31 @@ export type SockaRpcOptions<
 	onOpen?: (event: Event) => void;
 	onClose?: (event: CloseEvent) => void;
 	onError?: (event: Event) => void;
-	eventHandlers?: Partial<InferSockaEventHandlers<TContract>>;
+	pushHandlers?: Partial<InferSockaPushHandlers<TContract>>;
 	/**
-	 * Optional sink for client-side event pipeline failures (listener throws,
-	 * event payload validation). Defaults to `console.error`; see
+	 * Optional sink for client-side push pipeline failures (listener throws,
+	 * push payload validation). Defaults to `console.error`; see
 	 * `SockaReportError` in `socka/core`.
 	 */
 	reportError?: (event: SockaReportError) => void;
 };
 
 /**
- * Browser WebSocket RPC session driven by a socka contract.
- * Generates fully typed RPC methods and manages pending correlation.
+ * Browser WebSocket session: **`session.send`** for contract calls, **`session.subscribe`**
+ * for server pushes, **`session.client`** for low-level wire access.
  */
-export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
+class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
 	readonly client: SockaWebSocketClient<TContract>;
-	readonly rpc: InferSockaRpc<TContract>;
-	readonly events: SockaRpcEventsApi<TContract>;
+	readonly send: InferSockaSend<TContract>;
+	readonly subscribe: SockaSessionSubscribeApi<TContract>;
 
 	private readonly pending = new Map<string, PendingEntry>();
 	private idSeq = 0;
-	private readonly eventListeners = new Map<string, Set<EventListenerFn>>();
+	private readonly pushListeners = new Map<string, Set<PushListenerFn>>();
 	private readonly reportError?: (event: SockaReportError) => void;
 
-	constructor(options: SockaRpcOptions<TContract>) {
-		const { eventHandlers, reportError, ...clientOpts } = options;
+	constructor(options: SockaSessionOptions<TContract>) {
+		const { pushHandlers, reportError, ...clientOpts } = options;
 		this.reportError = reportError;
 
 		this.client = new SockaWebSocketClient({
@@ -115,32 +119,41 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 			onEvent: (frame) => this.handleEvent(frame),
 		});
 
-		this.rpc = this.buildRpcMethods();
-		this.events = this.createEventsApi();
+		this.subscribe = this.createSubscribeApi();
 
-		if (eventHandlers) {
-			for (const key of Object.keys(eventHandlers) as Array<
-				keyof InferSockaEventHandlers<TContract> & string
+		const sendBag = this.buildSendMethods();
+		for (const name of Object.keys(sendBag)) {
+			if (RESERVED_CALL_NAMES.has(name)) {
+				throw new Error(
+					`socka: call name "${name}" is reserved on SockaSession.send; rename it in defineSocka`,
+				);
+			}
+		}
+		this.send = sendBag;
+
+		if (pushHandlers) {
+			for (const key of Object.keys(pushHandlers) as Array<
+				keyof InferSockaPushHandlers<TContract> & string
 			>) {
-				const fn = eventHandlers[key];
+				const fn = pushHandlers[key];
 				if (fn) {
-					this.events.on(key, fn);
+					this.subscribe.on(key, fn);
 				}
 			}
 		}
 	}
 
-	private createEventsApi(): SockaRpcEventsApi<TContract> {
+	private createSubscribeApi(): SockaSessionSubscribeApi<TContract> {
 		return {
 			on: (name, handler) => {
-				this.addEventListener(name, handler as EventListenerFn);
+				this.addPushListener(name, handler as PushListenerFn);
 			},
 			off: (name, handler) => {
-				this.removeEventListener(name, handler as EventListenerFn);
+				this.removePushListener(name, handler as PushListenerFn);
 			},
 			once: (name, handler) => {
-				const wrapped: EventListenerFn = (payload: unknown) => {
-					this.removeEventListener(name, wrapped);
+				const wrapped: PushListenerFn = (payload: unknown) => {
+					this.removePushListener(name, wrapped);
 					try {
 						const result = (handler as (p: unknown) => void | Promise<void>)(
 							payload,
@@ -160,39 +173,39 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 						});
 					}
 				};
-				this.addEventListener(name, wrapped);
+				this.addPushListener(name, wrapped);
 			},
-			waitForEvent: (name, options) => this.waitForEventImpl(name, options),
+			waitForPush: (name, options) => this.waitForPushImpl(name, options),
 		};
 	}
 
-	private addEventListener(name: string, handler: EventListenerFn): void {
-		let set = this.eventListeners.get(name);
+	private addPushListener(name: string, handler: PushListenerFn): void {
+		let set = this.pushListeners.get(name);
 		if (!set) {
 			set = new Set();
-			this.eventListeners.set(name, set);
+			this.pushListeners.set(name, set);
 		}
 		set.add(handler);
 	}
 
-	private removeEventListener(name: string, handler: EventListenerFn): void {
-		this.eventListeners.get(name)?.delete(handler);
+	private removePushListener(name: string, handler: PushListenerFn): void {
+		this.pushListeners.get(name)?.delete(handler);
 	}
 
-	private waitForEventImpl<K extends keyof TContract["events"] & string>(
+	private waitForPushImpl<K extends keyof TContract["pushes"] & string>(
 		name: K,
-		options?: SockaRpcEventWaitOptions<TContract, K>,
-	): Promise<InferSockaEventPayload<TContract, K>> {
+		options?: SockaSessionPushWaitOptions<TContract, K>,
+	): Promise<InferSockaPushPayload<TContract, K>> {
 		return new Promise((resolve, reject) => {
 			const signal = options?.signal;
 			if (signal?.aborted) {
-				reject(waitForEventAbortError());
+				reject(waitForPushAbortError());
 				return;
 			}
 
 			const onAbort = () => {
 				cleanup();
-				reject(waitForEventAbortError());
+				reject(waitForPushAbortError());
 			};
 			signal?.addEventListener("abort", onAbort);
 
@@ -200,36 +213,36 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 			if (options?.timeoutMs != null) {
 				timeoutId = setTimeout(() => {
 					cleanup();
-					reject(new Error("socka: waitForEvent timed out"));
+					reject(new Error("socka: waitForPush timed out"));
 				}, options.timeoutMs);
 			}
 
-			const listener: EventListenerFn = (payload: unknown) => {
+			const listener: PushListenerFn = (payload: unknown) => {
 				if (
 					options?.predicate &&
-					!options.predicate(payload as InferSockaEventPayload<TContract, K>)
+					!options.predicate(payload as InferSockaPushPayload<TContract, K>)
 				) {
 					return;
 				}
 				cleanup();
-				resolve(payload as InferSockaEventPayload<TContract, K>);
+				resolve(payload as InferSockaPushPayload<TContract, K>);
 			};
 
 			const cleanup = () => {
 				if (timeoutId !== undefined) clearTimeout(timeoutId);
 				signal?.removeEventListener("abort", onAbort);
-				this.removeEventListener(name, listener);
+				this.removePushListener(name, listener);
 			};
 
-			this.addEventListener(name, listener);
+			this.addPushListener(name, listener);
 		});
 	}
 
-	private buildRpcMethods(): InferSockaRpc<TContract> {
+	private buildSendMethods(): InferSockaSend<TContract> {
 		const methods: Record<string, (input?: unknown) => Promise<unknown>> = {};
 
-		for (const name of Object.keys(this.client.contract.procedures)) {
-			const proc = this.client.contract.procedures[name];
+		for (const name of Object.keys(this.client.contract.calls)) {
+			const proc = this.client.contract.calls[name];
 			if (proc.input) {
 				methods[name] = (input: unknown) => this.call(name, input);
 			} else {
@@ -237,24 +250,24 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 			}
 		}
 
-		return methods as InferSockaRpc<TContract>;
+		return methods as InferSockaSend<TContract>;
 	}
 
-	private call(procedure: string, input: unknown): Promise<unknown> {
+	private call(callName: string, input: unknown): Promise<unknown> {
 		return (async () => {
 			await this.client.connect();
 			if (this.client.readyState !== WebSocket.OPEN) {
 				throw new Error("WebSocket not connected");
 			}
-			const id = this.nextId(procedure);
+			const id = this.nextId(callName);
 			const body =
 				input !== undefined && input !== null
 					? (input as Record<string, unknown>)
 					: {};
 			return new Promise<unknown>((resolve, reject) => {
-				this.pending.set(id, { rpc: procedure, resolve, reject });
+				this.pending.set(id, { rpc: callName, resolve, reject });
 				try {
-					this.client.sendRequest(id, procedure, body);
+					this.client.sendRequest(id, callName, body);
 				} catch (err) {
 					this.pending.delete(id);
 					reject(err instanceof Error ? err : new Error(String(err)));
@@ -268,9 +281,9 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 		if (!entry) return;
 		this.pending.delete(frame.id);
 
-		const proc = this.client.contract.procedures[frame.rpc];
+		const proc = this.client.contract.calls[frame.rpc];
 		if (!proc) {
-			entry.reject(new SockaError(`Unknown procedure: ${frame.rpc}`));
+			entry.reject(new SockaError(`Unknown call: ${frame.rpc}`));
 			return;
 		}
 
@@ -290,14 +303,14 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 
 	private handleEvent(frame: SockaServerEventFrame): void {
 		const schema = (
-			this.client.contract.events as Record<
+			this.client.contract.pushes as Record<
 				string,
 				Parameters<typeof parseStandardSchema>[0] | undefined
 			>
 		)[frame.event];
 		if (schema) {
 			void parseStandardSchema(schema, frame.body).then(
-				(validated) => this.dispatchValidatedEvent(frame.event, validated),
+				(validated) => this.dispatchValidatedPush(frame.event, validated),
 				(error: unknown) =>
 					reportSockaError(this.reportError, {
 						kind: "clientEventValidation",
@@ -306,28 +319,27 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 					}),
 			);
 		} else {
-			this.dispatchValidatedEvent(frame.event, frame.body);
+			this.dispatchValidatedPush(frame.event, frame.body);
 		}
 	}
 
-	private dispatchValidatedEvent(eventName: string, payload: unknown): void {
-		const set = this.eventListeners.get(eventName);
+	private dispatchValidatedPush(pushName: string, payload: unknown): void {
+		const set = this.pushListeners.get(pushName);
 		if (!set || set.size === 0) return;
 		for (const fn of [...set]) {
-			// Sync throws → catch; Promise return → rejections via .catch.
 			try {
 				const result = fn(payload);
 				void Promise.resolve(result).catch((error: unknown) => {
 					reportSockaError(this.reportError, {
 						kind: "clientEventListener",
-						eventName,
+						eventName: pushName,
 						error,
 					});
 				});
 			} catch (error) {
 				reportSockaError(this.reportError, {
 					kind: "clientEventListener",
-					eventName,
+					eventName: pushName,
 					error,
 				});
 			}
@@ -354,3 +366,18 @@ export class SockaRpc<TContract extends SockaContract<SockaContractConfig>> {
 		return this.client.connect();
 	}
 }
+
+export type SockaSession<TContract extends SockaContract<SockaContractConfig>> =
+	SockaSessionBase<TContract>;
+
+export interface SockaSessionConstructor {
+	new <TContract extends SockaContract<SockaContractConfig>>(
+		options: SockaSessionOptions<TContract>,
+	): SockaSession<TContract>;
+}
+
+/**
+ * WebSocket session: **`session.send`** for contract calls, **`session.subscribe`** for server pushes.
+ */
+export const SockaSession: SockaSessionConstructor =
+	SockaSessionBase as SockaSessionConstructor;

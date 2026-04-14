@@ -98,8 +98,8 @@ const chatSessionHandlers: BaseSessionHandlers<
     // Handle binary messages if needed
   },
 
-  handleClose: async () => {
-    console.log('Session closed');
+  handleClose: async (session) => {
+    console.log('Session closed', session.data);
   },
 };
 
@@ -137,8 +137,8 @@ class ChatSession extends BaseSession<
       handleBufferMessage: async (message) => {
         // Handle binary messages if needed
       },
-      handleClose: async () => {
-        console.log(`Session closed for user ${this.data.userId}`);
+      handleClose: async (session) => {
+        console.log(`Session closed for user ${session.data.userId}`);
       },
     });
   }
@@ -416,8 +416,8 @@ class ChatSession extends StandardSchemaSession<
         }
       },
 
-      handleClose: async () => {
-        console.log(`${this.data.name} disconnected`);
+      handleClose: async (session) => {
+        console.log(`${session.data.name} disconnected`);
       },
     });
   }
@@ -442,8 +442,8 @@ class ChatSession extends StandardSchemaSession<...> {
         // Messages automatically decoded from msgpack
         // Handle validated message
       },
-      handleClose: async () => {
-        console.log('Session closed');
+      handleClose: async (session) => {
+        console.log('Session closed', session.data);
       },
     });
   }
@@ -523,7 +523,9 @@ type BaseSessionHandlers<TData, TServerMessage, TClientMessage, TEnv> = {
   createData?: (ctx: Context<{ Bindings: TEnv }>) => TData;
   handleMessage: (message: TClientMessage) => Promise<void>;
   handleBufferMessage: (message: ArrayBuffer) => Promise<void>;
-  handleClose: () => Promise<void>;
+  handleClose: (
+    session: BaseSession<TData, TServerMessage, TClientMessage, TEnv>,
+  ) => Promise<void>;
 };
 ```
 
@@ -636,8 +638,8 @@ class GameSession extends BaseSession<GameData, ServerMsg, ClientMsg, Env> {
         // Handle buffer messages if needed
       },
 
-      handleClose: async () => {
-        console.log('Game session closed');
+      handleClose: async (session) => {
+        console.log('Game session closed', session.data);
       },
     });
   }
@@ -679,8 +681,8 @@ class MySession extends BaseSession<...> {
         // Handle buffer messages
       },
 
-      handleClose: async () => {
-        console.log('Session closed');
+      handleClose: async (session) => {
+        console.log('Session closed', session.data);
       },
     });
   }
@@ -776,8 +778,8 @@ class ChatSession extends StandardSchemaSession<SessionData, ServerMessage, Clie
         }
       },
 
-      handleClose: async () => {
-        console.log(`${this.data.name} disconnected`);
+      handleClose: async (session) => {
+        console.log(`${session.data.name} disconnected`);
       },
     });
   }

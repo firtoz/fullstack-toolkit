@@ -19,8 +19,9 @@ export type AttachedSockaWebSocket<
 
 /**
  * Register WebSocket `message` / `close` handlers, insert the session into
- * `sessions`, and return `{ session, dispose }`. `dispose` runs `handleClose`
- * once, then removes listeners (also triggered by `close`).
+ * `sessions`, and return `{ session, dispose }`. `dispose` runs
+ * {@link SockaWebSocketSession.invokeHandleClose} once, then removes listeners
+ * (also triggered by `close`).
  */
 export function attachSockaWebSocket<
 	TContract extends SockaContract<SockaContractConfig>,
@@ -48,7 +49,7 @@ export function attachSockaWebSocket<
 		shuttingDown = true;
 		void (async (): Promise<void> => {
 			try {
-				await config.handleClose();
+				await session.invokeHandleClose();
 			} catch (error) {
 				reportSockaError(config.reportError, {
 					kind: "serverHandleClose",

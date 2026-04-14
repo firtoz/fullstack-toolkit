@@ -1,4 +1,4 @@
-import { SockaRpc } from "socka/client";
+import { SockaSession } from "socka/client";
 import { ticTacToeContract } from "./contract";
 
 const roomInput = document.querySelector<HTMLInputElement>("#room");
@@ -13,7 +13,7 @@ function log(msg: string): void {
 	}
 }
 
-let rpc: SockaRpc<typeof ticTacToeContract> | null = null;
+let session: SockaSession<typeof ticTacToeContract> | null = null;
 
 function renderBoard(): void {
 	if (!boardEl) return;
@@ -28,9 +28,9 @@ function renderBoard(): void {
 			cell.dataset.col = String(c);
 			cell.textContent = " ";
 			cell.addEventListener("click", async () => {
-				if (!rpc) return;
+				if (!session) return;
 				try {
-					const out = await rpc.rpc.move({
+					const out = await session.send.move({
 						row: r,
 						col: c,
 					});
@@ -67,17 +67,17 @@ connectBtn?.addEventListener("click", async () => {
 	const host = window.location.host || "localhost:3461";
 	const url = `${proto}//${host}/ws/${encodeURIComponent(room)}`;
 
-	if (rpc) {
-		rpc.close();
-		rpc = null;
+	if (session) {
+		session.close();
+		session = null;
 	}
 
-	rpc = new SockaRpc({
+	session = new SockaSession({
 		contract: ticTacToeContract,
 		url,
 	});
 
-	rpc.events.on("stateChanged", (snap) => {
+	session.subscribe.on("stateChanged", (snap) => {
 		paintCellButtons(snap.board);
 		if (statusEl) statusEl.textContent = `${snap.status} — turn ${snap.turn}`;
 	});
@@ -85,7 +85,7 @@ connectBtn?.addEventListener("click", async () => {
 	if (statusEl) statusEl.textContent = "Connecting…";
 	try {
 		renderBoard();
-		const out = await rpc.rpc.join();
+		const out = await session.send.join();
 		paintCellButtons(out.board);
 		if (statusEl) {
 			statusEl.textContent = `You are ${out.you} — ${out.status} — turn ${out.turn}`;

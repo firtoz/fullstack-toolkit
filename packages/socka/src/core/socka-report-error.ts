@@ -2,7 +2,7 @@ import { exhaustiveGuard } from "@firtoz/maybe-error";
 
 /**
  * Single discriminated union for optional `reportError` on session config and
- * `SockaRpc` options: `kind` narrows context; `error` is what was thrown or rejected.
+ * `SockaSession` options: `kind` narrows context; `error` is what was thrown or rejected.
  */
 export type SockaReportError =
 	| { kind: "clientEventListener"; eventName: string; error: unknown }

@@ -1,7 +1,7 @@
 import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import type { InferSockaEventHandlers } from "socka/core";
-import { SockaRpc } from "socka/client";
+import type { InferSockaPushHandlers } from "socka/core";
+import { SockaSession } from "socka/client";
 import { sessionGameContract } from "../../socka-server-test/src/fixtures/session-game-contract";
 import {
 	assertSessionGameCombat,
@@ -15,11 +15,9 @@ import "./fixtures/worker";
 async function openSessionGameRpc(
 	stubSegment: string,
 	options?: {
-		eventHandlers?: Partial<
-			InferSockaEventHandlers<typeof sessionGameContract>
-		>;
+		pushHandlers?: Partial<InferSockaPushHandlers<typeof sessionGameContract>>;
 	},
-): Promise<SockaRpc<typeof sessionGameContract>> {
+): Promise<SockaSession<typeof sessionGameContract>> {
 	const response = await exports.default.fetch(
 		`http://example.com/socka-session-game/${stubSegment}/websocket`,
 		{ headers: { Upgrade: "websocket" } },
@@ -28,7 +26,7 @@ async function openSessionGameRpc(
 	if (!ws) throw new Error("expected webSocket");
 	ws.accept();
 
-	return new SockaRpc({
+	return new SockaSession({
 		contract: sessionGameContract,
 		webSocket: ws,
 		wireFormat: "json",
@@ -62,7 +60,7 @@ describe("socka DO session game (shared arena)", () => {
 		const stubJoined = "session-game-events-joined";
 		const witnessEv = createSessionGameEventCollector();
 		const rpcWitness = await openSessionGameRpc(stubJoined, {
-			eventHandlers: witnessEv.handlers,
+			pushHandlers: witnessEv.handlers,
 		});
 		const rpcPeer = await assertSessionGamePlayerJoinedEvent(
 			rpcWitness,
@@ -82,7 +80,7 @@ describe("socka DO session game (shared arena)", () => {
 				() => openSessionGameRpc(stubElim),
 				() =>
 					openSessionGameRpc(stubElim, {
-						eventHandlers: witnessElim.handlers,
+						pushHandlers: witnessElim.handlers,
 					}),
 				witnessElim.playerEliminated,
 				expect,

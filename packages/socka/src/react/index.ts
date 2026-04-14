@@ -1,8 +1,12 @@
-export { useSockaRpc, type UseSockaRpcOptions } from "./useSockaRpc";
+export {
+	useSockaSession,
+	createSockaSendProxyFromSession,
+	type UseSockaSessionOptions,
+} from "./useSockaSession";
 export { useSocka, type UseSockaOptions } from "./useSocka";
 export {
-	SockaRpcProvider,
-	useSockaRpcContext,
-	type SockaRpcContextValue,
-	type SockaRpcProviderProps,
-} from "./SockaRpcProvider";
+	SockaSessionProvider,
+	useSockaSessionContext,
+	type SockaSessionContextValue,
+	type SockaSessionProviderProps,
+} from "./SockaSessionProvider";

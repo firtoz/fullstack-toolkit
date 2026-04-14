@@ -17,6 +17,10 @@ export type SockaHonoCloudflareOptions<
 > = {
 	sessions?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
 	sockaInit?: (c: Context) => SockaWebSocketInit | undefined;
+	resolveScope?: (c: Context) => {
+		sessions: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
+		config: SockaWebSocketSessionConfig<TContract, TData>;
+	};
 };
 
 /**
@@ -30,26 +34,32 @@ export function sockaHonoCloudflare<
 	config: SockaWebSocketSessionConfig<TContract, TData>,
 	options?: SockaHonoCloudflareOptions<TContract, TData>,
 ): (c: Context) => Omit<WSEvents<WebSocket>, "onOpen"> {
-	const sessions =
+	const staticSessions =
 		options?.sessions ??
 		new Map<WebSocket, SockaWebSocketSession<TContract, TData>>();
-	const wireFormat: SockaWireFormat = config.wireFormat ?? "json";
+	const staticConfig = config;
+	const resolveScope = options?.resolveScope;
 
 	return (c: Context) => ({
 		onMessage(evt, wsCtx) {
 			const raw = wsCtx.raw;
 			if (!raw) return;
 			const domWs = raw as WebSocket;
+			const { sessions, config: scopeConfig } = resolveScope
+				? resolveScope(c)
+				: { sessions: staticSessions, config: staticConfig };
 			let session = sessions.get(domWs);
+			const cfg = scopeConfig as SockaWebSocketSessionConfig<TContract, TData>;
 			if (!session) {
 				const init = options?.sockaInit?.(c);
-				session = new SockaWebSocketSession(domWs, sessions, config, init);
+				session = new SockaWebSocketSession(domWs, sessions, cfg, init);
 				sessions.set(domWs, session);
-				runSockaSessionOnAttached(config, session);
+				runSockaSessionOnAttached(cfg, session);
 			}
+			const wireFormat: SockaWireFormat = cfg.wireFormat ?? "json";
 			void dispatchSockaInboundMessage(session, wireFormat, evt.data).catch(
 				(error: unknown) => {
-					reportSockaError(config.reportError, {
+					reportSockaError(cfg.reportError, {
 						kind: "serverInboundMessage",
 						adapter: "hono",
 						error,
@@ -62,10 +72,20 @@ export function sockaHonoCloudflare<
 			if (!raw) return;
 			const domWs = raw as WebSocket;
 			void (async (): Promise<void> => {
+				const { sessions, config: scopeConfig } = resolveScope
+					? resolveScope(c)
+					: { sessions: staticSessions, config: staticConfig };
+				const cfg = scopeConfig as SockaWebSocketSessionConfig<
+					TContract,
+					TData
+				>;
+				const session = sessions.get(domWs);
 				try {
-					await config.handleClose();
+					if (session) {
+						await session.invokeHandleClose();
+					}
 				} catch (error) {
-					reportSockaError(config.reportError, {
+					reportSockaError(cfg.reportError, {
 						kind: "serverHandleClose",
 						error,
 					});
@@ -73,7 +93,7 @@ export function sockaHonoCloudflare<
 					sessions.delete(domWs);
 				}
 			})().catch((error: unknown) => {
-				reportSockaError(config.reportError, {
+				reportSockaError(staticConfig.reportError, {
 					kind: "serverShutdown",
 					adapter: "hono",
 					error,

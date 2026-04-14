@@ -1,22 +1,22 @@
 import type { DependencyList, RefObject } from "react";
-import type { InferSockaRpc } from "socka/core";
-import type { SockaRpc } from "socka/client";
-import { useSockaRpc, type UseSockaRpcOptions } from "socka/react";
+import type { InferSockaSend } from "socka/core";
+import type { SockaSession } from "socka/client";
+import { useSockaSession, type UseSockaSessionOptions } from "socka/react";
 import { vpContract } from "./vp-ws-protocol";
 
-export type VpWsRpc = InferSockaRpc<typeof vpContract>;
+export type VpWsSend = InferSockaSend<typeof vpContract>;
 
 /**
- * Virtual-props WebSocket RPC hook driven by {@link vpContract}.
- * Returns typed `rpc.list()` / `rpc.insert(...)` with zero casts.
+ * Virtual-props WebSocket hook driven by {@link vpContract}.
+ * Returns typed `send.list()` / `send.insert(...)` with zero casts.
  */
-export function useVpWsSockaRpc(
-	options: UseSockaRpcOptions<typeof vpContract>,
+export function useVpWsSockaSession(
+	options: UseSockaSessionOptions<typeof vpContract>,
 	deps: DependencyList,
 ): {
 	ready: boolean;
-	rpc: VpWsRpc;
-	sessionRef: RefObject<SockaRpc<typeof vpContract> | null>;
+	send: VpWsSend;
+	sessionRef: RefObject<SockaSession<typeof vpContract> | null>;
 } {
-	return useSockaRpc(vpContract, options, deps);
+	return useSockaSession(vpContract, options, deps);
 }

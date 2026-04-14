@@ -21,21 +21,17 @@ export class TicTacToeSockaSession extends SockaDoSession<
 				join: async (session) => {
 					const { player } = game.join(session.websocket);
 					const snap = game.snapshot();
-					await session.broadcastContractEvent("stateChanged", snap);
+					await session.broadcastPush("stateChanged", snap);
 					return { ...snap, you: player };
 				},
 				move: async (input, session) => {
-					const snap = game.move(
-						session.websocket,
-						input.row,
-						input.col,
-					);
-					await session.broadcastContractEvent("stateChanged", snap);
+					const snap = game.move(session.websocket, input.row, input.col);
+					await session.broadcastPush("stateChanged", snap);
 					return snap;
 				},
 			},
-			handleClose: async () => {
-				game.release(websocket);
+			handleClose: async (session) => {
+				game.release(session.websocket);
 			},
 		});
 	}
@@ -50,11 +46,7 @@ export class TicTacToeDO extends SockaWebSocketDO<TicTacToeSockaSession, Env> {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
 			createSockaSession: (_ctx, websocket) =>
-				new TicTacToeSockaSession(
-					websocket,
-					this.sessions as Map<WebSocket, TicTacToeSockaSession>,
-					this.game,
-				),
+				new TicTacToeSockaSession(websocket, this.sessions, this.game),
 		});
 	}
 }

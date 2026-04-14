@@ -1,9 +1,10 @@
 export {
-	SockaRpc,
-	type SockaRpcEventWaitOptions,
-	type SockaRpcEventsApi,
-	type SockaRpcOptions,
-} from "./SockaRpc";
+	SockaSession,
+	type SockaSessionConstructor,
+	type SockaSessionPushWaitOptions,
+	type SockaSessionSubscribeApi,
+	type SockaSessionOptions,
+} from "./SockaSession";
 export {
 	reportSockaError,
 	type SockaReportError,

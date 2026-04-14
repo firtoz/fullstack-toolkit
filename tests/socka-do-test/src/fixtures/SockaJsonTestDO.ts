@@ -10,11 +10,7 @@ export class SockaJsonTestDO extends SockaWebSocketDO<
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env, {
 			createSockaSession: (_ctx, websocket) =>
-				new SockaRoundtripSession(
-					websocket,
-					this.sessions as Map<WebSocket, SockaRoundtripSession>,
-					"json",
-				),
+				new SockaRoundtripSession(websocket, this.sessions, "json"),
 		});
 	}
 }

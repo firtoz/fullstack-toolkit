@@ -7,26 +7,26 @@ description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objects�
 
 ## Components
 
-- **`SockaDoSession`** (**`socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Responses use **`encodeServerResponse`** / **`encodeServerError`**; optional **`encodeServerEvent`** for contract events.
+- **`SockaDoSession`** (**`socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Responses use **`encodeServerResponse`** / **`encodeServerError`**; optional **`encodeServerEvent`** for contract pushes.
 - **`SockaWebSocketDO`**: thin **`BaseWebSocketDO`** wrapper; you supply **`createSockaSession(ctx, websocket)`** returning a **`SockaDoSession`** (or subclass).
 
 ## Session config (`SockaDoSessionConfig`)
 
 - **`contract`**: from **`defineSocka`**.
-- **`wireFormat`**: **`"json"`** (default) or **`"msgpack"`**—must match the browser **`SockaWebSocketClient`/`SockaRpc`** **`wireFormat`**.
+- **`wireFormat`**: **`"json"`** (default) or **`"msgpack"`**—must match the browser **`SockaWebSocketClient`/`SockaSession`** **`wireFormat`**.
 - **`createData`**: optional when session **`TData`** is empty (**`Record<string, never>`**); defaults to **`{}`**. Otherwise Hono **`Context`** → per-connection state.
-- **`handlers`**: procedure name → async/sync handler; inputs/outputs validated with Standard Schema via **`parseStandardSchema`**.
+- **`handlers`**: call name → async/sync handler; inputs/outputs validated with Standard Schema via **`parseStandardSchema`**.
 - **`handleClose`**: cleanup when the socket closes.
 - **`onHandlerError`**, **`onValidationError`**: optional hooks (validation and handler failures are also mapped to **`serverError`** frames).
 - **`serializeJson`**, **`deserializeJson`**: optional; default **`JSON.stringify`/`JSON.parse`** for JSON mode.
 
 ## Errors
 
-- Throw **`SockaError`** from handlers for domain failures; the session maps the message to a **`serverError`** frame so the client can **`instanceof SockaError`** when using **`SockaRpc`**.
+- Throw **`SockaError`** from handlers for domain failures; the session maps the message to a **`serverError`** frame so the client can **`instanceof SockaError`** when using **`SockaSession`**.
 
 ## Client parity
 
-- Same **`defineSocka`** contract on the client: **`useSockaRpc`**, **`SockaRpcProvider`**, or **`SockaRpc`** with matching **`wireFormat`**.
+- Same **`defineSocka`** contract on the client: **`useSockaSession`**, **`SockaSessionProvider`**, or **`SockaSession`** with matching **`wireFormat`**.
 
 ## Transport
 
