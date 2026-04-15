@@ -1,6 +1,14 @@
 # @firtoz/chat-agent
 
-Wire protocol (Zod 4), `defineTool`, and abstract **`ChatAgentBase`** for Cloudflare Durable Objects with OpenRouter—a simplified alternative to `@cloudflare/ai-chat`.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fchat-agent.svg)](https://www.npmjs.com/package/@firtoz/chat-agent)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fchat-agent.svg)](https://www.npmjs.com/package/@firtoz/chat-agent)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fchat-agent.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Durable_Objects-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/durable-objects/)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-AI-6366f1)](https://openrouter.ai/)
+
+**Wire protocol (Zod 4), `defineTool`, and `ChatAgentBase` for Durable Objects + OpenRouter** — streaming chat, tools, and multi-tab sync; plug in Drizzle or raw SQL via sibling packages.
 
 **Persistence is separate:** install one of:
 

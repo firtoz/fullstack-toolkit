@@ -1,6 +1,13 @@
 # @firtoz/drizzle-utils
 
-Shared utilities and types for Drizzle ORM-based packages. Provides type-safe table builders with automatic timestamp tracking, branded IDs, common migration types, and collection sync utilities.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fdrizzle-utils.svg)](https://www.npmjs.com/package/@firtoz/drizzle-utils)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fdrizzle-utils.svg)](https://www.npmjs.com/package/@firtoz/drizzle-utils)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fdrizzle-utils.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-000000)](https://orm.drizzle.team/)
+
+**Shared utilities for Drizzle-based stacks** — syncable table builders, branded IDs, migration helpers, and collection-sync primitives shared across `@firtoz/drizzle-*` packages.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

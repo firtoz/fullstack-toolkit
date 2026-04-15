@@ -1,6 +1,14 @@
 # @firtoz/chat-agent-sql
 
-**Raw SQL** persistence for **`@firtoz/chat-agent`** using the Agent **`this.sql`** template tag. Exports **`SqlChatAgent`**.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fchat-agent-sql.svg)](https://www.npmjs.com/package/@firtoz/chat-agent-sql)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fchat-agent-sql.svg)](https://www.npmjs.com/package/@firtoz/chat-agent-sql)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fchat-agent-sql.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Durable_Objects-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/durable-objects/)
+[![SQL](https://img.shields.io/badge/Agent-SQLite-0ea5e9)](https://developers.cloudflare.com/agents/)
+
+**Raw `this.sql` persistence for `@firtoz/chat-agent`** — `SqlChatAgent` with no Drizzle; tables created in `dbInitialize()`.
 
 ## Install
 

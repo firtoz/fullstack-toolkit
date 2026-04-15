@@ -1,6 +1,14 @@
 # @firtoz/drizzle-indexeddb
 
-TanStack DB collections backed by IndexedDB with automatic migrations powered by Drizzle ORM. Build reactive, type-safe IndexedDB applications with the power of Drizzle's schema management.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fdrizzle-indexeddb.svg)](https://www.npmjs.com/package/@firtoz/drizzle-indexeddb)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fdrizzle-indexeddb.svg)](https://www.npmjs.com/package/@firtoz/drizzle-indexeddb)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fdrizzle-indexeddb.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-000000)](https://orm.drizzle.team/)
+[![IndexedDB](https://img.shields.io/badge/IndexedDB-browser-2563eb)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+
+**Drizzle-shaped schemas and migrations on top of IndexedDB** — TanStack DB collections in the browser with React hooks and generated migration functions (SQLite-flavored Drizzle types today).
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

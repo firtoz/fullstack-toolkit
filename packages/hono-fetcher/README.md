@@ -4,7 +4,11 @@
 [![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fhono-fetcher.svg)](https://www.npmjs.com/package/@firtoz/hono-fetcher)
 [![license](https://img.shields.io/npm/l/%40firtoz%2Fhono-fetcher.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
 
-Type-safe Hono API client with full TypeScript inference for routes, params, and payloads.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Hono](https://img.shields.io/badge/Hono-E36002?logo=hono&logoColor=white)](https://hono.dev)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/workers/)
+
+**Typed Hono fetcher for Workers and Durable Objects** — infer `AppType` routes, params, and JSON bodies end to end.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

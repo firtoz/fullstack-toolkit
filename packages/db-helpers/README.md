@@ -1,8 +1,13 @@
 # @firtoz/db-helpers
 
-TanStack DB helpers and utilities. TypeScript-only, no build step—consume source directly.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fdb-helpers.svg)](https://www.npmjs.com/package/@firtoz/db-helpers)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fdb-helpers.svg)](https://www.npmjs.com/package/@firtoz/db-helpers)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fdb-helpers.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
 
-This package is a small collection of helpers for [@tanstack/db](https://tanstack.com/db). More utilities will be added over time.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TanStack DB](https://img.shields.io/badge/TanStack_DB-000000?logo=react&logoColor=61DAFB)](https://tanstack.com/db)
+
+**Small helpers for [TanStack DB](https://tanstack.com/db)** — published as compiled `dist/` with types on npm. Memory collections, sync adapters, and more as the toolkit grows.
 
 ## Current helpers
 

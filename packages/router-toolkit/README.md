@@ -4,7 +4,11 @@
 [![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Frouter-toolkit.svg)](https://www.npmjs.com/package/@firtoz/router-toolkit)
 [![license](https://img.shields.io/npm/l/%40firtoz%2Frouter-toolkit.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
 
-Type-safe React Router 7 framework mode helpers with enhanced fetching, form submission, and state management for React Router 7 framework mode.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![React Router](https://img.shields.io/badge/React_Router-7-red)](https://reactrouter.com)
+
+**React Router 7 framework mode helpers** — typed fetchers, submitters, concurrent uploads, and Zod form actions wired to your route modules.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

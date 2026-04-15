@@ -4,7 +4,10 @@
 [![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fmaybe-error.svg)](https://www.npmjs.com/package/@firtoz/maybe-error)
 [![license](https://img.shields.io/npm/l/%40firtoz%2Fmaybe-error.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
 
-Type-safe result handling with the MaybeError pattern for TypeScript. Perfect for elegant error handling without exceptions.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![zero dependencies](https://img.shields.io/badge/deps-zero-22c55e)](https://github.com/firtoz/fullstack-toolkit/tree/main/packages/maybe-error)
+
+**`MaybeError` results without exceptions** — discriminated unions, tree-shakeable, zero runtime dependencies.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

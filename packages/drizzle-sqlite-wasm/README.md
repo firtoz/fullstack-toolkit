@@ -1,6 +1,14 @@
 # @firtoz/drizzle-sqlite-wasm
 
-TanStack DB collections backed by SQLite WASM running in Web Workers, with full Drizzle ORM integration. Build reactive, type-safe SQLite applications in the browser with non-blocking database operations.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fdrizzle-sqlite-wasm.svg)](https://www.npmjs.com/package/@firtoz/drizzle-sqlite-wasm)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fdrizzle-sqlite-wasm.svg)](https://www.npmjs.com/package/@firtoz/drizzle-sqlite-wasm)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fdrizzle-sqlite-wasm.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-000000)](https://orm.drizzle.team/)
+[![TanStack DB](https://img.shields.io/badge/TanStack_DB-000000?logo=react&logoColor=61DAFB)](https://tanstack.com/db)
+
+**SQLite WASM in a worker, Drizzle ORM, TanStack DB collections** — reactive, non-blocking browser databases with migrations and React hooks when you need them.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

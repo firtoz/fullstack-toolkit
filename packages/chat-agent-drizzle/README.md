@@ -1,6 +1,14 @@
 # @firtoz/chat-agent-drizzle
 
-**Drizzle ORM** persistence for **`@firtoz/chat-agent`**. Exports **`DrizzleChatAgent`** and the SQLite schema under **`@firtoz/chat-agent-drizzle/db/schema`**.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fchat-agent-drizzle.svg)](https://www.npmjs.com/package/@firtoz/chat-agent-drizzle)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fchat-agent-drizzle.svg)](https://www.npmjs.com/package/@firtoz/chat-agent-drizzle)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fchat-agent-drizzle.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-000000)](https://orm.drizzle.team/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Durable_Objects-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/durable-objects/)
+
+**Drizzle-backed persistence for `@firtoz/chat-agent`** — `DrizzleChatAgent`, bundled SQL migrations, and schema exports under `@firtoz/chat-agent-drizzle/db/schema`.
 
 ## Install
 

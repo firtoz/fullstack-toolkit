@@ -1,6 +1,14 @@
 # @firtoz/worker-helper
 
-Type-safe Web Worker helper with Zod validation for input and output messages. This package provides a simple way to create type-safe Web Workers with automatic validation of messages sent between the main thread and worker threads.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fworker-helper.svg)](https://www.npmjs.com/package/@firtoz/worker-helper)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fworker-helper.svg)](https://www.npmjs.com/package/@firtoz/worker-helper)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fworker-helper.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Zod](https://img.shields.io/badge/Zod-3B82F6?logo=zod&logoColor=white)](https://zod.dev)
+[![Web Workers](https://img.shields.io/badge/Web_Workers-646464)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)
+
+**Typed messages between the main thread and workers** — Zod validates every postMessage in both directions, with helpers for Cloudflare `wrangler types` / `.env` when you deploy Workers too.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 

@@ -1,6 +1,14 @@
 # @firtoz/drizzle-durable-sqlite
 
-TanStack DB collection configuration for **Drizzle ORM** on **Cloudflare Durable Object SQLite** (`drizzle-orm/durable-sqlite`). This mirrors [`@firtoz/drizzle-sqlite-wasm`](../drizzle-sqlite-wasm) for the browser (SQLite WASM + workers), but targets Workers/DOs only—no React provider, no OPFS, no Web Workers.
+[![npm version](https://img.shields.io/npm/v/%40firtoz%2Fdrizzle-durable-sqlite.svg)](https://www.npmjs.com/package/@firtoz/drizzle-durable-sqlite)
+[![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fdrizzle-durable-sqlite.svg)](https://www.npmjs.com/package/@firtoz/drizzle-durable-sqlite)
+[![license](https://img.shields.io/npm/l/%40firtoz%2Fdrizzle-durable-sqlite.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-000000)](https://orm.drizzle.team/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Durable_Objects-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/durable-objects/)
+
+**Drizzle + TanStack DB on Durable Object SQLite** — same ideas as [`@firtoz/drizzle-sqlite-wasm`](../drizzle-sqlite-wasm) in the browser, but for Workers/DOs only (no React provider, no OPFS, no web workers).
 
 ## Install
 

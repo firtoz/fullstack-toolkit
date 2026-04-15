@@ -4,7 +4,11 @@
 [![npm downloads](https://img.shields.io/npm/dm/%40firtoz%2Fwebsocket-do.svg)](https://www.npmjs.com/package/@firtoz/websocket-do)
 [![license](https://img.shields.io/npm/l/%40firtoz%2Fwebsocket-do.svg)](https://github.com/firtoz/fullstack-toolkit/blob/main/LICENSE)
 
-Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Durable_Objects-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/durable-objects/)
+[![Hono](https://img.shields.io/badge/Hono-E36002?logo=hono&logoColor=white)](https://hono.dev)
+
+**WebSocket sessions on Durable Objects** — Standard Schema message validation, broadcasting, and Hono integration.
 
 > **⚠️ Early WIP Notice:** This package is in very early development and is **not production-ready**. It is TypeScript-only and may have breaking changes. While I (the maintainer) have limited time, I'm open to PRs for features, bug fixes, or additional support (like JS builds). Please feel free to try it out and contribute! See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
 
