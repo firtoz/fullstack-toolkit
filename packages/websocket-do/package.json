@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/websocket-do",
-	"version": "10.0.0",
+	"version": "11.0.0",
 	"description": "Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",
@@ -11,10 +11,20 @@
 			"import": "./src/index.ts",
 			"require": "./src/index.ts"
 		},
-		"./zod-client": {
-			"types": "./src/ZodWebSocketClient.ts",
-			"import": "./src/ZodWebSocketClient.ts",
-			"require": "./src/ZodWebSocketClient.ts"
+		"./schema-client": {
+			"types": "./src/StandardSchemaWebSocketClient.ts",
+			"import": "./src/StandardSchemaWebSocketClient.ts",
+			"require": "./src/StandardSchemaWebSocketClient.ts"
+		},
+		"./rpc": {
+			"types": "./src/standardSchemaRpc.ts",
+			"import": "./src/standardSchemaRpc.ts",
+			"require": "./src/standardSchemaRpc.ts"
+		},
+		"./rpc-react": {
+			"types": "./src/standardSchemaRpcReact.ts",
+			"import": "./src/standardSchemaRpcReact.ts",
+			"require": "./src/standardSchemaRpcReact.ts"
 		}
 	},
 	"files": [
@@ -52,12 +62,17 @@
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:",
 		"@firtoz/hono-fetcher": "workspace:*",
-		"hono": "catalog:"
+		"hono": "catalog:",
+		"react": ">=18.0.0"
 	},
-	"optionalDependencies": {
-		"msgpackr": "catalog:",
-		"react": "catalog:",
-		"zod": "catalog:"
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
+	},
+	"dependencies": {
+		"@standard-schema/spec": "catalog:",
+		"msgpackr": "catalog:"
 	},
 	"engines": {
 		"node": ">=18.0.0"
@@ -68,6 +83,7 @@
 	"devDependencies": {
 		"@types/react": "catalog:",
 		"bun-types": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"zod": "catalog:"
 	}
 }

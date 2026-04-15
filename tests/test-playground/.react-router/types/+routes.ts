@@ -50,6 +50,9 @@ type Pages = {
   "/collections/sqlite-pagination-test": {
     params: {};
   };
+  "/collections/tanstack-06-virtual-props-demo": {
+    params: {};
+  };
   "/router-toolkit/loader-test": {
     params: {};
   };
@@ -76,7 +79,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/keyval-collection-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/api/clear-opfs" | "/collections/sqlite-test" | "/collections/indexeddb-test" | "/collections/indexeddb-migration-test" | "/collections/sync-mode-test" | "/collections/sqlite-sync-mode-test" | "/collections/standalone-test" | "/collections/memory-collection-test" | "/collections/memory-collection-n-sync-test" | "/collections/keyval-collection-test" | "/collections/pagination-test" | "/collections/sqlite-pagination-test" | "/collections/tanstack-06-virtual-props-demo" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -130,6 +133,10 @@ type RouteFiles = {
     id: "routes/collections/sqlite-pagination-test";
     page: "/collections/sqlite-pagination-test";
   };
+  "routes/collections/tanstack-06-virtual-props-demo.tsx": {
+    id: "routes/collections/tanstack-06-virtual-props-demo";
+    page: "/collections/tanstack-06-virtual-props-demo";
+  };
   "routes/router-toolkit/loader-test.tsx": {
     id: "routes/router-toolkit/loader-test";
     page: "/router-toolkit/loader-test";
@@ -175,6 +182,7 @@ type RouteModules = {
   "routes/collections/keyval-collection-test": typeof import("./app/routes/collections/keyval-collection-test.tsx");
   "routes/collections/pagination-test": typeof import("./app/routes/collections/pagination-test.tsx");
   "routes/collections/sqlite-pagination-test": typeof import("./app/routes/collections/sqlite-pagination-test.tsx");
+  "routes/collections/tanstack-06-virtual-props-demo": typeof import("./app/routes/collections/tanstack-06-virtual-props-demo.tsx");
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");
   "routes/router-toolkit/action-test": typeof import("./app/routes/router-toolkit/action-test.tsx");
   "routes/router-toolkit/form-action-test": typeof import("./app/routes/router-toolkit/form-action-test.tsx");

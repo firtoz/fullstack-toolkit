@@ -140,6 +140,12 @@ const sqliteRoutes: RouteItem[] = [
 
 const dbHelpersRoutes: RouteItem[] = [
 	{
+		path: href("/collections/tanstack-06-virtual-props-demo"),
+		text: "TanStack DB 0.6 — virtual props",
+		description:
+			"Query collection, $synced outbox, createEffect, queryOnce, includes + toArray",
+	},
+	{
 		path: href("/collections/memory-collection-test"),
 		text: "Memory Collection",
 		description:

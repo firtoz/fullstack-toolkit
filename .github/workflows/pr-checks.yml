@@ -15,6 +15,12 @@ on:
       AI_GATEWAY_TOKEN:
         required: false
 
+# Playwright Docker image tag must match the resolved `playwright` / `@playwright/test`
+# version in bun.lock (see catalog). Bump both together when upgrading Playwright.
+# Turbo 2 strict env mode does not forward PLAYWRIGHT_BROWSERS_PATH from the image unless
+# `test:e2e` lists it in `passThroughEnv` (see root turbo.json); otherwise Playwright looks
+# under ~/.cache/ms-playwright and fails in CI.
+
 jobs:
   checks:
     name: Run Checks
@@ -45,11 +51,6 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
-      - name: Start Playwright Install (background)
-        run: |
-          nohup bash -c 'bunx playwright install --with-deps; echo $? > /tmp/playwright_exit' > /tmp/playwright.log 2>&1 &
-          echo "Playwright install started in background (PID: $!)"
-
       - name: Run Typecheck and Lint
         run: TURBO_TELEMETRY_DISABLED=1 bun turbo run typecheck lint:ci
 
@@ -65,20 +66,35 @@ jobs:
           AI_GATEWAY_NAME: ${{ secrets.AI_GATEWAY_NAME }}
           AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
 
-      - name: Wait for Playwright and Run E2E Tests
-        run: |
-          echo "Waiting for Playwright install to complete..."
-          while [ ! -f /tmp/playwright_exit ]; do
-            sleep 2
-          done
-          EXIT_CODE=$(cat /tmp/playwright_exit)
-          if [ "$EXIT_CODE" != "0" ]; then
-            echo "::error::Playwright install failed"
-            cat /tmp/playwright.log
-            exit 1
-          fi
-          echo "Playwright installed successfully"
-          TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e --filter='test-playground'
+  e2e:
+    name: Playwright E2E (test-playground)
+    needs: checks
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      # Browsers + OS deps are in the image; see https://playwright.dev/docs/ci#via-containers
+      # --ipc=host: avoid Chromium OOM in Docker (https://playwright.dev/docs/docker#recommended-docker-configuration)
+      # Do not set --user: runner must be root here so we can `apt-get install unzip`
+      # (required by oven-sh/setup-bun to extract the Bun zip). Browser dirs are world-readable in the image.
+      options: --ipc=host --init
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # setup-bun downloads bun-linux-x64.zip and shells out to `unzip`; minimal images omit it.
+      - name: Install unzip (for setup-bun)
+        run: apt-get update && apt-get install -y unzip
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run E2E Tests
+        run: TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e --filter='test-playground'
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4

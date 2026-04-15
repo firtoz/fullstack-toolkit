@@ -698,6 +698,8 @@ describe("createGenericCollectionConfig", () => {
 		expect(config.utils).toBeDefined();
 		expect(config.utils.truncate).toBeTypeOf("function");
 		expect(config.utils.receiveSync).toBeTypeOf("function");
+		expect(config.autoIndex).toBe("eager");
+		expect(config.defaultIndexType).toBeDefined();
 	});
 
 	it("respects custom onInsert/onUpdate/onDelete overrides", () => {

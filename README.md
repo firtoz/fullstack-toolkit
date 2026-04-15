@@ -1,6 +1,6 @@
 # Fullstack Toolkit Monorepo
 
-A monorepo containing TypeScript utilities for full-stack web development, including React Router, error handling, and edge computing utilities.
+A monorepo containing TypeScript utilities for full-stack web development, including React Router, error handling, schema-first WebSocket RPC (**socka**), and edge computing utilities.
 
 ## Packages
 
@@ -36,16 +36,25 @@ Type-safe Hono API client with full TypeScript inference for routes, params, and
 
 ### [@firtoz/websocket-do](./packages/websocket-do)
 
-Type-safe WebSocket session management for Cloudflare Durable Objects with Zod validation.
+Type-safe WebSocket session management for Cloudflare Durable Objects with Standard Schema validation.
 
 - 🔒 **Type-safe** - Full TypeScript support with generic types for messages and session data
-- ✨ **Zod Validation** - Runtime message validation with `ZodWebSocketClient` and `ZodSession`
+- ✨ **Schema validation** - Runtime message validation with `StandardSchemaWebSocketClient` and `StandardSchemaSession` (Zod, Valibot, ArkType, …)
 - 🌐 **WebSocket Management** - Built on Cloudflare Durable Objects for stateful connections
 - 🎯 **Session-based** - Abstract session class for custom WebSocket logic
 - 🔄 **State Persistence** - Automatic serialization/deserialization of session data
 - 📡 **Broadcasting** - Built-in support for broadcasting messages
 - 📦 **Buffer Mode** - Efficient msgpack serialization for binary messaging
 - 🚀 **Hono Integration** - Seamless integration with Hono framework and `@firtoz/hono-fetcher`
+
+### [socka](./packages/socka)
+
+Standard Schema–first WebSocket RPC for browsers and servers: one `defineSocka` contract drives typed **`session.send.*`** (calls) and **`session.subscribe.*`** (pushes), with socka v1 frames on the wire.
+
+- 📋 **Schema-first** — `calls` / `pushes` with Zod, Valibot, ArkType, or any [Standard Schema v1](https://standardschema.dev/) implementation
+- 🖥️ **Servers** — Node `ws`, Bun, Hono, Cloudflare Workers; **`socka/do`** for Durable Objects with **`SockaDoSession`** / **`SockaWebSocketDO`**
+- ⚛️ **React** — **`useSockaSession`**, **`SockaSessionProvider`**, shared socket context
+- 📚 **Docs** — [Package README](./packages/socka/README.md) and [guides](./packages/socka/docs/README.md)
 
 ### [@firtoz/chat-agent](./packages/chat-agent)
 
@@ -96,6 +105,22 @@ Shared utilities and types for Drizzle ORM-based packages.
 - 🔄 **Migration Types** - Shared TypeScript types for Drizzle migrations
 - 📝 **Schema Type Helpers** - Type-safe Valibot schema inference
 
+### [@firtoz/collection-sync](./packages/collection-sync)
+
+WebSocket sync protocol and bridges for TanStack DB collections (pairs with **`@firtoz/websocket-do`** / **socka**-style contracts in app code).
+
+### [@firtoz/drizzle-durable-sqlite](./packages/drizzle-durable-sqlite)
+
+TanStack DB collections backed by Drizzle on Cloudflare Durable Object SQLite.
+
+### [@firtoz/db-helpers](./packages/db-helpers)
+
+TanStack DB helpers and utilities shared across collection packages.
+
+### [@firtoz/idb-collections](./packages/idb-collections)
+
+IndexedDB collection utilities for TanStack DB (key-value adapter, query helpers).
+
 ### [@firtoz/worker-helper](./packages/worker-helper) ⚠️ WIP
 
 Type-safe Web Worker helper with Zod validation for input and output messages.
@@ -122,6 +147,9 @@ bun add @firtoz/hono-fetcher
 
 # For WebSocket Durable Objects
 bun add @firtoz/websocket-do
+
+# For schema-first WebSocket RPC (browser + Node/Bun/Hono/DO)
+bun add socka
 
 # For ChatAgent with OpenRouter (core + peers; add drizzle or sql package for persistence)
 bun add @firtoz/chat-agent @openrouter/sdk agents
@@ -187,6 +215,7 @@ feat(router-toolkit): add new hook for dynamic routing
 fix(maybe-error): resolve type inference issue
 feat(hono-fetcher): add support for custom headers
 fix(websocket-do): handle connection errors gracefully
+feat(socka): add session.subscribe waitForPush
 feat(drizzle-indexeddb): add support for composite indexes
 fix(drizzle-sqlite-wasm): fix worker initialization race condition
 feat(drizzle-utils): add new column helper for JSON fields
@@ -226,7 +255,12 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 - [Maybe Error on NPM](https://npmjs.com/package/@firtoz/maybe-error)
 - [Hono Fetcher on NPM](https://npmjs.com/package/@firtoz/hono-fetcher)
 - [WebSocket DO on NPM](https://npmjs.com/package/@firtoz/websocket-do)
+- [socka on NPM](https://npmjs.com/package/socka)
 - [Chat Agent on NPM](https://npmjs.com/package/@firtoz/chat-agent)
+- [Collection Sync on NPM](https://npmjs.com/package/@firtoz/collection-sync)
+- [Drizzle Durable SQLite on NPM](https://npmjs.com/package/@firtoz/drizzle-durable-sqlite)
+- [DB Helpers on NPM](https://npmjs.com/package/@firtoz/db-helpers)
+- [IDB Collections on NPM](https://npmjs.com/package/@firtoz/idb-collections)
 - [Drizzle IndexedDB on NPM](https://npmjs.com/package/@firtoz/drizzle-indexeddb)
 - [Drizzle SQLite WASM on NPM](https://npmjs.com/package/@firtoz/drizzle-sqlite-wasm)
 - [Drizzle Utils on NPM](https://npmjs.com/package/@firtoz/drizzle-utils)

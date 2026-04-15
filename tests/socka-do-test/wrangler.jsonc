@@ -1,0 +1,32 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "socka-do-test",
+	"main": "src/fixtures/worker.ts",
+	"compatibility_date": "2025-10-01",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "SOCKA_JSON_TEST",
+				"class_name": "SockaJsonTestDO"
+			},
+			{
+				"name": "SOCKA_MSGPACK_TEST",
+				"class_name": "SockaMsgpackTestDO"
+			},
+			{
+				"name": "SOCKA_SESSION_GAME_TEST",
+				"class_name": "SockaSessionGameTestDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["SockaJsonTestDO", "SockaMsgpackTestDO"]
+		},
+		{
+			"tag": "v2",
+			"new_classes": ["SockaSessionGameTestDO"]
+		}
+	]
+}

@@ -1,0 +1,265 @@
+import type { SockaContract, SockaContractConfig } from "../core/contract";
+import {
+	SockaWireError,
+	decodeSockaWire,
+	encodeClientRequest,
+} from "../core/envelope";
+import type {
+	SockaServerResponseFrame,
+	SockaServerErrorFrame,
+	SockaServerEventFrame,
+} from "../core/envelope";
+import {
+	encodeSockaWire,
+	parseWirePayload,
+	type SockaWireFormat,
+} from "../core/wire-codec";
+
+export interface SockaWebSocketClientOptions<
+	TContract extends SockaContract<SockaContractConfig>,
+> {
+	contract: TContract;
+	/** Default `"json"` (text frames). Use `"msgpack"` for binary `ArrayBuffer` frames. */
+	wireFormat?: SockaWireFormat;
+	url?: string;
+	webSocket?: WebSocket;
+	/**
+	 * When `false`, the socket is not created until {@link SockaWebSocketClient.connect}
+	 * (or the first operation that implicitly opens, e.g. {@link SockaSession} `send`).
+	 * Default `true`.
+	 */
+	autoConnect?: boolean;
+	serializeJson?: (value: unknown) => string;
+	deserializeJson?: (raw: string) => unknown;
+	onOpen?: (event: Event) => void;
+	onClose?: (event: CloseEvent) => void;
+	onError?: (event: Event) => void;
+	onResponse?: (frame: SockaServerResponseFrame) => void;
+	onServerError?: (frame: SockaServerErrorFrame) => void;
+	onEvent?: (frame: SockaServerEventFrame) => void;
+	onValidationError?: (error: Error, rawMessage: unknown) => void;
+}
+
+/**
+ * Browser WebSocket client driven by a socka contract. Sends client request
+ * frames and dispatches decoded server frames to callbacks.
+ */
+export class SockaWebSocketClient<
+	TContract extends SockaContract<SockaContractConfig>,
+> {
+	private ws: WebSocket | undefined;
+	private readonly opts: SockaWebSocketClientOptions<TContract>;
+	private readonly wireFormat: SockaWireFormat;
+	private readonly serializeJson: (value: unknown) => string;
+	private readonly deserializeJson: (raw: string) => unknown;
+	private readonly onResponseCb?: (frame: SockaServerResponseFrame) => void;
+	private readonly onServerErrorCb?: (frame: SockaServerErrorFrame) => void;
+	private readonly onEventCb?: (frame: SockaServerEventFrame) => void;
+	private readonly onValidationError?: (
+		error: Error,
+		rawMessage: unknown,
+	) => void;
+
+	readonly contract: TContract;
+
+	constructor(options: SockaWebSocketClientOptions<TContract>) {
+		this.opts = options;
+		this.contract = options.contract;
+		this.wireFormat = options.wireFormat ?? "json";
+		this.serializeJson = options.serializeJson ?? JSON.stringify;
+		this.deserializeJson = options.deserializeJson ?? JSON.parse;
+		this.onResponseCb = options.onResponse;
+		this.onServerErrorCb = options.onServerError;
+		this.onEventCb = options.onEvent;
+		this.onValidationError = options.onValidationError;
+
+		if (options.autoConnect !== false) {
+			this.attachSocket(this.createSocket());
+		}
+	}
+
+	private createSocket(): WebSocket {
+		if (this.opts.webSocket) {
+			return this.opts.webSocket;
+		}
+		if (this.opts.url) {
+			return new WebSocket(this.opts.url);
+		}
+		throw new Error("Either 'url' or 'webSocket' must be provided");
+	}
+
+	private attachSocket(ws: WebSocket): void {
+		this.ws = ws;
+		if (this.wireFormat === "msgpack") {
+			ws.binaryType = "arraybuffer";
+		}
+
+		ws.addEventListener("open", (event) => {
+			this.opts.onOpen?.(event);
+		});
+
+		ws.addEventListener("message", (event) => {
+			this.handleMessageEvent(event);
+		});
+
+		ws.addEventListener("close", (event) => {
+			this.opts.onClose?.(event);
+		});
+
+		ws.addEventListener("error", (event) => {
+			this.opts.onError?.(event);
+		});
+	}
+
+	private handleMessageEvent(event: MessageEvent): void {
+		try {
+			const fmt = this.wireFormat;
+			let payload: string | ArrayBuffer;
+			if (fmt === "json") {
+				if (typeof event.data !== "string") {
+					this.onValidationError?.(
+						new Error("socka: expected JSON text frame"),
+						event.data,
+					);
+					return;
+				}
+				payload = event.data;
+			} else {
+				if (!(event.data instanceof ArrayBuffer)) {
+					this.onValidationError?.(
+						new Error("socka: expected ArrayBuffer msgpack frame"),
+						event.data,
+					);
+					return;
+				}
+				payload = event.data;
+			}
+
+			let parsed: unknown;
+			try {
+				parsed = parseWirePayload(payload, fmt, this.deserializeJson);
+			} catch (err) {
+				this.onValidationError?.(
+					err instanceof Error ? err : new Error(String(err)),
+					event.data,
+				);
+				return;
+			}
+
+			let decoded: ReturnType<typeof decodeSockaWire>;
+			try {
+				decoded = decodeSockaWire(parsed);
+			} catch (err) {
+				if (err instanceof SockaWireError) {
+					this.onValidationError?.(err, parsed);
+					return;
+				}
+				throw err;
+			}
+			switch (decoded.kind) {
+				case "serverResponse":
+					this.onResponseCb?.(decoded.frame);
+					break;
+				case "serverError":
+					this.onServerErrorCb?.(decoded.frame);
+					break;
+				case "serverEvent":
+					this.onEventCb?.(decoded.frame);
+					break;
+				case "clientRequest":
+					this.onValidationError?.(
+						new Error("socka: unexpected clientRequest frame from server"),
+						parsed,
+					);
+					break;
+				default: {
+					const _exhaustive: never = decoded;
+					throw new Error(
+						`socka: unexpected wire decode branch ${JSON.stringify(_exhaustive)}`,
+					);
+				}
+			}
+		} catch (error) {
+			const err = error instanceof Error ? error : new Error(String(error));
+			this.onValidationError?.(err, event.data);
+		}
+	}
+
+	/**
+	 * Creates the WebSocket (when {@link SockaWebSocketClientOptions.autoConnect}
+	 * was `false`) and waits until the connection is open.
+	 */
+	async connect(): Promise<void> {
+		if (!this.ws) {
+			this.attachSocket(this.createSocket());
+		}
+		await this.waitForOpen();
+	}
+
+	sendRequest(id: string, rpc: string, body: Record<string, unknown>): void {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			throw new Error("WebSocket is not open");
+		}
+		const frame = encodeClientRequest(id, rpc, body);
+		const encoded = encodeSockaWire(frame, this.wireFormat, this.serializeJson);
+		if (typeof encoded === "string") {
+			this.ws.send(encoded);
+			return;
+		}
+		const copy = new Uint8Array(encoded.byteLength);
+		copy.set(encoded);
+		this.ws.send(copy.buffer);
+	}
+
+	close(code?: number, reason?: string): void {
+		this.ws?.close(code, reason);
+	}
+
+	get readyState(): number {
+		return this.ws?.readyState ?? WebSocket.CONNECTING;
+	}
+
+	get socket(): WebSocket {
+		if (!this.ws) {
+			throw new Error(
+				"socka: WebSocket not created yet; call connect() first or use autoConnect: true",
+			);
+		}
+		return this.ws;
+	}
+
+	async waitForOpen(): Promise<void> {
+		const ws = this.ws;
+		if (!ws) {
+			throw new Error(
+				"socka: WebSocket not created yet; call connect() first or use autoConnect: true",
+			);
+		}
+		if (ws.readyState === WebSocket.OPEN) {
+			return;
+		}
+		return new Promise((resolve, reject) => {
+			const abortController = new AbortController();
+			const { signal } = abortController;
+			const cleanup = () => {
+				abortController.abort();
+			};
+			ws.addEventListener(
+				"open",
+				() => {
+					cleanup();
+					resolve();
+				},
+				{ signal },
+			);
+			ws.addEventListener(
+				"error",
+				() => {
+					cleanup();
+					reject(new Error("WebSocket connection failed"));
+				},
+				{ signal },
+			);
+		});
+	}
+}

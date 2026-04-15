@@ -42,7 +42,8 @@
 			"cache": false
 		},
 		"test:e2e": {
-			"outputLogs": "new-only"
+			"outputLogs": "new-only",
+			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
 		},
 		"dev": {
 			"persistent": true,
