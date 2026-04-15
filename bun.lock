@@ -91,7 +91,7 @@
     },
     "packages/chat-agent-drizzle": {
       "name": "@firtoz/chat-agent-drizzle",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
       },
@@ -110,7 +110,7 @@
     },
     "packages/chat-agent-sql": {
       "name": "@firtoz/chat-agent-sql",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "dependencies": {
         "@firtoz/chat-agent": "workspace:*",
       },

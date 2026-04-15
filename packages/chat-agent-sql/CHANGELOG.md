@@ -1,5 +1,11 @@
 # @firtoz/chat-agent-sql
 
+## 2.0.1
+
+### Patch Changes
+
+- [`dae4221`](https://github.com/firtoz/fullstack-toolkit/commit/dae42219514e791d558284d060601a9a8be12f12) Thanks [@firtoz](https://github.com/firtoz)! - Fix **tsup** `.d.ts` generation when **`@firtoz/chat-agent`** is not linked under **`node_modules`** (e.g. **`npm publish`** / **`prepack`** sandboxes): add **`tsconfig` `paths`** to the workspace **`chat-agent`** source so TypeScript resolves imports without a symlink.
+
 ## 2.0.0
 
 ### Minor Changes
