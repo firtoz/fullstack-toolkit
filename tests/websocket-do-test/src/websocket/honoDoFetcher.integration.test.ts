@@ -15,7 +15,7 @@ import {
 	honoDoFetcherWithId,
 	honoDoFetcherWithName,
 } from "@firtoz/hono-fetcher";
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import "./test-fixtures/worker";
 import type { ServerMessage } from "./test-fixtures/ChatRoomDO";
 
@@ -377,7 +377,13 @@ describe("honoDoFetcher Integration Tests", () => {
 			// Change name
 			ws.send(JSON.stringify({ type: "setName", name: "Bob" }));
 
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// CI can be slower than local; fixed sleeps are flaky
+			await vi.waitFor(
+				() => {
+					expect(messages.length).toBeGreaterThan(0);
+				},
+				{ timeout: 5000, interval: 50 },
+			);
 
 			// Should have received nameChanged message
 			expect(messages.length).toBeGreaterThan(0);
