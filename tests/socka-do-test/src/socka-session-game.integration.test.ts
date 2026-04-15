@@ -1,7 +1,7 @@
 import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import type { InferSockaPushHandlers } from "socka/core";
-import { SockaSession } from "socka/client";
+import type { InferSockaPushHandlers } from "@firtoz/socka/core";
+import { SockaSession } from "@firtoz/socka/client";
 import { sessionGameContract } from "../../socka-server-test/src/fixtures/session-game-contract";
 import {
 	assertSessionGameCombat,

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { Hono } from "hono";
-import type { SockaWireFormat } from "socka/core";
-import { SockaSession } from "socka/client";
-import { sockaHonoNodeWs } from "socka/hono";
+import type { SockaWireFormat } from "@firtoz/socka/core";
+import { SockaSession } from "@firtoz/socka/client";
+import { sockaHonoNodeWs } from "@firtoz/socka/hono";
 import { sessionGameContract } from "./fixtures/session-game-contract";
 import {
 	assertSessionGameCombat,
@@ -53,7 +53,7 @@ function startSessionGameHonoServer(wireFormat: SockaWireFormat): {
 	return { server, port: addr.port, world };
 }
 
-describe("socka/server session + shared state (dynamic roster) — Hono @hono/node-ws", () => {
+describe("@firtoz/socka/server session + shared state (dynamic roster) — Hono @hono/node-ws", () => {
 	let json: ReturnType<typeof startSessionGameHonoServer>;
 	let msgpack: ReturnType<typeof startSessionGameHonoServer>;
 

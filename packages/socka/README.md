@@ -1,20 +1,20 @@
-# socka
+# @firtoz/socka
 
 ![Socka — WebSocket RPC, Standard Schema](./assets/banner.png)
 
 **Standard Schema–first WebSocket RPC** for browsers and servers.
 
-The same contract runs on **Cloudflare Durable Objects** ([`socka/do`](./docs/durable-objects.md)), **Bun** (`socka/bun`), **Hono** (`socka/hono` on Node or Cloudflare Workers), and **regular WebSocket servers** ([`socka/server`](./docs/server.md) with **`attachSockaWebSocket`**—e.g. Node **`ws`** or any runtime that exposes a standard **`WebSocket`**).
+The same contract runs on **Cloudflare Durable Objects** ([`@firtoz/socka/do`](./docs/durable-objects.md)), **Bun** (`@firtoz/socka/bun`), **Hono** (`@firtoz/socka/hono` on Node or Cloudflare Workers), and **regular WebSocket servers** ([`@firtoz/socka/server`](./docs/server.md) with **`attachSockaWebSocket`**—e.g. Node **`ws`** or any runtime that exposes a standard **`WebSocket`**).
 
 One contract drives inferred **`session.send.*`** (client-initiated calls) and **`handlers`** on the server, socka v1 envelopes with correlation, and optional **`pushes`** (server-initiated)—without hand-rolled message unions or duplicate schema layers.
 
 ## Install
 
 ```bash
-bun add socka
+bun add @firtoz/socka
 ```
 
-Your package manager may warn about **optional peer dependencies** until you add the packages that match your imports (e.g. **`react`** for `socka/react`, **`hono`** for `socka/hono`). That is expected—see **[Peers](./docs/peers.md)** for **pick-your-flow** `bun add` lines and the full matrix.
+Your package manager may warn about **optional peer dependencies** until you add the packages that match your imports (e.g. **`react`** for `@firtoz/socka/react`, **`hono`** for `@firtoz/socka/hono`). That is expected—see **[Peers](./docs/peers.md)** for **pick-your-flow** `bun add` lines and the full matrix.
 
 ## Documentation
 
@@ -28,9 +28,9 @@ Agent-oriented skills: [`skills/`](./skills/).
 
 Self-contained **tic-tac-toe** apps live under the monorepo [`examples/`](../../examples/) (same game, different servers). Pick the one that matches **your** stack:
 
-- **Bun** (`socka/bun`) — [`tic-tac-toe-bun`](../../examples/tic-tac-toe-bun) · port **3461**
-- **Hono + Node** (`socka/hono`) — [`tic-tac-toe-hono`](../../examples/tic-tac-toe-hono) · port **3462**
-- **Cloudflare Durable Objects** (`socka/do`) — [`tic-tac-toe-do`](../../examples/tic-tac-toe-do) · port **3463**
+- **Bun** (`@firtoz/socka/bun`) — [`tic-tac-toe-bun`](../../examples/tic-tac-toe-bun) · port **3461**
+- **Hono + Node** (`@firtoz/socka/hono`) — [`tic-tac-toe-hono`](../../examples/tic-tac-toe-hono) · port **3462**
+- **Cloudflare Durable Objects** (`@firtoz/socka/do`) — [`tic-tac-toe-do`](../../examples/tic-tac-toe-do) · port **3463**
 
 Each folder is **`bun run dev`**. If you are not on Cloudflare Workers, use the Bun or Hono row; the third app is **`SockaWebSocketDO`** with **`wrangler dev`**.
 
@@ -39,7 +39,7 @@ Each folder is **`bun run dev`**. If you are not on Cloudflare Workers, use the 
 **Contract** (shared module):
 
 ```ts
-import { defineSocka } from "socka/core";
+import { defineSocka } from "@firtoz/socka/core";
 import * as z from "zod";
 
 export const myContract = defineSocka({
@@ -57,7 +57,7 @@ export const myContract = defineSocka({
 **Client** — **`SockaSession`** with the same contract and URL:
 
 ```ts
-import { SockaSession } from "socka/client";
+import { SockaSession } from "@firtoz/socka/client";
 import { myContract } from "./contract";
 
 const session = new SockaSession({ contract: myContract, url: "wss://example.com/ws" });
@@ -70,7 +70,7 @@ const { text } = await session.send.echo({ text: "hello" });
 **`SockaDoSession`** with **`SockaWebSocketDO`** (upgrade → **`createSockaSession`**). Full routing and hibernation: [`docs/durable-objects.md`](./docs/durable-objects.md).
 
 ```ts
-import { SockaDoSession, SockaWebSocketDO } from "socka/do";
+import { SockaDoSession, SockaWebSocketDO } from "@firtoz/socka/do";
 import { myContract } from "./contract";
 
 type SessionData = Record<string, never>;
@@ -106,14 +106,14 @@ export class EchoDO extends SockaWebSocketDO<EchoSession, Env> {
 }
 ```
 
-**Getting started** ([`docs/getting-started.md`](./docs/getting-started.md)) walks through choosing a stack, **`bun add socka`**, and runnable demos. **[Reference](./docs/reference.md)** covers wire format and errors.
+**Getting started** ([`docs/getting-started.md`](./docs/getting-started.md)) walks through choosing a stack, **`bun add @firtoz/socka`**, and runnable demos. **[Reference](./docs/reference.md)** covers wire format and errors.
 
 ## Features
 
 - **Schema-first** — [Standard Schema v1](https://standardschema.dev/) (Zod, Valibot, ArkType, …).
 - **Typed RPC** — `session.send.echo(...)` on the client; `handlers.echo` on the server with the full **`session`**.
 - **Server push** — optional contract **`pushes`** with validated **`broadcastPush`** / client **`session.subscribe`**.
-- **Runtimes** — **`socka/server`** (Node **`ws`**, any standard **`WebSocket`**); **`socka/bun`**; **`socka/hono`** (Node + Workers); **`socka/do`** + **`SockaWebSocketDO`** on Cloudflare Durable Objects.
+- **Runtimes** — **`@firtoz/socka/server`** (Node **`ws`**, any standard **`WebSocket`**); **`@firtoz/socka/bun`**; **`@firtoz/socka/hono`** (Node + Workers); **`@firtoz/socka/do`** + **`SockaWebSocketDO`** on Cloudflare Durable Objects.
 - **Multi-room** — shared config per scope; Bun **`resolveScope`**, Hono route-per-room or **`resolveScope`**, or one DO per room ([Multi-room](./docs/multi-room.md)).
 
 ## At a glance

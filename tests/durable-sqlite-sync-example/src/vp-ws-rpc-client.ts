@@ -1,7 +1,10 @@
 import type { DependencyList, RefObject } from "react";
-import type { InferSockaSend } from "socka/core";
-import type { SockaSession } from "socka/client";
-import { useSockaSession, type UseSockaSessionOptions } from "socka/react";
+import type { InferSockaSend } from "@firtoz/socka/core";
+import type { SockaSession } from "@firtoz/socka/client";
+import {
+	useSockaSession,
+	type UseSockaSessionOptions,
+} from "@firtoz/socka/react";
 import { vpContract } from "./vp-ws-protocol";
 
 export type VpWsSend = InferSockaSend<typeof vpContract>;

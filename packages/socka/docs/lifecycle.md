@@ -1,6 +1,6 @@
 # Lifecycle
 
-Join, message, and **leave** ordering for socka sessions—whether you use **`socka/server`**, **`socka/bun`**, **`socka/hono`**, or **`socka/do`**.
+Join, message, and **leave** ordering for socka sessions—whether you use **`@firtoz/socka/server`**, **`@firtoz/socka/bun`**, **`@firtoz/socka/hono`**, or **`@firtoz/socka/do`**.
 
 ## Registration and `onAttached`
 

@@ -11,7 +11,7 @@
 		"lint:ci": "biome ci src"
 	},
 	"dependencies": {
-		"socka": "workspace:*",
+		"@firtoz/socka": "workspace:*",
 		"ws": "^8.18.0",
 		"zod": "catalog:"
 	},

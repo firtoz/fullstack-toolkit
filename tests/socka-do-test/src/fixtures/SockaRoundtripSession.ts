@@ -1,6 +1,6 @@
-import type { SockaWireFormat } from "socka/core";
-import { SockaError } from "socka/core";
-import { SockaDoSession } from "socka/do";
+import type { SockaWireFormat } from "@firtoz/socka/core";
+import { SockaError } from "@firtoz/socka/core";
+import { SockaDoSession } from "@firtoz/socka/do";
 import { roundtripContract } from "./roundtrip-contract";
 
 export class SockaRoundtripSession extends SockaDoSession<

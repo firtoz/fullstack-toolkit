@@ -1,4 +1,4 @@
-import { SockaDoSession, SockaWebSocketDO } from "socka/do";
+import { SockaDoSession, SockaWebSocketDO } from "@firtoz/socka/do";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
 

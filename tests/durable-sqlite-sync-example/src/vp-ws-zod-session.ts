@@ -1,5 +1,5 @@
-import { SockaDoSession, type SockaDoSessionConfig } from "socka/do";
-import { SockaError } from "socka/core";
+import { SockaDoSession, type SockaDoSessionConfig } from "@firtoz/socka/do";
+import { SockaError } from "@firtoz/socka/core";
 import { vpContract, type VpWsHandlerDeps } from "./vp-ws-protocol";
 import { VP_SLOW_INSERT_DELAY_MS } from "./vp-demo-constants";
 

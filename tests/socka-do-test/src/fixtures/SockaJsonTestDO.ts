@@ -1,4 +1,4 @@
-import { SockaWebSocketDO } from "socka/do";
+import { SockaWebSocketDO } from "@firtoz/socka/do";
 import { SockaRoundtripSession } from "./SockaRoundtripSession";
 
 export class SockaJsonTestDO extends SockaWebSocketDO<

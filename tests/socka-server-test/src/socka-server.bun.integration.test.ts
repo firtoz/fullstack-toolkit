@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { SockaError } from "socka/core";
-import type { SockaWireFormat } from "socka/core";
-import { SockaSession } from "socka/client";
-import { createSockaBunWebSocketHandlers } from "socka/bun";
+import { SockaError } from "@firtoz/socka/core";
+import type { SockaWireFormat } from "@firtoz/socka/core";
+import { SockaSession } from "@firtoz/socka/client";
+import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
 import { roundtripContract } from "./fixtures/roundtrip-contract";
 import { roundtripHandlers } from "./fixtures/roundtrip-handlers";
 
@@ -36,7 +36,7 @@ function startBunSockaServer(wireFormat: SockaWireFormat): {
 	return { server, port };
 }
 
-describe("socka/server e2e (Bun.serve)", () => {
+describe("@firtoz/socka/server e2e (Bun.serve)", () => {
 	let json: ReturnType<typeof startBunSockaServer>;
 	let msgpack: ReturnType<typeof startBunSockaServer>;
 

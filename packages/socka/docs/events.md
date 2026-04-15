@@ -18,7 +18,7 @@ export const myContract = defineSocka({
 - **`await session.emitPush("itemsChanged", payload)`** — send one **validated** push to **this** socket (typical for private notifications).
 - **`await session.broadcastPush("itemsChanged", payload, excludeSelf?)`** — send to **every session in the same **`sessions`** map**, optionally skipping the caller.
 
-Lower-level helpers (for example **`broadcastSockaEventToPeers`** from **`socka/server`**) exist for advanced cases; prefer **`broadcastPush`** when you already have a session so schemas stay centralized.
+Lower-level helpers (for example **`broadcastSockaEventToPeers`** from **`@firtoz/socka/server`**) exist for advanced cases; prefer **`broadcastPush`** when you already have a session so schemas stay centralized.
 
 **Ordering** — Delivery order is per connection; there is no cross-client guarantee beyond your own handler ordering. For causal ordering across clients, include a **version** or **timestamp** in the payload.
 
@@ -36,7 +36,7 @@ const payload = await session.subscribe.waitForPush("itemsChanged", {
 });
 ```
 
-Use **`InferSockaPushPayload<typeof myContract, "itemsChanged">`** (from **`socka/core`**) when typing callbacks or reducers. If the server never emits a push your client subscribed to, **`waitForPush`** can time out—handle **`AbortSignal`** and UI loading states.
+Use **`InferSockaPushPayload<typeof myContract, "itemsChanged">`** (from **`@firtoz/socka/core`**) when typing callbacks or reducers. If the server never emits a push your client subscribed to, **`waitForPush`** can time out—handle **`AbortSignal`** and UI loading states.
 
 ## Who receives `broadcastPush`?
 

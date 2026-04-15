@@ -1,10 +1,10 @@
 import type { ServerWebSocket } from "bun";
-import { createSockaBunWebSocketHandlers } from "socka/bun";
+import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
 import type {
 	SockaWebSocketInit,
 	SockaWebSocketSession,
 	SockaWebSocketSessionConfig,
-} from "socka/server";
+} from "@firtoz/socka/server";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
 

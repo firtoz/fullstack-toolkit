@@ -1,4 +1,4 @@
-import { SockaWebSocketDO } from "socka/do";
+import { SockaWebSocketDO } from "@firtoz/socka/do";
 import { createSessionGameWorld } from "../../../socka-server-test/src/fixtures/session-game-state";
 import { SockaSessionGameSession } from "./SockaSessionGameSession";
 

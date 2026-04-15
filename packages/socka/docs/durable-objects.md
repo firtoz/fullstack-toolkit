@@ -14,7 +14,7 @@ This is the **Cloudflare** side (bindings, Wrangler, generated types)—not sock
 1. **Wrangler** — `wrangler.jsonc` / `wrangler.toml` with a **Durable Object** binding and a **migration** for the DO class (see Cloudflare docs and the runnable **[tic-tac-toe-do example](https://github.com/firtoz/fullstack-toolkit/tree/main/examples/tic-tac-toe-do)** in this repo).
 2. **Typed `Env`** — After you change bindings or `wrangler` config, regenerate env types (**`bun run typegen`** / **`cf-typegen`** via [`@firtoz/worker-helper`](https://github.com/firtoz/fullstack-toolkit/tree/main/packages/worker-helper)); **do not hand-edit** `worker-configuration.d.ts`. Workflow reference: [Cloudflare / Wrangler typegen skill](https://github.com/firtoz/fullstack-toolkit/blob/main/.cursor/skills/cloudflare-wrangler-typegen/SKILL.md) in this monorepo.
 3. **Run locally** — `wrangler dev` (optionally pin a port—e.g. **3463** in the tic-tac-toe example so it does not clash with other apps).
-4. **Peers** — **`socka/do`** needs **`@firtoz/websocket-do`**, **`hono`**, **`@cloudflare/workers-types`**—see **[Peers](./peers.md)**.
+4. **Peers** — **`@firtoz/socka/do`** needs **`@firtoz/websocket-do`**, **`hono`**, **`@cloudflare/workers-types`**—see **[Peers](./peers.md)**.
 
 ### Wire format
 
@@ -23,7 +23,7 @@ This is the **Cloudflare** side (bindings, Wrangler, generated types)—not sock
 ## `SockaDoSession`
 
 ```ts
-import { SockaDoSession } from "socka/do";
+import { SockaDoSession } from "@firtoz/socka/do";
 import { myContract } from "./contract";
 
 new SockaDoSession(websocket, sessions, {

@@ -1,5 +1,5 @@
-import type { SockaWireFormat } from "socka/core";
-import { SockaDoSession } from "socka/do";
+import type { SockaWireFormat } from "@firtoz/socka/core";
+import { SockaDoSession } from "@firtoz/socka/do";
 import { sessionGameContract } from "../../../socka-server-test/src/fixtures/session-game-contract";
 import {
 	createSessionGameHandlers,

@@ -1,7 +1,7 @@
-import { SockaError } from "socka/core";
-import type { InferSockaHandlers } from "socka/core";
-import type { SockaPushSession } from "socka/server";
-import type { SockaWebSocketSession } from "socka/server";
+import { SockaError } from "@firtoz/socka/core";
+import type { InferSockaHandlers } from "@firtoz/socka/core";
+import type { SockaPushSession } from "@firtoz/socka/server";
+import type { SockaWebSocketSession } from "@firtoz/socka/server";
 import type {
 	SessionGameContract,
 	SessionGamePlayerId,

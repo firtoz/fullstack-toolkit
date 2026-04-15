@@ -14,11 +14,11 @@ Pick the row that matches **your** deployment. Open the linked doc only for that
 
 | You want to… | Read this first | socka pieces |
 |--------------|-----------------|--------------|
-| Use **Node** with the **`ws`** package, or any runtime that gives you a standard **`WebSocket`** after an upgrade | **[Server](./server.md)** — **`attachSockaWebSocket`**, **`socka/server`** | `socka/server` |
-| Use **Bun** **`Bun.serve`** with **`ServerWebSocket`** | **[Server](./server.md)** — **`socka/bun`** | `socka/bun` |
-| Use **Hono** on **Node** with **`@hono/node-ws`** | **[Server](./server.md)** — **`socka/hono`** | `socka/hono` |
-| Use **Hono** on **Cloudflare Workers** (WebSocket upgrade) | **[Server](./server.md)** — **`socka/hono/cloudflare`** | `socka/hono/cloudflare` |
-| Use **Cloudflare Durable Objects** (one isolate per “room”, hibernation, **`SockaWebSocketDO`**) | **[Durable Objects](./durable-objects.md)** | `socka/do` |
+| Use **Node** with the **`ws`** package, or any runtime that gives you a standard **`WebSocket`** after an upgrade | **[Server](./server.md)** — **`attachSockaWebSocket`**, **`@firtoz/socka/server`** | `@firtoz/socka/server` |
+| Use **Bun** **`Bun.serve`** with **`ServerWebSocket`** | **[Server](./server.md)** — **`@firtoz/socka/bun`** | `@firtoz/socka/bun` |
+| Use **Hono** on **Node** with **`@hono/node-ws`** | **[Server](./server.md)** — **`@firtoz/socka/hono`** | `@firtoz/socka/hono` |
+| Use **Hono** on **Cloudflare Workers** (WebSocket upgrade) | **[Server](./server.md)** — **`@firtoz/socka/hono/cloudflare`** | `@firtoz/socka/hono/cloudflare` |
+| Use **Cloudflare Durable Objects** (one isolate per “room”, hibernation, **`SockaWebSocketDO`**) | **[Durable Objects](./durable-objects.md)** | `@firtoz/socka/do` |
 
 **Multiple rooms or scopes?** After the basics, see **[Multi-room](./multi-room.md)**.
 
@@ -29,17 +29,17 @@ When you know which row you are in, continue below—you will point your app at 
 ## Step 2 — Install socka
 
 ```bash
-bun add socka
+bun add @firtoz/socka
 ```
 
-Add any **peer dependencies** for the paths you import (React, `socka/do`, Hono, …)—**[Peers](./peers.md)** has the full table.
+Add any **peer dependencies** for the paths you import (React, `@firtoz/socka/do`, Hono, …)—**[Peers](./peers.md)** has the full table.
 
 ## Step 3 — Define a contract
 
 One module, shared by client and server:
 
 ```ts
-import { defineSocka } from "socka/core";
+import { defineSocka } from "@firtoz/socka/core";
 import * as z from "zod";
 
 const messageSchema = z.object({

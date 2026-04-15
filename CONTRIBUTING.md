@@ -126,10 +126,10 @@ Releases use [Changesets](https://github.com/changesets/changesets) with GitHub 
 
 Changesets generates **one section per published package** that gets a version bump. Packages that only changed because a dependency bumped show **“Updated dependencies”** with commit hashes—that repetition is normal and is not something you fix by “merging” changesets.
 
-**If one package (e.g. `socka`) should read as a single release story:** avoid **multiple pending `.changeset/*.md` files** that all bump the same package. Each file becomes its own changelog entry for that package.
+**If one package (e.g. `@firtoz/socka`) should read as a single release story:** avoid **multiple pending `.changeset/*.md` files** that all bump the same package. Each file becomes its own changelog entry for that package.
 
 - Prefer **one changeset per PR** that lists every affected package in the same file when the work is one logical release.
-- If several changesets on `main` all bump `socka` with separate bodies, you can **consolidate before the Release PR lands**: merge the prose into **one** file, list `socka` once in the frontmatter, and remove the redundant `.md` files (often done on the Release PR branch).
+- If several changesets on `main` all bump `@firtoz/socka` with separate bodies, you can **consolidate before the Release PR lands**: merge the prose into **one** file, list `@firtoz/socka` once in the frontmatter, and remove the redundant `.md` files (often done on the Release PR branch).
 
 Private apps under `examples/` and `tests/` are listed in `.changeset/config.json` **`ignore`**, so they are not versioned in release notes.
 

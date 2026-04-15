@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { AddressInfo } from "node:net";
-import { SockaError } from "socka/core";
-import { SockaSession } from "socka/client";
-import { attachSockaWebSocket } from "socka/server";
-import type { SockaWebSocketSession } from "socka/server";
+import { SockaError } from "@firtoz/socka/core";
+import { SockaSession } from "@firtoz/socka/client";
+import { attachSockaWebSocket } from "@firtoz/socka/server";
+import type { SockaWebSocketSession } from "@firtoz/socka/server";
 import type { WebSocket as NodeWebSocket } from "ws";
 import { WebSocketServer } from "ws";
 import { roundtripContract } from "./fixtures/roundtrip-contract";
@@ -33,7 +33,7 @@ function closeWss(wss: WebSocketServer): Promise<void> {
 	});
 }
 
-describe("socka/server e2e (ws)", () => {
+describe("@firtoz/socka/server e2e (ws)", () => {
 	let wssJson: WebSocketServer;
 	let wssMsgpack: WebSocketServer;
 	let portJson: number;

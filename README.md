@@ -52,7 +52,7 @@ Type-safe WebSocket session management for Cloudflare Durable Objects with Stand
 Standard Schema–first WebSocket RPC for browsers and servers: one `defineSocka` contract drives typed **`session.send.*`** (calls) and **`session.subscribe.*`** (pushes), with socka v1 frames on the wire.
 
 - 📋 **Schema-first** — `calls` / `pushes` with Zod, Valibot, ArkType, or any [Standard Schema v1](https://standardschema.dev/) implementation
-- 🖥️ **Servers** — Node `ws`, Bun, Hono, Cloudflare Workers; **`socka/do`** for Durable Objects with **`SockaDoSession`** / **`SockaWebSocketDO`**
+- 🖥️ **Servers** — Node `ws`, Bun, Hono, Cloudflare Workers; **`@firtoz/socka/do`** for Durable Objects with **`SockaDoSession`** / **`SockaWebSocketDO`**
 - ⚛️ **React** — **`useSockaSession`**, **`SockaSessionProvider`**, shared socket context
 - 📚 **Docs** — [Package README](./packages/socka/README.md) and [guides](./packages/socka/docs/README.md)
 
@@ -149,7 +149,7 @@ bun add @firtoz/hono-fetcher
 bun add @firtoz/websocket-do
 
 # For schema-first WebSocket RPC (browser + Node/Bun/Hono/DO)
-bun add socka
+bun add @firtoz/socka
 
 # For ChatAgent with OpenRouter (core + peers; add drizzle or sql package for persistence)
 bun add @firtoz/chat-agent @openrouter/sdk agents
@@ -255,7 +255,7 @@ MIT © [Firtina Ozbalikchi](https://github.com/firtoz)
 - [Maybe Error on NPM](https://npmjs.com/package/@firtoz/maybe-error)
 - [Hono Fetcher on NPM](https://npmjs.com/package/@firtoz/hono-fetcher)
 - [WebSocket DO on NPM](https://npmjs.com/package/@firtoz/websocket-do)
-- [socka on NPM](https://npmjs.com/package/socka)
+- [@firtoz/socka on npm](https://www.npmjs.com/package/@firtoz/socka)
 - [Chat Agent on NPM](https://npmjs.com/package/@firtoz/chat-agent)
 - [Collection Sync on NPM](https://npmjs.com/package/@firtoz/collection-sync)
 - [Drizzle Durable SQLite on NPM](https://npmjs.com/package/@firtoz/drizzle-durable-sqlite)

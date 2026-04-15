@@ -3,7 +3,7 @@
 ## Type inference
 
 ```ts
-import type { InferSockaSend, InferSockaHandlers } from "socka/core";
+import type { InferSockaSend, InferSockaHandlers } from "@firtoz/socka/core";
 
 type Send = InferSockaSend<typeof myContract>;
 type Handlers = InferSockaHandlers<
@@ -22,11 +22,11 @@ type Handlers = InferSockaHandlers<
 | Invalid **inbound wire** payloads (before your handler runs) | `onValidationError` on the same config |
 | Everything else ( **`onAttached`** failures, adapter I/O, **client** push listener throws, **client** push payload validation) | Optional **`reportError(event)`** on `SockaWebSocketSessionConfig`, `SockaDoSessionConfig`, or `SockaSession` / `useSockaSession` options |
 
-Each **`event`** is **`SockaReportError`**: one discriminated union (`kind` narrows context; **`error`** is the thrown/rejected value; **`eventName`** / **`adapter`** where relevant). Export: **`socka/core`** (`defaultReportError`, `reportSockaError`). If you omit **`reportError`**, socka uses **`console.error`** with the same **`socka:`**-prefixed messages as before.
+Each **`event`** is **`SockaReportError`**: one discriminated union (`kind` narrows context; **`error`** is the thrown/rejected value; **`eventName`** / **`adapter`** where relevant). Export: **`@firtoz/socka/core`** (`defaultReportError`, `reportSockaError`). If you omit **`reportError`**, socka uses **`console.error`** with the same **`socka:`**-prefixed messages as before.
 
 ## TypeScript: Durable Objects and session types
 
-`socka/do` **erases** the contract slot on **`SockaWebSocketDO`** so concrete `defineSocka(...)` contracts stay strict under TypeScript. If a generic base class rejects your session type, keep using **your** contract type from the module where you called **`defineSocka`**—do not expect an unconstrained `SockaContract<SockaContractConfig>` to accept every concrete contract without that erasure.
+`@firtoz/socka/do` **erases** the contract slot on **`SockaWebSocketDO`** so concrete `defineSocka(...)` contracts stay strict under TypeScript. If a generic base class rejects your session type, keep using **your** contract type from the module where you called **`defineSocka`**—do not expect an unconstrained `SockaContract<SockaContractConfig>` to accept every concrete contract without that erasure.
 
 ## Wire encoding: JSON and msgpack
 
@@ -63,7 +63,7 @@ Throw **`SockaError`** from handlers when you control the **message** sent on th
 
 ## Server session configuration
 
-**`SockaWebSocketSessionConfig`** (`socka/server`, Bun, Hono) and **`SockaDoSessionConfig`** (`socka/do`) share the same fields except **`createData`** (see below).
+**`SockaWebSocketSessionConfig`** (`@firtoz/socka/server`, Bun, Hono) and **`SockaDoSessionConfig`** (`@firtoz/socka/do`) share the same fields except **`createData`** (see below).
 
 | Field | Purpose |
 |--------|---------|
@@ -105,18 +105,18 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 |---:|---|
 | **Contract** | `defineSocka({ calls, pushes? })` — Zod, Valibot, ArkType, or any [Standard Schema v1](https://standardschema.dev/) |
 | **Client** | `SockaSession` / `useSockaSession` / `SockaSessionProvider` + `useSockaSessionContext` |
-| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects, or **`socka/server`** / **`socka/bun`** / **`socka/hono`** on any supported runtime |
+| **Server** | `SockaDoSession` + `SockaWebSocketDO` on Durable Objects, or **`@firtoz/socka/server`** / **`@firtoz/socka/bun`** / **`@firtoz/socka/hono`** on any supported runtime |
 | **Wire** | JSON text frames by default; optional **msgpack** binary — same logical frames, both ends must use the same `wireFormat` |
 
 ### Imports
 
 | Path | Use for |
 |------|---------|
-| `socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types |
-| `socka/client` | `SockaSession`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
-| `socka/react` | `useSocka`, `useSockaSession`, provider + context |
-| `socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
-| `socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastSockaEventToPeers` |
-| `socka/bun` | `createSockaBunWebSocketHandlers` for **`Bun.serve`** |
-| `socka/hono` | `sockaHonoNodeWs` for **`@hono/node-ws`** |
-| `socka/hono/cloudflare` | `sockaHonoCloudflare` for **`hono/cloudflare-workers`** |
+| `@firtoz/socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types |
+| `@firtoz/socka/client` | `SockaSession`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
+| `@firtoz/socka/react` | `useSocka`, `useSockaSession`, provider + context |
+| `@firtoz/socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
+| `@firtoz/socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastSockaEventToPeers` |
+| `@firtoz/socka/bun` | `createSockaBunWebSocketHandlers` for **`Bun.serve`** |
+| `@firtoz/socka/hono` | `sockaHonoNodeWs` for **`@hono/node-ws`** |
+| `@firtoz/socka/hono/cloudflare` | `sockaHonoCloudflare` for **`hono/cloudflare-workers`** |

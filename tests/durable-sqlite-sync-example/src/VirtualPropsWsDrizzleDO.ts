@@ -1,4 +1,4 @@
-import { SockaWebSocketDO } from "socka/do";
+import { SockaWebSocketDO } from "@firtoz/socka/do";
 import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";

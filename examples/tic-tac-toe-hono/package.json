@@ -14,7 +14,7 @@
 		"@hono/node-server": "^1.19.2",
 		"@hono/node-ws": "^1.3.0",
 		"hono": "catalog:",
-		"socka": "workspace:*",
+		"@firtoz/socka": "workspace:*",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

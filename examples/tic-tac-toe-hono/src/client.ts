@@ -1,4 +1,4 @@
-import { SockaSession } from "socka/client";
+import { SockaSession } from "@firtoz/socka/client";
 import { ticTacToeContract } from "./contract";
 
 const roomInput = document.querySelector<HTMLInputElement>("#room");

@@ -1,7 +1,7 @@
 import { exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
-import { SockaError } from "socka/core";
-import { SockaSession, SockaWebSocketClient } from "socka/client";
+import { SockaError } from "@firtoz/socka/core";
+import { SockaSession, SockaWebSocketClient } from "@firtoz/socka/client";
 import { roundtripContract } from "./fixtures/roundtrip-contract";
 import "./fixtures/worker";
 
@@ -77,7 +77,7 @@ describe("socka DO round-trip", () => {
 		expect(errors[0]).toContain("Unknown call");
 	});
 
-	it("Hono Cloudflare Workers (socka/hono/cloudflare): JSON echo and ping", async () => {
+	it("Hono Cloudflare Workers (@firtoz/socka/hono/cloudflare): JSON echo and ping", async () => {
 		const response = await exports.default.fetch(
 			"http://example.com/hono-socka-ws",
 			{ headers: { Upgrade: "websocket" } },

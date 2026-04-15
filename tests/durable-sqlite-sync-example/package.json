@@ -37,7 +37,7 @@
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"react-router": "catalog:",
-		"socka": "workspace:*",
+		"@firtoz/socka": "workspace:*",
 		"superjson": "^2.2.6",
 		"zod": "catalog:"
 	},

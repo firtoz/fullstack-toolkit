@@ -1,5 +1,5 @@
 ---
-name: socka/standard-schema
+name: "@firtoz/socka/standard-schema"
 description: Standard Schema v1 for socka contracts and wire validation—Zod, Valibot, or any compatible library; no Zod-only public surface.
 ---
 
@@ -7,7 +7,7 @@ description: Standard Schema v1 for socka contracts and wire validation—Zod, V
 
 ## When to use
 
-You define **call** `input` / `output` (and optional **push** payloads) for **`socka/core`**, **`socka/client`**, **`socka/react`**, and **`socka/do`**. Every schema slot expects **`StandardSchemaV1`** from **`@standard-schema/spec`** so callers can use **Zod**, **Valibot**, **ArkType**, etc., without socka-specific adapters.
+You define **call** `input` / `output` (and optional **push** payloads) for **`@firtoz/socka/core`**, **`@firtoz/socka/client`**, **`@firtoz/socka/react`**, and **`@firtoz/socka/do`**. Every schema slot expects **`StandardSchemaV1`** from **`@standard-schema/spec`** so callers can use **Zod**, **Valibot**, **ArkType**, etc., without socka-specific adapters.
 
 ## Rules
 
@@ -19,7 +19,7 @@ You define **call** `input` / `output` (and optional **push** payloads) for **`s
 ## Tiers
 
 - **Typical**: **`defineSocka`** → **`SockaSession`** or **`useSockaSession`** (or **`SockaSessionProvider`** + **`useSockaSessionContext`**) on the client; **`SockaDoSession`** with the same contract on the DO.
-- **Lower level**: **`SockaWebSocketClient`** with callbacks, or **`socka/core`** encode/decode helpers if you implement custom glue.
+- **Lower level**: **`SockaWebSocketClient`** with callbacks, or **`@firtoz/socka/core`** encode/decode helpers if you implement custom glue.
 
 ## Do not
 

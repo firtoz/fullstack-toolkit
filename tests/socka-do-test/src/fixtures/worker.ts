@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { upgradeWebSocket } from "hono/cloudflare-workers";
-import { sockaHonoCloudflare } from "socka/hono/cloudflare";
+import { sockaHonoCloudflare } from "@firtoz/socka/hono/cloudflare";
 import { SockaJsonTestDO } from "./SockaJsonTestDO";
 import { SockaMsgpackTestDO } from "./SockaMsgpackTestDO";
 import { SockaSessionGameTestDO } from "./SockaSessionGameTestDO";

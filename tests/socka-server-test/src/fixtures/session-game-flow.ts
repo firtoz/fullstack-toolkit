@@ -1,5 +1,5 @@
-import type { InferSockaPushHandlers } from "socka/core";
-import type { SockaSession } from "socka/client";
+import type { InferSockaPushHandlers } from "@firtoz/socka/core";
+import type { SockaSession } from "@firtoz/socka/client";
 import type { sessionGameContract } from "./session-game-contract";
 import {
 	SESSION_GAME_DAMAGE,

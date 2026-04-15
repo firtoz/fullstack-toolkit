@@ -1,4 +1,4 @@
-import { defineSocka } from "socka/core";
+import { defineSocka } from "@firtoz/socka/core";
 import * as z from "zod";
 
 export const vpMessageSchema = z.object({

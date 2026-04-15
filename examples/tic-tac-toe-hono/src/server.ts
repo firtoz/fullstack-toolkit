@@ -4,12 +4,12 @@ import { Hono } from "hono";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sockaHonoNodeWs } from "socka/hono";
+import { sockaHonoNodeWs } from "@firtoz/socka/hono";
 import type {
 	SockaWebSocketInit,
 	SockaWebSocketSession,
 	SockaWebSocketSessionConfig,
-} from "socka/server";
+} from "@firtoz/socka/server";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
 

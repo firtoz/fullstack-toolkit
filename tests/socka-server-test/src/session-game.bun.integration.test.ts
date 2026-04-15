@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { SockaWireFormat } from "socka/core";
-import { SockaSession } from "socka/client";
-import { createSockaBunWebSocketHandlers } from "socka/bun";
+import type { SockaWireFormat } from "@firtoz/socka/core";
+import { SockaSession } from "@firtoz/socka/client";
+import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
 import { sessionGameContract } from "./fixtures/session-game-contract";
 import {
 	assertSessionGameCombat,
@@ -47,7 +47,7 @@ function startSessionGameBunServer(wireFormat: SockaWireFormat): {
 	return { server, port, world };
 }
 
-describe("socka/server session + shared state (dynamic roster) — Bun.serve", () => {
+describe("@firtoz/socka/server session + shared state (dynamic roster) — Bun.serve", () => {
 	let json: ReturnType<typeof startSessionGameBunServer>;
 	let msgpack: ReturnType<typeof startSessionGameBunServer>;
 

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { defineSocka } from "socka/core";
+import { defineSocka } from "@firtoz/socka/core";
 
 const mark = z.enum(["", "X", "O"]);
 export const boardSchema = z.tuple([

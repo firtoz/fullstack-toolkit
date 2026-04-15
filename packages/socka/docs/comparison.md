@@ -5,7 +5,7 @@ Most apps model messages as large discriminated unions (`type` + `id`), validate
 | | Typical custom protocol | socka |
 |---|------------------------|--------|
 | **Strengths** | Total control; any framing; no shared spec | One contract drives **client + server** types; **Standard Schema** everywhere; socka v1 **envelopes** + correlation built in; inferred **`rpc`** / **`handlers`** |
-| **Tradeoffs** | Boilerplate, duplicated schemas, `Promise<unknown>` unless you invest | Opinionated **socka v1** shape; **named procedures** (not a free-form message bus); first-class paths are **browser + Cloudflare DO** and **`socka/server` on a standard WebSocket** |
+| **Tradeoffs** | Boilerplate, duplicated schemas, `Promise<unknown>` unless you invest | Opinionated **socka v1** shape; **named procedures** (not a free-form message bus); first-class paths are **browser + Cloudflare DO** and **`@firtoz/socka/server` on a standard WebSocket** |
 
 ## When a custom protocol still wins
 

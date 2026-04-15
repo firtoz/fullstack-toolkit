@@ -1,4 +1,4 @@
-import { SockaError } from "socka/core";
+import { SockaError } from "@firtoz/socka/core";
 
 /** Shared handlers for socka integration tests. */
 export const roundtripHandlers = {

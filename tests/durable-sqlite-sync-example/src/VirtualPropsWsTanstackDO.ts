@@ -1,4 +1,4 @@
-import { SockaWebSocketDO } from "socka/do";
+import { SockaWebSocketDO } from "@firtoz/socka/do";
 import {
 	createCloudflareDOSQLitePersistence,
 	persistedCollectionOptions,

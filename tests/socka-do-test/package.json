@@ -17,7 +17,7 @@
 	"dependencies": {
 		"@firtoz/websocket-do": "workspace:*",
 		"hono": "catalog:",
-		"socka": "workspace:*",
+		"@firtoz/socka": "workspace:*",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

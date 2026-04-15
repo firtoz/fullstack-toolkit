@@ -89,7 +89,7 @@ export type SockaSessionOptions<
 	/**
 	 * Optional sink for client-side push pipeline failures (listener throws,
 	 * push payload validation). Defaults to `console.error`; see
-	 * `SockaReportError` in `socka/core`.
+	 * `SockaReportError` in `@firtoz/socka/core`.
 	 */
 	reportError?: (event: SockaReportError) => void;
 };

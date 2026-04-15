@@ -61,7 +61,7 @@ export type SockaDoSessionConfig<
 	) => Promise<void>;
 	/**
 	 * Optional sink for non-RPC failures (e.g. `onAttached`). Defaults to
-	 * `console.error`; see `SockaReportError` in `socka/core`.
+	 * `console.error`; see `SockaReportError` in `@firtoz/socka/core`.
 	 */
 	reportError?: (event: SockaReportError) => void;
 	/**

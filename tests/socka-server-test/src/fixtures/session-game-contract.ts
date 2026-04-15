@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { defineSocka } from "socka/core";
+import { defineSocka } from "@firtoz/socka/core";
 
 const playerIdSchema = z.string().min(1);
 

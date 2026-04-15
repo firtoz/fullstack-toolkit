@@ -2,10 +2,10 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { Hono } from "hono";
-import { SockaError } from "socka/core";
-import type { SockaWireFormat } from "socka/core";
-import { SockaSession } from "socka/client";
-import { sockaHonoNodeWs } from "socka/hono";
+import { SockaError } from "@firtoz/socka/core";
+import type { SockaWireFormat } from "@firtoz/socka/core";
+import { SockaSession } from "@firtoz/socka/client";
+import { sockaHonoNodeWs } from "@firtoz/socka/hono";
 import { roundtripContract } from "./fixtures/roundtrip-contract";
 import { roundtripHandlers } from "./fixtures/roundtrip-handlers";
 
@@ -42,7 +42,7 @@ function startHonoSockaServer(wireFormat: SockaWireFormat): {
 	return { server, port: addr.port };
 }
 
-describe("socka/hono (Node @hono/node-ws)", () => {
+describe("@firtoz/socka/hono (Node @hono/node-ws)", () => {
 	let json: ReturnType<typeof startHonoSockaServer>;
 	let msgpack: ReturnType<typeof startHonoSockaServer>;
 

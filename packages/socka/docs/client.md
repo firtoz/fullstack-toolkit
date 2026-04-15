@@ -2,7 +2,7 @@
 
 ## Vanilla (`SockaSession`)
 
-Outside React, construct **`SockaSession`** from **`socka/client`** with the same **`contract`** as the server and a **`url`** (or a prebuilt **`webSocket`**). **`wireFormat`** defaults to **`"json"`** and must match every server session that receives this connection.
+Outside React, construct **`SockaSession`** from **`@firtoz/socka/client`** with the same **`contract`** as the server and a **`url`** (or a prebuilt **`webSocket`**). **`wireFormat`** defaults to **`"json"`** and must match every server session that receives this connection.
 
 | Option | Typical use |
 |--------|-------------|
@@ -16,10 +16,10 @@ Outside React, construct **`SockaSession`** from **`socka/client`** with the sam
 
 Full list: **[Reference — Client configuration](./reference.md#client-configuration)**.
 
-**Call names** — For literal `calls` objects, **`defineSocka`** rejects names that would make **`session.send`** Promise-like or clash with object shape (e.g. **`then`**, **`toString`**). If you use a wide **`Record<string, SockaProcedureDef>`**, TypeScript cannot apply that check; **`SockaSession`** still validates at construction (see **`RESERVED_SOCKA_PROCEDURE_NAMES`** in **`socka/core`**).
+**Call names** — For literal `calls` objects, **`defineSocka`** rejects names that would make **`session.send`** Promise-like or clash with object shape (e.g. **`then`**, **`toString`**). If you use a wide **`Record<string, SockaProcedureDef>`**, TypeScript cannot apply that check; **`SockaSession`** still validates at construction (see **`RESERVED_SOCKA_PROCEDURE_NAMES`** in **`@firtoz/socka/core`**).
 
 ```ts
-import { SockaSession } from "socka/client";
+import { SockaSession } from "@firtoz/socka/client";
 import { myContract } from "./contract";
 
 const session = new SockaSession({ contract: myContract, url: "wss://example.com/ws" });
@@ -31,7 +31,7 @@ Use **`SockaWebSocketClient`** directly if you need **`onResponse` / `onServerEr
 ## React
 
 ```ts
-import { useSockaSession } from "socka/react";
+import { useSockaSession } from "@firtoz/socka/react";
 import { myContract } from "./contract";
 
 function App() {
@@ -49,7 +49,7 @@ useSockaSession(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 If many components need **`send`**, avoid calling **`useSockaSession`** in each one (each call owns a connection). Mount a provider once and read the session from context:
 
 ```tsx
-import { SockaSessionProvider, useSockaSessionContext } from "socka/react";
+import { SockaSessionProvider, useSockaSessionContext } from "@firtoz/socka/react";
 import { myContract } from "./contract";
 
 function Layout({ roomId }: { roomId: string }) {

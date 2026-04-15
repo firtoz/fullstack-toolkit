@@ -7,9 +7,9 @@ import {
 	test,
 } from "bun:test";
 import type { AddressInfo } from "node:net";
-import { SockaSession } from "socka/client";
-import { attachSockaWebSocket } from "socka/server";
-import type { SockaWebSocketSession } from "socka/server";
+import { SockaSession } from "@firtoz/socka/client";
+import { attachSockaWebSocket } from "@firtoz/socka/server";
+import type { SockaWebSocketSession } from "@firtoz/socka/server";
 import type { WebSocket as NodeWebSocket } from "ws";
 import { WebSocketServer } from "ws";
 import {
@@ -53,7 +53,7 @@ function closeWss(wss: WebSocketServer): Promise<void> {
 	});
 }
 
-describe("socka/server session + shared state (dynamic roster) — Node ws", () => {
+describe("@firtoz/socka/server session + shared state (dynamic roster) — Node ws", () => {
 	let wss: WebSocketServer;
 	let port: number;
 	const world = createSessionGameWorld();

@@ -1,4 +1,4 @@
-import { SockaError } from "socka/core";
+import { SockaError } from "@firtoz/socka/core";
 import type { z } from "zod";
 import { boardSchema } from "./contract";
 

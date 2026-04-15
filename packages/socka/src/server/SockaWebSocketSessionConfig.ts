@@ -59,7 +59,7 @@ export type SockaWebSocketSessionConfig<
 	) => Promise<void>;
 	/**
 	 * Optional sink for non-RPC failures (onAttached, adapter I/O). Defaults to
-	 * `console.error` with `socka:` prefixes; see `SockaReportError` in `socka/core`.
+	 * `console.error` with `socka:` prefixes; see `SockaReportError` in `@firtoz/socka/core`.
 	 */
 	reportError?: (event: SockaReportError) => void;
 	serializeJson?: (value: unknown) => string;

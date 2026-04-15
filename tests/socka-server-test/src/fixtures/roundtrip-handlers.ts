@@ -1,4 +1,4 @@
-import { SockaError } from "socka/core";
+import { SockaError } from "@firtoz/socka/core";
 
 /** Shared server-side handlers for JSON/msgpack e2e (ws + Bun). */
 export const roundtripHandlers = {

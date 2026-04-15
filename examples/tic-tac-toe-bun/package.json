@@ -11,7 +11,7 @@
 		"typecheck": "tsgo --noEmit -p ./tsconfig.json"
 	},
 	"dependencies": {
-		"socka": "workspace:*",
+		"@firtoz/socka": "workspace:*",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

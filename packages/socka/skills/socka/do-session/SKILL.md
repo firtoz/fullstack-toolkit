@@ -1,5 +1,5 @@
 ---
-name: socka/do-session
+name: "@firtoz/socka/do-session"
 description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objectsâ€”contract, handlers, wireFormat, SockaError; extends websocket-do BaseSession.
 ---
 
@@ -7,7 +7,7 @@ description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objectsâ€
 
 ## Components
 
-- **`SockaDoSession`** (**`socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Responses use **`encodeServerResponse`** / **`encodeServerError`**; optional **`encodeServerEvent`** for contract pushes.
+- **`SockaDoSession`** (**`@firtoz/socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Responses use **`encodeServerResponse`** / **`encodeServerError`**; optional **`encodeServerEvent`** for contract pushes.
 - **`SockaWebSocketDO`**: thin **`BaseWebSocketDO`** wrapper; you supply **`createSockaSession(ctx, websocket)`** returning a **`SockaDoSession`** (or subclass).
 
 ## Session config (`SockaDoSessionConfig`)

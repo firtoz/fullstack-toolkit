@@ -4,7 +4,7 @@ This guide is for a **normal WebSocket** in your own process: **Node** (includin
 
 **Cloudflare Durable Objects** ( **`SockaDoSession`**, **`SockaWebSocketDO`** ) are covered in **[Durable Objects](./durable-objects.md)**.
 
-With **`socka/server`**, pass a **`SockaWebSocketSessionConfig`** and wire the socket with **`attachSockaWebSocket`**, or call **`dispatchSockaInboundMessage`**, **`handleRawMessage`**, or **`handleBinaryMessage`** on **`SockaWebSocketSession`** yourself if you already handle **`message`** events.
+With **`@firtoz/socka/server`**, pass a **`SockaWebSocketSessionConfig`** and wire the socket with **`attachSockaWebSocket`**, or call **`dispatchSockaInboundMessage`**, **`handleRawMessage`**, or **`handleBinaryMessage`** on **`SockaWebSocketSession`** yourself if you already handle **`message`** events.
 
 ### `wireFormat` and session config
 
@@ -14,7 +14,7 @@ The third argument to **`attachSockaWebSocket`** is a **`SockaWebSocketSessionCo
 import {
   attachSockaWebSocket,
   type SockaWebSocketSession,
-} from "socka/server";
+} from "@firtoz/socka/server";
 import { myContract } from "./contract";
 
 const sessions = new Map<
@@ -58,8 +58,8 @@ Calls **with** an input schema use **`(input, session) => output`**. Calls **wit
 **Example — `session.data`:**
 
 ```ts
-import { defineSocka } from "socka/core";
-import { SockaWebSocketSession } from "socka/server";
+import { defineSocka } from "@firtoz/socka/core";
+import { SockaWebSocketSession } from "@firtoz/socka/server";
 import * as z from "zod";
 
 const gameContract = defineSocka({
@@ -93,12 +93,12 @@ const session = new SockaWebSocketSession(websocket, sessions, {
 sessions.set(websocket, session);
 ```
 
-## `socka/bun` (Bun.serve)
+## `@firtoz/socka/bun` (Bun.serve)
 
 **Bun** `Bun.serve` uses **`ServerWebSocket`**, which does **not** implement **`addEventListener`**, so **`attachSockaWebSocket`** does not apply. Use **`createSockaBunWebSocketHandlers`** and pass the returned **`websocket`** into **`Bun.serve`**:
 
 ```ts
-import { createSockaBunWebSocketHandlers } from "socka/bun";
+import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
 
 const { websocket } = createSockaBunWebSocketHandlers({
   contract: myContract,
@@ -111,11 +111,11 @@ Bun.serve({ fetch, websocket });
 
 **Multi-room** — use the overload **`createSockaBunWebSocketHandlers({ resolveScope })`** so each **`ServerWebSocket`** picks the correct **`sessionMap`** and shared **`config`** (see [Multi-room](./multi-room.md) and the tic-tac-toe example).
 
-## `socka/hono` (Node — `@hono/node-ws`)
+## `@firtoz/socka/hono` (Node — `@hono/node-ws`)
 
 Use **`createNodeWebSocket`** from [**`@hono/node-ws`**](https://github.com/honojs/middleware/tree/main/packages/node-ws) with **`serve`** from **`@hono/node-server`**, then **`upgradeWebSocket(sockaHonoNodeWs({ contract, handlers, handleClose }))`**. **`sockaHonoNodeWs`** returns the callback Hono expects for **`upgradeWebSocket`**.
 
-## `socka/hono/cloudflare` (Workers)
+## `@firtoz/socka/hono/cloudflare` (Workers)
 
 Use **`upgradeWebSocket`** from **`hono/cloudflare-workers`** with **`sockaHonoCloudflare({ contract, handlers, handleClose })`**. The session is created on the first **`onMessage`** (Workers helpers omit **`onOpen`**).
 

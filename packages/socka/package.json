@@ -1,5 +1,5 @@
 {
-	"name": "socka",
+	"name": "@firtoz/socka",
 	"version": "1.0.0",
 	"description": "Standard Schema–first WebSocket RPC for browsers and Cloudflare Durable Objects",
 	"main": "./src/core/index.ts",
