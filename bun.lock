@@ -226,7 +226,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
