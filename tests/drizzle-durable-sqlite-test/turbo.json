@@ -31,7 +31,7 @@
 			"inputs": ["src/**", "biome.json"]
 		},
 		"test": {
-			"dependsOn": ["typegen"],
+			"dependsOn": ["^build", "typegen"],
 			"inputs": [
 				"src/**",
 				"vitest.config.ts",

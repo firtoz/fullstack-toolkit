@@ -339,8 +339,9 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 		},
 	};
 
-	const getKey = (item: InferSchemaOutput<SelectSchema<TTable>>): IdOf<TTable> =>
-		(item as { id: IdOf<TTable> }).id;
+	const getKey = (
+		item: InferSchemaOutput<SelectSchema<TTable>>,
+	): IdOf<TTable> => (item as { id: IdOf<TTable> }).id;
 
 	const baseSyncConfig: BaseSyncConfig<TTable> = {
 		table,

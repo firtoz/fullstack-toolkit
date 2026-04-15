@@ -27,11 +27,11 @@
 			"inputs": ["src/**", "biome.json"]
 		},
 		"test": {
-			"dependsOn": ["typegen"],
+			"dependsOn": ["^build", "typegen"],
 			"inputs": ["src/**", "*.config.*", "tsconfig.json", "package.json"]
 		},
 		"test:watch": {
-			"dependsOn": ["typegen"],
+			"dependsOn": ["^build", "typegen"],
 			"cache": false,
 			"persistent": true
 		}

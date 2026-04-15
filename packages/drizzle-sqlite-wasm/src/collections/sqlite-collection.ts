@@ -89,8 +89,9 @@ export function sqliteCollectionOptions<
 
 	const table = config.drizzle?._.fullSchema[tableName] as TTable;
 
-	const getKey = (item: InferSchemaOutput<SelectSchema<TTable>>): IdOf<TTable> =>
-		(item as { id: IdOf<TTable> }).id;
+	const getKey = (
+		item: InferSchemaOutput<SelectSchema<TTable>>,
+	): IdOf<TTable> => (item as { id: IdOf<TTable> }).id;
 
 	const backend = createSqliteTableSyncBackend({
 		drizzle: config.drizzle,
