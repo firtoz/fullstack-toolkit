@@ -63,7 +63,11 @@
 		"version": "changeset version && bun install --lockfile-only && git add bun.lock",
 		"release": "bun scripts/release.ts",
 		"resolve-catalog": "bun scripts/resolve-catalog.ts",
-		"restore-catalog": "bun scripts/restore-catalog.ts"
+		"restore-catalog": "bun scripts/restore-catalog.ts",
+		"test:published-smoke:node": "cd tests/published-smoke/node-smoke && bun install && bun run smoke",
+		"test:published-smoke:workers": "cd tests/published-smoke/cf-worker-smoke && bun install && bun run smoke",
+		"test:published-smoke:react-router": "cd tests/published-smoke/react-router-smoke && bun install && bun run smoke",
+		"test:published-smoke:all": "bun run test:published-smoke:node && bun run test:published-smoke:workers && bun run test:published-smoke:react-router"
 	},
 	"devDependencies": {
 		"tsup": "^8.5.1",

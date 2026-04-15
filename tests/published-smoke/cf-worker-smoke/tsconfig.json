@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types", "vitest/globals"]
+	},
+	"include": ["src/**/*.ts", "vitest.config.ts", "../shared/*.d.mts"]
+}

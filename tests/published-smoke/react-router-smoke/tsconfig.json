@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true
+	},
+	"include": ["src/**/*.tsx", "vite.config.ts", "../shared/*.d.mts"]
+}
