@@ -1,5 +1,11 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 1.1.1
+
+### Patch Changes
+
+- [`258feef`](https://github.com/firtoz/fullstack-toolkit/commit/258feef02802ebfe1f1284d1033e20f62a0c9643) Thanks [@firtoz](https://github.com/firtoz)! - Fix `compilerOptions.lib` in tsconfig (was at top level instead of inside `compilerOptions`); add `DOM` so `window` resolves during DTS generation.
+
 ## 1.1.0
 
 ### Minor Changes
