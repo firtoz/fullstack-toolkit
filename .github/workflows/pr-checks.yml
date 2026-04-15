@@ -17,6 +17,9 @@ on:
 
 # Playwright Docker image tag must match the resolved `playwright` / `@playwright/test`
 # version in bun.lock (see catalog). Bump both together when upgrading Playwright.
+# Turbo 2 strict env mode does not forward PLAYWRIGHT_BROWSERS_PATH from the image unless
+# `test:e2e` lists it in `passThroughEnv` (see root turbo.json); otherwise Playwright looks
+# under ~/.cache/ms-playwright and fails in CI.
 
 jobs:
   checks:
