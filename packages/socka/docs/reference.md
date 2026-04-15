@@ -112,6 +112,7 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 
 | Path | Use for |
 |------|---------|
+| `@firtoz/socka` | Same as **`@firtoz/socka/core`** — `defineSocka`, wire helpers, errors, types (prefer explicit **`/core`** in examples) |
 | `@firtoz/socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types |
 | `@firtoz/socka/client` | `SockaSession`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
 | `@firtoz/socka/react` | `useSocka`, `useSockaSession`, provider + context |

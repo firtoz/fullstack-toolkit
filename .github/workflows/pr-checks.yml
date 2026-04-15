@@ -98,6 +98,10 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      # Runner user differs from checkout ownership in containers; Turbo reads git for hashing.
+      - name: Git safe.directory (container)
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Run E2E Tests
         run: TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e --filter='test-playground'
 

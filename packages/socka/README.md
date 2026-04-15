@@ -12,6 +12,8 @@
 
 **Typed WebSocket RPC for TypeScript.** Define one contract, get **`session.send.*`** in the client and **`handlers`** on the server—validated, correlated, done.
 
+**npm:** [`@firtoz/socka`](https://www.npmjs.com/package/@firtoz/socka). *Socka* is the project name in prose; **install and `import` paths always use `@firtoz/socka` or `@firtoz/socka/...`**. The published artifact is **compiled ESM + `.d.ts` in `dist/`** (see `package.json` `exports`).
+
 ## 30-second example (Bun)
 
 **`contract.ts`** (shared):

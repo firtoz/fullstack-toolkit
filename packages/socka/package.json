@@ -2,8 +2,15 @@
 	"name": "@firtoz/socka",
 	"version": "1.0.0",
 	"type": "module",
-	"description": "Standard Schema–first WebSocket RPC for TypeScript — Bun, Hono, Node, Cloudflare Durable Objects",
+	"description": "Standard Schema–first WebSocket RPC for TypeScript — Bun, Hono, Node ws, Cloudflare Workers, Durable Objects",
+	"main": "./dist/core/index.js",
+	"module": "./dist/core/index.js",
+	"types": "./dist/core/index.d.ts",
 	"exports": {
+		".": {
+			"types": "./dist/core/index.d.ts",
+			"import": "./dist/core/index.js"
+		},
 		"./core": {
 			"types": "./dist/core/index.d.ts",
 			"import": "./dist/core/index.js"
@@ -41,13 +48,6 @@
 		"dist/**/*.js",
 		"dist/**/*.js.map",
 		"dist/**/*.d.ts",
-		"src/**/*.ts",
-		"src/**/*.tsx",
-		"!src/**/*.test.ts",
-		"!src/**/*.test.tsx",
-		"!src/test-utils/**",
-		"!test-setup.ts",
-		"!bunfig.toml",
 		"examples/**/*.ts",
 		"skills",
 		"docs/**/*.md",

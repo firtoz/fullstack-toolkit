@@ -64,7 +64,7 @@ const { text } = await session.send.echo({ text: "hello" });
 
 ## What socka is
 
-**socka** is **schema-first WebSocket RPC**: one **`defineSocka`** contract gives you typed **`session.send.*`** in the browser and **`handlers`** on the server, with socka **v1** frames on the wire.
+**Socka** is the library; the **npm package name is [`@firtoz/socka`](https://www.npmjs.com/package/@firtoz/socka)** (scoped). It is **schema-first WebSocket RPC**: one **`defineSocka`** contract gives you typed **`session.send.*`** in the browser and **`handlers`** on the server, with Socka **v1** frames on the wire.
 
 For frame shapes and options, see **[Reference](./reference.md)**.
 

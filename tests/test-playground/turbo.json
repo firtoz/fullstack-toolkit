@@ -49,6 +49,23 @@
 			"dependsOn": ["typegen"],
 			"persistent": true,
 			"cache": false
+		},
+		"test:e2e": {
+			"dependsOn": ["^build", "typegen"],
+			"inputs": [
+				"app/**",
+				"src/**",
+				"e2e/**",
+				"public/**",
+				"tsconfig.json",
+				"package.json",
+				"playwright.config.ts",
+				"vite.config.ts",
+				"react-router.config.ts",
+				"wrangler.jsonc",
+				"wrangler.toml"
+			],
+			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH", "CI", "TEST_PLAYGROUND_PORT"]
 		}
 	}
 }

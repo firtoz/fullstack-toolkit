@@ -1,6 +1,6 @@
-# socka documentation
+# @firtoz/socka — documentation
 
-In-repo guides for [@firtoz/socka](../README.md). For Cursor agents, see also [`../skills/`](../skills/).
+In-repo guides for the **[Socka](../README.md)** library (**npm** [`@firtoz/socka`](https://www.npmjs.com/package/@firtoz/socka)). For Cursor agents, see also [`../skills/`](../skills/).
 
 | Doc | Description |
 |-----|-------------|
