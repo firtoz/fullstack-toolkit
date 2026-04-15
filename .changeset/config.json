@@ -12,5 +12,18 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [
+    "chat-agent-e2e",
+    "drizzle-durable-sqlite-test",
+    "durable-sqlite-partial-sync-example",
+    "durable-sqlite-sync-example",
+    "socka-do-test",
+    "socka-server-test",
+    "test-playground",
+    "test-schema",
+    "tic-tac-toe-bun",
+    "tic-tac-toe-do",
+    "tic-tac-toe-hono",
+    "websocket-do-test"
+  ]
 }

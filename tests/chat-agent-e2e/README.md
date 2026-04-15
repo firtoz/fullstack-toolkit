@@ -109,6 +109,6 @@ In CI environments, the tests will:
   - `AI_GATEWAY_NAME`
   - `AI_GATEWAY_TOKEN`
 
-The workflow passes these as environment variables to the test runner, and wrangler automatically picks them up.
+On pushes to `main`, the release workflow passes these as environment variables to the test runner (via a reusable workflow), and wrangler automatically picks them up.
 
-For forked repositories without these secrets, the tests will skip with a warning message instead of failing.
+Pull request CI does **not** inject these repository secrets (including PRs from branches on this repo); integration tests that need them skip with a warning. Fork PRs behave the same way.

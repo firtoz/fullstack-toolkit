@@ -33,7 +33,11 @@ Use `patch` / `minor` / `major` per semver. More detail and examples: **[`AGENTS
 
 ## When **not** to add a changeset
 
-Skip changesets for **unpublished** apps (e2e fixtures, internal tests, workspace-only tooling) unless you intentionally version them.
+Skip changesets for **unpublished** apps (e2e fixtures, internal tests, workspace-only tooling) unless you intentionally version them. Apps in `examples/` and `tests/` are in config **`ignore`** so they are not versioned in changelogs.
+
+## One logical release, one changeset file (when you can)
+
+If several pending files each bump the same published package (e.g. `socka`), the Release PR will show **multiple** entries for that package. Prefer a **single** `.changeset/<name>.md` with all affected packages in the YAML frontmatter and one summary body, or consolidate redundant files before merging the Release PR. Long “Updated dependencies” blocks for downstream packages are expected—see **[`CONTRIBUTING.md`](../CONTRIBUTING.md)** (Release Process).
 
 ## More reading
 
