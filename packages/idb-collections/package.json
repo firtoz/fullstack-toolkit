@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/idb-collections",
-	"version": "0.2.3",
+	"version": "0.3.0",
 	"description": "IndexedDB collection utilities for TanStack DB — key-value adapter, query optimization",
 	"type": "module",
 	"main": "./dist/index.js",

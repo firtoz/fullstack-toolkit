@@ -1,5 +1,23 @@
 # @firtoz/socka
 
+## 2.0.0
+
+### Minor Changes
+
+- [`c3a3cc7`](https://github.com/firtoz/fullstack-toolkit/commit/c3a3cc778ba9ce4b5efe1bcdd8d541f46dec3bfd) Thanks [@firtoz](https://github.com/firtoz)! - Publish compiled ESM and TypeScript declarations from `dist/` for each package (`tsup`, `prepack` build). `exports`, `main`, and `types` resolve to `dist/`; CLI bins point at built JS with a Node shebang where applicable. Shared `scripts/tsup-lib.ts` discovers `src` entries and externals; workspace test apps map `@firtoz/*` to package sources in `tsconfig` for accurate generics during typecheck. `@firtoz/socka` is published under the scoped name with the same `dist/` layout.
+
+### Patch Changes
+
+- [`6950c53`](https://github.com/firtoz/fullstack-toolkit/commit/6950c531f643c3f8d404266624afe9d25200be30) Thanks [@firtoz](https://github.com/firtoz)! - Unify the **npm** story on **`@firtoz/socka`**: clarify _Socka_ (product) vs scoped package in README/docs/changelog, add root **`exports["."]`** plus **`main`**/**`types`** pointing at compiled **`dist/`** (same entry as **`/core`**), extend **`description`** for all supported runtimes, stop shipping **`src/`** in the published tarball (consumers resolve **ESM + `.d.ts`** only), and align peers copy with the scoped name.
+
+- [`f78c988`](https://github.com/firtoz/fullstack-toolkit/commit/f78c988d37a9cc48490ee3372dccc14a42810bfe) Thanks [@firtoz](https://github.com/firtoz)! - Improve READMEs: npm shields, contextual stack badges, clearer taglines, and new docs for `@firtoz/idb-collections` and `@firtoz/collection-sync`. Align `@firtoz/db-helpers` copy with published `dist/` builds.
+
+- [`2a975ec`](https://github.com/firtoz/fullstack-toolkit/commit/2a975ec03bc2d24ec31a9c99613c4e01ef217174) Thanks [@firtoz](https://github.com/firtoz)! - Docs: painkiller-first README with a complete Bun hello-world; align `description` with all runtimes; streamline getting-started and peers; fix comparison tradeoff wording.
+
+- Updated dependencies [[`c3a3cc7`](https://github.com/firtoz/fullstack-toolkit/commit/c3a3cc778ba9ce4b5efe1bcdd8d541f46dec3bfd), [`f78c988`](https://github.com/firtoz/fullstack-toolkit/commit/f78c988d37a9cc48490ee3372dccc14a42810bfe)]:
+  - @firtoz/maybe-error@1.6.0
+  - @firtoz/websocket-do@13.0.0
+
 ## 1.0.0
 
 ### Minor Changes
