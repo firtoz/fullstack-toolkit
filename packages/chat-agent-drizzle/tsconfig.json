@@ -16,10 +16,7 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
-		"types": ["bun-types", "@cloudflare/workers-types"],
-		"paths": {
-			"@firtoz/chat-agent": ["../chat-agent/src/index.ts"]
-		}
+		"types": ["bun-types", "@cloudflare/workers-types"]
 	},
 	"include": ["src/**/*", "drizzle"],
 	"exclude": ["node_modules"]

@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs (we ship TypeScript files directly)
 dist/
+build/
 
 # TypeScript incremental build caches (do not commit)
 *.tsbuildinfo
