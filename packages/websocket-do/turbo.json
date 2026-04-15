@@ -3,8 +3,13 @@
 	"extends": ["//"],
 	"tasks": {
 		"typecheck": {
-			"dependsOn": ["^build"],
-			"inputs": ["src/**", "tsconfig.json", "package.json"]
+			"dependsOn": ["^build", "build"],
+			"inputs": [
+				"src/**",
+				"examples/**",
+				"tsconfig.json",
+				"package.json"
+			]
 		},
 		"lint": {
 			"inputs": ["src/**", "../../biome.json"]
