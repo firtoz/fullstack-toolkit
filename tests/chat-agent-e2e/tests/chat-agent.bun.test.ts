@@ -31,70 +31,71 @@ if (shouldSkip) {
 }
 
 describe("ChatAgent WebSocket E2E (Bun)", () => {
-	test.skipIf(shouldSkip)("should connect via WebSocket and send/receive messages", async () => {
+	test.skipIf(shouldSkip)(
+		"should connect via WebSocket and send/receive messages",
+		async () => {
+			const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
+			const messages: ServerMessage[] = [];
 
-		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
-		const messages: ServerMessage[] = [];
+			const result = await new Promise<{
+				success: boolean;
+				messages: ServerMessage[];
+			}>((resolve) => {
+				const ws = new WebSocket(wsUrl);
+				let timeout: Timer;
 
-		const result = await new Promise<{
-			success: boolean;
-			messages: ServerMessage[];
-		}>((resolve) => {
-			const ws = new WebSocket(wsUrl);
-			let timeout: Timer;
+				ws.onopen = () => {
+					ws.send(
+						JSON.stringify({
+							type: "sendMessage",
+							content: "Hello! Please respond with just 'Hi there!'",
+						}),
+					);
 
-			ws.onopen = () => {
-				ws.send(
-					JSON.stringify({
-						type: "sendMessage",
-						content: "Hello! Please respond with just 'Hi there!'",
-					}),
-				);
+					timeout = setTimeout(() => {
+						ws.close();
+					}, 30000);
+				};
 
-				timeout = setTimeout(() => {
-					ws.close();
-				}, 30000);
-			};
+				ws.onmessage = (event) => {
+					const data = JSON.parse(event.data as string) as ServerMessage;
+					messages.push(data);
 
-			ws.onmessage = (event) => {
-				const data = JSON.parse(event.data as string) as ServerMessage;
-				messages.push(data);
+					if (data.type === "messageEnd") {
+						clearTimeout(timeout);
+						ws.close();
+					}
+				};
 
-				if (data.type === "messageEnd") {
+				ws.onclose = () => {
+					resolve({ success: true, messages });
+				};
+
+				ws.onerror = () => {
 					clearTimeout(timeout);
-					ws.close();
-				}
-			};
+					resolve({ success: false, messages });
+				};
+			});
 
-			ws.onclose = () => {
-				resolve({ success: true, messages });
-			};
+			expect(result.success).toBe(true);
+			expect(result.messages.length).toBeGreaterThan(0);
 
-			ws.onerror = () => {
-				clearTimeout(timeout);
-				resolve({ success: false, messages });
-			};
-		});
+			const messageTypes = result.messages.map((m) => m.type);
+			expect(messageTypes).toContain("messageStart");
+			expect(messageTypes).toContain("messageEnd");
 
-		expect(result.success).toBe(true);
-		expect(result.messages.length).toBeGreaterThan(0);
+			const hasChunks = messageTypes.includes("messageChunk");
+			expect(hasChunks).toBeTruthy();
 
-		const messageTypes = result.messages.map((m) => m.type);
-		expect(messageTypes).toContain("messageStart");
-		expect(messageTypes).toContain("messageEnd");
-
-		const hasChunks = messageTypes.includes("messageChunk");
-		expect(hasChunks).toBeTruthy();
-
-		console.log("✓ Received message types:", messageTypes);
-		console.log(
-			"✓ Message chunks:",
-			result.messages.filter((m) => m.type === "messageChunk"),
-		);
-	});
+			console.log("✓ Received message types:", messageTypes);
+			console.log(
+				"✓ Message chunks:",
+				result.messages.filter((m) => m.type === "messageChunk"),
+			);
+		},
+	);
 
 	test.skipIf(shouldSkip)("should retrieve chat history", async () => {
-
 		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
 
 		const result = await new Promise<{
@@ -142,112 +143,116 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 		}
 	});
 
-	test.skipIf(shouldSkip)("should handle tool calls with test tool", async () => {
+	test.skipIf(shouldSkip)(
+		"should handle tool calls with test tool",
+		async () => {
+			const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-bun-tools")}`;
 
-		const wsUrl = `${BASE_URL}/chat-agent/${agentId("test-agent-bun-tools")}`;
-
-		const result = await new Promise<{
-			success: boolean;
-			messages: ServerMessage[];
-			toolCalls: ToolCallMessage[];
-		}>((resolve) => {
-			const ws = new WebSocket(wsUrl);
-			const messages: ServerMessage[] = [];
-			const toolCalls: ToolCallMessage[] = [];
-			let timeout: Timer;
-
-			ws.onopen = () => {
-				ws.send(
-					JSON.stringify({
-						type: "sendMessage",
-						content: "Please use the get_test_value tool with key 'foo'",
-					}),
-				);
-
-				timeout = setTimeout(() => ws.close(), 30000);
-			};
-
-			ws.onmessage = (event) => {
-				const data = JSON.parse(event.data as string) as ServerMessage;
-				messages.push(data);
-
-				if (data.type === "toolCall") {
-					toolCalls.push(data);
-				}
-
-				if (data.type === "messageEnd") {
-					clearTimeout(timeout);
-					ws.close();
-				}
-			};
-
-			ws.onclose = () => {
-				clearTimeout(timeout);
-				resolve({ success: true, messages, toolCalls });
-			};
-
-			ws.onerror = () => {
-				clearTimeout(timeout);
-				resolve({ success: false, messages, toolCalls });
-			};
-		});
-
-		expect(result.success).toBe(true);
-		expect(result.messages.length).toBeGreaterThan(0);
-
-		console.log("✓ Tool calls received:", result.toolCalls.length);
-		if (result.toolCalls.length > 0) {
-			console.log(
-				"✓ Tool call names:",
-				result.toolCalls.map((tc) => tc.toolCall.function.name),
-			);
-		}
-	});
-
-	test.skipIf(shouldSkip)("should handle different agent IDs separately", async () => {
-
-		const agent1Url = `${BASE_URL}/chat-agent/${agentId("agent-1-separate-bun")}`;
-		const agent2Url = `${BASE_URL}/chat-agent/${agentId("agent-2-separate-bun")}`;
-
-		const sendMessage = (wsUrl: string, content: string) => {
-			return new Promise<{ success: boolean }>((resolve) => {
+			const result = await new Promise<{
+				success: boolean;
+				messages: ServerMessage[];
+				toolCalls: ToolCallMessage[];
+			}>((resolve) => {
 				const ws = new WebSocket(wsUrl);
-				const timeout = setTimeout(() => {
-					ws.close();
-					resolve({ success: false });
-				}, 5000);
+				const messages: ServerMessage[] = [];
+				const toolCalls: ToolCallMessage[] = [];
+				let timeout: Timer;
 
 				ws.onopen = () => {
 					ws.send(
 						JSON.stringify({
 							type: "sendMessage",
-							content,
+							content: "Please use the get_test_value tool with key 'foo'",
 						}),
 					);
-					setTimeout(() => ws.close(), 3000);
+
+					timeout = setTimeout(() => ws.close(), 30000);
+				};
+
+				ws.onmessage = (event) => {
+					const data = JSON.parse(event.data as string) as ServerMessage;
+					messages.push(data);
+
+					if (data.type === "toolCall") {
+						toolCalls.push(data);
+					}
+
+					if (data.type === "messageEnd") {
+						clearTimeout(timeout);
+						ws.close();
+					}
 				};
 
 				ws.onclose = () => {
 					clearTimeout(timeout);
-					resolve({ success: true });
+					resolve({ success: true, messages, toolCalls });
 				};
 
 				ws.onerror = () => {
 					clearTimeout(timeout);
-					resolve({ success: false });
+					resolve({ success: false, messages, toolCalls });
 				};
 			});
-		};
 
-		const [result1, result2] = await Promise.all([
-			sendMessage(agent1Url, "Message to agent 1"),
-			sendMessage(agent2Url, "Message to agent 2"),
-		]);
+			expect(result.success).toBe(true);
+			expect(result.messages.length).toBeGreaterThan(0);
 
-		expect(result1.success).toBe(true);
-		expect(result2.success).toBe(true);
-		console.log("✓ Separate agent instances working correctly");
-	});
+			console.log("✓ Tool calls received:", result.toolCalls.length);
+			if (result.toolCalls.length > 0) {
+				console.log(
+					"✓ Tool call names:",
+					result.toolCalls.map((tc) => tc.toolCall.function.name),
+				);
+			}
+		},
+	);
+
+	test.skipIf(shouldSkip)(
+		"should handle different agent IDs separately",
+		async () => {
+			const agent1Url = `${BASE_URL}/chat-agent/${agentId("agent-1-separate-bun")}`;
+			const agent2Url = `${BASE_URL}/chat-agent/${agentId("agent-2-separate-bun")}`;
+
+			const sendMessage = (wsUrl: string, content: string) => {
+				return new Promise<{ success: boolean }>((resolve) => {
+					const ws = new WebSocket(wsUrl);
+					const timeout = setTimeout(() => {
+						ws.close();
+						resolve({ success: false });
+					}, 5000);
+
+					ws.onopen = () => {
+						ws.send(
+							JSON.stringify({
+								type: "sendMessage",
+								content,
+							}),
+						);
+						setTimeout(() => ws.close(), 3000);
+					};
+
+					ws.onclose = () => {
+						clearTimeout(timeout);
+						resolve({ success: true });
+					};
+
+					ws.onerror = () => {
+						clearTimeout(timeout);
+						resolve({ success: false });
+					};
+				});
+			};
+
+			const [result1, result2] = await Promise.all([
+				sendMessage(agent1Url, "Message to agent 1"),
+				sendMessage(agent2Url, "Message to agent 2"),
+			]);
+
+			expect(result1.success).toBe(true);
+			expect(result2.success).toBe(true);
+			console.log("✓ Separate agent instances working correctly");
+		},
+	);
 
 	test.skipIf(shouldSkip)(
 		"should broadcast streaming to a second WebSocket on the same agent",
@@ -259,11 +264,24 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 				const wsA = new WebSocket(wsUrl);
 				const wsB = new WebSocket(wsUrl);
 				let opened = 0;
+				let aSawEnd = false;
+				let bSawEnd = false;
+
 				const timeout = setTimeout(() => {
 					wsA.close();
 					wsB.close();
 					reject(new Error("timeout waiting for broadcast"));
 				}, 45000);
+
+				const tryFinish = () => {
+					if (!aSawEnd || !bSawEnd) {
+						return;
+					}
+					clearTimeout(timeout);
+					wsA.close();
+					wsB.close();
+					resolve();
+				};
 
 				const onBothOpen = () => {
 					if (opened < 2) {
@@ -289,15 +307,17 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 				wsB.onmessage = (event) => {
 					const data = JSON.parse(event.data as string) as ServerMessage;
 					bTypes.push(data.type);
+					if (data.type === "messageEnd") {
+						bSawEnd = true;
+						tryFinish();
+					}
 				};
 
 				wsA.onmessage = (event) => {
 					const data = JSON.parse(event.data as string) as ServerMessage;
 					if (data.type === "messageEnd") {
-						clearTimeout(timeout);
-						wsA.close();
-						wsB.close();
-						resolve();
+						aSawEnd = true;
+						tryFinish();
 					}
 				};
 
@@ -308,6 +328,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 			});
 
 			expect(bTypes).toContain("messageStart");
+			expect(bTypes).toContain("messageEnd");
 			expect(bTypes.some((t) => t === "messageChunk")).toBe(true);
 			console.log("✓ Tab B observed types:", bTypes);
 		},

@@ -29,7 +29,8 @@
 				"CLOUDFLARE_ACCOUNT_ID",
 				"AI_GATEWAY_NAME",
 				"AI_GATEWAY_TOKEN"
-			]
+			],
+			"passThroughEnv": ["CI", "GITHUB_ACTIONS", "CHAT_AGENT_E2E_PORT"]
 		},
 		"test:ci": {
 			"outputLogs": "new-only"
