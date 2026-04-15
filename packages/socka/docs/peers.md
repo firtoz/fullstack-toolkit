@@ -1,10 +1,10 @@
 # Peers
 
-Install **`@firtoz/socka`** first, then add **only** the peers for the code paths you import. Package managers may warn about missing peers until you do—that is expected (see **[README](../README.md#install)**).
+Install **`@firtoz/socka`** first, then add **only** the peers for the code paths you import.
 
 ## Pick your flow, then install
 
-Choose one row and install for your app (`npm install`, `pnpm add`, `bun add`, etc.). Adjust versions to match your stack; the **[By entrypoint](#by-entrypoint)** table below explains each package.
+Choose one row and install for your app (`npm install`, `pnpm add`, `bun add`, etc.). Adjust versions to match your stack.
 
 ### Browser or Vite SPA (client only)
 
@@ -62,7 +62,17 @@ Add **`@types/ws`** as a dev dependency when you use **`ws`** on Node. (Omit **`
 
 ---
 
-## By entrypoint
+`@firtoz/websocket-do` is marked **optional** in **socka**’s `package.json` so browser-only clients do not pull Durable Object code. **`@cloudflare/workers-types`** is also **optional** unless you import **`@firtoz/socka/do`** or **`@firtoz/socka/hono/cloudflare`**, where Workers globals are part of the story.
+
+**Any Worker that imports `@firtoz/socka/do` must add `@firtoz/websocket-do` explicitly:** `npm install @firtoz/websocket-do` and keep the **major** aligned with the **socka** release you use.
+
+## Practical notes
+
+- **Only install peers for paths you use.** A Vite SPA that only imports `@firtoz/socka/client` does not need `hono`, **`@cloudflare/workers-types`**, or `@firtoz/websocket-do`.
+- **TypeScript:** For Workers code, add **`@cloudflare/workers-types`** to `compilerOptions.types` (or use your framework’s defaults). For **`@firtoz/socka/bun`** handlers, add **`bun-types`** when you author against Bun APIs.
+- **Version skew:** Mismatching **`@firtoz/websocket-do`** with **socka**’s expected API can surface as type errors on `SockaDoSession` / `SockaWebSocketDO`; upgrade both together when bumping majors.
+
+## By entrypoint (reference)
 
 | Entry | Required peers | Why |
 |--------|----------------|-----|
@@ -73,13 +83,3 @@ Add **`@types/ws`** as a dev dependency when you use **`ws`** on Node. (Omit **`
 | `@firtoz/socka/bun` | Same as `@firtoz/socka/server` (**`bun-types`** for TypeScript) | **`Bun.serve`** / **`ServerWebSocket`** integration. |
 | `@firtoz/socka/hono` | **`hono`**, **`@hono/node-ws`**, **`@hono/node-server`**, **`ws`** (runtime + types) | Node **`upgradeWebSocket`** pipeline. |
 | `@firtoz/socka/hono/cloudflare` | **`hono`**, **`@cloudflare/workers-types`** (**`upgradeWebSocket`** from `hono/cloudflare-workers`) | Workers WebSocket upgrade (session often starts on first message—see **[Server](./server.md)**). |
-
-`@firtoz/websocket-do` is marked **optional** in **socka**’s `package.json` so browser-only clients do not pull Durable Object code. **`@cloudflare/workers-types`** is also **optional** unless you import **`@firtoz/socka/do`** or **`@firtoz/socka/hono/cloudflare`**, where Workers globals are part of the story.
-
-**Any Worker that imports `@firtoz/socka/do` must add `@firtoz/websocket-do` explicitly:** `npm install @firtoz/websocket-do` and keep the **major** aligned with the **socka** release you use.
-
-## Practical notes
-
-- **Only install peers for paths you use.** A Vite SPA that only imports `@firtoz/socka/client` does not need `hono`, **`@cloudflare/workers-types`**, or `@firtoz/websocket-do`.
-- **TypeScript:** For Workers code, add **`@cloudflare/workers-types`** to `compilerOptions.types` (or use your framework’s defaults). For **`@firtoz/socka/bun`** handlers, add **`bun-types`** when you author against Bun APIs.
-- **Version skew:** Mismatching **`@firtoz/websocket-do`** with **socka**’s expected API can surface as type errors on `SockaDoSession` / `SockaWebSocketDO`; upgrade both together when bumping majors.

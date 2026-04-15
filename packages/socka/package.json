@@ -2,7 +2,7 @@
 	"name": "@firtoz/socka",
 	"version": "1.0.0",
 	"type": "module",
-	"description": "Standard Schema–first WebSocket RPC for browsers and Cloudflare Durable Objects",
+	"description": "Standard Schema–first WebSocket RPC for TypeScript — Bun, Hono, Node, Cloudflare Durable Objects",
 	"exports": {
 		"./core": {
 			"types": "./dist/core/index.d.ts",

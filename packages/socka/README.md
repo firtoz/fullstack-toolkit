@@ -10,41 +10,68 @@
 
 ![Socka — WebSocket RPC, Standard Schema](./assets/banner.png)
 
-**Typed WebSocket RPC.** One `defineSocka` contract, inferred `session.send.*`, correlated request/response frames, and optional typed **pushes**—without hand-rolled message unions or duplicate schema layers.
+**Typed WebSocket RPC for TypeScript.** Define one contract, get **`session.send.*`** in the client and **`handlers`** on the server—validated, correlated, done.
 
-## The problem
+## 30-second example (Bun)
 
-Most hand-rolled WebSocket protocols duplicate schemas, juggle correlation IDs by hand, and treat server push as a second, parallel protocol. **socka** replaces that with a **single shared contract** (Standard Schema v1) that drives both ends.
-
-## Minimal example
-
-**Contract** (shared):
+**`contract.ts`** (shared):
 
 ```ts
 import { defineSocka } from "@firtoz/socka/core";
 import * as z from "zod";
 
 export const myContract = defineSocka({
-  calls: {
-    echo: {
-      input: z.object({ text: z.string() }),
-      output: z.object({ text: z.string() }),
-    },
-  },
+	calls: {
+		echo: {
+			input: z.object({ text: z.string() }),
+			output: z.object({ text: z.string() }),
+		},
+	},
 });
 ```
 
-**Client:**
+**`server.ts`**:
+
+```ts
+import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
+import { myContract } from "./contract";
+
+const { websocket } = createSockaBunWebSocketHandlers({
+	contract: myContract,
+	handlers: {
+		echo: async (input) => ({ text: input.text }),
+	},
+	handleClose: async () => {},
+});
+
+Bun.serve({
+	port: 3450,
+	fetch(req, server) {
+		if (new URL(req.url).pathname === "/ws") {
+			if (server.upgrade(req)) return undefined;
+			return new Response("WebSocket upgrade failed", { status: 400 });
+		}
+		return new Response("OK");
+	},
+	websocket,
+});
+```
+
+**`client.ts`** (browser or Bun):
 
 ```ts
 import { SockaSession } from "@firtoz/socka/client";
 import { myContract } from "./contract";
 
-const session = new SockaSession({ contract: myContract, url: "wss://example.com/ws" });
+const session = new SockaSession({
+	contract: myContract,
+	url: "ws://localhost:3450/ws",
+});
 const { text } = await session.send.echo({ text: "hello" });
+console.log(text);
 ```
 
-Wire the **server** for your runtime in the table below (one stack per connection).
+Run **`bun run server.ts`**, then point the client at **`ws://localhost:3450/ws`**.
 
 ## Install
 
@@ -56,15 +83,15 @@ Also: `pnpm add @firtoz/socka` · `bun add @firtoz/socka`
 
 Optional peers depend on which subpath you import—see **[Peers](./docs/peers.md)**.
 
-## Server (pick your runtime)
+## Other runtimes
 
-| Runtime | Guide |
-|--------|--------|
-| **Node** + [`ws`](https://github.com/websockets/ws), or any standard **`WebSocket`** | **[Server](./docs/server.md)** — `attachSockaWebSocket`, `@firtoz/socka/server` |
-| **Bun** `Bun.serve` / `ServerWebSocket` | **[Server](./docs/server.md)** — `@firtoz/socka/bun` |
-| **Hono** on Node (`@hono/node-ws`) | **[Server](./docs/server.md)** — `@firtoz/socka/hono` |
-| **Hono** on Cloudflare Workers | **[Server](./docs/server.md)** — `@firtoz/socka/hono/cloudflare` |
-| **Cloudflare Durable Objects** | **[Durable Objects](./docs/durable-objects.md)** — `@firtoz/socka/do`, `SockaWebSocketDO` |
+| Runtime | Subpath | Guide |
+|--------|---------|--------|
+| **Node** + [`ws`](https://github.com/websockets/ws), or any standard **`WebSocket`** | `@firtoz/socka/server` | **[Server](./docs/server.md)** — `attachSockaWebSocket` |
+| **Bun** `Bun.serve` / `ServerWebSocket` | `@firtoz/socka/bun` | **[Server](./docs/server.md)** |
+| **Hono** on Node (`@hono/node-ws`) | `@firtoz/socka/hono` | **[Server](./docs/server.md)** |
+| **Hono** on Cloudflare Workers | `@firtoz/socka/hono/cloudflare` | **[Server](./docs/server.md)** |
+| **Cloudflare Durable Objects** | `@firtoz/socka/do` | **[Durable Objects](./docs/durable-objects.md)** |
 
 ## Why not socket.io, tRPC, or DIY?
 

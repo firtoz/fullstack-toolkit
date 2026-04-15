@@ -4,7 +4,7 @@ In-repo guides for [@firtoz/socka](../README.md). For Cursor agents, see also [`
 
 | Doc | Description |
 |-----|-------------|
-| [Getting started](./getting-started.md) | Choose your stack, install, contract, wire-up, runnable tic-tac-toe demos |
+| [Getting started](./getting-started.md) | Quickest Bun path, other runtimes, install, wire-up, tic-tac-toe demos |
 | [Peers](./peers.md) | Which peers to install per import path and why |
 | [Multi-room](./multi-room.md) | Scopes, patterns per runtime, pitfalls |
 | [Lifecycle](./lifecycle.md) | `onAttached`, inbound RPCs, `handleClose` ordering |

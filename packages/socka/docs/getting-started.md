@@ -1,14 +1,76 @@
 # Getting started
 
-The **[README](../README.md)** shows the **smallest** client path: a shared **`defineSocka`** contract and **`SockaSession`**. This page continues from there: **install → same contract → wire the server** for the stack you chose, then run a runnable demo.
+The **[README](../README.md)** opens with a **complete Bun example**: shared contract, **`createSockaBunWebSocketHandlers`**, and **`SockaSession`**. Start there if you want something runnable in one minute.
+
+## Quickest path (Bun)
+
+Save three files next to each other, then run **`bun run server.ts`**. Point a client at **`ws://localhost:3450/ws`** (same contract as the README).
+
+**`contract.ts`**
+
+```ts
+import { defineSocka } from "@firtoz/socka/core";
+import * as z from "zod";
+
+export const myContract = defineSocka({
+	calls: {
+		echo: {
+			input: z.object({ text: z.string() }),
+			output: z.object({ text: z.string() }),
+		},
+	},
+});
+```
+
+**`server.ts`**
+
+```ts
+import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
+import { myContract } from "./contract";
+
+const { websocket } = createSockaBunWebSocketHandlers({
+	contract: myContract,
+	handlers: {
+		echo: async (input) => ({ text: input.text }),
+	},
+	handleClose: async () => {},
+});
+
+Bun.serve({
+	port: 3450,
+	fetch(req, server) {
+		if (new URL(req.url).pathname === "/ws") {
+			if (server.upgrade(req)) return undefined;
+			return new Response("WebSocket upgrade failed", { status: 400 });
+		}
+		return new Response("OK");
+	},
+	websocket,
+});
+```
+
+**`client.ts`**
+
+```ts
+import { SockaSession } from "@firtoz/socka/client";
+import { myContract } from "./contract";
+
+const session = new SockaSession({
+	contract: myContract,
+	url: "ws://localhost:3450/ws",
+});
+const { text } = await session.send.echo({ text: "hello" });
+```
 
 ## What socka is
 
-**socka** is **schema-first WebSocket RPC**: one **`defineSocka`** contract gives you typed **`session.send.*`** in the browser and **`handlers`** on the server, with socka **v1** frames on the wire. You pick **how** the socket is upgraded—Bun, Hono, Node **`ws`**, Cloudflare **Durable Objects**—and use the matching subpath from the table below.
+**socka** is **schema-first WebSocket RPC**: one **`defineSocka`** contract gives you typed **`session.send.*`** in the browser and **`handlers`** on the server, with socka **v1** frames on the wire.
 
 For frame shapes and options, see **[Reference](./reference.md)**.
 
-## Step 1 — Choose your WebSocket stack
+## Other runtimes
+
+Pick **how** the socket is upgraded, then use the matching subpath:
 
 | You want to… | Read this first | Import path |
 |--------------|-----------------|-------------|
@@ -20,7 +82,7 @@ For frame shapes and options, see **[Reference](./reference.md)**.
 
 **Multiple rooms or scopes?** See **[Multi-room](./multi-room.md)**.
 
-## Step 2 — Install
+## Install
 
 ```bash
 npm install @firtoz/socka
@@ -28,38 +90,38 @@ npm install @firtoz/socka
 
 Add **only** the peers for the subpaths you import—**[Peers](./peers.md)**.
 
-## Step 3 — Shared contract (same as the README)
+## Shared contract
 
-Use one module for client and server. This matches the **[README](../README.md)** hero example:
+Use one module for client and server (same as the README):
 
 ```ts
 import { defineSocka } from "@firtoz/socka/core";
 import * as z from "zod";
 
 export const myContract = defineSocka({
-  calls: {
-    echo: {
-      input: z.object({ text: z.string() }),
-      output: z.object({ text: z.string() }),
-    },
-  },
+	calls: {
+		echo: {
+			input: z.object({ text: z.string() }),
+			output: z.object({ text: z.string() }),
+		},
+	},
 });
 ```
 
 For richer examples (list/insert, optional inputs), see **[Server](./server.md)** and the tic-tac-toe apps under `examples/`.
 
-## Step 4 — Wire the server, then the client
+## Wire the server, then the client
 
-You already have the **client** shape from the README (`SockaSession` with the same contract). Now:
+You already have the **client** shape (`SockaSession` with the same contract). Now:
 
-1. **Server** — Open the guide from **Step 1** and implement **`handlers`** + **`handleClose`** for **`myContract`**. Use **`SockaWebSocketSession`** / **`attachSockaWebSocket`** (Node/Bun/Hono) or **`SockaDoSession`** / **`SockaWebSocketDO`** (Durable Objects).
+1. **Server** — Open the guide from **Other runtimes** and implement **`handlers`** + **`handleClose`** for **`myContract`**. Use **`SockaWebSocketSession`** / **`attachSockaWebSocket`** (Node/Bun/Hono) or **`SockaDoSession`** / **`SockaWebSocketDO`** (Durable Objects).
 2. **Client** — Keep **`SockaSession`** (or **`useSockaSession`** / **`SockaSessionProvider`**—**[Client](./client.md)**) with the **same** **`wireFormat`** as the server.
 
 ### Wire format (short)
 
 Default is **JSON text** frames. **`wireFormat: "msgpack"`** must match on **both** sides. Details: **[Reference — Wire encoding](./reference.md#wire-encoding-json-and-msgpack)**.
 
-## Step 5 — Run a full-stack demo
+## Run a full-stack demo
 
 Same **tic-tac-toe** contract and game logic, three servers in this repo:
 
