@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	customSqliteMigrate,
 	type DurableSqliteMigrationConfig,
-} from "@firtoz/drizzle-sqlite-wasm/sqlite-wasm-migrator";
+} from "../migration/migrator";
 import {
 	drizzleSqliteWasmWorker,
 	createInstrumentedDrizzle,
-} from "@firtoz/drizzle-sqlite-wasm/drizzle-sqlite-wasm-worker";
+} from "../drizzle/worker";
 import type { ISqliteWorkerClient } from "../worker/manager";
 import {
 	initializeSqliteWorker,

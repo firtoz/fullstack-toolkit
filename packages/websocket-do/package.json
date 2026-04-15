@@ -2,37 +2,39 @@
 	"name": "@firtoz/websocket-do",
 	"version": "12.0.0",
 	"description": "Type-safe WebSocket session management for Cloudflare Durable Objects with Hono integration",
-	"main": "./src/index.ts",
-	"module": "./src/index.ts",
-	"types": "./src/index.ts",
+	"type": "module",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"import": "./src/index.ts",
-			"require": "./src/index.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
 		},
 		"./schema-client": {
-			"types": "./src/StandardSchemaWebSocketClient.ts",
-			"import": "./src/StandardSchemaWebSocketClient.ts",
-			"require": "./src/StandardSchemaWebSocketClient.ts"
+			"types": "./dist/StandardSchemaWebSocketClient.d.ts",
+			"import": "./dist/StandardSchemaWebSocketClient.js"
 		},
 		"./rpc": {
-			"types": "./src/standardSchemaRpc.ts",
-			"import": "./src/standardSchemaRpc.ts",
-			"require": "./src/standardSchemaRpc.ts"
+			"types": "./dist/standardSchemaRpc.d.ts",
+			"import": "./dist/standardSchemaRpc.js"
 		},
 		"./rpc-react": {
-			"types": "./src/standardSchemaRpcReact.ts",
-			"import": "./src/standardSchemaRpcReact.ts",
-			"require": "./src/standardSchemaRpcReact.ts"
+			"types": "./dist/standardSchemaRpcReact.d.ts",
+			"import": "./dist/standardSchemaRpcReact.js"
 		}
 	},
 	"files": [
+		"dist/**/*.js",
+		"dist/**/*.js.map",
+		"dist/**/*.d.ts",
 		"src/**/*.ts",
 		"!src/**/*.test.ts",
 		"README.md"
 	],
 	"scripts": {
+		"build": "tsup",
+		"prepack": "bun run build",
 		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",

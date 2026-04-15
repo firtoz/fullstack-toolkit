@@ -4,6 +4,7 @@
 	"daemon": false,
 	"tasks": {
 		"build": {
+			"dependsOn": ["^build"],
 			"outputs": ["dist/**"],
 			"outputLogs": "new-only"
 		},
@@ -23,6 +24,7 @@
 			"outputLogs": "new-only"
 		},
 		"test": {
+			"dependsOn": ["^build"],
 			"outputLogs": "new-only",
 			"env": [
 				"OPENROUTER_API_KEY",

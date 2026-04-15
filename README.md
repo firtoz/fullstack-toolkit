@@ -47,7 +47,7 @@ Type-safe WebSocket session management for Cloudflare Durable Objects with Stand
 - 📦 **Buffer Mode** - Efficient msgpack serialization for binary messaging
 - 🚀 **Hono Integration** - Seamless integration with Hono framework and `@firtoz/hono-fetcher`
 
-### [socka](./packages/socka)
+### [@firtoz/socka](./packages/socka)
 
 Standard Schema–first WebSocket RPC for browsers and servers: one `defineSocka` contract drives typed **`session.send.*`** (calls) and **`session.subscribe.*`** (pushes), with socka v1 frames on the wire.
 
@@ -149,7 +149,7 @@ bun add @firtoz/hono-fetcher
 bun add @firtoz/websocket-do
 
 # For schema-first WebSocket RPC (browser + Node/Bun/Hono/DO)
-bun add @firtoz/socka
+npm install @firtoz/socka
 
 # For ChatAgent with OpenRouter (core + peers; add drizzle or sql package for persistence)
 bun add @firtoz/chat-agent @openrouter/sdk agents

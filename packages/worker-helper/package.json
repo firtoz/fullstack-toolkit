@@ -2,30 +2,34 @@
 	"name": "@firtoz/worker-helper",
 	"version": "1.5.1",
 	"description": "Type-safe Web Worker helper with Zod validation and Cloudflare Workers utilities (cf-typegen)",
-	"main": "./src/index.ts",
-	"module": "./src/index.ts",
-	"types": "./src/index.ts",
+	"type": "module",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"import": "./src/index.ts",
-			"require": "./src/index.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
 		},
 		"./*": {
-			"types": "./src/*.ts",
-			"import": "./src/*.ts",
-			"require": "./src/*.ts"
+			"types": "./dist/*.d.ts",
+			"import": "./dist/*.js"
 		}
 	},
 	"bin": {
-		"cf-typegen": "./src/cf-typegen.ts"
+		"cf-typegen": "./dist/cf-typegen.js"
 	},
 	"files": [
+		"dist/**/*.js",
+		"dist/**/*.js.map",
+		"dist/**/*.d.ts",
 		"src/**/*.ts",
 		"README.md",
 		"CHANGELOG.md"
 	],
 	"scripts": {
+		"build": "tsup && bun ../../scripts/add-node-shebang.ts dist/cf-typegen.js",
+		"prepack": "bun run build",
 		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",

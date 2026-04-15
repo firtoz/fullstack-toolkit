@@ -16,7 +16,6 @@ import type {
 import {
 	createSyncFunction,
 	createInsertSchemaWithIdDefault,
-	createGetKeyFunction,
 	createCollectionConfig,
 	createSqliteTableSyncBackend,
 	type SQLOperation,
@@ -90,8 +89,8 @@ export function durableSqliteCollectionOptions<
 
 	const table = config.drizzle._.fullSchema[tableName] as TTable;
 
-	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
-	const getKey = createGetKeyFunction<TTable>();
+	const getKey = (item: InferSchemaOutput<SelectSchema<TTable>>): IdOf<TTable> =>
+		(item as { id: IdOf<TTable> }).id;
 
 	const backend = createSqliteTableSyncBackend({
 		drizzle: config.drizzle,
@@ -107,7 +106,7 @@ export function durableSqliteCollectionOptions<
 		readyPromise: config.readyPromise ?? Promise.resolve(),
 		syncMode: config.syncMode,
 		debug: config.debug,
-		getSyncPersistKey: (item: TItem) => String(getKey(item)),
+		getSyncPersistKey: (item) => String(getKey(item)),
 	};
 
 	const syncResult = createSyncFunction(baseSyncConfig, backend);

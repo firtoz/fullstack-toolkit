@@ -18,7 +18,6 @@ import {
 	type SyncBackend,
 	createSyncFunction,
 	createInsertSchemaWithDefaults,
-	createGetKeyFunction,
 	createCollectionConfig,
 } from "@firtoz/drizzle-utils";
 import { evaluateExpression, type CollectionUtils } from "@firtoz/db-helpers";
@@ -340,15 +339,15 @@ export function drizzleIndexedDBCollectionOptions<const TTable extends Table>(
 		},
 	};
 
-	type TItem = InferSchemaOutput<SelectSchema<TTable>>;
-	const getKey = createGetKeyFunction<TTable>();
+	const getKey = (item: InferSchemaOutput<SelectSchema<TTable>>): IdOf<TTable> =>
+		(item as { id: IdOf<TTable> }).id;
 
 	const baseSyncConfig: BaseSyncConfig<TTable> = {
 		table,
 		readyPromise: config.readyPromise,
 		syncMode: config.syncMode,
 		debug: config.debug,
-		getSyncPersistKey: (item: TItem) => String(getKey(item)),
+		getSyncPersistKey: (item) => String(getKey(item)),
 		...(config.deferLocalPersistence !== undefined
 			? { deferLocalPersistence: config.deferLocalPersistence }
 			: {}),

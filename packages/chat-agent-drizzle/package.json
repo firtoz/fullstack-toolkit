@@ -2,22 +2,24 @@
 	"name": "@firtoz/chat-agent-drizzle",
 	"version": "1.0.0",
 	"description": "Drizzle ORM persistence for @firtoz/chat-agent on Cloudflare Durable Objects",
-	"main": "./src/index.ts",
-	"module": "./src/index.ts",
-	"types": "./src/index.ts",
+	"type": "module",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"import": "./src/index.ts",
-			"require": "./src/index.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
 		},
 		"./db/schema": {
-			"types": "./src/db/schema.ts",
-			"import": "./src/db/schema.ts",
-			"require": "./src/db/schema.ts"
+			"types": "./dist/db/schema.d.ts",
+			"import": "./dist/db/schema.js"
 		}
 	},
 	"files": [
+		"dist/**/*.js",
+		"dist/**/*.js.map",
+		"dist/**/*.d.ts",
 		"src/**/*.ts",
 		"!src/**/*.test.ts",
 		"drizzle/**/*.sql",
@@ -27,6 +29,8 @@
 		"README.md"
 	],
 	"scripts": {
+		"build": "tsup",
+		"prepack": "bun run build",
 		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",
 		"lint:ci": "biome ci src",

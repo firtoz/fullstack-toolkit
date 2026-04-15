@@ -1,5 +1,5 @@
 ---
-name: "@firtoz/socka/standard-schema"
+name: socka/standard-schema
 description: Standard Schema v1 for socka contracts and wire validation—Zod, Valibot, or any compatible library; no Zod-only public surface.
 ---
 

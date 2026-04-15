@@ -49,7 +49,7 @@
 		"zod-form-data": "^3.0.1"
 	},
 	"scripts": {
-		"build": "TURBO_TELEMETRY_DISABLED=1 turbo run build",
+		"build": "TURBO_TELEMETRY_DISABLED=1 turbo run build --filter=./packages/*",
 		"ci": "TURBO_TELEMETRY_DISABLED=1 turbo run ci",
 		"typecheck": "TURBO_TELEMETRY_DISABLED=1 turbo run typecheck",
 		"dev": "TURBO_TELEMETRY_DISABLED=1 turbo run dev",
@@ -66,6 +66,7 @@
 		"restore-catalog": "bun scripts/restore-catalog.ts"
 	},
 	"devDependencies": {
+		"tsup": "^8.5.1",
 		"@biomejs/biome": "^2.4.9",
 		"@changesets/changelog-github": "^0.6.0",
 		"@changesets/cli": "^2.30.0",

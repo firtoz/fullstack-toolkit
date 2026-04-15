@@ -18,7 +18,7 @@ import { getTableName, type Table } from "drizzle-orm";
 import {
 	drizzleIndexedDBCollectionOptions,
 	type DrizzleIndexedDBCollectionConfig,
-} from "@firtoz/drizzle-indexeddb";
+} from "../collections/drizzle-indexeddb-collection";
 import type { CollectionUtils } from "@firtoz/db-helpers";
 import type {
 	IdOf,

@@ -1,5 +1,5 @@
 ---
-name: "@firtoz/socka/core-rpc"
+name: socka/core-rpc
 description: Standard Schema socka contracts (defineSocka), v1 wire envelopes, SockaSession/SockaWebSocketClient, React useSockaSession and SockaSessionProvider, SockaError.
 ---
 

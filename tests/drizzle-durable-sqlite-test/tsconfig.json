@@ -6,7 +6,23 @@
 			"@cloudflare/vitest-pool-workers",
 			"@cloudflare/workers-types",
 			"bun-types"
-		]
+		],
+		"paths": {
+			"@firtoz/collection-sync": ["../../packages/collection-sync/src/index.ts"],
+			"@firtoz/collection-sync/*": ["../../packages/collection-sync/src/*"],
+			"@firtoz/db-helpers": ["../../packages/db-helpers/src/index.ts"],
+			"@firtoz/db-helpers/*": ["../../packages/db-helpers/src/*"],
+			"@firtoz/drizzle-durable-sqlite": ["../../packages/drizzle-durable-sqlite/src/index.ts"],
+			"@firtoz/drizzle-durable-sqlite/*": ["../../packages/drizzle-durable-sqlite/src/*"],
+			"@firtoz/drizzle-utils": ["../../packages/drizzle-utils/src/index.ts"],
+			"@firtoz/drizzle-utils/*": ["../../packages/drizzle-utils/src/*"],
+			"@firtoz/hono-fetcher": ["../../packages/hono-fetcher/src/index.ts"],
+			"@firtoz/hono-fetcher/*": ["../../packages/hono-fetcher/src/*"],
+			"@firtoz/maybe-error": ["../../packages/maybe-error/src/index.ts"],
+			"@firtoz/maybe-error/*": ["../../packages/maybe-error/src/*"],
+			"@firtoz/websocket-do": ["../../packages/websocket-do/src/index.ts"],
+			"@firtoz/websocket-do/*": ["../../packages/websocket-do/src/*"]
+		}
 	},
 	"include": ["src/**/*.ts", "vitest.config.ts", "worker-configuration.d.ts"],
 	"exclude": ["node_modules"]
