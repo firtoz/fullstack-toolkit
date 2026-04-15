@@ -15,7 +15,7 @@
 			"outputs": ["worker-configuration.d.ts"]
 		},
 		"typecheck": {
-			"dependsOn": ["typegen"],
+			"dependsOn": ["^build", "typegen"],
 			"inputs": ["src/**", "tsconfig.json", "package.json"]
 		},
 		"lint": {

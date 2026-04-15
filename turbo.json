@@ -12,6 +12,7 @@
 			"dependsOn": ["typecheck", "lint:ci", "test"]
 		},
 		"typecheck": {
+			"dependsOn": ["^build"],
 			"outputLogs": "new-only"
 		},
 		"lint": {
