@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/maybe-error",
-	"version": "1.5.2",
+	"version": "1.6.0",
 	"description": "Type-safe result handling with MaybeError pattern",
 	"type": "module",
 	"main": "./dist/index.js",
