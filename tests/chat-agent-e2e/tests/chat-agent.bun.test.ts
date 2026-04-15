@@ -30,6 +30,9 @@ if (shouldSkip) {
 	);
 }
 
+/** Bun’s default per-test limit is 5s; `setDefaultTimeout` in preload is not reliably honored in CI. */
+const LLM_E2E_TEST_TIMEOUT_MS = 120_000;
+
 describe("ChatAgent WebSocket E2E (Bun)", () => {
 	test.skipIf(shouldSkip)(
 		"should connect via WebSocket and send/receive messages",
@@ -93,55 +96,63 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 				result.messages.filter((m) => m.type === "messageChunk"),
 			);
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 
-	test.skipIf(shouldSkip)("should retrieve chat history", async () => {
-		const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
+	test.skipIf(shouldSkip)(
+		"should retrieve chat history",
+		async () => {
+			const wsUrl = `${BASE_URL}/chat-agent/${AGENT_ID}`;
 
-		const result = await new Promise<{
-			history: HistoryMessage | null;
-			error?: string;
-		}>((resolve) => {
-			const ws = new WebSocket(wsUrl);
-			let history: HistoryMessage | null = null;
-			const timeout = setTimeout(() => {
-				ws.close();
-				resolve({ history });
-			}, 10000);
-
-			ws.onopen = () => {
-				ws.send(JSON.stringify({ type: "getHistory" }));
-			};
-
-			ws.onmessage = (event) => {
-				const data = JSON.parse(event.data as string) as ServerMessage;
-				if (data.type === "history") {
-					history = data;
-					clearTimeout(timeout);
+			const result = await new Promise<{
+				history: HistoryMessage | null;
+				error?: string;
+			}>((resolve) => {
+				const ws = new WebSocket(wsUrl);
+				let history: HistoryMessage | null = null;
+				const timeout = setTimeout(() => {
 					ws.close();
-				}
-			};
+					resolve({ history });
+				}, 10000);
 
-			ws.onclose = () => {
-				clearTimeout(timeout);
-				resolve({ history });
-			};
+				ws.onopen = () => {
+					ws.send(JSON.stringify({ type: "getHistory" }));
+				};
 
-			ws.onerror = (error) => {
-				clearTimeout(timeout);
-				resolve({ history: null, error: String(error) });
-			};
-		});
+				ws.onmessage = (event) => {
+					const data = JSON.parse(event.data as string) as ServerMessage;
+					if (data.type === "history") {
+						history = data;
+						clearTimeout(timeout);
+						ws.close();
+					}
+				};
 
-		expect(result.history).toBeTruthy();
-		if (result.history) {
-			expect(result.history.type).toBe("history");
-			expect(Array.isArray(result.history.messages)).toBe(true);
-			expect(result.history.messages.length).toBeGreaterThan(0);
+				ws.onclose = () => {
+					clearTimeout(timeout);
+					resolve({ history });
+				};
 
-			console.log("✓ History messages count:", result.history.messages.length);
-		}
-	});
+				ws.onerror = (error) => {
+					clearTimeout(timeout);
+					resolve({ history: null, error: String(error) });
+				};
+			});
+
+			expect(result.history).toBeTruthy();
+			if (result.history) {
+				expect(result.history.type).toBe("history");
+				expect(Array.isArray(result.history.messages)).toBe(true);
+				expect(result.history.messages.length).toBeGreaterThan(0);
+
+				console.log(
+					"✓ History messages count:",
+					result.history.messages.length,
+				);
+			}
+		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
+	);
 
 	test.skipIf(shouldSkip)(
 		"should handle tool calls with test tool",
@@ -205,6 +216,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 				);
 			}
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 
 	test.skipIf(shouldSkip)(
@@ -252,6 +264,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 			expect(result2.success).toBe(true);
 			console.log("✓ Separate agent instances working correctly");
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 
 	test.skipIf(shouldSkip)(
@@ -332,6 +345,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 			expect(bTypes.some((t) => t === "messageChunk")).toBe(true);
 			console.log("✓ Tab B observed types:", bTypes);
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 
 	test.skipIf(shouldSkip)(
@@ -437,6 +451,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 			expect(names.some((n) => n === "approval_ping")).toBe(true);
 			console.log("✓ approval_ping tool calls:", names);
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 
 	test.skipIf(shouldSkip)(
@@ -543,6 +558,7 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 			expect(result.sawMessageEnd).toBe(true);
 			console.log("✓ Rejection toolError observed");
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 
 	test.skipIf(shouldSkip)(
@@ -639,5 +655,6 @@ describe("ChatAgent WebSocket E2E (Bun)", () => {
 				")",
 			);
 		},
+		{ timeout: LLM_E2E_TEST_TIMEOUT_MS },
 	);
 });
