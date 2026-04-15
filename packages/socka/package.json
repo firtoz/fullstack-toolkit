@@ -1,6 +1,6 @@
 {
 	"name": "socka",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "Standard Schema–first WebSocket RPC for browsers and Cloudflare Durable Objects",
 	"main": "./src/core/index.ts",
 	"module": "./src/core/index.ts",

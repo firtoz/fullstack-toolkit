@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/db-helpers",
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"description": "TanStack DB helpers and utilities",
 	"main": "./src/index.ts",
 	"module": "./src/index.ts",

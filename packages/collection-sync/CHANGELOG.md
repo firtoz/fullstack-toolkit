@@ -1,5 +1,25 @@
 # @firtoz/collection-sync
 
+## 5.0.0
+
+### Patch Changes
+
+- [#70](https://github.com/firtoz/fullstack-toolkit/pull/70) [`d35e718`](https://github.com/firtoz/fullstack-toolkit/commit/d35e718bf3292258c2b0006affc7aad5ecc35208) Thanks [@firtoz](https://github.com/firtoz)! - **@firtoz/websocket-do:** Replace Zod-only `ZodSession`, `ZodWebSocketClient`, `ZodWebSocketDO`, and `zodMsgpack` with Standard Schema v1–based `StandardSchemaSession`, `StandardSchemaWebSocketClient`, `StandardSchemaWebSocketDO`, and `standardSchemaMsgpack`. Add `parseStandardSchema` and a direct dependency on `@standard-schema/spec`. Subpath `./zod-client` is removed; use `./schema-client`. Client `send` is now async (`Promise<void>`). Server session `send`/`broadcast` stay `void` with async validation under the hood. Remove the experimental `@firtoz/websocket-do/ws-rpc-protocol` export; use **`socka/core`** (`defineSocka`, typed RPC) instead.
+
+  **@firtoz/collection-sync:** `connectSync` / `connect-partial-sync` now use `StandardSchemaWebSocketClient` from `@firtoz/websocket-do/schema-client`.
+
+  **@firtoz/drizzle-durable-sqlite:** `SyncableDurableObject` and `QueryableDurableObject` extend `StandardSchemaWebSocketDO` / `StandardSchemaSession` and use `createStandardSchemaSession` / `standardSchemaSessionOptions` in constructors.
+
+- [#70](https://github.com/firtoz/fullstack-toolkit/pull/70) [`138c394`](https://github.com/firtoz/fullstack-toolkit/commit/138c3944b491ebf2e76b7f2c00d651fd5d788bac) Thanks [@firtoz](https://github.com/firtoz)! - Raise TanStack DB peer range to `>=0.6.3` where applicable. `createGenericCollectionConfig` now sets `defaultIndexType: BasicIndex` and `autoIndex: "eager"` so Drizzle-backed collections match pre-0.6 indexing defaults for `orderBy`/`limit` live queries. Re-enable `DeduplicatedLoadSubset` (`USE_DEDUPE`) with `@tanstack/db` 0.6.4.
+
+- [#70](https://github.com/firtoz/fullstack-toolkit/pull/70) [`d35e718`](https://github.com/firtoz/fullstack-toolkit/commit/d35e718bf3292258c2b0006affc7aad5ecc35208) Thanks [@firtoz](https://github.com/firtoz)! - Optional `createData` on `BaseSessionHandlers`: when omitted, `startFresh` initializes session `data` as `{}`.
+
+  **@firtoz/collection-sync:** `connectSync` / `connect-partial-sync` attach error logging to async `StandardSchemaWebSocketClient.send` so outbound validation failures are not unhandled promise rejections.
+
+- Updated dependencies [[`ffee5b3`](https://github.com/firtoz/fullstack-toolkit/commit/ffee5b313d073366a10e049dc988c9a9c95719be), [`7eb49ad`](https://github.com/firtoz/fullstack-toolkit/commit/7eb49adb100ffc5187a1f858b013b151db82643f), [`e1c08cb`](https://github.com/firtoz/fullstack-toolkit/commit/e1c08cb803574654d5808a984e358258c4171698), [`d35e718`](https://github.com/firtoz/fullstack-toolkit/commit/d35e718bf3292258c2b0006affc7aad5ecc35208), [`138c394`](https://github.com/firtoz/fullstack-toolkit/commit/138c3944b491ebf2e76b7f2c00d651fd5d788bac), [`d35e718`](https://github.com/firtoz/fullstack-toolkit/commit/d35e718bf3292258c2b0006affc7aad5ecc35208)]:
+  - @firtoz/websocket-do@12.0.0
+  - @firtoz/db-helpers@2.1.1
+
 ## 4.0.0
 
 ### Patch Changes

@@ -126,7 +126,7 @@
     },
     "packages/collection-sync": {
       "name": "@firtoz/collection-sync",
-      "version": "4.0.0",
+      "version": "5.0.0",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -151,7 +151,7 @@
     },
     "packages/db-helpers": {
       "name": "@firtoz/db-helpers",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
       },
@@ -168,7 +168,7 @@
     },
     "packages/drizzle-durable-sqlite": {
       "name": "@firtoz/drizzle-durable-sqlite",
-      "version": "1.0.4",
+      "version": "2.0.0",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -195,7 +195,7 @@
     },
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
-      "version": "4.0.0",
+      "version": "4.0.1",
       "bin": {
         "drizzle-indexeddb-generate": "./src/bin/generate-migrations.ts",
       },
@@ -215,7 +215,7 @@
         "valibot": "catalog:",
       },
       "peerDependencies": {
-        "@firtoz/drizzle-utils": ">=1.2.0",
+        "@firtoz/drizzle-utils": ">=1.2.1",
         "@tanstack/db": ">=0.6.3",
         "drizzle-orm": ">=0.45.2",
         "drizzle-valibot": ">=0.4.0",
@@ -225,7 +225,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -247,7 +247,7 @@
     },
     "packages/drizzle-utils": {
       "name": "@firtoz/drizzle-utils",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -281,7 +281,7 @@
     },
     "packages/idb-collections": {
       "name": "@firtoz/idb-collections",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
       },
@@ -325,7 +325,7 @@
     },
     "packages/socka": {
       "name": "socka",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
         "@standard-schema/spec": "catalog:",
@@ -366,7 +366,7 @@
     },
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
-      "version": "11.0.0",
+      "version": "12.0.0",
       "dependencies": {
         "@standard-schema/spec": "catalog:",
         "msgpackr": "catalog:",
