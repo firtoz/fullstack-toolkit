@@ -83,6 +83,32 @@ Two skills—**planning** vs **execution**—so phased work does not collapse in
 
 ---
 
+# Cursor Cloud Agents
+
+Repo-level environment config lives in [`.cursor/environment.json`](.cursor/environment.json) (see [Cursor Cloud Agent setup](https://cursor.com/docs/cloud-agent/setup)). It runs `TURBO_TELEMETRY_DISABLED=1 bun install` on VM startup so installs match CI and local workflows.
+
+## Secrets (dashboard)
+
+Configure variables in the Cursor dashboard **Cloud Agents** / **Secrets** (encrypted at rest; exposed as environment variables in the cloud VM). Do **not** rely on committed `.env.local` files for cloud runs.
+
+For parity with [`.github/workflows/pr-checks.yml`](.github/workflows/pr-checks.yml) non-Playwright tests, add the same names your CI uses when those tests are needed:
+
+- `OPENROUTER_API_KEY` (optional for tests that call OpenRouter)
+- `CLOUDFLARE_ACCOUNT_ID` (optional)
+- `AI_GATEWAY_NAME` (optional)
+- `AI_GATEWAY_TOKEN` (optional)
+
+Only add secrets you are willing to grant to cloud agents. If a test is skipped without them, prefer narrowing `bun test` scope to packages that do not require them.
+
+## Cursor Cloud specific instructions
+
+- **Install:** Already handled by `.cursor/environment.json`. If `bun` is missing on the VM, add a `.cursor/Dockerfile` (Debian/Ubuntu) that installs Bun and reference it from `environment.json` per [manual setup](https://cursor.com/docs/cloud-agent/setup).
+- **Verification:** Prefer `bun run typecheck`, `bun run lint`, then targeted `bun test` (single package or file) over the full monorepo test matrix.
+- **Memory:** Cloud VMs are limited. For broad test runs, use low Turbo concurrency (e.g. `bun turbo run test --concurrency=1` or similar), matching the spirit of CI which avoids parallel overload that can OOM (~7GB on `ubuntu-latest`).
+- **Playwright / browser E2E:** GitHub Actions runs the `test-playground` E2E job in a **Playwright Docker image** with browser deps preinstalled. Cursor Cloud Agents do not automatically replicate that; full Playwright E2E may require extra system deps or a custom Dockerfile—treat full E2E as optional in cloud unless you have explicitly set that up.
+
+---
+
 # Changeset Generation Guide
 
 **Always add or update a changeset when you change a published package.** Any change to a package that is published (has `publishConfig` or is released) must be reflected in a changeset so the next release has an accurate changelog and version bump. Do not add changesets for internal or unpublished packages (e.g. test apps, e2e, or workspace-only tooling).

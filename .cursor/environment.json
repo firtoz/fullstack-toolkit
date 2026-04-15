@@ -1,0 +1,4 @@
+{
+	"name": "router-toolkit",
+	"install": "TURBO_TELEMETRY_DISABLED=1 bun install"
+}
