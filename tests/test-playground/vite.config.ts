@@ -76,7 +76,7 @@ export default defineConfig({
 	dev: {},
 	optimizeDeps: {
 		exclude: ["@sqlite.org/sqlite-wasm"],
-		esbuildOptions: {
+		rolldownOptions: {
 			// Don't optimize worker files
 			plugins: [],
 		},

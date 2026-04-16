@@ -74,10 +74,10 @@
 	},
 	"peerDependencies": {
 		"@firtoz/drizzle-utils": ">=1.3.0",
-		"@tanstack/db": ">=0.6.3",
+		"@tanstack/db": ">=0.6.5",
 		"drizzle-orm": ">=0.45.2",
 		"drizzle-valibot": ">=0.4.0",
-		"react": ">=19.2.4",
+		"react": ">=19.2.5",
 		"valibot": ">=1.3.1"
 	},
 	"devDependencies": {
@@ -93,6 +93,6 @@
 		"@firtoz/db-helpers": "workspace:*",
 		"@firtoz/idb-collections": "workspace:*",
 		"@firtoz/maybe-error": "workspace:*",
-		"citty": "^0.2.1"
+		"citty": "^0.2.2"
 	}
 }

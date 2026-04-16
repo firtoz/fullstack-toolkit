@@ -72,9 +72,9 @@
 	"peerDependencies": {
 		"@firtoz/websocket-do": "workspace:*",
 		"@standard-schema/spec": ">=1.1.0",
-		"@tanstack/db": ">=0.6.3",
-		"@tanstack/react-db": ">=0.1.82",
-		"react": ">=19.2.4"
+		"@tanstack/db": ">=0.6.5",
+		"@tanstack/react-db": ">=0.1.83",
+		"react": ">=19.2.5"
 	},
 	"devDependencies": {
 		"@firtoz/websocket-do": "workspace:*",
