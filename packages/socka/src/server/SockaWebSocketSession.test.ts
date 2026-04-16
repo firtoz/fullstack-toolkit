@@ -16,6 +16,7 @@ describe("SockaWebSocketSession", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			handlers: {
 				echo: async (input) => ({ text: input.text }),
@@ -43,6 +44,7 @@ describe("SockaWebSocketSession", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			wireFormat: "msgpack",
 			handlers: {
@@ -81,6 +83,7 @@ describe("SockaWebSocketSession", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const sa = new SockaWebSocketSession(a.socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			handlers: {
 				echo: async (input) => ({ text: input.text }),
@@ -89,6 +92,7 @@ describe("SockaWebSocketSession", () => {
 			handleClose: async () => {},
 		});
 		const sb = new SockaWebSocketSession(b.socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			handlers: {
 				echo: async (input) => ({ text: input.text }),
@@ -111,6 +115,25 @@ describe("SockaWebSocketSession", () => {
 		expect(sa.listPeersWith((s) => s).length).toBe(2);
 		expect(sa.listPeersWith((s) => s, { excludeSelf: true }).length).toBe(1);
 	});
+
+	test("default strict upgrade throws without init.request", () => {
+		const { socket, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		expect(() => {
+			new SockaWebSocketSession(socket, sessions, {
+				contract: rpcTestContract,
+				handlers: {
+					echo: async (input) => ({ text: input.text }),
+					ping: async () => ({ pong: true as const }),
+				},
+				handleClose: async () => {},
+			});
+		}).toThrow(/strict upgrade/);
+	});
 });
 
 describe("attachSockaWebSocket", () => {
@@ -127,6 +150,7 @@ describe("attachSockaWebSocket", () => {
 			socket,
 			sessions,
 			{
+				strictUpgradeRequest: false,
 				contract: rpcTestContract,
 				handlers: {
 					echo: async (input) => ({ text: input.text }),
@@ -164,6 +188,7 @@ describe("attachSockaWebSocket", () => {
 			},
 		);
 		attachSockaWebSocket(socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			handlers: {
 				echo: async (input) => ({ text: input.text }),
@@ -185,6 +210,7 @@ describe("dispatchSockaInboundMessage", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			handlers: {
 				echo: async (input) => ({ text: input.text }),
@@ -212,6 +238,7 @@ describe("dispatchSockaInboundMessage", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			handlers: {
 				echo: async (input) => ({ text: input.text }),
@@ -238,6 +265,7 @@ describe("dispatchSockaInboundMessage", () => {
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
 		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
 			contract: rpcTestContract,
 			wireFormat: "msgpack",
 			handlers: {

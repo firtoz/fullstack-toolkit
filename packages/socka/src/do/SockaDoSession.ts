@@ -9,7 +9,7 @@ import type {
 import {
 	SockaWebSocketSession,
 	type SockaPushSession,
-	type SockaWebSocketSessionConfig,
+	type SockaWebSocketSessionConfigLoose,
 } from "../server/SockaWebSocketSession";
 import { reportSockaError } from "../core/socka-report-error";
 import type { SockaReportError } from "../core/socka-report-error";
@@ -199,10 +199,11 @@ export class SockaDoSession<
 				},
 			},
 		);
-		const sockaConfig: SockaWebSocketSessionConfig<
+		const sockaConfig: SockaWebSocketSessionConfigLoose<
 			TContract,
 			EmptySockaSessionData
 		> = {
+			strictUpgradeRequest: false,
 			contract: config.contract,
 			wireFormat,
 			handlers: wrapHandlersForInnerSockaEngine(

@@ -26,6 +26,18 @@ See [.cursor/skills/exhaustive-switches/SKILL.md](.cursor/skills/exhaustive-swit
 
 ---
 
+# JSDoc and public API comments
+
+When editing TypeScript, **preserve** existing **`/** … */`** (JSDoc / TSDoc) on **exported** types, functions, classes, and meaningful public fields **unless** the symbol is deleted or the user explicitly asked to remove or rewrite the docs.
+
+**Do not** drop or trim comment blocks as collateral damage from a “minimal” diff. Refactors and small patches should keep the same level of documentation unless you are deliberately consolidating or fixing accuracy.
+
+If behavior or types change, **update** the JSDoc so it stays true; avoid deleting comments instead of revising them.
+
+**Why:** Hover text and doc tooling surface these blocks; removing them reads like an intentional API documentation regression.
+
+---
+
 # Cloudflare / Wrangler Typegen
 
 When working on Cloudflare Workers apps (including test fixtures), **always use the Cloudflare typegen workflow skill**:
@@ -112,6 +124,12 @@ Only add secrets you are willing to grant to cloud agents. If a test is skipped 
 # Changeset Generation Guide
 
 **Always add or update a changeset when you change a published package.** Any change to a package that is published (has `publishConfig` or is released) must be reflected in a changeset so the next release has an accurate changelog and version bump. Do not add changesets for internal or unpublished packages (e.g. test apps, e2e, or workspace-only tooling).
+
+## Changelog and `package.json` version (do not edit by hand)
+
+**Never** manually edit a published package’s **`CHANGELOG.md`** or its **`package.json` `version`** field. Release automation (**Changesets**: `changeset version`, publish, etc.) applies version bumps and writes changelog entries from **`.changeset/*.md`**. Agents should record what shipped **only** by adding or editing changeset files under **`.changeset/`**, not by prepending changelog sections or bumping versions.
+
+This supplements the rest of this guide (**Creating Changesets**, **Format**, **Version Bump Guidelines**, **Examples**); it does not replace those steps when a published package changes.
 
 ## Creating Changesets
 

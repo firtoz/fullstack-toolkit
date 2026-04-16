@@ -26,6 +26,8 @@ import type {
 	SockaStrictWebSocketInit,
 	SockaWebSocketInit,
 	SockaWebSocketSessionConfig,
+	SockaWebSocketSessionConfigLoose,
+	SockaWebSocketSessionConfigUnion,
 } from "./SockaWebSocketSessionConfig";
 
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
@@ -35,17 +37,17 @@ export type {
 	SockaStrictWebSocketInit,
 	SockaWebSocketInit,
 	SockaWebSocketSessionConfig,
+	SockaWebSocketSessionConfigLoose,
+	SockaWebSocketSessionConfigUnion,
 };
 
-function isStrictUpgradeConfig<
+function isLooseUpgradeConfig<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
 >(
-	config: SockaWebSocketSessionConfig<TContract, TData>,
-): config is SockaWebSocketSessionConfig<TContract, TData> & {
-	strictUpgradeRequest: true;
-} {
-	return config.strictUpgradeRequest === true;
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
+): config is SockaWebSocketSessionConfigLoose<TContract, TData> {
+	return "strictUpgradeRequest" in config && config.strictUpgradeRequest === false;
 }
 
 /** Session that can send a wire-level server event (already validated). */
@@ -100,7 +102,7 @@ export class SockaWebSocketSession<
 	TData = EmptySockaSessionData,
 > implements SockaPushSession<TContract>
 {
-	private readonly config: SockaWebSocketSessionConfig<TContract, TData>;
+	private readonly config: SockaWebSocketSessionConfigUnion<TContract, TData>;
 	private readonly wireFormat: SockaWireFormat;
 	private _data!: TData;
 
@@ -110,15 +112,21 @@ export class SockaWebSocketSession<
 			WebSocket,
 			SockaWebSocketSession<TContract, TData>
 		>,
-		config: SockaWebSocketSessionConfig<TContract, TData>,
+		config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 		init?: SockaWebSocketInit,
 	) {
 		this.config = config;
 		this.wireFormat = config.wireFormat ?? "json";
-		if (isStrictUpgradeConfig(config)) {
+		if (isLooseUpgradeConfig(config)) {
+			const createData = config.createData as
+				| ((init: SockaWebSocketInit) => TData)
+				| undefined;
+			const create = createData ?? ((_i: SockaWebSocketInit) => ({}) as TData);
+			this._data = create(init ?? {});
+		} else {
 			if (!init?.request) {
 				throw new Error(
-					"socka: strictUpgradeRequest requires a Request on the upgrade init (e.g. Bun upgrade with `data: { …, request: req }`, or Hono default sockaInit)",
+					"socka: strict upgrade (default) requires a Request on the upgrade init (e.g. Bun upgrade with `data: { …, request: req }`, or Hono default sockaInit), or use SockaWebSocketSessionConfigLoose with strictUpgradeRequest: false",
 				);
 			}
 			const strictInit: SockaStrictWebSocketInit = { request: init.request };
@@ -127,12 +135,6 @@ export class SockaWebSocketSession<
 			} else {
 				this._data = {} as TData;
 			}
-		} else {
-			const createData = config.createData as
-				| ((init: SockaWebSocketInit) => TData)
-				| undefined;
-			const create = createData ?? ((_i: SockaWebSocketInit) => ({}) as TData);
-			this._data = create(init ?? {});
 		}
 	}
 
@@ -434,7 +436,7 @@ export function runSockaSessionOnAttached<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
 >(
-	config: SockaWebSocketSessionConfig<TContract, TData>,
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	session: SockaWebSocketSession<TContract, TData>,
 ): void {
 	const cb = config.onAttached;

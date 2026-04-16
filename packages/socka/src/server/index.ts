@@ -7,6 +7,8 @@ export {
 	type SockaStrictWebSocketInit,
 	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
+	type SockaWebSocketSessionConfigLoose,
+	type SockaWebSocketSessionConfigUnion,
 } from "./SockaWebSocketSession";
 export {
 	attachSockaWebSocket,

@@ -15,7 +15,6 @@ function makeRoomConfig(
 ): SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData> {
 	return {
 		contract: ticTacToeContract,
-		strictUpgradeRequest: true,
 		handlers: {
 			join: async (session) => {
 				const { player } = game.join(session.websocket);

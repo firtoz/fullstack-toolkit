@@ -66,7 +66,6 @@ function makeConfig(
 ): SockaWebSocketSessionConfig<typeof chatContract, SessionData> {
 	return {
 		contract: chatContract,
-		strictUpgradeRequest: true,
 		createData: (init) => {
 			const u = new URL(init.request.url);
 			const displayName = u.searchParams.get("name")?.trim() || "anon";

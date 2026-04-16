@@ -17,7 +17,7 @@
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"jsx": "react-jsx",
-		"ignoreDeprecations": "6.0",
+		"ignoreDeprecations": "5.0",
 		"types": ["bun-types", "@cloudflare/workers-types"]
 	},
 	"include": ["src/**/*", "examples/**/*.ts", "test-setup.ts"],

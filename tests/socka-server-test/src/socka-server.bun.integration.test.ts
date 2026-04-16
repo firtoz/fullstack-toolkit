@@ -11,6 +11,7 @@ function startBunSockaServer(wireFormat: SockaWireFormat): {
 	port: number;
 } {
 	const { websocket } = createSockaBunWebSocketHandlers({
+		strictUpgradeRequest: false,
 		contract: roundtripContract,
 		wireFormat,
 		handlers: roundtripHandlers,

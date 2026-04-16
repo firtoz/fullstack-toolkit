@@ -4,7 +4,7 @@ Socka does not ship a built-in auth layer: you decide **who** may open a WebSock
 
 ## Read credentials on upgrade
 
-- **`@firtoz/socka/server`** with **`strictUpgradeRequest: true`** — in **`createData`**, read **`init.request`** (cookies via **`Cookie`**, **`Authorization`**, URL query, path segments).
+- **`@firtoz/socka/server`** — by default **`createData`** receives **`SockaStrictWebSocketInit`**; read **`init.request`** (cookies via **`Cookie`**, **`Authorization`**, URL query, path segments).
 - **`SockaDoSession`** with **`createData: (ctx) => …`** — use Hono **`ctx.req`**, **`ctx.get("…")`**, or **`ctx.req.raw.headers`**.
 
 Reject before returning session data: throw **`SockaError`** with **`{ code, data }`** so the client receives a correlated **`serverError`** frame (see **[Reference — RPC handler errors](./reference.md#rpc-handler-errors)**).

@@ -11,12 +11,13 @@ type EmptySockaSessionData = Record<string, never>;
 
 /**
  * Upgrade context passed into `createData` for {@link SockaWebSocketSession} when
- * **`strictUpgradeRequest` is not set to `true`** (the default).
+ * **`strictUpgradeRequest: false`** is set (opt out of the default strict upgrade).
  *
  * **`request` is optional** because some call sites attach a socket without an HTTP upgrade
- * (custom tests, unusual adapters). If you read query params or headers from the upgrade,
- * you must handle a missing `request` (e.g. optional chaining and a fallback URL), or set
- * **`strictUpgradeRequest: true`** instead so {@link SockaStrictWebSocketInit} applies.
+ * (custom tests, unusual adapters, Node **`ws`** without a **`Request`**, inner DO engine).
+ * If you read query params or headers from the upgrade, either handle a missing
+ * **`request`** here, or use the default strict mode (omit **`strictUpgradeRequest: false`**)
+ * so {@link SockaStrictWebSocketInit} applies.
  */
 export type SockaWebSocketInit = {
 	/**
@@ -27,13 +28,12 @@ export type SockaWebSocketInit = {
 };
 
 /**
- * Upgrade context when **`strictUpgradeRequest: true`** is set on
- * {@link SockaWebSocketSessionConfig}.
+ * Upgrade context for {@link SockaWebSocketSession} when using the default strict config
+ * ({@link SockaWebSocketSessionConfig} — no `strictUpgradeRequest` field).
  *
  * **What this enables:** `createData` is typed so **`init.request` is always defined**.
- * You can use **`new URL(init.request.url)`** and read search params without
- * `init.request?.url ?? "http://_/"` placeholders, and TypeScript will catch mistakes if you
- * treat the request as optional.
+ * You can use **`new URL(init.request.url)`**, read search params, and use **`Request`**
+ * headers without optional chaining or a dummy base URL for **`URL`** parsing.
  *
  * **Runtime behavior:** If the adapter does not pass a `Request` while strict mode is on,
  * socka throws an error explaining how to wire the upgrade (e.g. Bun `data: { request: req }`,
@@ -70,31 +70,9 @@ type SockaSessionForHandlers<
 	TData,
 > = import("./SockaWebSocketSession").SockaWebSocketSession<TContract, TData>;
 
-/**
- * Configuration for {@link SockaWebSocketSession}. Handlers receive the session
- * instance as the second argument (or the only argument when the procedure has no input).
- *
- * ## `strictUpgradeRequest` (optional flag)
- *
- * Controls how **`createData`** is typed and validated for the **HTTP upgrade**:
- *
- * - **Omitted or `undefined` (default)** — `createData` receives {@link SockaWebSocketInit}.
- *   **`init.request` may be missing.** Use this for adapters or tests that construct sessions
- *   without a real upgrade request, or when you intentionally support both cases and handle
- *   optional `request` in code.
- *
- * - **`true`** — Opt in to **strict** upgrade typing: `createData` receives
- *   {@link SockaStrictWebSocketInit}, so **`init.request` is required** in TypeScript and
- *   enforced at runtime. Prefer this for normal Bun/Hono apps that always have an upgrade
- *   `Request`, so you avoid placeholder URLs and get clearer errors if wiring is wrong.
- *
- * Bun and Hono helpers document how they populate init (e.g. **`sockaBunInitFromWsData`**,
- * default **`sockaInit`** from Hono context). The published **Server** guide includes a
- * **Strict upgrade request** section with examples.
- */
-export type SockaWebSocketSessionConfig<
+type SockaWebSocketSessionConfigBase<
 	TContract extends SockaContract<SockaContractConfig>,
-	TData = EmptySockaSessionData,
+	TData,
 > = {
 	contract: TContract;
 	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
@@ -131,7 +109,65 @@ export type SockaWebSocketSessionConfig<
 	onAttached?: (
 		session: SockaSessionForHandlers<TContract, TData>,
 	) => void | Promise<void>;
-} & (
-	| ({ strictUpgradeRequest?: undefined } & SockaWebSocketCreateData<TData>)
-	| ({ strictUpgradeRequest: true } & SockaWebSocketCreateDataStrict<TData>)
-);
+};
+
+/**
+ * Configuration for {@link SockaWebSocketSession} — **default (strict upgrade)**.
+ *
+ * Handlers receive the session as the second argument, or the only argument when the call
+ * has no input schema.
+ *
+ * **`createData`** receives {@link SockaStrictWebSocketInit}: **`init.request`** is the
+ * HTTP upgrade **`Request`**, required in TypeScript and enforced at runtime. Use for
+ * normal Bun/Hono apps and **`attachSockaWebSocket(websocket, sessions, config, { request })`**.
+ *
+ * Bun helpers: store **`request`** on **`ServerWebSocket`** `data` and use
+ * **`sockaBunInitFromWsData`** (see **`@firtoz/socka/bun`**). Hono: **`sockaHonoNodeWs`** /
+ * **`sockaHonoCloudflare`** can supply **`sockaInit`** from the context so **`createData`**
+ * still sees a **`Request`**.
+ *
+ * To allow a missing upgrade **`Request`** (tests, Node **`ws`**, inner DO engine), use
+ * {@link SockaWebSocketSessionConfigLoose} instead. See the **Server** guide section
+ * **Strict upgrade request** in the package docs.
+ */
+export type SockaWebSocketSessionConfig<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData = EmptySockaSessionData,
+> = SockaWebSocketSessionConfigBase<TContract, TData> &
+	SockaWebSocketCreateDataStrict<TData>;
+
+/**
+ * Configuration for {@link SockaWebSocketSession} — **loose upgrade** (opt out of strict).
+ *
+ * Sets **`strictUpgradeRequest: false`**. **`createData`** receives {@link SockaWebSocketInit};
+ * **`init.request` may be `undefined`**.
+ *
+ * Use when:
+ *
+ * - Custom **`attachSockaWebSocket`** call sites or tests that do not attach an HTTP
+ *   **`Request`**
+ * - Node **`ws`** or other adapters where you only have a **`WebSocket`**
+ * - The inner **`SockaWebSocketSession`** constructed inside **`SockaDoSession`** (socka sets
+ *   this mode for you)
+ *
+ * If you read query params or headers from the upgrade, guard for a missing **`request`**
+ * or switch to {@link SockaWebSocketSessionConfig} and wire the real **`Request`** through.
+ */
+export type SockaWebSocketSessionConfigLoose<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData = EmptySockaSessionData,
+> = SockaWebSocketSessionConfigBase<TContract, TData> & {
+	strictUpgradeRequest: false;
+} & SockaWebSocketCreateData<TData>;
+
+/**
+ * Union of {@link SockaWebSocketSessionConfig} (strict) and {@link SockaWebSocketSessionConfigLoose}.
+ * This is the type accepted by {@link SockaWebSocketSession}'s constructor,
+ * **`attachSockaWebSocket`**, **`createSockaBunWebSocketHandlers`**, and Hono socka helpers.
+ */
+export type SockaWebSocketSessionConfigUnion<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData = EmptySockaSessionData,
+> =
+	| SockaWebSocketSessionConfig<TContract, TData>
+	| SockaWebSocketSessionConfigLoose<TContract, TData>;

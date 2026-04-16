@@ -9,7 +9,7 @@ import {
 	SockaWebSocketSession,
 	runSockaSessionOnAttached,
 	type SockaWebSocketInit,
-	type SockaWebSocketSessionConfig,
+	type SockaWebSocketSessionConfigUnion,
 } from "../server/SockaWebSocketSession";
 import { sockaHonoStrictInitFromContext } from "./strict-init-context";
 
@@ -33,7 +33,7 @@ export type SockaHonoNodeWsOptions<
 	 */
 	resolveScope?: (c: Context) => {
 		sessions: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
-		config: SockaWebSocketSessionConfig<TContract, TData>;
+		config: SockaWebSocketSessionConfigUnion<TContract, TData>;
 	};
 };
 
@@ -46,7 +46,7 @@ export function sockaHonoNodeWs<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
 >(
-	config: SockaWebSocketSessionConfig<TContract, TData>,
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	options?: SockaHonoNodeWsOptions<TContract, TData>,
 ): (c: Context) => WSEvents<NodeWebSocket> {
 	const staticSessions =
@@ -65,7 +65,7 @@ export function sockaHonoNodeWs<
 				: { sessions: staticSessions, config: staticConfig };
 			const init: SockaWebSocketInit | undefined =
 				options?.sockaInit?.(c) ?? sockaHonoStrictInitFromContext(c);
-			const cfg = scopeConfig as SockaWebSocketSessionConfig<TContract, TData>;
+			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<TContract, TData>;
 			const session = new SockaWebSocketSession(domWs, sessions, cfg, init);
 			sessions.set(domWs, session);
 			runSockaSessionOnAttached(cfg, session);
@@ -79,7 +79,7 @@ export function sockaHonoNodeWs<
 				: { sessions: staticSessions, config: staticConfig };
 			const session = sessions.get(domWs);
 			if (!session) return;
-			const cfg = scopeConfig as SockaWebSocketSessionConfig<TContract, TData>;
+			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<TContract, TData>;
 			const wireFormat: SockaWireFormat = cfg.wireFormat ?? "json";
 			void dispatchSockaInboundMessage(session, wireFormat, evt.data).catch(
 				(error: unknown) => {
@@ -99,7 +99,7 @@ export function sockaHonoNodeWs<
 				const { sessions, config: scopeConfig } = resolveScope
 					? resolveScope(c)
 					: { sessions: staticSessions, config: staticConfig };
-				const cfg = scopeConfig as SockaWebSocketSessionConfig<
+				const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<
 					TContract,
 					TData
 				>;

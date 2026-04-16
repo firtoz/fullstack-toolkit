@@ -57,6 +57,7 @@ describe("@firtoz/socka/server e2e (ws)", () => {
 				ws as unknown as globalThis.WebSocket,
 				sessionsJson,
 				{
+					strictUpgradeRequest: false,
 					contract: roundtripContract,
 					wireFormat: "json",
 					handlers: roundtripHandlers,
@@ -73,6 +74,7 @@ describe("@firtoz/socka/server e2e (ws)", () => {
 				ws as unknown as globalThis.WebSocket,
 				sessionsMsgpack,
 				{
+					strictUpgradeRequest: false,
 					contract: roundtripContract,
 					wireFormat: "msgpack",
 					handlers: roundtripHandlers,

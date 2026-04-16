@@ -5,7 +5,7 @@ import {
 	SockaWebSocketSession,
 	runSockaSessionOnAttached,
 	type SockaWebSocketInit,
-	type SockaWebSocketSessionConfig,
+	type SockaWebSocketSessionConfigUnion,
 } from "./SockaWebSocketSession";
 
 export type AttachedSockaWebSocket<
@@ -29,7 +29,7 @@ export function attachSockaWebSocket<
 >(
 	websocket: WebSocket,
 	sessions: Map<WebSocket, SockaWebSocketSession<TContract, TData>>,
-	config: SockaWebSocketSessionConfig<TContract, TData>,
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	init?: SockaWebSocketInit,
 ): AttachedSockaWebSocket<TContract, TData> {
 	const session = new SockaWebSocketSession(websocket, sessions, config, init);

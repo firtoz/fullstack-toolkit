@@ -21,6 +21,7 @@ function startSessionGameBunServer(wireFormat: SockaWireFormat): {
 	const { handlers, createData, onAttached } = createSessionGameHandlers(world);
 
 	const { websocket } = createSockaBunWebSocketHandlers({
+		strictUpgradeRequest: false,
 		contract: sessionGameContract,
 		wireFormat,
 		handlers,

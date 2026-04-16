@@ -80,7 +80,7 @@ export function createLibTsupOptions(packageDir: string, overrides?: Partial<Opt
 		format: ["esm"],
 		dts: {
 			compilerOptions: {
-				ignoreDeprecations: "6.0",
+				ignoreDeprecations: "5.0",
 			},
 		},
 		outDir: join(packageDir, "dist"),

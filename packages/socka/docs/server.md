@@ -48,19 +48,19 @@ Optional fourth argument **`{ request }`** is passed to **`createData`** when yo
 
 | | |
 |---:|---|
-| **`createData`** runs in the **`SockaWebSocketSession`** constructor. | You receive **`SockaWebSocketInit`** (e.g. **`{ request }`** from **`attachSockaWebSocket`**). |
+| **`createData`** runs in the **`SockaWebSocketSession`** constructor. | By default you receive **`SockaStrictWebSocketInit`** ( **`init.request`** is the upgrade **`Request`** ). Set **`strictUpgradeRequest: false`** for **`SockaWebSocketInit`** when **`request`** may be missing. |
 | **Result** is stored in **`session.data`**. | Lives in **process memory** unless you persist it yourself. |
 
 ## Strict upgrade request
 
-**`strictUpgradeRequest`** is an optional field on **`SockaWebSocketSessionConfig`**. It does not change the wire protocol — only how **`createData`** is typed and what happens at runtime if the upgrade **`Request`** is missing.
+**Strict vs loose:** **`SockaWebSocketSessionConfig`** (default) requires the upgrade **`Request`**. Use **`SockaWebSocketSessionConfigLoose`** with **`strictUpgradeRequest: false`** when **`init.request`** may be missing — it does not change the wire protocol, only **`createData`** typing and runtime checks.
 
 | Mode | Type passed to **`createData`** | When to use it |
 |------|----------------------------------|----------------|
-| **Omitted** (default) | **`SockaWebSocketInit`** — **`init.request` may be `undefined`** | Custom **`attachSockaWebSocket`** call sites, tests, or any adapter that might not attach an HTTP **`Request`**. You handle a missing URL yourself (optional chaining, fallback URL). |
-| **`true`** | **`SockaStrictWebSocketInit`** — **`init.request` is always a `Request`** | Normal **Bun** / **Hono** upgrades where the HTTP **`Request`** is always present. **`createData`** can use **`new URL(init.request.url)`** and read headers without guarding for a missing **`request`**. If the adapter omits **`request`**, socka throws a clear error at session construction. |
+| **Omitted** (default) | **`SockaStrictWebSocketInit`** — **`init.request` is always a `Request`** | Normal **Bun** / **Hono** upgrades and **`attachSockaWebSocket(..., { request })`**. **`createData`** can use **`new URL(init.request.url)`** and read headers. If the adapter omits **`request`**, socka throws at session construction. |
+| **`false`** | **`SockaWebSocketInit`** — **`init.request` may be `undefined`** | Tests, **Node `ws`** without a **`Request`**, or adapters that only have a bare **`WebSocket`**. Handle a missing **`request`** in **`createData`** or omit **`createData`** usage of **`init`**. |
 
-**Typical wiring:** Bun stores **`request`** on **`ServerWebSocket` `data`**; use **`sockaBunInitFromWsData`** with **`strictUpgradeRequest: true`**. Hono **`sockaHonoNodeWs`** can omit **`sockaInit`** — the default builds a **`Request`** from the Hono context. See JSDoc on **`SockaWebSocketSessionConfig`**, **`SockaWebSocketInit`**, and **`SockaStrictWebSocketInit`** in **`@firtoz/socka/server`**.
+**Typical wiring:** Bun stores **`request`** on **`ServerWebSocket` `data`**; use **`sockaBunInitFromWsData`** (strict is the default). Hono **`sockaHonoNodeWs`** can omit **`sockaInit`** — the default builds a **`Request`** from the Hono context. See JSDoc on **`SockaWebSocketSessionConfig`**, **`SockaWebSocketInit`**, and **`SockaStrictWebSocketInit`** in **`@firtoz/socka/server`**.
 
 Calls **with** an input schema use **`(input, session) => output`**. Calls **without** input use **`(session) => output`** only (no `undefined` first argument). The **`session`** argument is the **`SockaWebSocketSession`** instance: read **`session.data`**, call **`await session.emitPush`**, **`await session.broadcastPush`** (payloads are validated against the contract **`pushes`** schemas before send).
 
@@ -89,6 +89,7 @@ type GameData = { health: number };
 
 const session = new SockaWebSocketSession(websocket, sessions, {
   contract: gameContract,
+  strictUpgradeRequest: false,
   createData: () => ({ health: 100 }),
   handlers: {
     getHealth: async (s) => ({ health: s.data.health }),

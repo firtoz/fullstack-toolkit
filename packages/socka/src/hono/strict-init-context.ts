@@ -6,7 +6,7 @@ import type { SockaStrictWebSocketInit } from "../server/SockaWebSocketSession";
  * **`Request`** from **`c.req.url`** (method GET; URL matches the incoming upgrade).
  *
  * Used when **`sockaHonoNodeWs` / `sockaHonoCloudflare`** omit a custom **`sockaInit`** and
- * **`strictUpgradeRequest: true`** is set: **`createData`** then always receives
+ * strict upgrade is the default: **`createData`** then always receives
  * **`init.request`** without you writing **`sockaInit: (ctx) => ({ request: new Request(ctx.req.url) })`** by hand.
  *
  * For full fidelity to the original upgrade (headers, method), pass your own **`sockaInit`**

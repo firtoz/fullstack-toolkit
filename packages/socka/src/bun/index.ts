@@ -7,18 +7,18 @@ import {
 	SockaWebSocketSession,
 	runSockaSessionOnAttached,
 	type SockaStrictWebSocketInit,
-	type SockaWebSocketSessionConfig,
+	type SockaWebSocketSessionConfigUnion,
 } from "../server/SockaWebSocketSession";
 
 /**
  * Reads the upgrade {@link Request} from Bun **`ServerWebSocket.data`** when your
  * **`fetch`** handler stored it there (e.g. **`server.upgrade(req, { data: { roomId, request: req } })`**).
  *
- * Pair with **`strictUpgradeRequest: true`** on {@link SockaWebSocketSessionConfig} so
+ * Pair with the default strict upgrade on {@link SockaWebSocketSessionConfig} so
  * **`createData`** is typed with {@link SockaStrictWebSocketInit} and **`init.request`**
  * is always defined. If **`request`** is missing from **`data`**, this returns **`undefined`**
- * and strict mode will throw when constructing the session — that usually means you forgot
- * to pass **`request`** on upgrade.
+ * and the session constructor will throw — that usually means you forgot
+ * to pass **`request`** on upgrade (or set **`strictUpgradeRequest: false`**).
  */
 export function sockaBunInitFromWsData(
 	ws: ServerWebSocket<unknown>,
@@ -35,7 +35,7 @@ export type SockaBunUpgradeData<TExtra> = TExtra & { request: Request };
 
 /**
  * Calls {@link Bun.Server.upgrade} with **`request: req`** merged into **`data`**, so
- * {@link sockaBunInitFromWsData} and **`strictUpgradeRequest: true`** always see the HTTP
+ * {@link sockaBunInitFromWsData} and the default strict upgrade always see the HTTP
  * upgrade request (query params, cookies path).
  */
 export function sockaBunUpgrade<TExtra extends Record<string, unknown>>(
@@ -58,7 +58,7 @@ export type SockaBunResolveScope<
 	TWsData = undefined,
 > = (ws: ServerWebSocket<TWsData>) => {
 	sessionMap: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
-	config: SockaWebSocketSessionConfig<TContract, TData>;
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>;
 };
 
 export type SockaBunWebSocketHandlers<
@@ -154,7 +154,7 @@ function bunHandlersFromConfig<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
 >(
-	config: SockaWebSocketSessionConfig<TContract, TData>,
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	maybeOptions?: {
 		sessionMap?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
 	},
@@ -235,7 +235,7 @@ export function createSockaBunWebSocketHandlers<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
 >(
-	config: SockaWebSocketSessionConfig<TContract, TData>,
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	options?: {
 		sessionMap?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
 	},
@@ -254,7 +254,7 @@ export function createSockaBunWebSocketHandlers<
 	TData,
 >(
 	configOrOptions:
-		| SockaWebSocketSessionConfig<TContract, TData>
+		| SockaWebSocketSessionConfigUnion<TContract, TData>
 		| { resolveScope: SockaBunResolveScope<TContract, TData, unknown> },
 	maybeOptions?: {
 		sessionMap?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
@@ -279,7 +279,7 @@ export function createSockaBunWebSocketHandlers<
 		);
 	}
 	return bunHandlersFromConfig(
-		configOrOptions as SockaWebSocketSessionConfig<TContract, TData>,
+		configOrOptions as SockaWebSocketSessionConfigUnion<TContract, TData>,
 		maybeOptions,
 	);
 }

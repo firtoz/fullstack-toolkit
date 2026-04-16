@@ -77,6 +77,7 @@ describe("@firtoz/socka/server session + shared state (dynamic roster) — Node 
 
 		wss.on("connection", (ws: NodeWebSocket) => {
 			attachSockaWebSocket(ws as unknown as globalThis.WebSocket, sessions, {
+				strictUpgradeRequest: false,
 				contract: sessionGameContract,
 				wireFormat: "json",
 				handlers,

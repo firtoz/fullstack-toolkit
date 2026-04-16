@@ -79,14 +79,13 @@ export const chatContract = defineSocka({
 });
 ```
 
-**`server.ts`** — **`createSockaRoomRegistry`** gives each room its own **`sessionMap`** and **config**. With **`strictUpgradeRequest: true`**, **`createData`** receives **`SockaStrictWebSocketInit`**: **`init.request`** is always the upgrade **`Request`**, so you can parse the URL, query params, and headers with normal **`Request` APIs** (see **[Server — Strict upgrade request](./docs/server.md#strict-upgrade-request)**). **`session.listPeers()`** returns **`session.data`** for other sockets in the same room—use it to implement **`listPresence`**-style calls (see **[Presence](./docs/presence.md)**).
+**`server.ts`** — **`createSockaRoomRegistry`** gives each room its own **`sessionMap`** and **config**. By default **`createData`** receives **`SockaStrictWebSocketInit`**: **`init.request`** is the upgrade **`Request`** (Bun/Hono/adapters pass it through; see **[Server — Strict upgrade request](./docs/server.md#strict-upgrade-request)**). Set **`strictUpgradeRequest: false`** when you have no **`Request`**. **`session.listPeers()`** returns **`session.data`** for other sockets in the same room—use it to implement **`listPresence`**-style calls (see **[Presence](./docs/presence.md)**).
 
 ```ts
 import type { ServerWebSocket } from "bun";
 import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
 import {
 	createSockaRoomRegistry,
-	type SockaStrictWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
 import { type ChatMessageRow, chatContract } from "./contract";
@@ -99,8 +98,7 @@ const history = new Map<string, ChatMessageRow[]>();
 const registry = createSockaRoomRegistry(
 	(roomId): SockaWebSocketSessionConfig<typeof chatContract, SessionData> => ({
 		contract: chatContract,
-		strictUpgradeRequest: true,
-		createData: (init: SockaStrictWebSocketInit) => {
+		createData: (init) => {
 			const u = new URL(init.request.url);
 			const displayName = u.searchParams.get("name")?.trim() || "anon";
 			return { roomId, userId: crypto.randomUUID(), displayName };
@@ -251,7 +249,7 @@ Pick how the socket is upgraded, then use the matching import path and guide:
 - **Correlated envelopes** — request/response IDs and validation hooks are built in.
 - **Same contract** across Bun, Hono, Node `ws`, and Durable Objects (see **[Comparison](./docs/comparison.md)** for socket.io, tRPC, and custom WebSocket stacks).
 - **Room registry + presence helpers** — **`createSockaRoomRegistry`** for per-room **`sessionMap`** / config; **`session.listPeers()`** to list other peers in the room (see **[Presence](./docs/presence.md)**).
-- **Strict upgrade typing + optional reconnect** — Bun/Hono can set **`strictUpgradeRequest: true`** so **`createData`** sees **`init.request`**; **`SockaWebSocketClient`** / **`SockaSession`** can **`reconnect`** with exponential backoff (see **[Reconnection](./docs/reconnection.md)**).
+- **Strict upgrade typing + optional reconnect** — by default **`createData`** sees **`init.request`** on the upgrade; **`SockaWebSocketClient`** / **`SockaSession`** can **`reconnect`** with exponential backoff (see **[Reconnection](./docs/reconnection.md)**).
 
 ## Documentation
 

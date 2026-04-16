@@ -12,7 +12,6 @@ import { createSockaRoomRegistry } from "@firtoz/socka/server";
 
 const rooms = createSockaRoomRegistry((roomId, _sessionMap) => ({
   contract: myContract,
-  strictUpgradeRequest: true,
   createData: (init) => { /* parse init.request */ return { roomId: "…" }; },
   handlers: { /* … */ },
   handleClose: async () => {},

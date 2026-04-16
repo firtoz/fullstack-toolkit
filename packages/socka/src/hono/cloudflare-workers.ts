@@ -8,7 +8,7 @@ import {
 	SockaWebSocketSession,
 	runSockaSessionOnAttached,
 	type SockaWebSocketInit,
-	type SockaWebSocketSessionConfig,
+	type SockaWebSocketSessionConfigUnion,
 } from "../server/SockaWebSocketSession";
 import { sockaHonoStrictInitFromContext } from "./strict-init-context";
 
@@ -20,7 +20,7 @@ export type SockaHonoCloudflareOptions<
 	sockaInit?: (c: Context) => SockaWebSocketInit | undefined;
 	resolveScope?: (c: Context) => {
 		sessions: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
-		config: SockaWebSocketSessionConfig<TContract, TData>;
+		config: SockaWebSocketSessionConfigUnion<TContract, TData>;
 	};
 };
 
@@ -32,7 +32,7 @@ export function sockaHonoCloudflare<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,
 >(
-	config: SockaWebSocketSessionConfig<TContract, TData>,
+	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	options?: SockaHonoCloudflareOptions<TContract, TData>,
 ): (c: Context) => Omit<WSEvents<WebSocket>, "onOpen"> {
 	const staticSessions =
@@ -50,7 +50,7 @@ export function sockaHonoCloudflare<
 				? resolveScope(c)
 				: { sessions: staticSessions, config: staticConfig };
 			let session = sessions.get(domWs);
-			const cfg = scopeConfig as SockaWebSocketSessionConfig<TContract, TData>;
+			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<TContract, TData>;
 			if (!session) {
 				const init: SockaWebSocketInit | undefined =
 					options?.sockaInit?.(c) ?? sockaHonoStrictInitFromContext(c);
@@ -77,7 +77,7 @@ export function sockaHonoCloudflare<
 				const { sessions, config: scopeConfig } = resolveScope
 					? resolveScope(c)
 					: { sessions: staticSessions, config: staticConfig };
-				const cfg = scopeConfig as SockaWebSocketSessionConfig<
+				const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<
 					TContract,
 					TData
 				>;
