@@ -9,19 +9,27 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"require": "./dist/index.js",
+			"default": "./dist/index.js"
 		},
 		"./sqlite-table-sync": {
 			"types": "./dist/sqlite-table-sync/index.d.ts",
-			"import": "./dist/sqlite-table-sync/index.js"
+			"import": "./dist/sqlite-table-sync/index.js",
+			"require": "./dist/sqlite-table-sync/index.js",
+			"default": "./dist/sqlite-table-sync/index.js"
 		},
 		"./sqlite-table-sync/*": {
 			"types": "./dist/sqlite-table-sync/*.d.ts",
-			"import": "./dist/sqlite-table-sync/*.js"
+			"import": "./dist/sqlite-table-sync/*.js",
+			"require": "./dist/sqlite-table-sync/*.js",
+			"default": "./dist/sqlite-table-sync/*.js"
 		},
 		"./*": {
 			"types": "./dist/*.d.ts",
-			"import": "./dist/*.js"
+			"import": "./dist/*.js",
+			"require": "./dist/*.js",
+			"default": "./dist/*.js"
 		}
 	},
 	"files": [
