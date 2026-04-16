@@ -58,7 +58,7 @@ Optional fourth argument **`{ request }`** is passed to **`createData`** when yo
 | Mode | Type passed to **`createData`** | When to use it |
 |------|----------------------------------|----------------|
 | **Omitted** (default) | **`SockaWebSocketInit`** — **`init.request` may be `undefined`** | Custom **`attachSockaWebSocket`** call sites, tests, or any adapter that might not attach an HTTP **`Request`**. You handle a missing URL yourself (optional chaining, fallback URL). |
-| **`true`** | **`SockaStrictWebSocketInit`** — **`init.request` is always a `Request`** | Normal **Bun** / **Hono** upgrades where you always have the incoming request and want to read query params, cookies, or path without `init.request?.url ?? "http://_/"` placeholders. TypeScript catches mistakes; if the adapter omits **`request`**, socka throws a clear error at session construction. |
+| **`true`** | **`SockaStrictWebSocketInit`** — **`init.request` is always a `Request`** | Normal **Bun** / **Hono** upgrades where the HTTP **`Request`** is always present. **`createData`** can use **`new URL(init.request.url)`** and read headers without guarding for a missing **`request`**. If the adapter omits **`request`**, socka throws a clear error at session construction. |
 
 **Typical wiring:** Bun stores **`request`** on **`ServerWebSocket` `data`**; use **`sockaBunInitFromWsData`** with **`strictUpgradeRequest: true`**. Hono **`sockaHonoNodeWs`** can omit **`sockaInit`** — the default builds a **`Request`** from the Hono context. See JSDoc on **`SockaWebSocketSessionConfig`**, **`SockaWebSocketInit`**, and **`SockaStrictWebSocketInit`** in **`@firtoz/socka/server`**.
 

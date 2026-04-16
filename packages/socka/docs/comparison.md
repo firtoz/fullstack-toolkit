@@ -1,4 +1,4 @@
-# Compared to hand-rolled WebSocket RPC (and common alternatives)
+# Compared to custom WebSocket RPC (and common alternatives)
 
 Most apps model messages as large discriminated unions (`type` + `id`), validate twice (once on the wire, once in the handler), and maintain a **pending `Map<string, Deferred>`** for every RPC. That works, but types drift between client and server, correlation IDs are easy to get wrong, and pushing **server events** becomes a second, parallel protocol.
 

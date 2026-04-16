@@ -24,4 +24,4 @@ In-repo guides for the **[Socka](../README.md)** library (**npm** [`@firtoz/sock
 | [Internals](./internals.md) | Wire protocol details, frame kinds, source file links (contributors & curious readers) |
 | [Comparison](./comparison.md) | vs DIY WS, **socket.io**, **tRPC** |
 
-**Roadmap** — [Deferred and post–v1 ideas](../roadmap.md).
+**Roadmap** — [Deferred ideas and future work](../roadmap.md).

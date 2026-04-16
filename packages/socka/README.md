@@ -79,7 +79,7 @@ export const chatContract = defineSocka({
 });
 ```
 
-**`server.ts`** — **`createSockaRoomRegistry`** holds one **`sessionMap` + config per room**; **`strictUpgradeRequest: true`** types **`createData`** with a real **`Request`** (no `http://_/` placeholder). **`session.listPeers()`** replaces hand-rolled **`sessionMap`** walks for presence.
+**`server.ts`** — **`createSockaRoomRegistry`** gives each room its own **`sessionMap`** and **config**. With **`strictUpgradeRequest: true`**, **`createData`** receives **`SockaStrictWebSocketInit`**: **`init.request`** is always the upgrade **`Request`**, so you can parse the URL, query params, and headers with normal **`Request` APIs** (see **[Server — Strict upgrade request](./docs/server.md#strict-upgrade-request)**). **`session.listPeers()`** returns **`session.data`** for other sockets in the same room—use it to implement **`listPresence`**-style calls (see **[Presence](./docs/presence.md)**).
 
 ```ts
 import type { ServerWebSocket } from "bun";
@@ -249,15 +249,15 @@ Pick how the socket is upgraded, then use the matching import path and guide:
 
 - **Schema-first RPC + push** — one contract; no parallel “event” protocol for server pushes.
 - **Correlated envelopes** — request/response IDs and validation hooks are built in.
-- **Same contract** across Bun, Hono, Node `ws`, and Durable Objects (see **[Comparison](./docs/comparison.md)** for socket.io / tRPC / hand-rolled).
-- **Room registry + presence helpers** — **`createSockaRoomRegistry`** for per-room **`sessionMap`** / config; **`session.listPeers()`** for who is in the room without walking maps by hand.
+- **Same contract** across Bun, Hono, Node `ws`, and Durable Objects (see **[Comparison](./docs/comparison.md)** for socket.io, tRPC, and custom WebSocket stacks).
+- **Room registry + presence helpers** — **`createSockaRoomRegistry`** for per-room **`sessionMap`** / config; **`session.listPeers()`** to list other peers in the room (see **[Presence](./docs/presence.md)**).
 - **Strict upgrade typing + optional reconnect** — Bun/Hono can set **`strictUpgradeRequest: true`** so **`createData`** sees **`init.request`**; **`SockaWebSocketClient`** / **`SockaSession`** can **`reconnect`** with exponential backoff (see **[Reconnection](./docs/reconnection.md)**).
 
 ## Documentation
 
 Hub: **[`docs/README.md`](./docs/README.md)** (getting started, peers, lifecycle, multi-room, reference).
 
-**Roadmap:** [post–v1 and deferred work](./roadmap.md). Agent skills: [`skills/`](./skills/).
+**Roadmap:** [deferred ideas and future work](./roadmap.md). Agent skills: [`skills/`](./skills/).
 
 ## Full-stack examples
 
