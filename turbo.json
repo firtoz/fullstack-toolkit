@@ -43,11 +43,13 @@
 			"outputLogs": "new-only"
 		},
 		"db:generate": {
+			"dependsOn": ["^build"],
 			"inputs": ["drizzle.config.ts", "package.json", "src/**/*.ts", "app/**/*.ts"],
 			"outputs": ["drizzle/**"],
 			"outputLogs": "new-only"
 		},
 		"db:generate:emoji": {
+			"dependsOn": ["^build"],
 			"inputs": ["drizzle-emoji.config.ts", "package.json", "src/**/*.ts", "app/**/*.ts"],
 			"outputs": ["drizzle-emoji/**"],
 			"outputLogs": "new-only"
