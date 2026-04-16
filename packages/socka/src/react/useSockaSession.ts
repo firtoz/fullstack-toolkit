@@ -41,7 +41,7 @@ export function createSockaSendProxyFromSession<
 /**
  * ```tsx
  * const { ready, send } = useSockaSession(myContract, { url }, deps);
- * await send.echo({ text: "hi" });
+ * await send.echo({ message: "hi" });
  * ```
  */
 export function useSockaSession<

@@ -33,4 +33,4 @@ Most apps model messages as large discriminated unions (`type` + `id`), validate
 
 ## When socka is a good fit
 
-You want **schema-first WebSocket RPC** with **correlated request/response** and optional **typed server push** from a **single contract module**—and you are fine with **socka v1** frames (see **[Reference](./reference.md)**) so you can swap runtimes (Bun, Hono, Durable Objects, Node **`ws`**) behind the same procedures.
+You want **schema-first WebSocket RPC** with **correlated request/response** and optional **typed server push** from a **single contract module**—and you are fine with **socka v1** frames (see **[Internals](./internals.md)**) so you can swap runtimes (Bun, Hono, Durable Objects, Node **`ws`**) behind the same procedures.

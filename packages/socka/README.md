@@ -25,8 +25,8 @@ import * as z from "zod";
 export const myContract = defineSocka({
 	calls: {
 		echo: {
-			input: z.object({ text: z.string() }),
-			output: z.object({ text: z.string() }),
+			input: z.object({ message: z.string() }),
+			output: z.object({ response: z.string() }),
 		},
 	},
 });
@@ -41,7 +41,7 @@ import { myContract } from "./contract";
 const { websocket } = createSockaBunWebSocketHandlers({
 	contract: myContract,
 	handlers: {
-		echo: async (input) => ({ text: input.text }),
+		echo: async (input) => ({ response: input.message }),
 	},
 	handleClose: async () => {},
 });
@@ -49,6 +49,7 @@ const { websocket } = createSockaBunWebSocketHandlers({
 Bun.serve({
 	port: 3450,
 	fetch(req, server) {
+		// "/ws" is just a convention — any path works; you decide when to call upgrade()
 		if (new URL(req.url).pathname === "/ws") {
 			if (server.upgrade(req)) return undefined;
 			return new Response("WebSocket upgrade failed", { status: 400 });
@@ -69,30 +70,39 @@ const session = new SockaSession({
 	contract: myContract,
 	url: "ws://localhost:3450/ws",
 });
-const { text } = await session.send.echo({ text: "hello" });
-console.log(text);
+const { response } = await session.send.echo({ message: "hello" });
+console.log(response);
 ```
 
-Run **`bun run server.ts`**, then point the client at **`ws://localhost:3450/ws`**.
+Run **`bun run server.ts`**, then point the client at **`ws://localhost:3450/ws`** (same path you upgraded in `fetch`).
+
+For fuller apps, see the tic-tac-toe examples: **[Bun](../../examples/tic-tac-toe-bun)** · **[Hono + Node](../../examples/tic-tac-toe-hono)** · **[Cloudflare DO](../../examples/tic-tac-toe-do)**.
 
 ## Install
 
-```bash
-npm install @firtoz/socka
-```
+Always install **`@firtoz/socka`**, then add **only** what your imports need (`npm` / `pnpm` / `bun add` as you prefer):
 
-Also: `pnpm add @firtoz/socka` · `bun add @firtoz/socka`
+| You are building… | Install |
+|-------------------|---------|
+| **Browser / Vite SPA** (client only) | `npm install @firtoz/socka` |
+| **React** (`@firtoz/socka/react`) | `npm install @firtoz/socka react` — add **`@types/react`** as a dev dependency if TypeScript asks |
+| **Bun** (`Bun.serve`, `@firtoz/socka/bun`) | `npm install @firtoz/socka` — add **`bun-types`** as a dev dependency if you type-check Bun APIs |
+| **Node + Hono + `@hono/node-ws`** | `npm install @firtoz/socka hono @hono/node-ws @hono/node-server ws` — add **`@types/ws`** as a dev dependency when you use **`ws`** on Node |
+| **Cloudflare Workers + Hono** (`@firtoz/socka/hono/cloudflare`) | `npm install @firtoz/socka hono` |
+| **Cloudflare Durable Objects** (`@firtoz/socka/do`) | `npm install @firtoz/socka hono @firtoz/websocket-do` |
 
-Optional peers depend on which subpath you import—see **[Peers](./docs/peers.md)**.
+For **Cloudflare TypeScript types**, prefer **`wrangler types`** (or your app’s typegen) so globals and bindings match your Worker — see [Cloudflare’s TypeScript guide](https://developers.cloudflare.com/workers/languages/typescript). More detail: **[Peers](./docs/peers.md)**.
 
 ## Other runtimes
 
-| Runtime | Subpath | Guide |
-|--------|---------|--------|
-| **Node** + [`ws`](https://github.com/websockets/ws), or any standard **`WebSocket`** | `@firtoz/socka/server` | **[Server](./docs/server.md)** — `attachSockaWebSocket` |
-| **Bun** `Bun.serve` / `ServerWebSocket` | `@firtoz/socka/bun` | **[Server](./docs/server.md)** |
-| **Hono** on Node (`@hono/node-ws`) | `@firtoz/socka/hono` | **[Server](./docs/server.md)** |
-| **Hono** on Cloudflare Workers | `@firtoz/socka/hono/cloudflare` | **[Server](./docs/server.md)** |
+Pick how the socket is upgraded, then use the matching import path and guide:
+
+| Runtime | Import path | Quick start |
+|---------|-------------|-------------|
+| **Node + [`ws`](https://github.com/websockets/ws)** (or any standard **`WebSocket`** after upgrade) | `@firtoz/socka/server` | [`attachSockaWebSocket`](./docs/server.md) |
+| **Bun** (`Bun.serve` / `ServerWebSocket`) | `@firtoz/socka/bun` | [`createSockaBunWebSocketHandlers`](./docs/server.md#firtoz-socka-bun-bunserve) |
+| **Hono on Node** (`@hono/node-ws`) | `@firtoz/socka/hono` | [`sockaHonoNodeWs`](./docs/server.md#firtoz-socka-hono-node-hono-node-ws) |
+| **Hono on Cloudflare Workers** | `@firtoz/socka/hono/cloudflare` | [`sockaHonoCloudflare`](./docs/server.md#firtoz-socka-hono-cloudflare-workers) |
 | **Cloudflare Durable Objects** | `@firtoz/socka/do` | **[Durable Objects](./docs/durable-objects.md)** |
 
 ## Why not socket.io, tRPC, or DIY?

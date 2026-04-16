@@ -2,7 +2,7 @@
 
 Contracts can declare **`pushes`** alongside **`calls`**. Each push name maps to a **Standard Schema** payload. The server validates payloads **before** sending; the client decodes and validates **before** your listeners run—so **`InferSockaPushPayload`** stays honest end to end.
 
-**Wire format** — Push uses the **`serverEvent`** logical frame type. It is encoded with the session’s **`wireFormat`** (**JSON text** or **msgpack binary**) like RPC traffic. Switching to msgpack affects **calls and pushes** together—there is no separate “push encoding.”
+Pushes use the same **`wireFormat`** as RPCs for that session (default JSON). **Details:** **[Reference](./reference.md#wire-encoding-json-and-msgpack)** · **[Internals](./internals.md)**.
 
 ```ts
 export const myContract = defineSocka({

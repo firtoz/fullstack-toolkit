@@ -2,14 +2,14 @@
 
 A **room** (channel, game, namespace) is a **scope** where every client shares one **`sessionMap`** and one session **config** (the object you pass to **`attachSockaWebSocket`**, **`sockaHonoNodeWs`**, **`createSockaBunWebSocketHandlers`**, …).
 
-That shared **config** includes **`wireFormat`** (`"json"` or `"msgpack"`). Everyone connecting into that scope must use the same encoding—see **[Reference — Wire encoding](./reference.md#wire-encoding-json-and-msgpack)**.
+If you care about **encoding** (`json` vs `msgpack`), everyone in that scope must use the same **`wireFormat`** — see **[Reference](./reference.md#wire-encoding-json-and-msgpack)** (details in **[Internals](./internals.md)**).
 
 **Durable Objects** — Often one **Durable Object instance** per room (e.g. **`idFromName(roomId)`**), with one **`sessions`** map per instance. See **[Durable Objects](./durable-objects.md)**.
 
 Within a scope:
 
 - All **`WebSocket`** instances are keys in the same **`Map<WebSocket, Session>`**.
-- **`broadcastContractEvent`** walks that map, so “everyone in this room” means “every session in this scope’s map.”
+- **`broadcastPush`** (and anything else that iterates **`sessions`**) only reaches sockets in **that** map — “everyone in this room” means “every session in this scope’s map.”
 - **`handleClose(session)`** runs when a socket leaves; use **`session.websocket`** and **`session.data`** for cleanup. See **[Lifecycle](./lifecycle.md)** for ordering (your handler runs **before** the socket is removed from the map).
 
 ## Choosing a pattern
@@ -22,10 +22,10 @@ Within a scope:
 
 Demos: [`tic-tac-toe-bun`](../../../examples/tic-tac-toe-bun), [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono), [`tic-tac-toe-do`](../../../examples/tic-tac-toe-do).
 
-## Pitfalls
+## Pitfalls (for app authors)
 
-- **Mixing rooms in one map** — Two logical rooms sharing a **`sessionMap`** leak broadcasts and presence. Partition maps per room or use separate DO instances.
-- **Stale `config`** — Handlers close over **`config`**; mutating shared objects inside it affects every connection using that config. Prefer immutable snapshots or room-scoped instances (e.g. one **`Game`** per room).
-- **Very large rooms on a Durable Object** — One DO is one isolate; huge fan-in can hit limits. Shard by room id (multiple DOs) if needed.
+- **Mixing rooms in one map** — If two logical rooms share a **`sessionMap`**, **`broadcastPush`** and “who’s online” can leak across rooms. Give each room its own map (or its own DO instance).
+- **Mutating shared `config`** — Handlers close over **`config`**; changing a shared object inside it affects every connection using that config. Prefer immutable snapshots or a **per-room** config instance (e.g. one **`Game`** object per room).
+- **Very large rooms on a Durable Object** — One DO is one isolate; huge fan-in can hit CPU or memory limits. Split traffic across multiple DOs (e.g. shard by room id) if needed.
 
 See also [Lifecycle](./lifecycle.md) and [Server](./server.md) for **`createData`** and **`session.data`**.

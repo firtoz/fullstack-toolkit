@@ -11,8 +11,8 @@ import {
 const contract = defineSocka({
 	calls: {
 		echo: {
-			input: z.object({ text: z.string() }),
-			output: z.object({ text: z.string() }),
+			input: z.object({ message: z.string() }),
+			output: z.object({ response: z.string() }),
 		},
 	},
 });
@@ -23,7 +23,7 @@ type Handlers = InferSockaHandlers<typeof contract, unknown>;
 void (async () => {
 	const _send: Send = {} as Send;
 	const _handlers: Handlers = {
-		echo: async (input) => ({ text: input.text }),
+		echo: async (input) => ({ response: input.message }),
 	};
 	void _send;
 	void _handlers;

@@ -42,7 +42,7 @@ attachSockaWebSocket(
 
 Optional fourth argument **`{ request }`** is passed to **`createData`** when you define per-connection state. Use **`InferSockaHandlers<typeof myContract, SockaWebSocketSession<typeof myContract, YourData>>`** (or omit the second generic and let inference fill it from your handlers).
 
-**Inbound frames without `attachSockaWebSocket`** — use **`dispatchSockaInboundMessage(session, wireFormat, data)`** with the same `data` shape as a DOM **`MessageEvent`** (`string`, **`ArrayBuffer`**, **`Blob`**, **`ArrayBufferView`**, or **`Buffer`** on Node/Bun). This is what **`attachSockaWebSocket`** uses internally.
+**Inbound frames without `attachSockaWebSocket`** — use **`dispatchSockaInboundMessage(session, wireFormat, data)`** with the same `data` shape as a DOM **`MessageEvent`**. See **[Internals](./internals.md)** for how this fits the wire pipeline.
 
 ## `createData` and session-only state
 
