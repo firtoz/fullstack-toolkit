@@ -12,6 +12,8 @@
 
 **Typed WebSocket RPC and pushes for TypeScript.** One **`defineSocka`** contract gives you **`session.send.*`** for RPCs and **`session.subscribe`** for **typed server pushes**—validated, correlated, same schema on client and server.
 
+**Validation is [Standard Schema](https://standardschema.dev) v1**, not Zod-specific: any compliant library works (e.g. **Zod**, **Valibot**, or others). Examples below use **Zod** for familiarity.
+
 **npm:** [`@firtoz/socka`](https://www.npmjs.com/package/@firtoz/socka). *Socka* is the project name in prose; **install and `import` paths always use `@firtoz/socka` or `@firtoz/socka/...`**. The published artifact is **compiled ESM + `.d.ts` in `dist/`** (see `package.json` `exports`).
 
 ## Minimal example: multi-room chat (Bun)
