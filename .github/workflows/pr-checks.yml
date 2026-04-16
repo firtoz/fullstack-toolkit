@@ -79,7 +79,7 @@ jobs:
     needs: checks
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: mcr.microsoft.com/playwright:v1.59.1-noble
       # Browsers + OS deps are in the image; see https://playwright.dev/docs/ci#via-containers
       # --ipc=host: avoid Chromium OOM in Docker (https://playwright.dev/docs/docker#recommended-docker-configuration)
       # Do not set --user: runner must be root here so we can `apt-get install unzip`
