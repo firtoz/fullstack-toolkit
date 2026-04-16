@@ -65,7 +65,10 @@ export function sockaHonoNodeWs<
 				: { sessions: staticSessions, config: staticConfig };
 			const init: SockaWebSocketInit | undefined =
 				options?.sockaInit?.(c) ?? sockaHonoStrictInitFromContext(c);
-			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<TContract, TData>;
+			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<
+				TContract,
+				TData
+			>;
 			const session = new SockaWebSocketSession(domWs, sessions, cfg, init);
 			sessions.set(domWs, session);
 			runSockaSessionOnAttached(cfg, session);
@@ -79,7 +82,10 @@ export function sockaHonoNodeWs<
 				: { sessions: staticSessions, config: staticConfig };
 			const session = sessions.get(domWs);
 			if (!session) return;
-			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<TContract, TData>;
+			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<
+				TContract,
+				TData
+			>;
 			const wireFormat: SockaWireFormat = cfg.wireFormat ?? "json";
 			void dispatchSockaInboundMessage(session, wireFormat, evt.data).catch(
 				(error: unknown) => {

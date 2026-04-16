@@ -50,7 +50,10 @@ export function sockaHonoCloudflare<
 				? resolveScope(c)
 				: { sessions: staticSessions, config: staticConfig };
 			let session = sessions.get(domWs);
-			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<TContract, TData>;
+			const cfg = scopeConfig as SockaWebSocketSessionConfigUnion<
+				TContract,
+				TData
+			>;
 			if (!session) {
 				const init: SockaWebSocketInit | undefined =
 					options?.sockaInit?.(c) ?? sockaHonoStrictInitFromContext(c);

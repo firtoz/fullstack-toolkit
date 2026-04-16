@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { RoutePath } from "@firtoz/router-toolkit";
 import { useSearchParams } from "react-router";
 import {
@@ -7,7 +7,7 @@ import {
 	createInstrumentedDbCreator,
 	type IDBOperation,
 } from "@firtoz/drizzle-indexeddb";
-import { useLiveQuery } from "@tanstack/react-db";
+import { useLiveQuery, count } from "@tanstack/react-db";
 import * as schema from "test-schema/schema";
 import { migrations } from "test-schema/drizzle/indexeddb-migrations";
 import { ClientOnly } from "~/components/shared/ClientOnly";
@@ -127,7 +127,8 @@ const PaginatedQuery = ({
 	);
 };
 
-// Component for testing window/offset-based pagination
+// Component for testing offset-based pagination via TanStack DB `.offset()` (backed by
+// `loadSubset` in the IndexedDB collection — no full-table scan for the page rows).
 const OffsetPaginatedQuery = ({
 	pageSize,
 	currentPage,
@@ -140,34 +141,34 @@ const OffsetPaginatedQuery = ({
 	const { useCollection } = useDrizzleIndexedDB<typeof schema>();
 	const todoCollection = useCollection("todoTable");
 
-	// Get total count for pagination
-	const { data: allTodos } = useLiveQuery(
-		(q) => q.from({ todo: todoCollection }),
-		[todoCollection],
-	);
-
-	const totalItems = allTodos?.length ?? 0;
-	const totalPages = Math.ceil(totalItems / pageSize);
 	const offset = currentPage * pageSize;
 
-	const { data: todos, isLoading } = useLiveQuery(
+	const { data: countResult } = useLiveQuery(
 		(q) =>
 			q
 				.from({ todo: todoCollection })
-				.orderBy(({ todo }) => todo.priority, "asc")
-				.limit(pageSize),
-		[todoCollection, pageSize, currentPage],
+				.select(({ todo }) => ({ total: count(todo.id) })),
+		[todoCollection],
 	);
 
-	// Apply offset manually since TanStack DB's offset is internal
-	// In a real app, you'd use setWindow or similar
-	const displayedTodos = useMemo(() => {
-		if (!allTodos) return [];
-		const sorted = [...allTodos].sort(
-			(a, b) => (a.priority ?? 0) - (b.priority ?? 0),
-		);
-		return sorted.slice(offset, offset + pageSize);
-	}, [allTodos, offset, pageSize]);
+	const totalItems = countResult?.[0]?.total ?? 0;
+	const totalPages = Math.ceil(totalItems / pageSize);
+
+	const { data: todos, isLoading } = useLiveQuery(
+		(q) => {
+			let query = q.from({ todo: todoCollection });
+
+			query = query.orderBy(({ todo }) => todo.priority, "asc");
+
+			query = query.limit(pageSize);
+			if (offset > 0) {
+				query = query.offset(offset);
+			}
+
+			return query;
+		},
+		[todoCollection, pageSize, offset],
+	);
 
 	return (
 		<div data-testid="offset-paginated-query">
@@ -177,9 +178,7 @@ const OffsetPaginatedQuery = ({
 			<div data-testid="query-status">{isLoading ? "Loading..." : "Ready"}</div>
 			<div data-testid="total-items">Total items: {totalItems}</div>
 			<div data-testid="current-offset">Current offset: {offset}</div>
-			<div data-testid="items-on-page">
-				Items on page: {displayedTodos.length}
-			</div>
+			<div data-testid="items-on-page">Items on page: {todos?.length ?? 0}</div>
 
 			<div
 				style={{
@@ -190,7 +189,7 @@ const OffsetPaginatedQuery = ({
 					padding: "10px",
 				}}
 			>
-				{displayedTodos.map((todo, index) => (
+				{todos?.map((todo, index) => (
 					<div
 						key={todo.id}
 						data-testid={`offset-todo-item-${index}`}

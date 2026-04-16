@@ -47,7 +47,9 @@ function isLooseUpgradeConfig<
 >(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 ): config is SockaWebSocketSessionConfigLoose<TContract, TData> {
-	return "strictUpgradeRequest" in config && config.strictUpgradeRequest === false;
+	return (
+		"strictUpgradeRequest" in config && config.strictUpgradeRequest === false
+	);
 }
 
 /** Session that can send a wire-level server event (already validated). */
