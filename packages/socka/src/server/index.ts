@@ -4,6 +4,7 @@ export {
 	runSockaSessionOnAttached,
 	type SockaEmitCapable,
 	type SockaPushSession,
+	type SockaStrictWebSocketInit,
 	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "./SockaWebSocketSession";
@@ -12,3 +13,7 @@ export {
 	type AttachedSockaWebSocket,
 } from "./attachSockaWebSocket";
 export { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
+export {
+	createSockaRoomRegistry,
+	type SockaRoomBundle,
+} from "./room-registry";

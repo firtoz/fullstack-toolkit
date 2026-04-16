@@ -83,13 +83,9 @@ export class ChatRoomDO extends SockaWebSocketDO<ChatSockaSession, Env> {
 					return { messages };
 				},
 				listPresence: async (_input, session) => {
-					const users: { userId: string; displayName: string }[] = [];
-					for (const s of this.sessions.values()) {
-						users.push({
-							userId: s.data.userId,
-							displayName: s.data.displayName,
-						});
-					}
+					const users = session
+						.listPeers()
+						.map((d) => ({ userId: d.userId, displayName: d.displayName }));
 					users.sort((a, b) => a.displayName.localeCompare(b.displayName));
 					return { selfUserId: session.data.userId, users };
 				},

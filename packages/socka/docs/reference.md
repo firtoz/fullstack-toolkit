@@ -32,6 +32,8 @@ Each **`event`** is **`SockaReportError`**: one discriminated union (`kind` narr
 - **`"msgpack"`** uses **binary** frames; use it only when **both** ends opt in.
 - **RPCs and typed pushes** share one encoding — there is no separate “push encoding.”
 
+Tradeoffs (bundle size, CPU, debuggability): **[Wire format](./wire-format.md)**.
+
 Tables, logical frame kinds (`clientRequest`, `serverResponse`, …), and **`dispatchSockaInboundMessage`** details: **[Internals](./internals.md)**.
 
 ## RPC handler errors
@@ -48,7 +50,8 @@ Throw **`SockaError`** from handlers when you control the **message** sent on th
 | **`wireFormat`** | `"json"` (default) or `"msgpack"` — must match clients. |
 | **`handlers`** | Typed call implementations; arity follows input schema (see [Getting started](./getting-started.md)). |
 | **`handleClose`** | Async per-socket teardown; runs **before** removal from `sessions` (see [Lifecycle](./lifecycle.md)). |
-| **`createData`** | Builds **`session.data`**. **`SockaWebSocketSession`**: **`(init: SockaWebSocketInit) => T`** (e.g. **`init.request`** from upgrade). **`SockaDoSession`**: **`(ctx: Context) => T`** — see **[Durable Objects](./durable-objects.md)**. |
+| **`createData`** | Builds **`session.data`**. **`SockaWebSocketSession`**: **`(init: SockaWebSocketInit) => T`** or, with **`strictUpgradeRequest: true`**, **`(init: SockaStrictWebSocketInit) => T`** so **`init.request`** is always set — see **[Server](./server.md)**. **`SockaDoSession`**: **`(ctx: Context) => T`** — see **[Durable Objects](./durable-objects.md)**. |
+| **`strictUpgradeRequest`** | When **`true`**, **`createData`** receives **`SockaStrictWebSocketInit`** ( **`init.request` required** ). Omitted = **`SockaWebSocketInit`** with optional **`request`**. See **[Server — Strict upgrade request](./server.md#strict-upgrade-request)**. |
 | **`onAttached`** | Optional: after registration in `sessions` (safe for broadcasts). |
 | **`onHandlerError`** | Observes thrown errors in handlers (after optional `SockaError` wrapping for the wire). |
 | **`onValidationError`** | Inbound frame failed schema / wire decode before your handler. |
@@ -66,6 +69,8 @@ Throw **`SockaError`** from handlers when you control the **message** sent on th
 | **`autoConnect`** | Default **`true`**. If **`false`**, call **`connect()`** before **`session.send`** (or rely on implicit open from **`send`**). |
 | **`serializeJson` / `deserializeJson`** | Same as server — JSON wire mode only. |
 | **`onOpen` / `onClose` / `onError`** | WebSocket lifecycle. |
+| **`reconnect`** | **`false`** or backoff options — default **on** for **`url`**, **off** for injected **`webSocket`** unless overridden. See **[Reconnection](./reconnection.md)**. |
+| **`onReconnecting` / `onReconnected`** | Reconnect lifecycle (**`SockaWebSocketClient`** / **`SockaSession`**). |
 | **`onValidationError`** | Inbound frame failed validation (**`SockaWebSocketClient`**). |
 | **`pushHandlers`** | Initial **`session.subscribe`** subscriptions (**`SockaSession`** only). |
 | **`reportError`** | Client pipeline failures (listeners, validation); see **Errors and observability**. |

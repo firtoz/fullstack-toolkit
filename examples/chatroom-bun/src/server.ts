@@ -6,7 +6,6 @@ import type {
 } from "./contract";
 import { chatContract } from "./contract";
 import type {
-	SockaWebSocketInit,
 	SockaWebSocketSession,
 	SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
@@ -77,8 +76,9 @@ function makeConfig(
 ): SockaWebSocketSessionConfig<typeof chatContract, SessionData> {
 	return {
 		contract: chatContract,
-		createData: (init: SockaWebSocketInit) => {
-			const u = new URL(init.request?.url ?? "http://_/");
+		strictUpgradeRequest: true,
+		createData: (init) => {
+			const u = new URL(init.request.url);
 			const displayName = u.searchParams.get("name")?.trim() || "anon";
 			return { roomId, userId: crypto.randomUUID(), displayName };
 		},
@@ -95,13 +95,9 @@ function makeConfig(
 				return { messages: listMessagesForRoom(session.data.roomId, lim) };
 			},
 			listPresence: async (_input, session) => {
-				const users: { userId: string; displayName: string }[] = [];
-				for (const [, s] of sessionMap) {
-					users.push({
-						userId: s.data.userId,
-						displayName: s.data.displayName,
-					});
-				}
+				const users = session
+					.listPeers()
+					.map((d) => ({ userId: d.userId, displayName: d.displayName }));
 				users.sort((a, b) => a.displayName.localeCompare(b.displayName));
 				return { selfUserId: session.data.userId, users };
 			},

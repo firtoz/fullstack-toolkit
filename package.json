@@ -58,6 +58,7 @@
 		"format": "TURBO_TELEMETRY_DISABLED=1 turbo run format",
 		"test": "TURBO_TELEMETRY_DISABLED=1 turbo run test",
 		"test:watch": "turbo run test:watch",
+		"codegen": "bun scripts/codegen.ts",
 		"prepare": "husky",
 		"changeset": "changeset",
 		"version": "changeset version && bun install --lockfile-only && git add bun.lock",

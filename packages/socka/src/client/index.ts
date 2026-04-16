@@ -11,5 +11,8 @@ export {
 } from "../core/socka-report-error";
 export {
 	SockaWebSocketClient,
+	type SockaReconnectConfig,
+	type SockaReconnectedInfo,
+	type SockaReconnectingInfo,
 	type SockaWebSocketClientOptions,
 } from "./SockaWebSocketClient";

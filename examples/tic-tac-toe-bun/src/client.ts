@@ -1,17 +1,20 @@
 import { SockaSession } from "@firtoz/socka/client";
 import { ticTacToeContract } from "./contract";
 
+function logLine(logEl: HTMLPreElement | null, msg: string): void {
+	if (logEl) {
+		logEl.textContent = `${msg}\n${logEl.textContent ?? ""}`.slice(0, 4000);
+	}
+}
+
+/** When opening `index.html` without a host, use this port (matches `Bun.serve`). */
+const defaultPort = 3461;
+
 const roomInput = document.querySelector<HTMLInputElement>("#room");
 const connectBtn = document.querySelector<HTMLButtonElement>("#connect");
 const statusEl = document.querySelector<HTMLParagraphElement>("#status");
 const boardEl = document.querySelector<HTMLDivElement>("#board");
 const logEl = document.querySelector<HTMLPreElement>("#log");
-
-function log(msg: string): void {
-	if (logEl) {
-		logEl.textContent = `${msg}\n${logEl.textContent ?? ""}`.slice(0, 4000);
-	}
-}
 
 let session: SockaSession<typeof ticTacToeContract> | null = null;
 
@@ -37,7 +40,7 @@ function renderBoard(): void {
 					paintCellButtons(out.board);
 					if (statusEl) statusEl.textContent = `${out.status} — turn ${out.turn}`;
 				} catch (e) {
-					log(e instanceof Error ? e.message : String(e));
+					logLine(logEl, e instanceof Error ? e.message : String(e));
 				}
 			});
 			row.appendChild(cell);
@@ -64,7 +67,7 @@ if (roomInput) roomInput.value = defaultRoom;
 connectBtn?.addEventListener("click", async () => {
 	const room = roomInput?.value.trim() || "demo";
 	const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-	const host = window.location.host || "localhost:3461";
+	const host = window.location.host || `localhost:${defaultPort}`;
 	const url = `${proto}//${host}/ws/${encodeURIComponent(room)}`;
 
 	if (session) {
@@ -90,9 +93,9 @@ connectBtn?.addEventListener("click", async () => {
 		if (statusEl) {
 			statusEl.textContent = `You are ${out.you} — ${out.status} — turn ${out.turn}`;
 		}
-		log(`Joined as ${out.you}`);
+		logLine(logEl, `Joined as ${out.you}`);
 	} catch (e) {
-		log(e instanceof Error ? e.message : String(e));
+		logLine(logEl, e instanceof Error ? e.message : String(e));
 		if (statusEl) statusEl.textContent = "Error (see log)";
 	}
 });

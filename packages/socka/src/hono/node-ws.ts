@@ -11,6 +11,9 @@ import {
 	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
+import { sockaHonoStrictInitFromContext } from "./strict-init-context";
+
+export { sockaHonoStrictInitFromContext } from "./strict-init-context";
 
 export type SockaHonoNodeWsOptions<
 	TContract extends SockaContract<SockaContractConfig>,
@@ -18,7 +21,10 @@ export type SockaHonoNodeWsOptions<
 > = {
 	/** Shared map; default is a new `Map`. */
 	sessions?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
-	/** Per-upgrade init for `createData` (e.g. `{ request: c.req.raw }` when it is a `Request`). */
+	/**
+	 * Per-upgrade init for `createData`. When omitted, defaults to
+	 * {@link sockaHonoStrictInitFromContext} so `Request` is always available.
+	 */
 	sockaInit?: (c: Context) => SockaWebSocketInit | undefined;
 	/**
 	 * Resolve the session map and config from this upgrade’s Hono context (e.g. multi-room
@@ -57,7 +63,8 @@ export function sockaHonoNodeWs<
 			const { sessions, config: scopeConfig } = resolveScope
 				? resolveScope(c)
 				: { sessions: staticSessions, config: staticConfig };
-			const init = options?.sockaInit?.(c);
+			const init: SockaWebSocketInit | undefined =
+				options?.sockaInit?.(c) ?? sockaHonoStrictInitFromContext(c);
 			const cfg = scopeConfig as SockaWebSocketSessionConfig<TContract, TData>;
 			const session = new SockaWebSocketSession(domWs, sessions, cfg, init);
 			sessions.set(domWs, session);

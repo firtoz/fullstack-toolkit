@@ -30,6 +30,10 @@ Use **`SockaWebSocketClient`** directly if you need **`onResponse` / `onServerEr
 
 ## React
 
+### `useSockaSession` — typed `send`
+
+Use **`useSockaSession(contract, options, deps)`** when you want **`send.*`** RPC methods directly (same shape as **`session.send`**). **`ready`** flips to **`true`** after the socket opens; **`deps`** remount the connection when identity (e.g. room id) changes.
+
 ```ts
 import { useSockaSession } from "@firtoz/socka/react";
 import { myContract } from "./contract";
@@ -43,6 +47,37 @@ function App() {
 // Binary frames — set the same `wireFormat` on the server session
 useSockaSession(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 ```
+
+### `useSocka` — hold a `SockaSession` ref
+
+Use **`useSocka(options, deps)`** when you need the full **`SockaSession`** (e.g. **`session.subscribe`**, **`session.client`**, **`waitForPush`**, or passing the session into non-React helpers). It returns **`{ ready, sessionRef }`** — read **`sessionRef.current`** in effects or callbacks (it is **`null`** until the effect runs).
+
+| | **`useSockaSession`** | **`useSocka`** |
+|--|------------------------|----------------|
+| **Returns** | **`{ ready, send }`** | **`{ ready, sessionRef }`** |
+| **Best for** | Most React UIs that only call RPCs | Subscriptions, low-level client access, imperative APIs |
+
+```tsx
+import { useEffect } from "react";
+import { useSocka } from "@firtoz/socka/react";
+import { myContract } from "./contract";
+
+function App() {
+  const { ready, sessionRef } = useSocka({ contract: myContract, url: "ws://..." }, []);
+
+  useEffect(() => {
+    const s = sessionRef.current;
+    if (!ready || !s) return;
+    const onNotify = (p: { msg: string }) => console.log(p.msg);
+    s.subscribe.on("notify", onNotify);
+    return () => s.subscribe.off("notify", onNotify);
+  }, [ready, sessionRef]);
+
+  return null;
+}
+```
+
+*(Example assumes your contract defines a **`notify`** push; use the real push names from **`myContract`**.)*
 
 ### One WebSocket for the whole tree
 
@@ -78,8 +113,8 @@ Use **`autoConnect: false`** on **`SockaWebSocketClient`** / **`SockaSession`** 
 
 ## Client lifecycle
 
-Treat each **`SockaSession`** / **`SockaWebSocketClient`** as bound to **one** underlying **`WebSocket`**. When the socket closes, pending calls reject and should not be retried on the same instance. For reconnect or room changes, construct a **new** client (in React, remount **`useSockaSession`** / **`SockaSessionProvider`** when **`url`** or identity **`deps`** change). Use **`ready`** / **`waitForOpen()`** before assuming the connection is usable; use **`onClose`** / **`onError`** (or **`reportError`**) for backoff, toasts, or logging.
+Treat each **`SockaSession`** / **`SockaWebSocketClient`** as bound to **one** underlying **`WebSocket`**. When the socket closes, pending calls reject on that instance unless you opt into client-side reconnect (see **[Reconnection](./reconnection.md)**). For a deliberate room/url change, construct a **new** client (in React, remount **`useSockaSession`** / **`SockaSessionProvider`** when **`url`** or identity **`deps`** change). Use **`ready`** / **`waitForOpen()`** before assuming the connection is usable; use **`onClose`** / **`onError`** (or **`reportError`**) for telemetry.
 
 ## Pushes
 
-Server push and client subscriptions are covered in [Pushes](./events.md).
+Server push and client subscriptions are covered in **[Pushes](./pushes.md)**.

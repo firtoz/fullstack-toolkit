@@ -6,7 +6,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sockaHonoNodeWs } from "@firtoz/socka/hono";
 import type {
-	SockaWebSocketInit,
 	SockaWebSocketSession,
 	SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
@@ -32,6 +31,7 @@ function makeRoomConfig(
 ): SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData> {
 	return {
 		contract: ticTacToeContract,
+		strictUpgradeRequest: true,
 		handlers: {
 			join: async (session) => {
 				const { player } = game.join(session.websocket);
@@ -45,8 +45,8 @@ function makeRoomConfig(
 				return snap;
 			},
 		},
-		createData: (init: SockaWebSocketInit) => {
-			const u = new URL(init.request?.url ?? "http://_/ws/default");
+		createData: (init) => {
+			const u = new URL(init.request.url);
 			const parts = u.pathname.split("/").filter(Boolean);
 			const rid =
 				parts.length >= 2 && parts[0] === "ws" ? parts[1] : roomId;

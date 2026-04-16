@@ -16,7 +16,7 @@ Within a scope:
 
 | Runtime | Pattern | When it fits |
 |--------|---------|----------------|
-| **Bun** | **`createSockaBunWebSocketHandlers({ resolveScope })`** | One **`Bun.serve`** `websocket` handler; **`resolveScope(ws)`** returns **`{ sessionMap, config }`**—often from **`ws.data`** set during the HTTP upgrade. |
+| **Bun** | **`createSockaBunWebSocketHandlers({ resolveScope })`** | One **`Bun.serve`** `websocket` handler; **`resolveScope(ws)`** returns **`{ sessionMap, config }`**—often **`registry.get(roomId)`** from **`createSockaRoomRegistry`** plus **`ws.data`** from the HTTP upgrade. |
 | **Hono (Node)** | **A)** One route per room (`/ws/:roomId`) with **`getOrCreateRoom`** and **`sockaHonoNodeWs(room.config, { sessions: room.sessionMap })`**. **B)** Single upgrade route + **`resolveScope(c)`** returning **`{ sessions, config }`**. |
 | **Durable Objects** | **One DO instance per room** via **`idFromName(roomId)`** (or similar). Each instance has its own **`sessions`** map. |
 

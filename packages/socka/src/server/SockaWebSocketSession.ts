@@ -23,6 +23,7 @@ import { reportSockaError } from "../core/socka-report-error";
 import { parseStandardSchema } from "../core/validate";
 import { SockaError } from "../core/socka-error";
 import type {
+	SockaStrictWebSocketInit,
 	SockaWebSocketInit,
 	SockaWebSocketSessionConfig,
 } from "./SockaWebSocketSessionConfig";
@@ -30,7 +31,22 @@ import type {
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
 type EmptySockaSessionData = Record<string, never>;
 
-export type { SockaWebSocketInit, SockaWebSocketSessionConfig };
+export type {
+	SockaStrictWebSocketInit,
+	SockaWebSocketInit,
+	SockaWebSocketSessionConfig,
+};
+
+function isStrictUpgradeConfig<
+	TContract extends SockaContract<SockaContractConfig>,
+	TData,
+>(
+	config: SockaWebSocketSessionConfig<TContract, TData>,
+): config is SockaWebSocketSessionConfig<TContract, TData> & {
+	strictUpgradeRequest: true;
+} {
+	return config.strictUpgradeRequest === true;
+}
 
 /** Session that can send a wire-level server event (already validated). */
 export type SockaEmitCapable = {
@@ -99,13 +115,58 @@ export class SockaWebSocketSession<
 	) {
 		this.config = config;
 		this.wireFormat = config.wireFormat ?? "json";
-		const create =
-			config.createData ?? ((_i: SockaWebSocketInit) => ({}) as TData);
-		this._data = create(init ?? {});
+		if (isStrictUpgradeConfig(config)) {
+			if (!init?.request) {
+				throw new Error(
+					"socka: strictUpgradeRequest requires a Request on the upgrade init (e.g. Bun upgrade with `data: { …, request: req }`, or Hono default sockaInit)",
+				);
+			}
+			const strictInit: SockaStrictWebSocketInit = { request: init.request };
+			if (config.createData) {
+				this._data = config.createData(strictInit);
+			} else {
+				this._data = {} as TData;
+			}
+		} else {
+			const createData = config.createData as
+				| ((init: SockaWebSocketInit) => TData)
+				| undefined;
+			const create = createData ?? ((_i: SockaWebSocketInit) => ({}) as TData);
+			this._data = create(init ?? {});
+		}
 	}
 
 	public get data(): TData {
 		return this._data;
+	}
+
+	/**
+	 * Session data for every connection in the same {@link sessions} map (same room),
+	 * optionally excluding this socket.
+	 */
+	public listPeers(options?: { excludeSelf?: boolean }): TData[] {
+		const out: TData[] = [];
+		for (const [ws, s] of this.sessions) {
+			if (options?.excludeSelf && ws === this.websocket) continue;
+			out.push(s.data);
+		}
+		return out;
+	}
+
+	/**
+	 * Like {@link listPeers} but maps each peer {@link SockaWebSocketSession}
+	 * (e.g. when you need more than {@link #data}).
+	 */
+	public listPeersWith<R>(
+		map: (session: SockaWebSocketSession<TContract, TData>) => R,
+		options?: { excludeSelf?: boolean },
+	): R[] {
+		const out: R[] = [];
+		for (const [ws, s] of this.sessions) {
+			if (options?.excludeSelf && ws === this.websocket) continue;
+			out.push(map(s));
+		}
+		return out;
 	}
 
 	/**

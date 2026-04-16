@@ -55,6 +55,9 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      - name: Codegen (Wrangler types + Drizzle)
+        run: bun run codegen
+
       - name: Run Typecheck and Lint
         run: TURBO_TELEMETRY_DISABLED=1 bun turbo run typecheck lint:ci
 

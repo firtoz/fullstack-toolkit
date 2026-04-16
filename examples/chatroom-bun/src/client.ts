@@ -9,7 +9,6 @@ function escapeHtml(s: string): string {
 		.replace(/"/g, "&quot;");
 }
 
-/** Format persisted / server message time for the log. */
 function formatMsgTime(ts: number): string {
 	const d = new Date(ts);
 	const now = new Date();
@@ -71,6 +70,12 @@ function setConnStatus(
 	el.textContent = label;
 	el.className = `conn-status ${state}`;
 }
+
+/**
+ * Default port when opening `index.html` as a file (no `window.location.host`).
+ * Matches this example’s `Bun.serve` port.
+ */
+const defaultPort = 3464;
 
 const panesEl = document.querySelector<HTMLDivElement>("#panes");
 const roomInput = document.querySelector<HTMLInputElement>("#room");
@@ -152,7 +157,7 @@ function addPane(room: string, displayName: string): void {
 	panesEl.appendChild(wrap);
 
 	const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-	const host = window.location.host || "localhost:3464";
+	const host = window.location.host || `localhost:${defaultPort}`;
 	const url = `${proto}//${host}/ws/${encodeURIComponent(room)}?name=${encodeURIComponent(displayName)}`;
 	urlEl.textContent = url;
 

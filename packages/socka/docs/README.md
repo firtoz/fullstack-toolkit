@@ -10,8 +10,14 @@ In-repo guides for the **[Socka](../README.md)** library (**npm** [`@firtoz/sock
 | [Lifecycle](./lifecycle.md) | `onAttached`, inbound RPCs, `handleClose` ordering |
 | [Server](./server.md) | Node `ws`, Bun, Hono, `attachSockaWebSocket`, `createData`, `session.data` |
 | [Durable Objects](./durable-objects.md) | `SockaDoSession`, `SockaWebSocketDO`, routing, hibernation |
-| [Client](./client.md) | `SockaSession`, React, deferred connect, reconnect |
-| [Pushes](./events.md) | `emitPush` / `broadcastPush`, `session.subscribe`, ordering notes |
+| [Client](./client.md) | `SockaSession`, React (`useSocka` / `useSockaSession`), deferred connect |
+| [Reconnection](./reconnection.md) | Exponential backoff, `onReconnecting` / `onReconnected`, hydrate after reconnect |
+| [Presence](./presence.md) | `listPeers`, snapshot RPC + `userJoined` / `userLeft` pushes |
+| [History](./history.md) | Pagination/cursor, retention, `historyCleared`-style invalidation |
+| [Pushes](./pushes.md) | `emitPush` / `broadcastPush`, `session.subscribe`, ordering notes |
+| [Wire format](./wire-format.md) | JSON vs msgpack tradeoffs |
+| [Backpressure](./backpressure.md) | Current behavior and app-level mitigations |
+| [Testing](./testing.md) | Fake `WebSocket`, handler isolation, integration fixtures |
 | [Reference](./reference.md) | Configuration tables, type inference, errors, imports |
 | [Internals](./internals.md) | Wire protocol details, frame kinds, source file links (contributors & curious readers) |
 | [Comparison](./comparison.md) | vs DIY WS, **socket.io**, **tRPC** |

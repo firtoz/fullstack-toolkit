@@ -4,6 +4,3 @@ playwright-report/
 
 # Environment
 .env.local
-
-# Generated types
-worker-configuration.d.ts

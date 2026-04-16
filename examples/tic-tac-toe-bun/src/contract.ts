@@ -28,7 +28,6 @@ const snapshotSchema = z.object({
 	status: statusSchema,
 });
 
-/** Self-contained contract for this example (duplicated in other `tic-tac-toe-*` folders). */
 export const ticTacToeContract = defineSocka({
 	calls: {
 		join: {

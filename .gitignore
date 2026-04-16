@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# Example apps: `bun run build:client` → public/client.js
+examples/**/public/client.js
+
 # TypeScript incremental build caches (do not commit)
 *.tsbuildinfo
 

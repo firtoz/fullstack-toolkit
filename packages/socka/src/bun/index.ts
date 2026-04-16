@@ -6,11 +6,23 @@ import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessa
 import {
 	SockaWebSocketSession,
 	runSockaSessionOnAttached,
-	type SockaWebSocketInit,
+	type SockaStrictWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
 
-export function sockaBunInitFromWsData(ws: ServerWebSocket<unknown>): SockaWebSocketInit | undefined {
+/**
+ * Reads the upgrade {@link Request} from Bun **`ServerWebSocket.data`** when your
+ * **`fetch`** handler stored it there (e.g. **`server.upgrade(req, { data: { roomId, request: req } })`**).
+ *
+ * Pair with **`strictUpgradeRequest: true`** on {@link SockaWebSocketSessionConfig} so
+ * **`createData`** is typed with {@link SockaStrictWebSocketInit} and **`init.request`**
+ * is always defined. If **`request`** is missing from **`data`**, this returns **`undefined`**
+ * and strict mode will throw when constructing the session — that usually means you forgot
+ * to pass **`request`** on upgrade.
+ */
+export function sockaBunInitFromWsData(
+	ws: ServerWebSocket<unknown>,
+): SockaStrictWebSocketInit | undefined {
 	const d = ws.data as Record<string, unknown> | undefined;
 	if (d && "request" in d && d.request instanceof Request) {
 		return { request: d.request };
@@ -61,7 +73,12 @@ function bunHandlersFromResolveScope<
 			const { sessionMap, config } = resolveScope(ws);
 			const domWs = ws as unknown as WebSocket;
 			const init = sockaBunInitFromWsData(ws);
-			const session = new SockaWebSocketSession(domWs, sessionMap, config, init);
+			const session = new SockaWebSocketSession(
+				domWs,
+				sessionMap,
+				config,
+				init,
+			);
 			sessionMap.set(domWs, session);
 			runSockaSessionOnAttached(config, session);
 		},
@@ -133,7 +150,12 @@ function bunHandlersFromConfig<
 		open(ws: ServerWebSocket<undefined>) {
 			const domWs = ws as unknown as WebSocket;
 			const init = sockaBunInitFromWsData(ws);
-			const session = new SockaWebSocketSession(domWs, sessionMap, config, init);
+			const session = new SockaWebSocketSession(
+				domWs,
+				sessionMap,
+				config,
+				init,
+			);
 			sessionMap.set(domWs, session);
 			runSockaSessionOnAttached(config, session);
 		},

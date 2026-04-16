@@ -38,7 +38,42 @@ export interface SockaWebSocketClientOptions<
 	onServerError?: (frame: SockaServerErrorFrame) => void;
 	onEvent?: (frame: SockaServerEventFrame) => void;
 	onValidationError?: (error: Error, rawMessage: unknown) => void;
+	/**
+	 * Automatic reconnect after an abnormal close. **Disabled by default** when
+	 * {@link webSocket} is injected (tests); enabled when using {@link url}.
+	 * Pass `false` to disable.
+	 */
+	reconnect?: false | SockaReconnectConfig;
+	/** Fired before a reconnect attempt is scheduled (after delay is chosen). */
+	onReconnecting?: (info: SockaReconnectingInfo) => void;
+	/** Fired after a new socket reaches `open` following a reconnect. */
+	onReconnected?: (info: SockaReconnectedInfo) => void;
 }
+
+/** Options for {@link SockaWebSocketClientOptions.reconnect}. */
+export type SockaReconnectConfig = {
+	/** Default `1000`. */
+	initialDelayMs?: number;
+	/** Default `30000`. */
+	maxDelayMs?: number;
+	/** 0–1 fraction of delay to randomize. Default `0.2`. */
+	jitter?: number;
+	/** Omit for infinite attempts. */
+	maxAttempts?: number;
+	/**
+	 * When `true` (default), delay reconnect until `document` is visible again.
+	 */
+	pauseWhenHidden?: boolean;
+};
+
+export type SockaReconnectingInfo = {
+	attempt: number;
+	delayMs: number;
+};
+
+export type SockaReconnectedInfo = {
+	attempt: number;
+};
 
 /**
  * Browser WebSocket client driven by a socka contract. Sends client request
@@ -61,6 +96,10 @@ export class SockaWebSocketClient<
 	) => void;
 
 	readonly contract: TContract;
+
+	private manualClose = false;
+	private reconnectAttempt = 0;
+	private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
 	constructor(options: SockaWebSocketClientOptions<TContract>) {
 		this.opts = options;
@@ -95,6 +134,11 @@ export class SockaWebSocketClient<
 		}
 
 		ws.addEventListener("open", (event) => {
+			const prev = this.reconnectAttempt;
+			this.reconnectAttempt = 0;
+			if (prev > 0) {
+				this.opts.onReconnected?.({ attempt: prev });
+			}
 			this.opts.onOpen?.(event);
 		});
 
@@ -104,11 +148,83 @@ export class SockaWebSocketClient<
 
 		ws.addEventListener("close", (event) => {
 			this.opts.onClose?.(event);
+			this.maybeScheduleReconnect();
 		});
 
 		ws.addEventListener("error", (event) => {
 			this.opts.onError?.(event);
 		});
+	}
+
+	private getReconnectEnabled(): boolean {
+		if (this.opts.reconnect === false) return false;
+		if (
+			this.opts.webSocket !== undefined &&
+			this.opts.reconnect === undefined
+		) {
+			return false;
+		}
+		return this.opts.url !== undefined;
+	}
+
+	private resolveReconnectConfig(): SockaReconnectConfig {
+		const r = this.opts.reconnect;
+		if (r === false) return {};
+		return r ?? {};
+	}
+
+	private computeReconnectDelayMs(
+		attempt: number,
+		cfg: SockaReconnectConfig,
+	): number {
+		const initial = cfg.initialDelayMs ?? 1000;
+		const max = cfg.maxDelayMs ?? 30000;
+		const jitterRatio = cfg.jitter ?? 0.2;
+		const base = Math.min(max, initial * 2 ** Math.max(0, attempt - 1));
+		const spread = base * jitterRatio;
+		return Math.max(0, base + (Math.random() * 2 - 1) * spread);
+	}
+
+	private maybeScheduleReconnect(): void {
+		if (this.manualClose) return;
+		if (!this.getReconnectEnabled()) return;
+		const cfg = this.resolveReconnectConfig();
+		const maxAttempts = cfg.maxAttempts;
+		if (maxAttempts !== undefined && this.reconnectAttempt >= maxAttempts) {
+			return;
+		}
+		if (
+			cfg.pauseWhenHidden !== false &&
+			typeof document !== "undefined" &&
+			document.hidden
+		) {
+			const onVis = (): void => {
+				if (!document.hidden) {
+					document.removeEventListener("visibilitychange", onVis);
+					this.maybeScheduleReconnect();
+				}
+			};
+			document.addEventListener("visibilitychange", onVis);
+			return;
+		}
+		this.reconnectAttempt += 1;
+		const delayMs = this.computeReconnectDelayMs(this.reconnectAttempt, cfg);
+		this.opts.onReconnecting?.({ attempt: this.reconnectAttempt, delayMs });
+		if (this.reconnectTimer !== undefined) {
+			clearTimeout(this.reconnectTimer);
+		}
+		this.reconnectTimer = setTimeout(() => {
+			this.reconnectTimer = undefined;
+			if (this.manualClose) return;
+			this.openReplacementSocket();
+		}, delayMs);
+	}
+
+	private openReplacementSocket(): void {
+		if (this.manualClose) return;
+		if (!this.opts.url) return;
+		this.ws = undefined;
+		this.attachSocket(this.createSocket());
 	}
 
 	private handleMessageEvent(event: MessageEvent): void {
@@ -212,6 +328,11 @@ export class SockaWebSocketClient<
 	}
 
 	close(code?: number, reason?: string): void {
+		this.manualClose = true;
+		if (this.reconnectTimer !== undefined) {
+			clearTimeout(this.reconnectTimer);
+			this.reconnectTimer = undefined;
+		}
 		this.ws?.close(code, reason);
 	}
 

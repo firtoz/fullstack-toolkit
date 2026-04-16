@@ -1,3 +1,4 @@
+export { sockaHonoStrictInitFromContext } from "./strict-init-context";
 export {
 	sockaHonoNodeWs,
 	type SockaHonoNodeWsOptions,

@@ -6,7 +6,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sockaHonoNodeWs } from "@firtoz/socka/hono";
 import type {
-	SockaWebSocketInit,
 	SockaWebSocketSession,
 	SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
@@ -32,8 +31,9 @@ function makeConfig(
 ): SockaWebSocketSessionConfig<typeof chatContract, SessionData> {
 	return {
 		contract: chatContract,
-		createData: (init: SockaWebSocketInit) => {
-			const u = new URL(init.request?.url ?? "http://_/");
+		strictUpgradeRequest: true,
+		createData: (init) => {
+			const u = new URL(init.request.url);
 			const displayName = u.searchParams.get("name")?.trim() || "anon";
 			return { roomId, userId: crypto.randomUUID(), displayName };
 		},
@@ -51,13 +51,9 @@ function makeConfig(
 				return { messages };
 			},
 			listPresence: async (_input, session) => {
-				const users: { userId: string; displayName: string }[] = [];
-				for (const [, s] of sessionMap) {
-					users.push({
-						userId: s.data.userId,
-						displayName: s.data.displayName,
-					});
-				}
+				const users = session
+					.listPeers()
+					.map((d) => ({ userId: d.userId, displayName: d.displayName }));
 				users.sort((a, b) => a.displayName.localeCompare(b.displayName));
 				return { selfUserId: session.data.userId, users };
 			},
@@ -115,7 +111,6 @@ app.get(
 		const room = getOrCreateRoom(roomId);
 		return sockaHonoNodeWs(room.config, {
 			sessions: room.sessionMap,
-			sockaInit: (ctx) => ({ request: new Request(ctx.req.url) }),
 		})(c);
 	}),
 );

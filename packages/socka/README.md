@@ -77,15 +77,15 @@ export const chatContract = defineSocka({
 });
 ```
 
-**`server.ts`** — one **`sessionMap` per room**, **`resolveScope`** picks the map after upgrade (room id is carried on **`ws.data`**):
+**`server.ts`** — **`createSockaRoomRegistry`** holds one **`sessionMap` + config per room**; **`strictUpgradeRequest: true`** types **`createData`** with a real **`Request`** (no `http://_/` placeholder). **`session.listPeers()`** replaces hand-rolled **`sessionMap`** walks for presence.
 
 ```ts
 import type { ServerWebSocket } from "bun";
 import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
-import type {
-	SockaWebSocketInit,
-	SockaWebSocketSession,
-	SockaWebSocketSessionConfig,
+import {
+	createSockaRoomRegistry,
+	type SockaStrictWebSocketInit,
+	type SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
 import { type ChatMessageRow, chatContract } from "./contract";
 
@@ -94,21 +94,12 @@ type SessionData = { roomId: string; userId: string; displayName: string };
 /** In-memory demo store — swap for SQLite / files / DO in real apps. */
 const history = new Map<string, ChatMessageRow[]>();
 
-type RoomBundle = {
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof chatContract, SessionData>>;
-	config: SockaWebSocketSessionConfig<typeof chatContract, SessionData>;
-};
-
-const rooms = new Map<string, RoomBundle>();
-
-function makeConfig(
-	roomId: string,
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof chatContract, SessionData>>,
-): SockaWebSocketSessionConfig<typeof chatContract, SessionData> {
-	return {
+const registry = createSockaRoomRegistry(
+	(roomId): SockaWebSocketSessionConfig<typeof chatContract, SessionData> => ({
 		contract: chatContract,
-		createData: (init: SockaWebSocketInit) => {
-			const u = new URL(init.request?.url ?? "http://_/");
+		strictUpgradeRequest: true,
+		createData: (init: SockaStrictWebSocketInit) => {
+			const u = new URL(init.request.url);
 			const displayName = u.searchParams.get("name")?.trim() || "anon";
 			return { roomId, userId: crypto.randomUUID(), displayName };
 		},
@@ -126,13 +117,10 @@ function makeConfig(
 				return { messages: rows.slice(-lim) };
 			},
 			listPresence: async (_input, session) => {
-				const users: { userId: string; displayName: string }[] = [];
-				for (const [, s] of sessionMap) {
-					users.push({
-						userId: s.data.userId,
-						displayName: s.data.displayName,
-					});
-				}
+				const users = session.listPeers().map((d) => ({
+					userId: d.userId,
+					displayName: d.displayName,
+				}));
 				users.sort((a, b) => a.displayName.localeCompare(b.displayName));
 				return { selfUserId: session.data.userId, users };
 			},
@@ -168,26 +156,15 @@ function makeConfig(
 				true,
 			);
 		},
-	};
-}
-
-function getOrCreateRoom(roomId: string): RoomBundle {
-	let r = rooms.get(roomId);
-	if (!r) {
-		const sessionMap: RoomBundle["sessionMap"] = new Map();
-		const config = makeConfig(roomId, sessionMap);
-		r = { sessionMap, config };
-		rooms.set(roomId, r);
-	}
-	return r;
-}
+	}),
+);
 
 type BunWsData = { roomId: string; request: Request };
 
 const { websocket } = createSockaBunWebSocketHandlers({
 	resolveScope(ws: ServerWebSocket<BunWsData>) {
 		const { roomId } = ws.data;
-		const room = getOrCreateRoom(roomId);
+		const room = registry.get(roomId);
 		return { sessionMap: room.sessionMap, config: room.config };
 	},
 });
@@ -206,6 +183,8 @@ Bun.serve<BunWsData>({
 	websocket,
 });
 ```
+
+*Ports: this minimal snippet listens on **3450**; the [full-stack examples](#full-stack-examples) use **3461–3466**.*
 
 **`client.ts`** (browser or Bun):
 
@@ -269,6 +248,8 @@ Pick how the socket is upgraded, then use the matching import path and guide:
 - **Schema-first RPC + push** — one contract; no parallel “event” protocol for server pushes.
 - **Correlated envelopes** — request/response IDs and validation hooks are built in.
 - **Same contract** across Bun, Hono, Node `ws`, and Durable Objects (see **[Comparison](./docs/comparison.md)** for socket.io / tRPC / hand-rolled).
+- **Room registry + presence helpers** — **`createSockaRoomRegistry`** for per-room **`sessionMap`** / config; **`session.listPeers()`** for who is in the room without walking maps by hand.
+- **Strict upgrade typing + optional reconnect** — Bun/Hono can set **`strictUpgradeRequest: true`** so **`createData`** sees **`init.request`**; **`SockaWebSocketClient`** / **`SockaSession`** can **`reconnect`** with exponential backoff (see **[Reconnection](./docs/reconnection.md)**).
 
 ## Documentation
 

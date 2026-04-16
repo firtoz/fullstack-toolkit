@@ -262,4 +262,31 @@ export class SockaDoSession<
 	): Promise<void> {
 		return this.socka.broadcastPush(name, body, excludeSelf);
 	}
+
+	/**
+	 * {@link SockaWebSocketSession.listPeers} for this Durable Object room.
+	 */
+	public listPeers(options?: { excludeSelf?: boolean }): TData[] {
+		const out: TData[] = [];
+		for (const [ws, s] of this.sessions) {
+			if (options?.excludeSelf && ws === this.websocket) continue;
+			out.push(s.data);
+		}
+		return out;
+	}
+
+	/**
+	 * Like {@link listPeers} but maps each peer {@link SockaDoSession}.
+	 */
+	public listPeersWith<R>(
+		map: (session: SockaDoSession<TContract, TData, TEnv>) => R,
+		options?: { excludeSelf?: boolean },
+	): R[] {
+		const out: R[] = [];
+		for (const [ws, s] of this.sessions) {
+			if (options?.excludeSelf && ws === this.websocket) continue;
+			out.push(map(s as SockaDoSession<TContract, TData, TEnv>));
+		}
+		return out;
+	}
 }

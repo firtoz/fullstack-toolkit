@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import {
 	decodeSockaWire,
 	encodeClientRequest,
@@ -12,6 +12,19 @@ import { createFakeWebSocket } from "../test-utils/fake-websocket";
 import { SockaWebSocketClient } from "./SockaWebSocketClient";
 
 describe("SockaWebSocketClient", () => {
+	test("reconnect: does not schedule when webSocket is injected (default)", () => {
+		const { socket, dispatchClose, dispatchOpen } = createFakeWebSocket();
+		const onReconnecting = mock(() => {});
+		new SockaWebSocketClient({
+			contract: rpcTestContract,
+			webSocket: socket,
+			onReconnecting,
+		});
+		dispatchOpen();
+		dispatchClose();
+		expect(onReconnecting).not.toHaveBeenCalled();
+	});
+
 	test("throws when neither url nor webSocket is provided", () => {
 		expect(
 			() =>

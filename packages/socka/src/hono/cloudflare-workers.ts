@@ -10,6 +10,7 @@ import {
 	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
+import { sockaHonoStrictInitFromContext } from "./strict-init-context";
 
 export type SockaHonoCloudflareOptions<
 	TContract extends SockaContract<SockaContractConfig>,
@@ -51,7 +52,8 @@ export function sockaHonoCloudflare<
 			let session = sessions.get(domWs);
 			const cfg = scopeConfig as SockaWebSocketSessionConfig<TContract, TData>;
 			if (!session) {
-				const init = options?.sockaInit?.(c);
+				const init: SockaWebSocketInit | undefined =
+					options?.sockaInit?.(c) ?? sockaHonoStrictInitFromContext(c);
 				session = new SockaWebSocketSession(domWs, sessions, cfg, init);
 				sessions.set(domWs, session);
 				runSockaSessionOnAttached(cfg, session);

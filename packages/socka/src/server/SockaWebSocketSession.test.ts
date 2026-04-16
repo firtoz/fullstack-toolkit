@@ -105,6 +105,11 @@ describe("SockaWebSocketSession", () => {
 		const ev = JSON.parse(b.sent[0] as string);
 		expect(ev.socka).toBe("serverEvent");
 		expect(ev.event).toBe("notify");
+
+		expect(sa.listPeers().length).toBe(2);
+		expect(sa.listPeers({ excludeSelf: true }).length).toBe(1);
+		expect(sa.listPeersWith((s) => s).length).toBe(2);
+		expect(sa.listPeersWith((s) => s, { excludeSelf: true }).length).toBe(1);
 	});
 });
 
