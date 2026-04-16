@@ -56,10 +56,13 @@ export function prepareEnvFiles(targetDir: string): string[] {
 	if (exampleLocalEnvExists) {
 		result.push(".env.local.example");
 	}
-	if (envExists) {
+	// Only pass real .env / .env.local when there is no corresponding example file.
+	// Otherwise `wrangler types` embeds different `--env-file` lists locally (with
+	// .env.local) vs CI (no .env.local), causing noisy diffs in committed worker-configuration.d.ts.
+	if (!exampleEnvExists && envExists) {
 		result.push(".env");
 	}
-	if (envLocalExists) {
+	if (!exampleLocalEnvExists && envLocalExists) {
 		result.push(".env.local");
 	}
 
