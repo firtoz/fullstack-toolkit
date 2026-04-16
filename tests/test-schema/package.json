@@ -31,7 +31,7 @@
 		"drizzle/**/*"
 	],
 	"scripts": {
-		"db:generate": "bun drizzle-kit generate && bunx drizzle-indexeddb-generate",
+		"db:generate": "bun drizzle-kit generate && bun ./node_modules/.bin/drizzle-indexeddb-generate",
 		"db:reset": "bun reset-migrations.ts"
 	},
 	"devDependencies": {
