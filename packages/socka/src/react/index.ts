@@ -5,6 +5,10 @@ export {
 } from "./useSockaSession";
 export { useSocka, type UseSockaOptions } from "./useSocka";
 export {
+	useSockaPresence,
+	type SockaPresenceOptions,
+} from "./useSockaPresence";
+export {
 	SockaSessionProvider,
 	useSockaSessionContext,
 	type SockaSessionContextValue,

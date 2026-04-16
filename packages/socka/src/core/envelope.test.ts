@@ -109,6 +109,20 @@ describe("encode helpers", () => {
 		expect(d.kind).toBe("serverError");
 	});
 
+	test("encodeServerError optional code and data round-trip", () => {
+		const frame = encodeServerError("x-2", "nope", {
+			code: "E_TEST",
+			data: { retryAfter: 5 },
+		});
+		const roundTrip: unknown = JSON.parse(JSON.stringify(frame));
+		const d = decodeSockaWire(roundTrip);
+		expect(d.kind).toBe("serverError");
+		if (d.kind === "serverError") {
+			expect(d.frame.code).toBe("E_TEST");
+			expect(d.frame.data).toEqual({ retryAfter: 5 });
+		}
+	});
+
 	test("encodeServerEvent round-trips via decode", () => {
 		const frame = encodeServerEvent("notify", { count: 5 });
 		const roundTrip: unknown = JSON.parse(JSON.stringify(frame));

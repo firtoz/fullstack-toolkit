@@ -12,7 +12,9 @@ In-repo guides for the **[Socka](../README.md)** library (**npm** [`@firtoz/sock
 | [Durable Objects](./durable-objects.md) | `SockaDoSession`, `SockaWebSocketDO`, routing, hibernation |
 | [Client](./client.md) | `SockaSession`, React (`useSocka` / `useSockaSession`), deferred connect |
 | [Reconnection](./reconnection.md) | Exponential backoff, `onReconnecting` / `onReconnected`, hydrate after reconnect |
-| [Presence](./presence.md) | `listPeers`, snapshot RPC + `userJoined` / `userLeft` pushes |
+| [Presence](./presence.md) | `listPeers`, `peerCount`, snapshot RPC + `userJoined` / `userLeft` pushes |
+| [Auth](./auth.md) | Cookies, tokens, and upgrade-time authorization |
+| [Recipes](./recipes.md) | Copy-paste wiring per runtime |
 | [History](./history.md) | Pagination/cursor, retention, `historyCleared`-style invalidation |
 | [Pushes](./pushes.md) | `emitPush` / `broadcastPush`, `session.subscribe`, ordering notes |
 | [Wire format](./wire-format.md) | JSON vs msgpack tradeoffs |

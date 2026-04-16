@@ -38,7 +38,13 @@ Tables, logical frame kinds (`clientRequest`, `serverResponse`, …), and **`dis
 
 ## RPC handler errors
 
-Throw **`SockaError`** from handlers when you control the **message** sent on the **`serverError`** frame. Any other thrown value is wrapped in **`SockaError`** using the original **`Error.message`** when possible, otherwise **`"Handler failed"`**. The client rejects the matching RPC with **`SockaError`**; the wire carries a string **message** only.
+Throw **`SockaError`** from handlers when you control the **message** sent on the **`serverError`** frame. Pass optional **`code`** and **`data`** so clients can branch without parsing **`message`**:
+
+```ts
+throw new SockaError("Not allowed", { code: "FORBIDDEN", data: { reason: "…" } });
+```
+
+Any other thrown value is wrapped in **`SockaError`** using the original **`Error.message`** when possible, otherwise **`"Handler failed"`**. The client rejects the matching RPC with **`SockaError`**; the wire carries **`error`** (string) plus optional **`code`** and **`data`**. Older peers that only read **`error`** are unchanged.
 
 ## Server session configuration
 
@@ -77,6 +83,8 @@ Throw **`SockaError`** from handlers when you control the **message** sent on th
 
 **`SockaSession`** passes unrecognized options through to **`SockaWebSocketClient`** except **`pushHandlers`** and **`reportError`** (handled at the session layer). React hooks mirror these options — see **[Client](./client.md)**.
 
+**`SockaSession`** / **`SockaWebSocketClient`** also expose **`status`** and **`onStatusChange`** (connection lifecycle, reconnect UI).
+
 ## Schema libraries
 
 Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, **ArkType**, or a custom implementation. Pass schemas straight into **`defineSocka`**; no adapter helpers required.
@@ -97,7 +105,8 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 | `@firtoz/socka` | Same as **`@firtoz/socka/core`** — `defineSocka`, wire helpers, errors, types (prefer explicit **`/core`** in examples) |
 | `@firtoz/socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types |
 | `@firtoz/socka/client` | `SockaSession`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
-| `@firtoz/socka/react` | `useSocka`, `useSockaSession`, provider + context |
+| `@firtoz/socka/test` | `createFakeWebSocket` for unit tests — see **[Testing](./testing.md)** |
+| `@firtoz/socka/react` | `useSocka`, `useSockaSession`, `useSockaPresence`, provider + context |
 | `@firtoz/socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
 | `@firtoz/socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastSockaEventToPeers` |
 | `@firtoz/socka/bun` | `createSockaBunWebSocketHandlers` for **`Bun.serve`** |

@@ -122,7 +122,7 @@ Bun.serve({ fetch, websocket });
 
 **Multi-room** — use the overload **`createSockaBunWebSocketHandlers({ resolveScope })`** so each **`ServerWebSocket`** picks the correct **`sessionMap`** and shared **`config`** (see [Multi-room](./multi-room.md) and the tic-tac-toe example).
 
-**Upgrade query params** — `createData` only sees **`init.request`** when the adapter passes it. For Bun, put the HTTP **`Request`** on **`ServerWebSocket` `data`** (e.g. `server.upgrade(req, { data: { roomId, request: req } })`) so **`?name=`** and other query params are available. **`sockaBunInitFromWsData`** (exported from **`@firtoz/socka/bun`**) reads **`data.request`** and builds **`SockaWebSocketInit`**.
+**Upgrade query params** — `createData` only sees **`init.request`** when the adapter passes it. For Bun, merge the upgrade **`Request`** into **`ServerWebSocket` `data`** so **`?name=`** and other query params are available. Prefer **`sockaBunUpgrade(server, req, { roomId })`** from **`@firtoz/socka/bun`**, which sets **`data: { …extras, request: req }`**. Alternatively call **`server.upgrade(req, { data: { roomId, request: req } })`** yourself. **`sockaBunInitFromWsData`** reads **`data.request`** and builds **`SockaWebSocketInit`** for the session constructor.
 
 ## `@firtoz/socka/hono` (Node — `@hono/node-ws`)
 

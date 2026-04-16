@@ -5,22 +5,14 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sockaHonoNodeWs } from "@firtoz/socka/hono";
-import type {
-	SockaWebSocketSession,
-	SockaWebSocketSessionConfig,
+import {
+	createSockaRoomRegistry,
+	type SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
 
 type SessionData = { roomId: string };
-
-type RoomBundle = {
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof ticTacToeContract, SessionData>>;
-	game: TicTacToeGame;
-	config: SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData>;
-};
-
-const rooms = new Map<string, RoomBundle>();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "../public");
@@ -58,17 +50,12 @@ function makeRoomConfig(
 	};
 }
 
-function getOrCreateRoom(roomId: string): RoomBundle {
-	let r = rooms.get(roomId);
-	if (!r) {
+const rooms = createSockaRoomRegistry<typeof ticTacToeContract, SessionData>(
+	(roomId, _sessionMap) => {
 		const game = new TicTacToeGame();
-		const sessionMap: RoomBundle["sessionMap"] = new Map();
-		const config = makeRoomConfig(game, roomId);
-		r = { sessionMap, game, config };
-		rooms.set(roomId, r);
-	}
-	return r;
-}
+		return makeRoomConfig(game, roomId);
+	},
+);
 
 const app = new Hono();
 const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
@@ -77,7 +64,7 @@ app.get(
 	"/ws/:roomId",
 	upgradeWebSocket((c) => {
 		const roomId = c.req.param("roomId") ?? "default";
-		const room = getOrCreateRoom(roomId);
+		const room = rooms.get(roomId);
 		return sockaHonoNodeWs(room.config, { sessions: room.sessionMap })(c);
 	}),
 );

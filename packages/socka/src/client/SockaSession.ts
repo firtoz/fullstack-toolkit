@@ -18,6 +18,7 @@ import type {
 } from "../core/envelope";
 import {
 	SockaWebSocketClient,
+	type SockaConnectionStatus,
 	type SockaWebSocketClientOptions,
 } from "./SockaWebSocketClient";
 import { RESERVED_SOCKA_PROCEDURE_NAMES } from "../core/reserved-procedure-names";
@@ -364,6 +365,18 @@ class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
 	/** Opens the WebSocket when using {@link SockaWebSocketClientOptions.autoConnect} `false`. */
 	connect(): Promise<void> {
 		return this.client.connect();
+	}
+
+	/** Same as {@link SockaWebSocketClient.status}. */
+	get status(): SockaConnectionStatus {
+		return this.client.status;
+	}
+
+	/** Same as {@link SockaWebSocketClient.onStatusChange}. */
+	onStatusChange(
+		listener: (status: SockaConnectionStatus) => void,
+	): () => void {
+		return this.client.onStatusChange(listener);
 	}
 }
 

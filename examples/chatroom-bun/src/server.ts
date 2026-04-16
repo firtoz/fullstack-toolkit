@@ -1,23 +1,14 @@
 import type { ServerWebSocket } from "bun";
 import { Database } from "bun:sqlite";
-import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
-import type {
-	ChatMessageRow,
-} from "./contract";
+import { createSockaBunWebSocketHandlers, sockaBunUpgrade } from "@firtoz/socka/bun";
+import type { ChatMessageRow } from "./contract";
 import { chatContract } from "./contract";
-import type {
-	SockaWebSocketSession,
-	SockaWebSocketSessionConfig,
+import {
+	createSockaRoomRegistry,
+	type SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
 
 type SessionData = { roomId: string; userId: string; displayName: string };
-
-type RoomBundle = {
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof chatContract, SessionData>>;
-	config: SockaWebSocketSessionConfig<typeof chatContract, SessionData>;
-};
-
-const rooms = new Map<string, RoomBundle>();
 
 const db = new Database("./data/chat.sqlite", { create: true });
 db.run(`
@@ -72,7 +63,6 @@ function clearMessagesForRoom(roomId: string): void {
 
 function makeConfig(
 	roomId: string,
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof chatContract, SessionData>>,
 ): SockaWebSocketSessionConfig<typeof chatContract, SessionData> {
 	return {
 		contract: chatContract,
@@ -134,23 +124,16 @@ function makeConfig(
 	};
 }
 
-function getOrCreateRoom(roomId: string): RoomBundle {
-	let r = rooms.get(roomId);
-	if (!r) {
-		const sessionMap: RoomBundle["sessionMap"] = new Map();
-		const config = makeConfig(roomId, sessionMap);
-		r = { sessionMap, config };
-		rooms.set(roomId, r);
-	}
-	return r;
-}
+const rooms = createSockaRoomRegistry<typeof chatContract, SessionData>(
+	(roomId, _sessionMap) => makeConfig(roomId),
+);
 
 type BunWsData = { roomId: string; request: Request };
 
 const { websocket } = createSockaBunWebSocketHandlers({
 	resolveScope(ws: ServerWebSocket<BunWsData>) {
 		const { roomId } = ws.data;
-		const room = getOrCreateRoom(roomId);
+		const room = rooms.get(roomId);
 		return { sessionMap: room.sessionMap, config: room.config };
 	},
 });
@@ -161,7 +144,7 @@ const server = Bun.serve<BunWsData>({
 		const url = new URL(req.url);
 		if (url.pathname.startsWith("/ws/")) {
 			const roomId = decodeURIComponent(url.pathname.slice(4)) || "default";
-			if (srv.upgrade(req, { data: { roomId, request: req } })) return undefined;
+			if (sockaBunUpgrade(srv, req, { roomId })) return undefined;
 			return new Response("WebSocket upgrade failed", { status: 400 });
 		}
 		if (url.pathname === "/" || url.pathname === "/index.html") {

@@ -3,7 +3,7 @@
 	"ui": "tui",
 	"tasks": {
 		"build": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build", "typegen", "db:generate", "db:generate:emoji"],
 			"outputs": ["dist/**"],
 			"outputLogs": "new-only"
 		},
@@ -11,7 +11,7 @@
 			"dependsOn": ["typecheck", "lint:ci", "test"]
 		},
 		"typecheck": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build", "typegen", "db:generate", "db:generate:emoji"],
 			"outputLogs": "new-only"
 		},
 		"lint": {
@@ -38,6 +38,18 @@
 			"outputLogs": "new-only"
 		},
 		"typegen": {
+			"inputs": ["wrangler.jsonc", "wrangler.toml", "package.json"],
+			"outputs": ["worker-configuration.d.ts"],
+			"outputLogs": "new-only"
+		},
+		"db:generate": {
+			"inputs": ["drizzle.config.ts", "package.json", "src/**/*.ts", "app/**/*.ts"],
+			"outputs": ["drizzle/**"],
+			"outputLogs": "new-only"
+		},
+		"db:generate:emoji": {
+			"inputs": ["drizzle-emoji.config.ts", "package.json", "src/**/*.ts", "app/**/*.ts"],
+			"outputs": ["drizzle-emoji/**"],
 			"outputLogs": "new-only"
 		},
 		"test:watch": {

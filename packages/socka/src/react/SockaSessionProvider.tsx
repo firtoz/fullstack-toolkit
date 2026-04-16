@@ -1,6 +1,7 @@
 import type { DependencyList, ReactElement, ReactNode, RefObject } from "react";
 import { createContext, useContext, useMemo } from "react";
 import type { SockaSession } from "../client/SockaSession";
+import type { SockaConnectionStatus } from "../client/SockaWebSocketClient";
 import type {
 	SockaContract,
 	SockaContractConfig,
@@ -25,6 +26,9 @@ export type SockaSessionContextValue<
 	readonly contract: TContract;
 	readonly ready: boolean;
 	readonly sessionRef: RefObject<SockaSession<TContract> | null>;
+	readonly status: SockaConnectionStatus;
+	readonly reconnecting: boolean;
+	readonly reconnectAttempt: number;
 };
 
 const SockaSessionContext =
@@ -61,6 +65,9 @@ export function SockaSessionProvider<
 		contract,
 		ready: value.ready,
 		sessionRef: value.sessionRef,
+		status: value.status,
+		reconnecting: value.reconnecting,
+		reconnectAttempt: value.reconnectAttempt,
 	};
 	return (
 		<SockaSessionContext.Provider value={merged}>
@@ -83,6 +90,9 @@ export function useSockaSessionContext<
 	ready: boolean;
 	send: InferSockaSend<TContract>;
 	sessionRef: RefObject<SockaSession<TContract> | null>;
+	status: SockaConnectionStatus;
+	reconnecting: boolean;
+	reconnectAttempt: number;
 } {
 	const ctx = useContext(SockaSessionContext);
 	if (ctx === null) {
@@ -103,5 +113,8 @@ export function useSockaSessionContext<
 		ready: ctx.ready,
 		send,
 		sessionRef: ctx.sessionRef,
+		status: ctx.status,
+		reconnecting: ctx.reconnecting,
+		reconnectAttempt: ctx.reconnectAttempt,
 	};
 }

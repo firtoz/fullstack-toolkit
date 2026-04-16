@@ -5,29 +5,21 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sockaHonoNodeWs } from "@firtoz/socka/hono";
-import type {
-	SockaWebSocketSession,
-	SockaWebSocketSessionConfig,
-} from "@firtoz/socka/server";
 import type { ChatMessageRow } from "./contract";
 import { chatContract } from "./contract";
 import { appendMessage, clearRoom, listMessages } from "./storage";
+import {
+	createSockaRoomRegistry,
+	type SockaWebSocketSessionConfig,
+} from "@firtoz/socka/server";
 
 type SessionData = { roomId: string; userId: string; displayName: string };
-
-type RoomBundle = {
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof chatContract, SessionData>>;
-	config: SockaWebSocketSessionConfig<typeof chatContract, SessionData>;
-};
-
-const rooms = new Map<string, RoomBundle>();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "../public");
 
 function makeConfig(
 	roomId: string,
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof chatContract, SessionData>>,
 ): SockaWebSocketSessionConfig<typeof chatContract, SessionData> {
 	return {
 		contract: chatContract,
@@ -90,16 +82,9 @@ function makeConfig(
 	};
 }
 
-function getOrCreateRoom(roomId: string): RoomBundle {
-	let r = rooms.get(roomId);
-	if (!r) {
-		const sessionMap: RoomBundle["sessionMap"] = new Map();
-		const config = makeConfig(roomId, sessionMap);
-		r = { sessionMap, config };
-		rooms.set(roomId, r);
-	}
-	return r;
-}
+const rooms = createSockaRoomRegistry<typeof chatContract, SessionData>(
+	(roomId, _sessionMap) => makeConfig(roomId),
+);
 
 const app = new Hono();
 const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
@@ -108,7 +93,7 @@ app.get(
 	"/ws/:roomId",
 	upgradeWebSocket((c) => {
 		const roomId = c.req.param("roomId") ?? "default";
-		const room = getOrCreateRoom(roomId);
+		const room = rooms.get(roomId);
 		return sockaHonoNodeWs(room.config, {
 			sessions: room.sessionMap,
 		})(c);

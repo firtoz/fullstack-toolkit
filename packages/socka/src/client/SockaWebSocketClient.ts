@@ -75,6 +75,14 @@ export type SockaReconnectedInfo = {
 	attempt: number;
 };
 
+/** High-level connection lifecycle for UI and telemetry. */
+export type SockaConnectionStatus =
+	| "idle"
+	| "connecting"
+	| "open"
+	| "reconnecting"
+	| "closed";
+
 /**
  * Browser WebSocket client driven by a socka contract. Sends client request
  * frames and dispatches decoded server frames to callbacks.
@@ -101,6 +109,11 @@ export class SockaWebSocketClient<
 	private reconnectAttempt = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
+	private _status: SockaConnectionStatus;
+	private readonly statusListeners = new Set<
+		(status: SockaConnectionStatus) => void
+	>();
+
 	constructor(options: SockaWebSocketClientOptions<TContract>) {
 		this.opts = options;
 		this.contract = options.contract;
@@ -113,8 +126,38 @@ export class SockaWebSocketClient<
 		this.onValidationError = options.onValidationError;
 
 		if (options.autoConnect !== false) {
+			this._status = "connecting";
 			this.attachSocket(this.createSocket());
+		} else {
+			this._status = "idle";
 		}
+	}
+
+	private setStatus(next: SockaConnectionStatus): void {
+		if (this._status === next) return;
+		this._status = next;
+		for (const fn of this.statusListeners) {
+			fn(next);
+		}
+	}
+
+	/** Current connection lifecycle state. */
+	get status(): SockaConnectionStatus {
+		return this._status;
+	}
+
+	/**
+	 * Subscribe to {@link status} changes. The listener is called immediately with the
+	 * current status, then on every transition. Returns an unsubscribe function.
+	 */
+	onStatusChange(
+		listener: (status: SockaConnectionStatus) => void,
+	): () => void {
+		this.statusListeners.add(listener);
+		listener(this._status);
+		return () => {
+			this.statusListeners.delete(listener);
+		};
 	}
 
 	private createSocket(): WebSocket {
@@ -128,6 +171,7 @@ export class SockaWebSocketClient<
 	}
 
 	private attachSocket(ws: WebSocket): void {
+		this.setStatus("connecting");
 		this.ws = ws;
 		if (this.wireFormat === "msgpack") {
 			ws.binaryType = "arraybuffer";
@@ -139,6 +183,7 @@ export class SockaWebSocketClient<
 			if (prev > 0) {
 				this.opts.onReconnected?.({ attempt: prev });
 			}
+			this.setStatus("open");
 			this.opts.onOpen?.(event);
 		});
 
@@ -148,6 +193,20 @@ export class SockaWebSocketClient<
 
 		ws.addEventListener("close", (event) => {
 			this.opts.onClose?.(event);
+			if (this.manualClose) {
+				this.setStatus("closed");
+				return;
+			}
+			if (!this.getReconnectEnabled()) {
+				this.setStatus("closed");
+				return;
+			}
+			const cfg = this.resolveReconnectConfig();
+			const maxAttempts = cfg.maxAttempts;
+			if (maxAttempts !== undefined && this.reconnectAttempt >= maxAttempts) {
+				this.setStatus("closed");
+				return;
+			}
 			this.maybeScheduleReconnect();
 		});
 
@@ -198,6 +257,7 @@ export class SockaWebSocketClient<
 			typeof document !== "undefined" &&
 			document.hidden
 		) {
+			this.setStatus("reconnecting");
 			const onVis = (): void => {
 				if (!document.hidden) {
 					document.removeEventListener("visibilitychange", onVis);
@@ -208,6 +268,7 @@ export class SockaWebSocketClient<
 			return;
 		}
 		this.reconnectAttempt += 1;
+		this.setStatus("reconnecting");
 		const delayMs = this.computeReconnectDelayMs(this.reconnectAttempt, cfg);
 		this.opts.onReconnecting?.({ attempt: this.reconnectAttempt, delayMs });
 		if (this.reconnectTimer !== undefined) {
@@ -333,6 +394,7 @@ export class SockaWebSocketClient<
 			clearTimeout(this.reconnectTimer);
 			this.reconnectTimer = undefined;
 		}
+		this.setStatus("closed");
 		this.ws?.close(code, reason);
 	}
 

@@ -110,6 +110,30 @@ describe("SockaSession", () => {
 		expect((err as SockaError).requestId).toBe(id);
 	});
 
+	test("server error frame maps code and data onto SockaError", async () => {
+		const { socket, dispatchMessage, dispatchOpen, sent } =
+			createFakeWebSocket();
+		dispatchOpen();
+		const session = new SockaSession({
+			contract: rpcTestContract,
+			webSocket: socket,
+		});
+		const p = session.send.ping();
+		await Promise.resolve();
+		await Promise.resolve();
+		const id = (JSON.parse(sent[0] as string) as { id: string }).id;
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerError(id, "nope", { code: "E_X", data: { x: 1 } }),
+				"json",
+			) as string,
+		);
+		const err = await p.catch((e: unknown) => e);
+		expect(err).toBeInstanceOf(SockaError);
+		expect((err as SockaError).code).toBe("E_X");
+		expect((err as SockaError).data).toEqual({ x: 1 });
+	});
+
 	test("unknown call in response rejects", async () => {
 		const { socket, dispatchMessage, dispatchOpen, sent } =
 			createFakeWebSocket();

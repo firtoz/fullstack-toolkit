@@ -55,11 +55,11 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Codegen (Wrangler types + Drizzle)
-        run: bun run codegen
-
       - name: Run Typecheck and Lint
         run: TURBO_TELEMETRY_DISABLED=1 bun turbo run typecheck lint:ci
+
+      - name: Verify generated files are committed
+        run: git diff --exit-code
 
       # Run one package test at a time: Vitest + @cloudflare/vitest-pool-workers plus other
       # suites in parallel still exceeded ~7GB on ubuntu-latest (SIGKILL exit 137).

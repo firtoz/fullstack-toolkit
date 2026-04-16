@@ -1,21 +1,13 @@
 import type { ServerWebSocket } from "bun";
-import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
-import type {
-	SockaWebSocketSession,
-	SockaWebSocketSessionConfig,
+import { createSockaBunWebSocketHandlers, sockaBunUpgrade } from "@firtoz/socka/bun";
+import {
+	createSockaRoomRegistry,
+	type SockaWebSocketSessionConfig,
 } from "@firtoz/socka/server";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
 
 type SessionData = { roomId: string };
-
-type RoomBundle = {
-	sessionMap: Map<WebSocket, SockaWebSocketSession<typeof ticTacToeContract, SessionData>>;
-	game: TicTacToeGame;
-	config: SockaWebSocketSessionConfig<typeof ticTacToeContract, SessionData>;
-};
-
-const rooms = new Map<string, RoomBundle>();
 
 function makeRoomConfig(
 	game: TicTacToeGame,
@@ -50,34 +42,30 @@ function makeRoomConfig(
 	};
 }
 
-function getOrCreateRoom(roomId: string): RoomBundle {
-	let r = rooms.get(roomId);
-	if (!r) {
+const rooms = createSockaRoomRegistry<typeof ticTacToeContract, SessionData>(
+	(roomId, _sessionMap) => {
 		const game = new TicTacToeGame();
-		const sessionMap: RoomBundle["sessionMap"] = new Map();
-		const config = makeRoomConfig(game, roomId);
-		r = { sessionMap, game, config };
-		rooms.set(roomId, r);
-	}
-	return r;
-}
+		return makeRoomConfig(game, roomId);
+	},
+);
+
+type BunWsData = { roomId: string; request: Request };
 
 const { websocket } = createSockaBunWebSocketHandlers({
-	resolveScope(ws: ServerWebSocket<{ roomId: string }>) {
+	resolveScope(ws: ServerWebSocket<BunWsData>) {
 		const { roomId } = ws.data;
-		const room = getOrCreateRoom(roomId);
+		const room = rooms.get(roomId);
 		return { sessionMap: room.sessionMap, config: room.config };
 	},
 });
 
-const server = Bun.serve<{ roomId: string }>({
+const server = Bun.serve<BunWsData>({
 	port: Number(process.env.PORT ?? 3461),
 	async fetch(req, srv) {
 		const url = new URL(req.url);
 		if (url.pathname.startsWith("/ws/")) {
 			const roomId = decodeURIComponent(url.pathname.slice(4)) || "default";
-			const upgraded = srv.upgrade(req, { data: { roomId } });
-			if (upgraded) return undefined;
+			if (sockaBunUpgrade(srv, req, { roomId })) return undefined;
 			return new Response("WebSocket upgrade failed", { status: 400 });
 		}
 		if (url.pathname === "/" || url.pathname === "/index.html") {

@@ -28,11 +28,13 @@ const rows = await session.send.list();
 
 Use **`SockaWebSocketClient`** directly if you need **`onResponse` / `onServerError` / `onEvent`** frame hooks without **`SockaSession`**’s typed **`send`** / **`subscribe`**; most apps use **`SockaSession`**.
 
+**Connection status** — **`SockaWebSocketClient`** and **`SockaSession`** expose **`status`** (`"idle" | "connecting" | "open" | "reconnecting" | "closed"`) and **`onStatusChange`** for UI (e.g. “Reconnecting…”). Same fields power the React hooks below.
+
 ## React
 
 ### `useSockaSession` — typed `send`
 
-Use **`useSockaSession(contract, options, deps)`** when you want **`send.*`** RPC methods directly (same shape as **`session.send`**). **`ready`** flips to **`true`** after the socket opens; **`deps`** remount the connection when identity (e.g. room id) changes.
+Use **`useSockaSession(contract, options, deps)`** when you want **`send.*`** RPC methods directly (same shape as **`session.send`**). **`ready`** flips to **`true`** after the socket opens; **`deps`** remount the connection when identity (e.g. room id) changes. Also returns **`status`**, **`reconnecting`**, and **`reconnectAttempt`** (see **`useSocka`**).
 
 ```ts
 import { useSockaSession } from "@firtoz/socka/react";
@@ -50,11 +52,11 @@ useSockaSession(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 
 ### `useSocka` — hold a `SockaSession` ref
 
-Use **`useSocka(options, deps)`** when you need the full **`SockaSession`** (e.g. **`session.subscribe`**, **`session.client`**, **`waitForPush`**, or passing the session into non-React helpers). It returns **`{ ready, sessionRef }`** — read **`sessionRef.current`** in effects or callbacks (it is **`null`** until the effect runs).
+Use **`useSocka(options, deps)`** when you need the full **`SockaSession`** (e.g. **`session.subscribe`**, **`session.client`**, **`waitForPush`**, or passing the session into non-React helpers). It returns **`{ ready, sessionRef, status, reconnecting, reconnectAttempt }`** — read **`sessionRef.current`** in effects or callbacks (it is **`null`** until the effect runs). Use **`reconnecting`** or **`status === "reconnecting"`** for banners; **`reconnectAttempt`** counts backoff attempts.
 
 | | **`useSockaSession`** | **`useSocka`** |
 |--|------------------------|----------------|
-| **Returns** | **`{ ready, send }`** | **`{ ready, sessionRef }`** |
+| **Returns** | **`{ ready, send, status, reconnecting, reconnectAttempt }`** | **`{ ready, sessionRef, status, reconnecting, reconnectAttempt }`** |
 | **Best for** | Most React UIs that only call RPCs | Subscriptions, low-level client access, imperative APIs |
 
 ```tsx
@@ -79,6 +81,10 @@ function App() {
 
 *(Example assumes your contract defines a **`notify`** push; use the real push names from **`myContract`**.)*
 
+### `useSockaPresence` — snapshot + join/leave deltas
+
+Call **`useSockaPresence(sessionRef, ready, options, deps)`** after **`useSocka`** / **`useSockaSession`**: it runs your **`snapshot`** RPC once, subscribes to **`joinPush`** / **`leavePush`**, and returns **`{ users, selfUserId, loading }`**. Pass the same **`deps`** as the connection when room identity changes.
+
 ### One WebSocket for the whole tree
 
 If many components need **`send`**, avoid calling **`useSockaSession`** in each one (each call owns a connection). Mount a provider once and read the session from context:
@@ -100,7 +106,7 @@ function Layout({ roomId }: { roomId: string }) {
 }
 
 function Child() {
-  const { ready, send } = useSockaSessionContext(myContract);
+  const { ready, send, status, reconnecting } = useSockaSessionContext(myContract);
   // ...
 }
 ```

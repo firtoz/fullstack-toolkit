@@ -30,6 +30,28 @@ export function sockaBunInitFromWsData(
 	return undefined;
 }
 
+/** `ServerWebSocket.data` shape after {@link sockaBunUpgrade}. */
+export type SockaBunUpgradeData<TExtra> = TExtra & { request: Request };
+
+/**
+ * Calls {@link Bun.Server.upgrade} with **`request: req`** merged into **`data`**, so
+ * {@link sockaBunInitFromWsData} and **`strictUpgradeRequest: true`** always see the HTTP
+ * upgrade request (query params, cookies path).
+ */
+export function sockaBunUpgrade<TExtra extends Record<string, unknown>>(
+	server: {
+		upgrade: (
+			req: Request,
+			opts: { data: SockaBunUpgradeData<TExtra> },
+		) => boolean;
+	},
+	req: Request,
+	data?: TExtra,
+): boolean {
+	const extra = (data ?? ({} as TExtra)) as TExtra;
+	return server.upgrade(req, { data: { ...extra, request: req } });
+}
+
 export type SockaBunResolveScope<
 	TContract extends SockaContract<SockaContractConfig>,
 	TData,

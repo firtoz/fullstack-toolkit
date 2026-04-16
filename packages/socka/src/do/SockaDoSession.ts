@@ -289,4 +289,17 @@ export class SockaDoSession<
 		}
 		return out;
 	}
+
+	public peerCount(options?: { excludeSelf?: boolean }): number {
+		let n = 0;
+		for (const [ws] of this.sessions) {
+			if (options?.excludeSelf && ws === this.websocket) continue;
+			n += 1;
+		}
+		return n;
+	}
+
+	public hasPeers(options?: { excludeSelf?: boolean }): boolean {
+		return this.peerCount(options) > 0;
+	}
 }

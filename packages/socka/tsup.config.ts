@@ -25,6 +25,7 @@ export default defineConfig({
 		"bun/index": "src/bun/index.ts",
 		"hono/index": "src/hono/index.ts",
 		"hono/cloudflare-workers": "src/hono/cloudflare-workers.ts",
+		"test/index": "src/test/index.ts",
 	},
 	format: ["esm"],
 	dts: true,

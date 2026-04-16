@@ -169,6 +169,21 @@ export class SockaWebSocketSession<
 		return out;
 	}
 
+	/** Count of sessions in this room (same {@link sessions} map), optionally excluding self. */
+	public peerCount(options?: { excludeSelf?: boolean }): number {
+		let n = 0;
+		for (const [ws] of this.sessions) {
+			if (options?.excludeSelf && ws === this.websocket) continue;
+			n += 1;
+		}
+		return n;
+	}
+
+	/** Whether any peer sessions exist (optionally excluding self). */
+	public hasPeers(options?: { excludeSelf?: boolean }): boolean {
+		return this.peerCount(options) > 0;
+	}
+
 	/**
 	 * Invokes the user {@link typeof SockaWebSocketSessionConfig.handleClose} callback.
 	 * Server adapters should call this when the WebSocket closes, **before** deleting
@@ -304,7 +319,10 @@ export class SockaWebSocketSession<
 					: new SockaError(
 							err instanceof Error ? err.message : "Handler failed",
 						);
-			const errorFrame = encodeServerError(frame.id, sockaErr.message);
+			const errorFrame = encodeServerError(frame.id, sockaErr.message, {
+				code: sockaErr.code,
+				data: sockaErr.data,
+			});
 			this.sendWireFrame(errorFrame);
 			return;
 		}

@@ -2,6 +2,7 @@ import { useMemo, type DependencyList, type RefObject } from "react";
 import type { SockaContract, SockaContractConfig } from "../core/contract";
 import type { InferSockaSend, InferSockaPushHandlers } from "../core/contract";
 import type { SockaSession } from "../client/SockaSession";
+import type { SockaConnectionStatus } from "../client/SockaWebSocketClient";
 import { useSocka, type UseSockaOptions } from "./useSocka";
 
 export type UseSockaSessionOptions<
@@ -54,21 +55,32 @@ export function useSockaSession<
 	ready: boolean;
 	send: InferSockaSend<TContract>;
 	sessionRef: RefObject<SockaSession<TContract> | null>;
+	status: SockaConnectionStatus;
+	reconnecting: boolean;
+	reconnectAttempt: number;
 } {
 	const { pushHandlers, ...sockaOpts } = options;
-	const { ready, sessionRef } = useSocka(
-		{
-			...sockaOpts,
-			contract,
-			pushHandlers,
-		},
-		deps,
-	);
+	const { ready, sessionRef, status, reconnecting, reconnectAttempt } =
+		useSocka(
+			{
+				...sockaOpts,
+				contract,
+				pushHandlers,
+			},
+			deps,
+		);
 
 	const send = useMemo(
 		() => createSockaSendProxyFromSession(contract, sessionRef),
 		[contract, sessionRef],
 	);
 
-	return { ready, send, sessionRef };
+	return {
+		ready,
+		send,
+		sessionRef,
+		status,
+		reconnecting,
+		reconnectAttempt,
+	};
 }

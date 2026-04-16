@@ -9,6 +9,8 @@
 
 On **`SockaWebSocketSession`** (and **`SockaDoSession`**), **`session.listPeers()`** returns **`TData[]`** for every connection in the same **`sessions`** map (same room), in **insert order**. Use **`listPeers({ excludeSelf: true })`** to omit the calling socket.
 
+**`session.peerCount()`** / **`session.hasPeers()`** are cheap alternatives to **`listPeers().length`** when you only need a count or existence check.
+
 **`session.listPeersWith((s) => …)`** maps each **peer session** (not just **`data`**) — useful if you need fields beyond **`TData`**.
 
 Map that list to whatever your RPC output needs:
@@ -31,6 +33,9 @@ In **`onAttached`**, broadcast **`userJoined`**; in **`handleClose`**, broadcast
 ## Client
 
 After **`waitForOpen()`** or in **`onOpen`**, fetch **`listPresence`** once, then apply **`userJoined`** / **`userLeft`** from **`session.subscribe`** for live updates.
+
+React: **`useSockaPresence`** — see **[Client](./client.md)**.
+
 
 ## See also
 

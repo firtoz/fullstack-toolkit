@@ -30,6 +30,10 @@ export type SockaServerErrorFrame = {
 	readonly v: typeof SOCKA_WIRE_VERSION;
 	readonly id: string;
 	readonly error: string;
+	/** Optional machine-readable code (e.g. `FORBIDDEN`). */
+	readonly code?: string;
+	/** Optional structured detail for clients; keep small and JSON-serializable. */
+	readonly data?: unknown;
 };
 
 export type SockaServerEventFrame = {
@@ -99,10 +103,20 @@ export function decodeSockaWire(parsed: unknown): DecodedSockaWire {
 		typeof parsed.id === "string" &&
 		typeof parsed.error === "string"
 	) {
-		return {
-			kind: "serverError",
-			frame: parsed as SockaServerErrorFrame,
+		const code =
+			"code" in parsed && typeof parsed.code === "string"
+				? parsed.code
+				: undefined;
+		const data = "data" in parsed ? parsed.data : undefined;
+		const frame: SockaServerErrorFrame = {
+			socka: "serverError",
+			v: SOCKA_WIRE_VERSION,
+			id: parsed.id,
+			error: parsed.error,
+			...(code !== undefined ? { code } : {}),
+			...(data !== undefined ? { data } : {}),
 		};
+		return { kind: "serverError", frame };
 	}
 	if (socka === "serverEvent" && typeof parsed.event === "string") {
 		return {
@@ -137,8 +151,16 @@ export function encodeServerResponse(
 export function encodeServerError(
 	id: string,
 	error: string,
+	extra?: { readonly code?: string; readonly data?: unknown },
 ): SockaServerErrorFrame {
-	return { socka: "serverError", v: SOCKA_WIRE_VERSION, id, error };
+	return {
+		socka: "serverError",
+		v: SOCKA_WIRE_VERSION,
+		id,
+		error,
+		...(extra?.code !== undefined ? { code: extra.code } : {}),
+		...(extra?.data !== undefined ? { data: extra.data } : {}),
+	};
 }
 
 /** Builds a socka v1 server event frame. */

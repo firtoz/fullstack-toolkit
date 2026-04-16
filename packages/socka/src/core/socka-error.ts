@@ -5,15 +5,22 @@
 export class SockaError extends Error {
 	readonly requestId?: string;
 	readonly code?: string;
+	readonly data?: unknown;
 
 	constructor(
 		message: string,
-		options?: { requestId?: string; code?: string; cause?: unknown },
+		options?: {
+			requestId?: string;
+			code?: string;
+			data?: unknown;
+			cause?: unknown;
+		},
 	) {
 		super(message);
 		this.name = "SockaError";
 		this.requestId = options?.requestId;
 		this.code = options?.code;
+		this.data = options?.data;
 		if (options?.cause !== undefined) {
 			Object.defineProperty(this, "cause", {
 				value: options.cause,
@@ -26,7 +33,16 @@ export class SockaError extends Error {
 	}
 
 	/** Builds a {@link SockaError} from a standard RPC error envelope. */
-	static fromWire(msg: { id: string; error: string }): SockaError {
-		return new SockaError(msg.error, { requestId: msg.id });
+	static fromWire(msg: {
+		id: string;
+		error: string;
+		code?: string;
+		data?: unknown;
+	}): SockaError {
+		return new SockaError(msg.error, {
+			requestId: msg.id,
+			code: msg.code,
+			data: msg.data,
+		});
 	}
 }

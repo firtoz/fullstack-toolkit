@@ -2,7 +2,7 @@
 
 ## Client: inject a `WebSocket`
 
-In tests, pass **`webSocket`** into **`SockaSession`** or **`SockaWebSocketClient`** with a **fake implementation** of the **`WebSocket`** API (no real network). The socka package tests use a small **`createFakeWebSocket()`** helper under **`src/test-utils/`** — copy that pattern or use your test runner’s mock. Drive **`send`** / **`subscribe`** by delivering **encoded socka frames** (JSON or msgpack per **`wireFormat`**) through the fake’s **`onmessage`** path.
+In tests, pass **`webSocket`** into **`SockaSession`** or **`SockaWebSocketClient`** with a **fake implementation** of the **`WebSocket`** API (no real network). Import **`createFakeWebSocket`** from **`@firtoz/socka/test`** (same helper the package tests use). Drive **`send`** / **`subscribe`** by delivering **encoded socka frames** (JSON or msgpack per **`wireFormat`**) through the fake’s **`onmessage`** path.
 
 **Reconnect:** With an injected socket, reconnect defaults to **off**; set **`reconnect`** explicitly if you need to test backoff behavior.
 
