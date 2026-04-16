@@ -1,5 +1,14 @@
 # @firtoz/db-helpers
 
+## 2.2.1
+
+### Patch Changes
+
+- [`7c4983f`](https://github.com/firtoz/fullstack-toolkit/commit/7c4983fd27adb9709ee844547259e0f22040fded) Thanks [@firtoz](https://github.com/firtoz)! - Add `require` and `default` conditions to `package.json` `exports` so CommonJS tools (e.g. drizzle-kit) can resolve these packages under Node.
+
+- Updated dependencies [[`7c4983f`](https://github.com/firtoz/fullstack-toolkit/commit/7c4983fd27adb9709ee844547259e0f22040fded)]:
+  - @firtoz/maybe-error@1.6.1
+
 ## 2.2.0
 
 ### Minor Changes

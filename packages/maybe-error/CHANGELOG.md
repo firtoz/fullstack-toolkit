@@ -1,5 +1,11 @@
 # [@firtoz/maybe-error-v1.2.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/maybe-error@1.1.0...@firtoz/maybe-error@1.2.0) (2025-07-13)
 
+## 1.6.1
+
+### Patch Changes
+
+- [`7c4983f`](https://github.com/firtoz/fullstack-toolkit/commit/7c4983fd27adb9709ee844547259e0f22040fded) Thanks [@firtoz](https://github.com/firtoz)! - Add `require` and `default` conditions to `package.json` `exports` so CommonJS tools (e.g. drizzle-kit) can resolve these packages under Node.
+
 ## 1.6.0
 
 ### Minor Changes

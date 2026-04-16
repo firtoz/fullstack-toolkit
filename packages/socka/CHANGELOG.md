@@ -1,5 +1,28 @@
 # @firtoz/socka
 
+## 2.1.0
+
+### Minor Changes
+
+- [`021ed8e`](https://github.com/firtoz/fullstack-toolkit/commit/021ed8e5beb64ff4123f8def65b42863c5844f39) Thanks [@firtoz](https://github.com/firtoz)! - **Strict upgrade:** **`SockaStrictWebSocketInit`** and **`strictUpgradeRequest`** so **`createData`** can use a real **`Request`** (Bun/Hono). **`sockaBunInitFromWsData`**; **`sockaHonoNodeWs`** can default **`sockaInit`** from context.
+
+  **Core:** **`createSockaRoomRegistry`**; **`listPeers`** / **`listPeersWith`**; optional reconnect with backoff on **`SockaWebSocketClient`** / **`SockaSession`** (**`onReconnecting`** / **`onReconnected`**).
+
+  **DX:** **`sockaBunUpgrade`** on Bun; examples use **`createSockaRoomRegistry`** + upgrade helper; **`peerCount`** / **`hasPeers`** on sessions; **`@firtoz/socka/test`** exports **`createFakeWebSocket`**.
+
+  **Client:** **`SockaConnectionStatus`** via **`status`** + **`onStatusChange`**; React **`useSocka`** / **`useSockaSession`** / context return **`status`**, **`reconnecting`**, **`reconnectAttempt`**; **`useSockaPresence`** hook.
+
+  **Wire:** **`serverError`** frames may include optional **`code`** and **`data`**; **`SockaError`** carries them through from handler throws. Older peers ignore missing fields.
+
+  **Docs:** **`docs/auth.md`**, **`docs/recipes.md`**, reconnection, presence, history, testing, wire-format, backpressure; README and docs hub updates.
+
+  **Repo:** Removed root **`codegen`** script; re-tracked **`worker-configuration.d.ts`** and Drizzle generated bundles where applicable; **`turbo.json`** runs **`typegen`** / **`db:generate`** before **`typecheck`** / **`build`**; CI verifies **`git diff`** is clean after checks.
+
+### Patch Changes
+
+- Updated dependencies [[`7c4983f`](https://github.com/firtoz/fullstack-toolkit/commit/7c4983fd27adb9709ee844547259e0f22040fded)]:
+  - @firtoz/maybe-error@1.6.1
+
 ## 2.0.0
 
 ### Minor Changes
