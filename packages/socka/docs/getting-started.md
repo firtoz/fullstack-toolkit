@@ -1,16 +1,25 @@
 # Getting started
 
-**Socka** is **schema-first WebSocket RPC** for TypeScript: one **`defineSocka`** contract gives you **`session.send.*`** on the client and **`handlers`** on the server, with validation and correlated request/response on the wire.
+This guide walks through a **multi-room chat** on one **`defineSocka`** contract: **typed RPCs** (`listHistory`, `listPresence`, `sendMessage`, `clearHistory`) and **typed pushes** (`userJoined`, `userLeft`, `roomMessage`, `historyCleared`). The **[README](../README.md)** has the shortest runnable **Bun** slice (in-memory history).
 
-The **[README](../README.md)** has a runnable **Bun** example if you want to copy three files and go. This page helps you **pick a runtime** and wire the same contract everywhere.
+**Runnable apps** with persistence and a **multi-room browser client**: **[chatroom-bun](../../../examples/chatroom-bun)** (Bun SQLite), **[chatroom-hono](../../../examples/chatroom-hono)** (JSON files), **[chatroom-do](../../../examples/chatroom-do)** (Durable Object SQLite + Drizzle).
 
-For API tables (options, hooks), see **[Reference](./reference.md)**. For how the wire protocol is structured (optional), see **[Internals](./internals.md)**.
+For API tables, see **[Reference](./reference.md)**. For wire details, **[Internals](./internals.md)**.
 
 ---
 
-## Shared contract
+## Step 1 — What you are building
 
-Use one module on the client and server:
+1. Clients connect to **`ws://host/ws/<roomId>?name=<displayName>`** (path and query are conventions you control).
+2. Each **room** has its own **`sessionMap`** and **config** — see **[Multi-room](./multi-room.md)**.
+3. **Join/leave** are **`pushes`** to everyone else in the room; **chat lines** are **`pushes`** too (after you persist).
+4. **History** is loaded with a **call** (`listHistory`) so reconnects and new panes can hydrate from storage (SQLite, JSON files, or DO SQLite in the examples).
+
+---
+
+## Step 2 — Shared contract
+
+Use one module on the client and every server:
 
 **`contract.ts`**
 
@@ -18,217 +27,171 @@ Use one module on the client and server:
 import { defineSocka } from "@firtoz/socka/core";
 import * as z from "zod";
 
-export const myContract = defineSocka({
+export const messageRow = z.object({
+	id: z.string(),
+	ts: z.number(),
+	userId: z.string(),
+	displayName: z.string(),
+	text: z.string(),
+});
+
+export type ChatMessageRow = z.infer<typeof messageRow>;
+
+const onlineUser = z.object({
+	userId: z.string(),
+	displayName: z.string(),
+});
+
+export const chatContract = defineSocka({
 	calls: {
-		echo: {
-			input: z.object({ message: z.string() }),
-			output: z.object({ response: z.string() }),
+		listHistory: {
+			input: z.object({ limit: z.number().int().min(1).max(500).optional() }),
+			output: z.object({ messages: z.array(messageRow) }),
 		},
+		listPresence: {
+			input: z.object({}).optional(),
+			output: z.object({
+				selfUserId: z.string(),
+				users: z.array(onlineUser),
+			}),
+		},
+		sendMessage: {
+			input: z.object({ text: z.string().min(1) }),
+			output: z.object({ ok: z.literal(true) }),
+		},
+		clearHistory: {
+			input: z.object({}).optional(),
+			output: z.object({ ok: z.literal(true) }),
+		},
+	},
+	pushes: {
+		userJoined: z.object({ userId: z.string(), displayName: z.string() }),
+		userLeft: z.object({
+			userId: z.string(),
+			displayName: z.string(),
+		}),
+		roomMessage: messageRow,
+		historyCleared: z.object({
+			ts: z.number(),
+			clearedByUserId: z.string(),
+			clearedByDisplayName: z.string(),
+		}),
 	},
 });
 ```
 
 ---
 
-## Shared client
+## Step 3 — Client: subscribe, hydrate, send
 
-Point the URL at whatever path your server upgrades (here **`/ws`** — only a convention; match your server):
+1. Open **`SockaSession`** with **`url`** pointing at your upgrade path (same **`roomId`** and **`name`** the server parses in **`createData`**).
+2. After the socket is ready, **`await session.send.listHistory({})`** (or `{ limit: 100 }`) and render **`messages`**, then **`await session.send.listPresence({})`** to show **who is online** (compare **`selfUserId`** to highlight the current user).
+3. Register **`session.subscribe.on("userJoined" | "userLeft" | "roomMessage" | "historyCleared", …)`** for live updates (merge joins/leaves into your presence UI; on **`historyCleared`**, drop or redraw stored chat lines for that room).
+4. Send **`await session.send.sendMessage({ text: "…" })`**. Optional: **`await session.send.clearHistory({})`** to wipe persisted messages for the room (server should **`broadcastPush("historyCleared", …)`** so every client updates).
 
-**`client.ts`**
+**Minimal client**
 
 ```ts
 import { SockaSession } from "@firtoz/socka/client";
-import { myContract } from "./contract";
+import { chatContract } from "./contract";
 
 const session = new SockaSession({
-	contract: myContract,
-	url: "ws://localhost:3450/ws",
+	contract: chatContract,
+	url: "ws://localhost:3464/ws/lobby?name=Ada",
 });
-const { response } = await session.send.echo({ message: "hello" });
+
+session.subscribe.on("userJoined", (p) => console.log("in", p.displayName));
+session.subscribe.on("userLeft", (p) => console.log("out", p.displayName));
+session.subscribe.on("roomMessage", (m) => console.log(`${m.displayName}: ${m.text}`));
+session.subscribe.on("historyCleared", (p) =>
+	console.log("cleared by", p.clearedByDisplayName),
+);
+
+const { messages } = await session.send.listHistory({ limit: 50 });
+for (const m of messages) console.log(`[hist] ${m.displayName}: ${m.text}`);
+
+const { selfUserId, users } = await session.send.listPresence({});
+console.log("online", selfUserId, users);
+
+await session.send.sendMessage({ text: "hello" });
 ```
 
-By default, socka uses **JSON text** WebSocket frames. If you switch to **`msgpack`**, set **`wireFormat`** the same on client and server — see **[Reference](./reference.md)**.
+**Multiple rooms on one page** — use **one `SockaSession` per room** (see the chat example **`public/index.html`** + **`src/client.ts`**): each pane builds its own URL and keeps its own subscriptions.
+
+By default, **`wireFormat`** is JSON — see **[Reference](./reference.md#wire-encoding-json-and-msgpack)** if you use **`msgpack`**.
 
 ---
 
-## Choose your server runtime
+## Step 4 — Server behavior (all runtimes)
 
-| Runtime | Install | Where to wire socka |
-|---------|---------|---------------------|
-| **Bun** (`Bun.serve`) | `npm install @firtoz/socka` — add **`bun-types`** dev if you type-check Bun APIs | **[Bun](#bun-bunserve)** below · **[Server](./server.md#firtoz-socka-bun-bunserve)** |
-| **Node + `ws`** | `npm install @firtoz/socka ws` — add **`@types/ws`** dev when you use **`ws`** on Node | **[Node](#node--ws)** · **[Server](./server.md)** |
-| **Hono on Node** (`@hono/node-ws`) | `npm install @firtoz/socka hono @hono/node-ws @hono/node-server ws` | **[Hono (Node)](#hono-on-node)** · **[Server](./server.md#firtoz-socka-hono-node-hono-node-ws)** |
-| **Hono on Cloudflare Workers** | `npm install @firtoz/socka hono` | **[Hono (Workers)](#hono-on-cloudflare-workers)** · **[Server](./server.md#firtoz-socka-hono-cloudflare-workers)** |
-| **Cloudflare Durable Objects** | `npm install @firtoz/socka hono @firtoz/websocket-do` | **[Durable Objects](./durable-objects.md)** · **[DO overview](#cloudflare-durable-objects)** |
+For each **`SockaWebSocketSessionConfig`** / **`SockaDoSessionConfig`**:
 
-More install notes and peers: **[Peers](./peers.md)**. Cloudflare TypeScript: prefer **`wrangler types`** — [Cloudflare docs](https://developers.cloudflare.com/workers/languages/typescript).
-
-**Multiple rooms or scopes?** See **[Multi-room](./multi-room.md)**.
+1. **`createData`** — Parse **`roomId`** from the upgrade URL (path) and **`displayName`** from **`name`** query; set **`userId`** (e.g. **`crypto.randomUUID()`**). Same shape as the README **`SockaWebSocketInit`** / Hono **`Context`** on DO.
+2. **`onAttached`** — `await session.broadcastPush("userJoined", { userId, displayName }, true)` (**`excludeSelf: true`** so only peers see the join).
+3. **`handlers.listHistory`** — Read from your store for **`session.data.roomId`** (Bun: SQLite; Hono: JSON file; DO: SQLite in the object).
+4. **`handlers.listPresence`** — Walk the room’s **`sessionMap`** (or DO **`this.sessions`**) and return **`{ selfUserId: session.data.userId, users: [{ userId, displayName }, …] }`** sorted for display.
+5. **`handlers.sendMessage`** — Persist the line, then **`await session.broadcastPush("roomMessage", row)`** (everyone in the room, including the sender, unless you choose **`excludeSelf`**).
+6. **`handlers.clearHistory`** — Delete persisted messages for **`session.data.roomId`**, then **`await session.broadcastPush("historyCleared", { ts, clearedByUserId, clearedByDisplayName })`** so all clients refresh their UI.
+7. **`handleClose`** — `await session.broadcastPush("userLeft", { userId, displayName: session.data.displayName }, true)` — **`displayName`** is the **session’s name at disconnect** (same field as in **`userJoined`** / messages), so clients can render a leave line without guessing from **`userId`** alone. Session is still in **`sessions`** until **`handleClose`** finishes — see **[Lifecycle](./lifecycle.md)**.
 
 ---
+
+## Step 5 — Wire the server by runtime
+
+Pick a row, then follow the numbered steps in that subsection.
+
+| Runtime | Install | Full example |
+|---------|---------|--------------|
+| **Bun** | `npm install @firtoz/socka` (+ **`bun-types`** dev if needed) | [chatroom-bun](../../../examples/chatroom-bun) |
+| **Node + `ws`** | `npm install @firtoz/socka ws` (+ **`@types/ws`** dev) | Same contract; attach pattern below |
+| **Hono (Node)** | `npm install @firtoz/socka hono @hono/node-ws @hono/node-server ws` | [chatroom-hono](../../../examples/chatroom-hono) |
+| **Hono (Workers)** | `npm install @firtoz/socka hono` | **[Server](./server.md#firtoz-socka-hono-cloudflare-workers)** — usually **`sockaHonoCloudflare`**; session often starts on first message |
+| **Durable Objects** | `npm install @firtoz/socka hono @firtoz/websocket-do` | [chatroom-do](../../../examples/chatroom-do) |
+
+More installs: **[Peers](./peers.md)**. Cloudflare typings: **`wrangler types`**.
 
 ### Bun (`Bun.serve`)
 
-**`server.ts`**
-
-```ts
-import { createSockaBunWebSocketHandlers } from "@firtoz/socka/bun";
-import { myContract } from "./contract";
-
-const { websocket } = createSockaBunWebSocketHandlers({
-	contract: myContract,
-	handlers: {
-		echo: async (input) => ({ response: input.message }),
-	},
-	handleClose: async () => {},
-});
-
-Bun.serve({
-	port: 3450,
-	fetch(req, server) {
-		// "/ws" is just a convention — any path works; you decide when to call upgrade()
-		if (new URL(req.url).pathname === "/ws") {
-			if (server.upgrade(req)) return undefined;
-			return new Response("WebSocket upgrade failed", { status: 400 });
-		}
-		return new Response("OK");
-	},
-	websocket,
-});
-```
-
-Run **`bun run server.ts`**, then run the client against **`ws://localhost:3450/ws`**.
-
-**Full-stack demo:** [`tic-tac-toe-bun`](../../../examples/tic-tac-toe-bun) (port **3461**, **`bun run dev`**).
-
----
+1. **Open** a **`Database`** from **`bun:sqlite`** (one file; table keyed by **`room_id`**), **`CREATE TABLE IF NOT EXISTS`** for messages.
+2. **`getOrCreateRoom(roomId)`** returns **`{ sessionMap, config }`** where **`config`** closes over **`roomId`** and **`db`**.
+3. **`createSockaBunWebSocketHandlers({ resolveScope })`** — **`resolveScope(ws)`** reads **`ws.data.roomId`** (set in **`fetch`** via **`server.upgrade(req, { data: { roomId } })`**).
+4. **`fetch`** upgrades **`/ws/:roomId`** (decode the segment).
 
 ### Node + `ws`
 
-**`server.ts`**
-
-```ts
-import { WebSocketServer } from "ws";
-import { attachSockaWebSocket } from "@firtoz/socka/server";
-import type { SockaWebSocketSession } from "@firtoz/socka/server";
-import { myContract } from "./contract";
-
-const sessions = new Map<
-	WebSocket,
-	SockaWebSocketSession<typeof myContract>
->();
-
-const wss = new WebSocketServer({ port: 3450 });
-wss.on("connection", (ws) => {
-	attachSockaWebSocket(
-		ws as unknown as WebSocket,
-		sessions,
-		{
-			contract: myContract,
-			handlers: {
-				echo: async (input) => ({ response: input.message }),
-			},
-			handleClose: async () => {},
-		},
-	);
-});
-```
-
-The `ws` package’s socket type may differ from the DOM **`WebSocket`** type; the cast above is a common pattern. Use the same **`ws://…/ws`** URL in the client if you listen on **`3450`**.
-
-**Full-stack demo:** [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono) (Hono on Node — port **3462**, **`bun run dev`**). For plain **`ws`** integration tests, see [`tests/socka-server-test`](https://github.com/firtoz/fullstack-toolkit/tree/main/tests/socka-server-test).
-
----
+1. **`new WebSocketServer({ port })`**.
+2. On **`connection`**, parse **`roomId`** from **`req.url`**, **`getOrCreateRoom`**, then **`attachSockaWebSocket( ws, room.sessionMap, room.config, { request: req } )`** so **`createData`** sees the URL.
 
 ### Hono on Node
 
-**`server.ts`**
-
-```ts
-import { serve } from "@hono/node-server";
-import { createNodeWebSocket } from "@hono/node-ws";
-import { Hono } from "hono";
-import { sockaHonoNodeWs } from "@firtoz/socka/hono";
-import { myContract } from "./contract";
-
-const app = new Hono();
-const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
-
-app.get(
-	"/ws",
-	upgradeWebSocket(
-		sockaHonoNodeWs({
-			contract: myContract,
-			handlers: {
-				echo: async (input) => ({ response: input.message }),
-			},
-			handleClose: async () => {},
-		}),
-	),
-);
-
-const server = serve({ fetch: app.fetch, port: 3450 });
-injectWebSocket(server);
-```
-
-**Full-stack demo:** [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono).
-
----
+1. **`createNodeWebSocket({ app })`** from **`@hono/node-ws`**.
+2. **`app.get("/ws/:roomId", upgradeWebSocket((c) => { const room = getOrCreateRoom(c.req.param("roomId")); return sockaHonoNodeWs(room.config, { sessions: room.sessionMap })(c); }))`**.
+3. **`serve`** + **`injectWebSocket(server)`**.
 
 ### Hono on Cloudflare Workers
 
-**`src/index.ts`** (shape only — you still need Wrangler bindings and `export default` wiring for your Worker)
-
-```ts
-import { Hono } from "hono";
-import { upgradeWebSocket } from "hono/cloudflare-workers";
-import { sockaHonoCloudflare } from "@firtoz/socka/hono/cloudflare";
-import { myContract } from "./contract";
-
-const app = new Hono();
-
-app.get(
-	"/ws",
-	upgradeWebSocket(
-		sockaHonoCloudflare({
-			contract: myContract,
-			handlers: {
-				echo: async (input) => ({ response: input.message }),
-			},
-			handleClose: async () => {},
-		}),
-	),
-);
-```
-
-On Workers, the socka session is often created on the **first message** (see **[Server](./server.md#firtoz-socka-hono-cloudflare-workers)**).
-
-**Examples:** full tic-tac-toe apps — **[Bun](../../../examples/tic-tac-toe-bun)** · **[Hono + Node](../../../examples/tic-tac-toe-hono)** · **[Cloudflare (Hono + DO)](../../../examples/tic-tac-toe-do)**. The DO app is the fleshed-out **Workers** sample; it uses **`SockaWebSocketDO`**, not a standalone **`sockaHonoCloudflare`** Worker. For Workers + Hono upgrade **without** a DO, follow **[Server](./server.md)**.
-
----
+1. Use **`upgradeWebSocket`** from **`hono/cloudflare-workers`** with **`sockaHonoCloudflare`** — see **[Server](./server.md)**.
+2. For **room routing** without a DO, put **`roomId`** in the path and parse it in **`createData`** from **`init.request`**.
 
 ### Cloudflare Durable Objects
 
-Socka on a DO uses **`SockaDoSession`** and usually **`SockaWebSocketDO`** from **`@firtoz/socka/do`**. The contract is the same; wiring goes through your Durable Object class and **`@firtoz/websocket-do`**.
-
-See **[Durable Objects](./durable-objects.md)** for **`SockaWebSocketDO`**, hibernation, and Wrangler setup.
-
-**Full-stack demo:** [`tic-tac-toe-do`](../../../examples/tic-tac-toe-do) (port **3463**, **`wrangler dev`**).
+1. **Worker** — route **`/ws/:roomId`** to **`env.CHAT_ROOM.idFromName(roomId).get(id).fetch(...)`** (stub forwards WebSocket upgrade to the DO).
+2. **DO class** — extend **`SockaWebSocketDO`**; **`SockaDoSession`** handlers use **Drizzle** on **`drizzle(ctx.storage)`** (see [chatroom-do](../../../examples/chatroom-do)).
+3. **One DO instance per room** — history lives in that object’s SQLite; no **`room_id`** column needed if the table is per-DO.
 
 ---
 
-## Full-stack demos (tic-tac-toe)
+## Full-stack examples (chat + tic-tac-toe)
 
-Same game logic, different servers:
-
-| Stack | Folder | Port |
-|-------|--------|------|
-| **Bun** | [`tic-tac-toe-bun`](../../../examples/tic-tac-toe-bun) | **3461** |
-| **Hono + Node** | [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono) | **3462** |
-| **Durable Objects** | [`tic-tac-toe-do`](../../../examples/tic-tac-toe-do) | **3463** |
-
-From each folder: **`bun run dev`**, except the DO app: **`wrangler dev`**.
+| Topic | Stack | Folder | Port |
+|-------|--------|--------|------|
+| Chat + history | **Bun** + SQLite | [`chatroom-bun`](../../../examples/chatroom-bun) | **3464** |
+| Chat + history | **Hono + Node** + JSON | [`chatroom-hono`](../../../examples/chatroom-hono) | **3465** |
+| Chat + history | **DO** + Drizzle SQLite | [`chatroom-do`](../../../examples/chatroom-do) | **3466** |
+| Tic-tac-toe | **Bun** | [`tic-tac-toe-bun`](../../../examples/tic-tac-toe-bun) | **3461** |
+| Tic-tac-toe | **Hono + Node** | [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono) | **3462** |
+| Tic-tac-toe | **DO** | [`tic-tac-toe-do`](../../../examples/tic-tac-toe-do) | **3463** |
 
 ---
 
-Next: [Peers](./peers.md) · [Server](./server.md) · [Durable Objects](./durable-objects.md) · [Client](./client.md) · [Reference](./reference.md) · [Internals](./internals.md)
+Next: [Peers](./peers.md) · [Multi-room](./multi-room.md) · [Server](./server.md) · [Durable Objects](./durable-objects.md) · [Client](./client.md) · [Reference](./reference.md) · [Internals](./internals.md)

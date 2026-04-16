@@ -111,6 +111,8 @@ Bun.serve({ fetch, websocket });
 
 **Multi-room** — use the overload **`createSockaBunWebSocketHandlers({ resolveScope })`** so each **`ServerWebSocket`** picks the correct **`sessionMap`** and shared **`config`** (see [Multi-room](./multi-room.md) and the tic-tac-toe example).
 
+**Upgrade query params** — `createData` only sees **`init.request`** when the adapter passes it. For Bun, put the HTTP **`Request`** on **`ServerWebSocket` `data`** (e.g. `server.upgrade(req, { data: { roomId, request: req } })`) so **`?name=`** and other query params are available. **`sockaBunInitFromWsData`** (exported from **`@firtoz/socka/bun`**) reads **`data.request`** and builds **`SockaWebSocketInit`**.
+
 ## `@firtoz/socka/hono` (Node — `@hono/node-ws`)
 
 Use **`createNodeWebSocket`** from [**`@hono/node-ws`**](https://github.com/honojs/middleware/tree/main/packages/node-ws) with **`serve`** from **`@hono/node-server`**, then **`upgradeWebSocket(sockaHonoNodeWs({ contract, handlers, handleClose }))`**. **`sockaHonoNodeWs`** returns the callback Hono expects for **`upgradeWebSocket`**.

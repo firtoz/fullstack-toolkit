@@ -1,0 +1,22 @@
+{
+	"name": "chatroom-bun",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Multi-room chat over socka on Bun.serve with SQLite history (self-contained example)",
+	"scripts": {
+		"dev": "bun run build:client && bun --watch src/server.ts",
+		"start": "bun run build:client && bun src/server.ts",
+		"build:client": "bun build ./src/client.ts --outfile=public/client.js --target=browser --minify",
+		"typecheck": "tsgo --noEmit -p ./tsconfig.json"
+	},
+	"dependencies": {
+		"@firtoz/socka": "workspace:*",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@typescript/native-preview": "catalog:",
+		"bun-types": "catalog:",
+		"typescript": "catalog:"
+	}
+}

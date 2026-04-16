@@ -6,8 +6,17 @@ import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessa
 import {
 	SockaWebSocketSession,
 	runSockaSessionOnAttached,
+	type SockaWebSocketInit,
 	type SockaWebSocketSessionConfig,
 } from "../server/SockaWebSocketSession";
+
+export function sockaBunInitFromWsData(ws: ServerWebSocket<unknown>): SockaWebSocketInit | undefined {
+	const d = ws.data as Record<string, unknown> | undefined;
+	if (d && "request" in d && d.request instanceof Request) {
+		return { request: d.request };
+	}
+	return undefined;
+}
 
 export type SockaBunResolveScope<
 	TContract extends SockaContract<SockaContractConfig>,
@@ -51,7 +60,8 @@ function bunHandlersFromResolveScope<
 		open(ws: ServerWebSocket<TWsData>) {
 			const { sessionMap, config } = resolveScope(ws);
 			const domWs = ws as unknown as WebSocket;
-			const session = new SockaWebSocketSession(domWs, sessionMap, config);
+			const init = sockaBunInitFromWsData(ws);
+			const session = new SockaWebSocketSession(domWs, sessionMap, config, init);
 			sessionMap.set(domWs, session);
 			runSockaSessionOnAttached(config, session);
 		},
@@ -122,7 +132,8 @@ function bunHandlersFromConfig<
 	>["websocket"] = {
 		open(ws: ServerWebSocket<undefined>) {
 			const domWs = ws as unknown as WebSocket;
-			const session = new SockaWebSocketSession(domWs, sessionMap, config);
+			const init = sockaBunInitFromWsData(ws);
+			const session = new SockaWebSocketSession(domWs, sessionMap, config, init);
 			sessionMap.set(domWs, session);
 			runSockaSessionOnAttached(config, session);
 		},

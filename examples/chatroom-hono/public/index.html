@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Chat (socka + Hono)</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 1rem; max-width: 64rem; }
+      #panes { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); }
+      .pane { border: 1px solid #ccc; border-radius: 6px; padding: 0.65rem; min-width: 0; }
+      .pane-body { display: flex; gap: 0; align-items: stretch; min-height: 11rem; }
+      .pane-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+      .pane-room-title { margin: 0 0 0.25rem; font-size: 1rem; }
+      .conn-status { font-size: 0.78rem; font-weight: 600; margin-bottom: 0.2rem; }
+      .conn-status.connecting { color: #a60; }
+      .conn-status.connected { color: #070; }
+      .conn-status.disconnected { color: #888; }
+      .conn-status.error { color: #c00; }
+      .ws-url { font-size: 0.62rem; font-family: ui-monospace, monospace; color: #555; word-break: break-all; line-height: 1.3; margin-bottom: 0.45rem; }
+      .log { font-size: 0.72rem; max-height: 12rem; overflow: auto; flex: 1; background: #f6f6f6; padding: 0.5rem; white-space: pre-wrap; word-break: break-word; min-height: 4rem; }
+      .composer { margin-top: 0.45rem; flex-shrink: 0; border: 1px solid #d4d4d4; border-radius: 6px; padding: 0.5rem 0.55rem; background: #fafafa; }
+      .composer-row { display: flex; align-items: center; gap: 0.5rem; }
+      .composer-row--primary { margin-bottom: 0.45rem; }
+      .composer-row--secondary { justify-content: flex-end; flex-wrap: wrap; gap: 0.45rem; }
+      .composer input.msg { flex: 1; min-width: 0; padding: 0.4rem 0.5rem; border: 1px solid #bbb; border-radius: 4px; font-size: 0.85rem; background: #fff; }
+      .composer input.msg:focus { outline: 2px solid #94b8e8; outline-offset: 1px; border-color: #88a; }
+      .composer .btn-send { flex-shrink: 0; padding: 0.4rem 0.9rem; font-weight: 600; font-size: 0.82rem; border-radius: 4px; border: 1px solid #3a7; background: #e8f8ec; cursor: pointer; }
+      .composer .btn-send:hover:not(:disabled) { background: #d4efd9; }
+      .composer .btn-secondary { padding: 0.32rem 0.65rem; font-size: 0.76rem; border-radius: 4px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+      .composer .btn-secondary:hover:not(:disabled) { background: #f0f0f0; }
+      .composer .btn-disc { color: #7a2222; border-color: #c9a0a0; }
+      .composer .btn-disc:hover:not(:disabled) { background: #fff5f5; }
+      .composer button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .presence-aside { width: 6.75rem; flex-shrink: 0; border-left: 1px solid #ddd; padding: 0 0 0 0.5rem; margin-left: 0.4rem; font-size: 0.72rem; }
+      .presence-aside h3 { margin: 0 0 0.35rem; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }
+      .presence-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.28rem; max-height: 12rem; overflow: auto; }
+      .presence-list li { padding: 0.22rem 0.35rem; border-radius: 4px; background: #eee; line-height: 1.25; }
+      .presence-list li.self { font-weight: 700; background: #d8f4dc; border: 1px solid #8ac593; }
+    </style>
+  </head>
+  <body>
+    <h1>Multi-room chat (Hono + JSON files)</h1>
+    <p>
+      Room <input id="room" type="text" value="lobby" />
+      Name <input id="name" type="text" value="Ada" />
+      <button id="add" type="button">Connect</button>
+    </p>
+    <p style="font-size:0.85rem;color:#444">History is stored under <code>./data/&lt;room&gt;.json</code>.</p>
+    <div id="panes"></div>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>

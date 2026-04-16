@@ -4,7 +4,7 @@ In-repo guides for the **[Socka](../README.md)** library (**npm** [`@firtoz/sock
 
 | Doc | Description |
 |-----|-------------|
-| [Getting started](./getting-started.md) | Pick a runtime, shared contract + client, wire the server, tic-tac-toe demos |
+| [Getting started](./getting-started.md) | Multi-room chat tutorial (RPC + pushes + history); links to **chatroom-*** examples |
 | [Peers](./peers.md) | Which dependencies to install per import path and why |
 | [Multi-room](./multi-room.md) | Scopes, patterns per runtime, pitfalls |
 | [Lifecycle](./lifecycle.md) | `onAttached`, inbound RPCs, `handleClose` ordering |

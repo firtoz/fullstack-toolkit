@@ -20,7 +20,9 @@ Within a scope:
 | **Hono (Node)** | **A)** One route per room (`/ws/:roomId`) with **`getOrCreateRoom`** and **`sockaHonoNodeWs(room.config, { sessions: room.sessionMap })`**. **B)** Single upgrade route + **`resolveScope(c)`** returning **`{ sessions, config }`**. |
 | **Durable Objects** | **One DO instance per room** via **`idFromName(roomId)`** (or similar). Each instance has its own **`sessions`** map. |
 
-Demos: [`tic-tac-toe-bun`](../../../examples/tic-tac-toe-bun), [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono), [`tic-tac-toe-do`](../../../examples/tic-tac-toe-do).
+**Chat + persisted history (good multi-room reference):** [`chatroom-bun`](../../../examples/chatroom-bun) (SQLite), [`chatroom-hono`](../../../examples/chatroom-hono) (JSON files), [`chatroom-do`](../../../examples/chatroom-do) (Durable Object SQLite). **Games:** [`tic-tac-toe-bun`](../../../examples/tic-tac-toe-bun), [`tic-tac-toe-hono`](../../../examples/tic-tac-toe-hono), [`tic-tac-toe-do`](../../../examples/tic-tac-toe-do).
+
+If you persist messages **per room**, keep storage keyed by **room** (or one DO per room) so history cannot leak across scopes.
 
 ## Pitfalls (for app authors)
 
