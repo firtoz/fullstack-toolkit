@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/chat-agent-sql",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"description": "Raw SQL persistence for @firtoz/chat-agent on Cloudflare Durable Objects",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -47,7 +47,7 @@
 		"url": "https://github.com/firtoz/fullstack-toolkit/issues"
 	},
 	"peerDependencies": {
-		"@firtoz/chat-agent": "^2.1.0",
+		"@firtoz/chat-agent": "^2.1.1",
 		"@cloudflare/workers-types": "catalog:",
 		"@openrouter/sdk": "catalog:",
 		"agents": "catalog:"

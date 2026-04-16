@@ -1,5 +1,11 @@
 # @firtoz/worker-helper
 
+## 1.6.1
+
+### Patch Changes
+
+- [`80a7aa6`](https://github.com/firtoz/fullstack-toolkit/commit/80a7aa6abbca3b7ef621e6dd92f51954bee84b43) Thanks [@firtoz](https://github.com/firtoz)! - `prepareEnvFiles` no longer passes `.env` / `.env.local` to `wrangler types` when a matching `.env.example` / `.env.local.example` exists, so generated `worker-configuration.d.ts` headers match CI and local dev.
+
 ## 1.6.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @firtoz/chat-agent
 
+## 2.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`7c4983f`](https://github.com/firtoz/fullstack-toolkit/commit/7c4983fd27adb9709ee844547259e0f22040fded)]:
+  - @firtoz/maybe-error@1.6.1
+
 ## 2.1.0
 
 ### Minor Changes

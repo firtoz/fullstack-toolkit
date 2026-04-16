@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/worker-helper",
-	"version": "1.6.0",
+	"version": "1.6.1",
 	"description": "Type-safe Web Worker helper with Zod validation and Cloudflare Workers utilities (cf-typegen)",
 	"type": "module",
 	"main": "./dist/index.js",
