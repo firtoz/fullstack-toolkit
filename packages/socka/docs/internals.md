@@ -35,11 +35,11 @@ Every decoded payload is one logical socka **v1** object. **`decodeSockaWire`** 
 | Kind | Role |
 |------|------|
 | `clientRequest` | Client → server RPC (`id`, `rpc`, `body`) |
-| `serverResponse` | Success reply (correlated by `id`) |
-| `serverError` | Correlated failure (`id`, `error` message string) |
+| `serverResponse` | Success reply (correlated by `id`) — **omitted** when the contract call has **no** **`output`** (fire-and-forget success); see **[Reference](./reference.md)** |
+| `serverError` | Correlated failure (`id`, **`error`** string; optional **`code`**, **`data`**, **`rpc`**) — **`rpc`** names the procedure when the failure is tied to an RPC |
 | `serverEvent` | Server push (`event`, `body`) — **not** tied to an RPC `id` |
 
-Clients generate **`id`** strings per request; servers echo them on **`serverResponse`** and **`serverError`** so concurrent RPCs never mix results. **`serverEvent`** uses the contract **`pushes`** map and **`session.subscribe`** on the client.
+Clients generate **`id`** strings per request; servers echo them on **`serverResponse`** (when the call declares **`output`**) and on **`serverError`**. **`serverEvent`** uses the contract **`pushes`** map and **`session.subscribe`** on the client.
 
 ---
 

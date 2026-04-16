@@ -16,15 +16,19 @@ type Handlers = InferSockaHandlers<
 
 **`InferSockaSend`** — Call names become methods on **`session.send`**; inputs/outputs follow the contract. **`InferSockaHandlers`** — Server handler arity matches **`calls`** (with or without `input`).
 
+### Optional output (fire-and-forget)
+
+If a call omits **`output`**, the server sends **no** **`serverResponse`** on success, and the client **`send`** method returns **`Promise<void>`** that resolves after the request is queued to the socket (not after the server runs the handler). **`output: z.void()`** keeps full request/response: the server still sends **`serverResponse`** and the client **`await`** waits for it. For output-less calls, server **`serverError`** frames include an optional **`rpc`** field so **`reportError`** can attribute failures when there is no pending promise.
+
 ## Errors and observability
 
 | Concern | Hook |
 |--------|------|
 | Exceptions inside **RPC handlers** | `onHandlerError` on `SockaWebSocketSessionConfig` / `SockaDoSessionConfig` |
 | Invalid **inbound wire** payloads (before your handler runs) | `onValidationError` on the same config |
-| Everything else ( **`onAttached`** failures, adapter I/O, **client** push listener throws, **client** push payload validation) | Optional **`reportError(event)`** on `SockaWebSocketSessionConfig`, `SockaDoSessionConfig`, or `SockaSession` / `useSockaSession` options |
+| Everything else ( **`onAttached`** failures, adapter I/O, **client** push listener throws, **client** push payload validation, **fire-and-forget RPC errors** without a pending promise) | Optional **`reportError(event)`** on `SockaWebSocketSessionConfig`, `SockaDoSessionConfig`, or `SockaSession` / `useSockaSession` options |
 
-Each **`event`** is **`SockaReportError`**: one discriminated union (`kind` narrows context; **`error`** is the thrown/rejected value; **`eventName`** / **`adapter`** where relevant). Export: **`@firtoz/socka/core`** (`defaultReportError`, `reportSockaError`). If you omit **`reportError`**, socka uses **`console.error`** with the same **`socka:`**-prefixed messages as before.
+Each **`event`** is **`SockaReportError`**: one discriminated union (`kind` narrows context; **`error`** is the thrown/rejected value where applicable; **`eventName`** / **`adapter`** where relevant). Kinds include **`clientFireAndForgetRpcError`**, **`clientOrphanServerError`**, and **`clientUnexpectedServerResponse`** for client-side RPC edge cases. Export: **`@firtoz/socka/core`** (`defaultReportError`, `reportSockaError`). If you omit **`reportError`**, socka uses **`console.error`** with the same **`socka:`**-prefixed messages as before.
 
 ## Wire encoding: JSON and msgpack
 
@@ -44,7 +48,7 @@ Throw **`SockaError`** from handlers when you control the **message** sent on th
 throw new SockaError("Not allowed", { code: "FORBIDDEN", data: { reason: "…" } });
 ```
 
-Any other thrown value is wrapped in **`SockaError`** using the original **`Error.message`** when possible, otherwise **`"Handler failed"`**. The client rejects the matching RPC with **`SockaError`**; the wire carries **`error`** (string) plus optional **`code`** and **`data`**. Older peers that only read **`error`** are unchanged.
+Any other thrown value is wrapped in **`SockaError`** using the original **`Error.message`** when possible, otherwise **`"Handler failed"`**. For calls **with** **`output`**, the client rejects the matching RPC with **`SockaError`**. For **output-less** (fire-and-forget) calls, there is no pending promise; the client surfaces **`SockaError`** via **`reportError`** (`kind`: **`clientFireAndForgetRpcError`**). The wire carries **`error`** (string) plus optional **`code`**, **`data`**, and **`rpc`** (procedure name). Older peers that only read **`error`** are unchanged.
 
 ## Server session configuration
 

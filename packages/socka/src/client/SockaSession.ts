@@ -265,6 +265,15 @@ class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
 				input !== undefined && input !== null
 					? (input as Record<string, unknown>)
 					: {};
+			const proc = this.client.contract.calls[callName];
+			if (proc !== undefined && proc.output === undefined) {
+				try {
+					this.client.sendRequest(id, callName, body);
+				} catch (err) {
+					throw err instanceof Error ? err : new Error(String(err));
+				}
+				return;
+			}
 			return new Promise<unknown>((resolve, reject) => {
 				this.pending.set(id, { rpc: callName, resolve, reject });
 				try {
@@ -278,15 +287,43 @@ class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
 	}
 
 	private handleResponse(frame: SockaServerResponseFrame): void {
+		const proc = this.client.contract.calls[frame.rpc];
+		if (!proc) {
+			const entry = this.pending.get(frame.id);
+			if (entry) {
+				this.pending.delete(frame.id);
+				entry.reject(new SockaError(`Unknown call: ${frame.rpc}`));
+			}
+			return;
+		}
+		if (proc.output === undefined) {
+			const entry = this.pending.get(frame.id);
+			if (entry) {
+				this.pending.delete(frame.id);
+				reportSockaError(this.reportError, {
+					kind: "clientUnexpectedServerResponse",
+					rpc: frame.rpc,
+					requestId: frame.id,
+				});
+				entry.reject(
+					new SockaError(
+						"socka: unexpected serverResponse for fire-and-forget call",
+						{ requestId: frame.id, rpc: frame.rpc },
+					),
+				);
+			} else {
+				reportSockaError(this.reportError, {
+					kind: "clientUnexpectedServerResponse",
+					rpc: frame.rpc,
+					requestId: frame.id,
+				});
+			}
+			return;
+		}
+
 		const entry = this.pending.get(frame.id);
 		if (!entry) return;
 		this.pending.delete(frame.id);
-
-		const proc = this.client.contract.calls[frame.rpc];
-		if (!proc) {
-			entry.reject(new SockaError(`Unknown call: ${frame.rpc}`));
-			return;
-		}
 
 		void parseStandardSchema(proc.output, frame.body).then(
 			(validated) => entry.resolve(validated),
@@ -297,9 +334,33 @@ class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
 
 	private handleServerError(frame: SockaServerErrorFrame): void {
 		const entry = this.pending.get(frame.id);
-		if (!entry) return;
-		this.pending.delete(frame.id);
-		entry.reject(SockaError.fromWire(frame));
+		if (entry) {
+			this.pending.delete(frame.id);
+			entry.reject(SockaError.fromWire(frame));
+			return;
+		}
+
+		const err = SockaError.fromWire(frame);
+		const rpcName = frame.rpc;
+		if (rpcName === undefined) {
+			reportSockaError(this.reportError, {
+				kind: "clientFireAndForgetRpcError",
+				error: err,
+			});
+			return;
+		}
+		const proc = this.client.contract.calls[rpcName];
+		if (proc !== undefined && proc.output === undefined) {
+			reportSockaError(this.reportError, {
+				kind: "clientFireAndForgetRpcError",
+				error: err,
+			});
+			return;
+		}
+		reportSockaError(this.reportError, {
+			kind: "clientOrphanServerError",
+			error: err,
+		});
 	}
 
 	private handleEvent(frame: SockaServerEventFrame): void {

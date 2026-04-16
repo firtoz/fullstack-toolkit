@@ -39,7 +39,7 @@ new SockaDoSession(websocket, sessions, {
 });
 ```
 
-Handler types use **`InferSockaHandlers<typeof myContract, SockaDoSession<typeof myContract, …>>`**. Throw **`SockaError`** for expected domain failures (bad move, permission denied) so the client receives a structured **`serverError`** frame; see **[Reference](./reference.md)** for other failure paths.
+Handler types use **`InferSockaHandlers<typeof myContract, SockaDoSession<typeof myContract, …>>`**. Same semantics as **`SockaWebSocketSession`**: calls **with** **`output`** get a validated **`serverResponse`**; calls **without** **`output`** are fire-and-forget on success (no success frame). Throw **`SockaError`** for expected domain failures so the client receives a structured **`serverError`** frame (with optional **`rpc`** on the wire). For client-side **`reportError`** when using output-less calls, see **[Reference](./reference.md#optional-output-fire-and-forget)** and **[Client](./client.md#fire-and-forget)**.
 
 **`createData`** — If your session needs typed **`session.data`**, provide **`createData: (ctx) => …`** where **`ctx`** is a Hono **`Context`** (bindings, request, etc.). That runs when the DO accepts the socket; data participates in **hibernation** via **`@firtoz/websocket-do`** **`BaseSession`** (see **`session.update()`** below).
 

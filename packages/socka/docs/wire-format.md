@@ -23,3 +23,7 @@ If you send **raw binary** application data, msgpack mode is a natural fit; keep
 Set **`wireFormat: "msgpack"`** on **`SockaSession`** / **`SockaWebSocketClient`** and on **`SockaWebSocketSessionConfig`** / **`SockaDoSessionConfig`** for every session that speaks to that client.
 
 **Details:** **[Reference — Wire encoding](./reference.md#wire-encoding-json-and-msgpack)** · **[Internals](./internals.md)**.
+
+## `serverError` and `rpc`
+
+On **`serverError`** frames, **`rpc`** is an optional string naming the procedure when the failure is tied to a client RPC. Servers built on **`SockaWebSocketSession`** include it on correlated errors so clients can attribute failures without relying on a pending **`Map`** entry (needed for fire-and-forget calls that omit **`output`**). Older servers may omit **`rpc`**; clients still receive **`id`** and **`error`**.

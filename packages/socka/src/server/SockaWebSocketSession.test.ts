@@ -1,4 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
+import * as z from "zod";
+import { defineSocka } from "../core/contract";
+import { SockaError } from "../core/socka-error";
 import { decodeSockaWire, encodeClientRequest } from "../core/envelope";
 import { encodeSockaWire, parseWirePayload } from "../core/wire-codec";
 import { rpcTestContract } from "../test-utils/rpc-contract-for-tests";
@@ -71,6 +74,74 @@ describe("SockaWebSocketSession", () => {
 		if (decoded.kind === "serverResponse") {
 			expect(decoded.frame.body).toEqual({ text: "hi" });
 		}
+	});
+
+	test("fire-and-forget RPC sends no serverResponse on success", async () => {
+		const ffContract = defineSocka({
+			calls: {
+				nudge: {
+					input: z.object({ x: z.number() }),
+				},
+			},
+		});
+		const { socket, dispatchOpen, sent } = createFakeWebSocket();
+		dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof ffContract, Record<string, never>>
+		>();
+		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
+			contract: ffContract,
+			handlers: {
+				nudge: async () => {},
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(socket, session);
+
+		const req = encodeClientRequest("r1", "nudge", { x: 1 });
+		const wire = encodeSockaWire(req, "json") as string;
+		await session.handleRawMessage(wire);
+
+		expect(sent.length).toBe(0);
+	});
+
+	test("fire-and-forget handler failure sends serverError with rpc", async () => {
+		const ffContract = defineSocka({
+			calls: {
+				nudge: {
+					input: z.object({ x: z.number() }),
+				},
+			},
+		});
+		const { socket, dispatchOpen, sent } = createFakeWebSocket();
+		dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof ffContract, Record<string, never>>
+		>();
+		const session = new SockaWebSocketSession(socket, sessions, {
+			strictUpgradeRequest: false,
+			contract: ffContract,
+			handlers: {
+				nudge: async () => {
+					throw new SockaError("bad");
+				},
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(socket, session);
+
+		const req = encodeClientRequest("r1", "nudge", { x: 1 });
+		const wire = encodeSockaWire(req, "json") as string;
+		await session.handleRawMessage(wire);
+
+		expect(sent.length).toBe(1);
+		const out = JSON.parse(sent[0] as string);
+		expect(out.socka).toBe("serverError");
+		expect(out.rpc).toBe("nudge");
+		expect(out.error).toBe("bad");
 	});
 
 	test("broadcastPush reaches peer session", async () => {

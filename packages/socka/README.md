@@ -79,6 +79,8 @@ export const chatContract = defineSocka({
 });
 ```
 
+**Fire-and-forget vs `output: z.void()`** — Omit **`output`** on a call when you want one-way success semantics: the server does not send a **`serverResponse`**, and **`await session.send.*` resolves after the frame is sent** (it does not wait for server processing). Server failures still return a correlated **`serverError`**; use **`reportError`** on **`SockaSession`** / **`useSockaSession`** to observe those when using output-less calls. Use **`output: z.void()`** when you still want a normal request/response **`await`** that completes only after the server acknowledges.
+
 **`server.ts`** — **`createSockaRoomRegistry`** gives each room its own **`sessionMap`** and **config**. By default **`createData`** receives **`SockaStrictWebSocketInit`**: **`init.request`** is the upgrade **`Request`** (Bun/Hono/adapters pass it through; see **[Server — Strict upgrade request](./docs/server.md#strict-upgrade-request)**). Set **`strictUpgradeRequest: false`** when you have no **`Request`**. **`session.listPeers()`** returns **`session.data`** for other sockets in the same room—use it to implement **`listPresence`**-style calls (see **[Presence](./docs/presence.md)**).
 
 ```ts

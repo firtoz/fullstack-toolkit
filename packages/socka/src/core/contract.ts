@@ -2,12 +2,18 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { ReservedSockaProcedureName } from "./reserved-procedure-names";
 
 /**
- * Defines one client-initiated call: an optional input schema and a required output schema.
- * Both must be Standard Schema v1 compliant (Zod v4, Valibot, ArkType, etc.).
+ * Defines one client-initiated call: optional `input` and optional `output` schemas
+ * (Standard Schema v1: Zod v4, Valibot, ArkType, etc.).
+ *
+ * - **`output` present** (including `z.void()`): request/response RPC; the server sends
+ *   a validated `serverResponse` on success.
+ * - **`output` omitted**: fire-and-forget on success (no `serverResponse`); the client
+ *   `send` method resolves after the request is sent. Use `output: z.void()` when you
+ *   still want a correlated ack. See the package README and {@link defineSocka}.
  */
 export type SockaProcedureDef = {
 	readonly input?: StandardSchemaV1;
-	readonly output: StandardSchemaV1;
+	readonly output?: StandardSchemaV1;
 };
 
 /** Configuration object accepted by {@link defineSocka}. */
@@ -39,13 +45,18 @@ export type SockaContract<T extends SockaContractConfig = SockaContractConfig> =
 			: Record<string, never>;
 	};
 
+/** Inferred client return type for a call: payload type or `void` when `output` is omitted. */
+type InferSockaCallReturn<P extends SockaProcedureDef> =
+	P["output"] extends StandardSchemaV1
+		? StandardSchemaV1.InferOutput<P["output"]>
+		: // biome-ignore lint/suspicious/noConfusingVoidType: This is correct
+			void;
+
 type CallFn<P extends SockaProcedureDef> = P extends {
 	input: infer I extends StandardSchemaV1;
 }
-	? (
-			input: StandardSchemaV1.InferInput<I>,
-		) => Promise<StandardSchemaV1.InferOutput<P["output"]>>
-	: () => Promise<StandardSchemaV1.InferOutput<P["output"]>>;
+	? (input: StandardSchemaV1.InferInput<I>) => Promise<InferSockaCallReturn<P>>
+	: () => Promise<InferSockaCallReturn<P>>;
 
 /**
  * Infers the typed `session.send.*` method map for a contract.
@@ -55,8 +66,11 @@ export type InferSockaSend<C extends SockaContract> = {
 };
 
 type HandlerOut<P extends SockaProcedureDef> =
-	| StandardSchemaV1.InferOutput<P["output"]>
-	| Promise<StandardSchemaV1.InferOutput<P["output"]>>;
+	P["output"] extends StandardSchemaV1
+		?
+				| StandardSchemaV1.InferOutput<P["output"]>
+				| Promise<StandardSchemaV1.InferOutput<P["output"]>>
+		: void | Promise<void>;
 
 type HandlerFn<P extends SockaProcedureDef, TSession> = P extends {
 	input: infer I extends StandardSchemaV1;
@@ -67,7 +81,9 @@ type HandlerFn<P extends SockaProcedureDef, TSession> = P extends {
 /**
  * Infers the typed server handler map for a contract. Handlers with an input
  * schema take `(input, session)`; calls without input take `(session)` only.
- * Each handler returns the output that will be validated before sending.
+ * When `output` is present, the return value is validated and sent as `serverResponse`.
+ * When `output` is omitted (fire-and-forget), the handler should return `void`; the
+ * server does not send a success response.
  */
 export type InferSockaHandlers<C extends SockaContract, TSession> = {
 	[K in keyof C["calls"]]: HandlerFn<C["calls"][K], TSession>;
@@ -104,6 +120,7 @@ export type InferSockaPushHandlers<C extends SockaContract> = {
  *   calls: {
  *     list: { output: z.array(itemSchema) },
  *     insert: { input: z.object({ item: itemSchema }), output: z.void() },
+ *     notify: { input: z.object({ text: z.string() }) },
  *   },
  * });
  * ```

@@ -7,7 +7,7 @@ description: Standard Schema v1 for socka contracts and wire validation—Zod, V
 
 ## When to use
 
-You define **call** `input` / `output` (and optional **push** payloads) for **`@firtoz/socka/core`**, **`@firtoz/socka/client`**, **`@firtoz/socka/react`**, and **`@firtoz/socka/do`**. Every schema slot expects **`StandardSchemaV1`** from **`@standard-schema/spec`** so callers can use **Zod**, **Valibot**, **ArkType**, etc., without socka-specific adapters.
+You define **call** `input` and optional **`output`** (and optional **push** payloads) for **`@firtoz/socka/core`**, **`@firtoz/socka/client`**, **`@firtoz/socka/react`**, and **`@firtoz/socka/do`**. Omit **`output`** only for intentional fire-and-forget success semantics; **`output`** slots that are present use **`StandardSchemaV1`** from **`@standard-schema/spec`** so callers can use **Zod**, **Valibot**, **ArkType**, etc., without socka-specific adapters.
 
 ## Rules
 

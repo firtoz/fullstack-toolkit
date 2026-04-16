@@ -26,6 +26,10 @@ const contract = defineSocka({
 			input: z.object({ message: messageSchema }),
 			output: z.void(),
 		},
+		notify: {
+			input: z.object({ text: z.string() }),
+		},
+		ping: {},
 	},
 	pushes: {
 		itemsChanged: z.array(messageSchema),
@@ -34,10 +38,18 @@ const contract = defineSocka({
 
 describe("defineSocka", () => {
 	test("preserves call definitions at runtime", () => {
-		expect(Object.keys(contract.calls)).toEqual(["list", "echo", "insert"]);
+		expect(Object.keys(contract.calls)).toEqual([
+			"list",
+			"echo",
+			"insert",
+			"notify",
+			"ping",
+		]);
 		expect(contract.calls.list.output).toBeDefined();
 		expect(contract.calls.echo.input).toBeDefined();
 		expect(contract.calls.echo.output).toBeDefined();
+		expect("output" in contract.calls.notify).toBe(false);
+		expect("output" in contract.calls.ping).toBe(false);
 	});
 
 	test("preserves push definitions at runtime", () => {
@@ -95,6 +107,18 @@ describe("InferSockaSend type inference", () => {
 			: false = true;
 		expect(_typecheck).toBe(true);
 	});
+
+	test("omitted output is fire-and-forget Promise<void>", () => {
+		type Send = InferSockaSend<typeof contract>;
+		const _notify: Send["notify"] extends (input: {
+			text: string;
+		}) => Promise<void>
+			? true
+			: false = true;
+		const _ping: Send["ping"] extends () => Promise<void> ? true : false = true;
+		expect(_notify).toBe(true);
+		expect(_ping).toBe(true);
+	});
 });
 
 describe("InferSockaHandlers type inference", () => {
@@ -119,6 +143,13 @@ describe("InferSockaHandlers type inference", () => {
 				},
 				session: Session,
 			) => void | Promise<void>;
+			notify: (
+				input: {
+					text: string;
+				},
+				session: Session,
+			) => void | Promise<void>;
+			ping: (session: Session) => void | Promise<void>;
 		}
 			? true
 			: false = true;

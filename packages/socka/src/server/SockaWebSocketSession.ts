@@ -281,6 +281,7 @@ export class SockaWebSocketSession<
 			const errorFrame = encodeServerError(
 				frame.id,
 				`Unknown call: ${rpcName}`,
+				{ rpc: rpcName },
 			);
 			this.sendWireFrame(errorFrame);
 			return;
@@ -293,7 +294,9 @@ export class SockaWebSocketSession<
 			} catch (err) {
 				const msg =
 					err instanceof Error ? err.message : "Input validation failed";
-				const errorFrame = encodeServerError(frame.id, msg);
+				const errorFrame = encodeServerError(frame.id, msg, {
+					rpc: rpcName,
+				});
 				this.sendWireFrame(errorFrame);
 				return;
 			}
@@ -322,10 +325,15 @@ export class SockaWebSocketSession<
 							err instanceof Error ? err.message : "Handler failed",
 						);
 			const errorFrame = encodeServerError(frame.id, sockaErr.message, {
+				rpc: rpcName,
 				code: sockaErr.code,
 				data: sockaErr.data,
 			});
 			this.sendWireFrame(errorFrame);
+			return;
+		}
+
+		if (procedure.output === undefined) {
 			return;
 		}
 
@@ -335,7 +343,7 @@ export class SockaWebSocketSession<
 		} catch (err) {
 			const msg =
 				err instanceof Error ? err.message : "Output validation failed";
-			const errorFrame = encodeServerError(frame.id, msg);
+			const errorFrame = encodeServerError(frame.id, msg, { rpc: rpcName });
 			this.sendWireFrame(errorFrame);
 			return;
 		}

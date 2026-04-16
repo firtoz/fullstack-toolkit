@@ -123,6 +123,16 @@ describe("encode helpers", () => {
 		}
 	});
 
+	test("encodeServerError optional rpc round-trips", () => {
+		const frame = encodeServerError("x-3", "bad", { rpc: "notify" });
+		const roundTrip: unknown = JSON.parse(JSON.stringify(frame));
+		const d = decodeSockaWire(roundTrip);
+		expect(d.kind).toBe("serverError");
+		if (d.kind === "serverError") {
+			expect(d.frame.rpc).toBe("notify");
+		}
+	});
+
 	test("encodeServerEvent round-trips via decode", () => {
 		const frame = encodeServerEvent("notify", { count: 5 });
 		const roundTrip: unknown = JSON.parse(JSON.stringify(frame));

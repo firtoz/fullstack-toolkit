@@ -4,6 +4,8 @@
  */
 export class SockaError extends Error {
 	readonly requestId?: string;
+	/** Procedure name when provided on the wire (`serverError.rpc`). */
+	readonly rpc?: string;
 	readonly code?: string;
 	readonly data?: unknown;
 
@@ -11,6 +13,7 @@ export class SockaError extends Error {
 		message: string,
 		options?: {
 			requestId?: string;
+			rpc?: string;
 			code?: string;
 			data?: unknown;
 			cause?: unknown;
@@ -19,6 +22,7 @@ export class SockaError extends Error {
 		super(message);
 		this.name = "SockaError";
 		this.requestId = options?.requestId;
+		this.rpc = options?.rpc;
 		this.code = options?.code;
 		this.data = options?.data;
 		if (options?.cause !== undefined) {
@@ -36,11 +40,13 @@ export class SockaError extends Error {
 	static fromWire(msg: {
 		id: string;
 		error: string;
+		rpc?: string;
 		code?: string;
 		data?: unknown;
 	}): SockaError {
 		return new SockaError(msg.error, {
 			requestId: msg.id,
+			rpc: msg.rpc,
 			code: msg.code,
 			data: msg.data,
 		});

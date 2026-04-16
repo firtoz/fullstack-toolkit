@@ -30,6 +30,8 @@ export type SockaServerErrorFrame = {
 	readonly v: typeof SOCKA_WIRE_VERSION;
 	readonly id: string;
 	readonly error: string;
+	/** Procedure name when the error relates to a client RPC (helps clients without a pending entry). */
+	readonly rpc?: string;
 	/** Optional machine-readable code (e.g. `FORBIDDEN`). */
 	readonly code?: string;
 	/** Optional structured detail for clients; keep small and JSON-serializable. */
@@ -108,11 +110,16 @@ export function decodeSockaWire(parsed: unknown): DecodedSockaWire {
 				? parsed.code
 				: undefined;
 		const data = "data" in parsed ? parsed.data : undefined;
+		const rpc =
+			"rpc" in parsed && typeof parsed.rpc === "string"
+				? parsed.rpc
+				: undefined;
 		const frame: SockaServerErrorFrame = {
 			socka: "serverError",
 			v: SOCKA_WIRE_VERSION,
 			id: parsed.id,
 			error: parsed.error,
+			...(rpc !== undefined ? { rpc } : {}),
 			...(code !== undefined ? { code } : {}),
 			...(data !== undefined ? { data } : {}),
 		};
@@ -151,13 +158,18 @@ export function encodeServerResponse(
 export function encodeServerError(
 	id: string,
 	error: string,
-	extra?: { readonly code?: string; readonly data?: unknown },
+	extra?: {
+		readonly code?: string;
+		readonly data?: unknown;
+		readonly rpc?: string;
+	},
 ): SockaServerErrorFrame {
 	return {
 		socka: "serverError",
 		v: SOCKA_WIRE_VERSION,
 		id,
 		error,
+		...(extra?.rpc !== undefined ? { rpc: extra.rpc } : {}),
 		...(extra?.code !== undefined ? { code: extra.code } : {}),
 		...(extra?.data !== undefined ? { data: extra.data } : {}),
 	};

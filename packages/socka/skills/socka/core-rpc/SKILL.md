@@ -7,7 +7,7 @@ description: Standard Schema socka contracts (defineSocka), v1 wire envelopes, S
 
 ## Contract
 
-- **`defineSocka`** in **`@firtoz/socka/core`**: pass **`calls`** (and optional **`pushes`**) with **`StandardSchemaV1`** `input` / `output` per call. Types flow from **`InferSockaSend`**, **`InferSockaHandlers`**, **`InferSockaPushHandlers`**.
+- **`defineSocka`** in **`@firtoz/socka/core`**: pass **`calls`** (and optional **`pushes`**) with **`StandardSchemaV1`** `input` and optional **`output`** per call. Omit **`output`** for fire-and-forget (no **`serverResponse`** on success; client **`send`** resolves after send; failures use **`serverError`** + **`reportError`**). Use **`output: z.void()`** for a correlated ACK. Types flow from **`InferSockaSend`**, **`InferSockaHandlers`**, **`InferSockaPushHandlers`**.
 - There is **no** `defineSockaProtocol` / `defineSockaRpcSpec` in socka—those names belong to other stacks; use **`defineSocka`** only.
 
 ## Browser client
@@ -24,7 +24,7 @@ description: Standard Schema socka contracts (defineSocka), v1 wire envelopes, S
 ## Wire
 
 - Every frame is a **socka v1** object validated by **`decodeSockaWire`** (`socka`, **`v`**, discriminators, **`id`**, **`rpc`**, **`body`**, …). Invalid payloads become **`SockaWireError`** (or **`onValidationError`** on the client).
-- RPC success → **`serverResponse`**; RPC failure → **`serverError`**; server pushes → **`serverEvent`** with event name + **`body`**.
+- RPC success → **`serverResponse`** (unless the call omits **`output`**, then no success frame); RPC failure → **`serverError`** (optional **`rpc`** field for procedure name); server pushes → **`serverEvent`** with event name + **`body`**.
 - **JSON vs msgpack** is a transport choice only; the logical shape is identical. **Client and DO must use the same `wireFormat`.**
 
 ## Durable Objects

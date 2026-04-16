@@ -169,6 +169,86 @@ describe("SockaSession", () => {
 		).not.toThrow();
 	});
 
+	test("fire-and-forget send resolves without awaiting serverResponse", async () => {
+		const ffContract = defineSocka({
+			calls: {
+				nudge: {
+					input: z.object({ x: z.number() }),
+				},
+			},
+		});
+		const { socket, dispatchOpen, sent } = createFakeWebSocket();
+		dispatchOpen();
+		const session = new SockaSession({
+			contract: ffContract,
+			webSocket: socket,
+		});
+		await expect(session.send.nudge({ x: 1 })).resolves.toBeUndefined();
+		expect(sent.length).toBe(1);
+		const req = JSON.parse(sent[0] as string) as {
+			socka: string;
+			rpc: string;
+		};
+		expect(req.socka).toBe("clientRequest");
+		expect(req.rpc).toBe("nudge");
+	});
+
+	test("reportError receives clientFireAndForgetRpcError when serverError follows fire-and-forget", async () => {
+		const ffContract = defineSocka({
+			calls: {
+				nudge: {
+					input: z.object({ x: z.number() }),
+				},
+			},
+		});
+		const { socket, dispatchMessage, dispatchOpen, sent } =
+			createFakeWebSocket();
+		dispatchOpen();
+		const reportError = mock((_e: SockaReportError) => {});
+		const session = new SockaSession({
+			contract: ffContract,
+			webSocket: socket,
+			reportError,
+		});
+		await session.send.nudge({ x: 1 });
+		await Promise.resolve();
+		const id = (JSON.parse(sent[0] as string) as { id: string }).id;
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerError(id, "nope", { rpc: "nudge" }),
+				"json",
+			) as string,
+		);
+		await Promise.resolve();
+		expect(reportError.mock.calls.length).toBe(1);
+		const ev = reportError.mock.calls[0][0];
+		expect(ev.kind).toBe("clientFireAndForgetRpcError");
+		if (ev.kind === "clientFireAndForgetRpcError") {
+			expect(ev.error.message).toBe("nope");
+			expect(ev.error.rpc).toBe("nudge");
+		}
+	});
+
+	test("reportError receives clientOrphanServerError for stale serverError on RPC with output", async () => {
+		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
+		dispatchOpen();
+		const reportError = mock((_e: SockaReportError) => {});
+		new SockaSession({
+			contract: rpcTestContract,
+			webSocket: socket,
+			reportError,
+		});
+		dispatchMessage(
+			encodeSockaWire(
+				encodeServerError("ghost-id", "stale", { rpc: "ping" }),
+				"json",
+			) as string,
+		);
+		await Promise.resolve();
+		expect(reportError.mock.calls.length).toBe(1);
+		expect(reportError.mock.calls[0][0].kind).toBe("clientOrphanServerError");
+	});
+
 	test("pushHandlers receives validated notify payload", async () => {
 		const { socket, dispatchMessage, dispatchOpen } = createFakeWebSocket();
 		dispatchOpen();
@@ -242,6 +322,9 @@ describe("SockaSession", () => {
 				eventName: "notify",
 			}),
 		);
+		if (ev.kind !== "clientEventValidation") {
+			throw new Error("expected clientEventValidation");
+		}
 		expect(ev.error).toBeInstanceOf(Error);
 	});
 
@@ -272,6 +355,9 @@ describe("SockaSession", () => {
 				eventName: "notify",
 			}),
 		);
+		if (ev.kind !== "clientEventListener") {
+			throw new Error("expected clientEventListener");
+		}
 		if (!(ev.error instanceof Error)) {
 			throw new Error("expected listener error to be Error");
 		}

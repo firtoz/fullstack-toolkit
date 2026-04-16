@@ -7,7 +7,7 @@ description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objects�
 
 ## Components
 
-- **`SockaDoSession`** (**`@firtoz/socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Responses use **`encodeServerResponse`** / **`encodeServerError`**; optional **`encodeServerEvent`** for contract pushes.
+- **`SockaDoSession`** (**`@firtoz/socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Calls **with** **`output`** get **`encodeServerResponse`** on success; calls **without** **`output`** send **`encodeServerError`** only on failure; optional **`encodeServerEvent`** for contract pushes.
 - **`SockaWebSocketDO`**: thin **`BaseWebSocketDO`** wrapper; you supply **`createSockaSession(ctx, websocket)`** returning a **`SockaDoSession`** (or subclass).
 
 ## Session config (`SockaDoSessionConfig`)
@@ -15,7 +15,7 @@ description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objects�
 - **`contract`**: from **`defineSocka`**.
 - **`wireFormat`**: **`"json"`** (default) or **`"msgpack"`**—must match the browser **`SockaWebSocketClient`/`SockaSession`** **`wireFormat`**.
 - **`createData`**: optional when session **`TData`** is empty (**`Record<string, never>`**); defaults to **`{}`**. Otherwise Hono **`Context`** → per-connection state.
-- **`handlers`**: call name → async/sync handler; inputs/outputs validated with Standard Schema via **`parseStandardSchema`**.
+- **`handlers`**: call name → async/sync handler; inputs and optional outputs validated with Standard Schema via **`parseStandardSchema`** (omit **`output`** in the contract for fire-and-forget success; handler still runs on the server).
 - **`handleClose`**: cleanup when the socket closes.
 - **`onHandlerError`**, **`onValidationError`**: optional hooks (validation and handler failures are also mapped to **`serverError`** frames).
 - **`serializeJson`**, **`deserializeJson`**: optional; default **`JSON.stringify`/`JSON.parse`** for JSON mode.

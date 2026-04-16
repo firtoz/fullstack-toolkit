@@ -1,4 +1,5 @@
 import { exhaustiveGuard } from "@firtoz/maybe-error";
+import type { SockaError } from "./socka-error";
 
 /**
  * Single discriminated union for optional `reportError` on session config and
@@ -7,6 +8,24 @@ import { exhaustiveGuard } from "@firtoz/maybe-error";
 export type SockaReportError =
 	| { kind: "clientEventListener"; eventName: string; error: unknown }
 	| { kind: "clientEventValidation"; eventName: string; error: unknown }
+	/**
+	 * `serverError` for a fire-and-forget call (no pending client promise). Prefer
+	 * setting `reportError` on the session when using output-less procedures.
+	 */
+	| { kind: "clientFireAndForgetRpcError"; error: SockaError }
+	/**
+	 * `serverError` with no matching pending entry for a call that expects a response
+	 * (e.g. stale id after reconnect or duplicate frame).
+	 */
+	| { kind: "clientOrphanServerError"; error: SockaError }
+	/**
+	 * Server sent `serverResponse` for a procedure with no `output` (misbehaving server).
+	 */
+	| {
+			kind: "clientUnexpectedServerResponse";
+			rpc: string;
+			requestId: string;
+	  }
 	| { kind: "serverOnAttached"; error: unknown }
 	| {
 			kind: "serverInboundMessage";
@@ -29,6 +48,19 @@ export function defaultReportError(event: SockaReportError): void {
 			return;
 		case "clientEventValidation":
 			console.error("socka: event validation error", event.error);
+			return;
+		case "clientFireAndForgetRpcError":
+			console.error("socka: fire-and-forget RPC error", event.error);
+			return;
+		case "clientOrphanServerError":
+			console.error("socka: orphan serverError (no pending RPC)", event.error);
+			return;
+		case "clientUnexpectedServerResponse":
+			console.error(
+				"socka: unexpected serverResponse for fire-and-forget RPC",
+				event.rpc,
+				event.requestId,
+			);
 			return;
 		case "serverOnAttached":
 			console.error("socka: onAttached error:", event.error);

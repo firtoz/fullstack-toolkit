@@ -16,6 +16,10 @@ Outside React, construct **`SockaSession`** from **`@firtoz/socka/client`** with
 
 Full list: **[Reference — Client configuration](./reference.md#client-configuration)**.
 
+### Fire-and-forget
+
+Calls that **omit** **`output`** resolve **`await session.send.*`** as soon as the request is sent; they do **not** wait for **`serverResponse`**. If the server returns **`serverError`**, handle it with **`reportError`** (see **[Reference — Errors](./reference.md#errors-and-observability)**) — there is no rejected promise for that call. Prefer **`output: z.void()`** when you still want **`await`** to track success or failure through the returned promise.
+
 **Call names** — For literal `calls` objects, **`defineSocka`** rejects names that would make **`session.send`** Promise-like or clash with object shape (e.g. **`then`**, **`toString`**). If you use a wide **`Record<string, SockaProcedureDef>`**, TypeScript cannot apply that check; **`SockaSession`** still validates at construction (see **`RESERVED_SOCKA_PROCEDURE_NAMES`** in **`@firtoz/socka/core`**).
 
 ```ts

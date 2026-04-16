@@ -62,7 +62,9 @@ Optional fourth argument **`{ request }`** is passed to **`createData`** when yo
 
 **Typical wiring:** Bun stores **`request`** on **`ServerWebSocket` `data`**; use **`sockaBunInitFromWsData`** (strict is the default). Hono **`sockaHonoNodeWs`** can omit **`sockaInit`** — the default builds a **`Request`** from the Hono context. See JSDoc on **`SockaWebSocketSessionConfig`**, **`SockaWebSocketInit`**, and **`SockaStrictWebSocketInit`** in **`@firtoz/socka/server`**.
 
-Calls **with** an input schema use **`(input, session) => output`**. Calls **without** input use **`(session) => output`** only (no `undefined` first argument). The **`session`** argument is the **`SockaWebSocketSession`** instance: read **`session.data`**, call **`await session.emitPush`**, **`await session.broadcastPush`** (payloads are validated against the contract **`pushes`** schemas before send).
+Calls **with** an input schema use **`(input, session) => …`**. Calls **without** input use **`(session) => …`** only (no `undefined` first argument). When the call has **`output`** in the contract, the handler return value is validated and sent as **`serverResponse`**. When **`output` is omitted** (fire-and-forget), the handler should return **`void`**; socka sends **no** success **`serverResponse`** (failures still become **`serverError`**). See **[Reference — Optional output (fire-and-forget)](./reference.md#optional-output-fire-and-forget)** and **[Client](./client.md)**.
+
+The **`session`** argument is the **`SockaWebSocketSession`** instance: read **`session.data`**, call **`await session.emitPush`**, **`await session.broadcastPush`** (payloads are validated against the contract **`pushes`** schemas before send).
 
 **`onAttached`** — optional. Runs after the session is registered in the shared **`sessions`** map (safe to broadcast to peers).
 
