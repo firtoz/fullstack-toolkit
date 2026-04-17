@@ -1,4 +1,4 @@
-import { fail, success } from "@firtoz/router-toolkit";
+import { fail, success } from "@firtoz/maybe-error";
 import { data } from "react-router";
 
 export const todoLoader = async ({ request }: { request: Request }) => {

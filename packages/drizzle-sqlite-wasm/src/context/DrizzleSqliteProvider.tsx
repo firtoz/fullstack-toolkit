@@ -12,8 +12,8 @@ import {
 	type ValidTableNames,
 	type DrizzleSchema,
 	sqliteCollectionOptions,
-	type SQLInterceptor,
 } from "../collections/sqlite-collection";
+import type { SQLInterceptor } from "@firtoz/drizzle-utils";
 import { useDrizzleSqliteDb } from "../hooks/useDrizzleSqliteDb";
 import type { DurableSqliteMigrationConfig } from "../migration/migrator";
 import type { SqliteWasmWorkerOpenOptions } from "../worker/sqlite-open-options";

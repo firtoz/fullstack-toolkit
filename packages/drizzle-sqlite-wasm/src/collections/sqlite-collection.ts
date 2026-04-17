@@ -18,10 +18,8 @@ import {
 	createInsertSchemaWithIdDefault,
 	createCollectionConfig,
 	createSqliteTableSyncBackend,
-	type SQLOperation,
 	type SQLInterceptor,
 } from "@firtoz/drizzle-utils";
-export type { SQLOperation, SQLInterceptor };
 
 export type AnyDrizzleDatabase = BaseSQLiteDatabase<
 	"async",

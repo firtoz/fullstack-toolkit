@@ -12,7 +12,7 @@ import {
 	initializeSqliteWorker,
 	isSqliteWorkerInitialized,
 } from "../worker/global-manager";
-import type { SQLInterceptor } from "../collections/sqlite-collection";
+import type { SQLInterceptor } from "@firtoz/drizzle-utils";
 import type { SqliteWasmWorkerOpenOptions } from "../worker/sqlite-open-options";
 
 export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(

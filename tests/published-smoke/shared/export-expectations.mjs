@@ -44,7 +44,6 @@ export const EXPECTED_EXPORTS = {
 	"@firtoz/drizzle-sqlite-wasm": [
 		"drizzleSqliteWasm",
 		"createSyncedSqliteCollection",
-		"makeId",
 		"initializeSqliteWorker",
 		"DrizzleSqliteProvider",
 	],

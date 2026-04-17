@@ -1134,12 +1134,12 @@ export default function CombinedTest() {
 
 ## MaybeError Utility
 
-The router-toolkit includes the `@firtoz/maybe-error` package, which provides type-safe error handling utilities using discriminated unions. This is perfect for handling operations that may fail in your route loaders and actions.
+`@firtoz/maybe-error` is a **dependency** of router-toolkit (it is installed with this package), but it is **not** re-exported from `@firtoz/router-toolkit`. Import `success`, `fail`, `MaybeError`, `exhaustiveGuard`, and related symbols **from `@firtoz/maybe-error`** so your imports match runtime and dependency boundaries stay clear.
 
 ### Basic Usage
 
 ```tsx
-import { success, fail, type MaybeError } from '@firtoz/router-toolkit';
+import { success, fail, type MaybeError } from '@firtoz/maybe-error';
 
 // Define a function that may fail
 function divide(a: number, b: number): MaybeError<number> {
@@ -1162,7 +1162,8 @@ if (result.success) {
 
 ```tsx
 // app/routes/user-profile.tsx
-import { success, fail, type MaybeError, type RoutePath } from '@firtoz/router-toolkit';
+import { success, fail, type MaybeError } from '@firtoz/maybe-error';
+import { type RoutePath } from '@firtoz/router-toolkit';
 import type { Route } from './+types/user-profile';
 
 interface User {
@@ -1230,7 +1231,8 @@ export default function UserProfile() {
 
 ```tsx
 // app/routes/create-user.tsx
-import { success, fail, type MaybeError, useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
+import { success, fail, type MaybeError } from '@firtoz/maybe-error';
+import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
 import { z } from 'zod';
 import type { Route } from './+types/create-user';
 

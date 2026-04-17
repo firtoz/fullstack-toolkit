@@ -5,8 +5,6 @@ export {
 	type DurableSqliteCollectionConfig,
 	type DurableSqliteCollectionConfigResult,
 	type ValidTableNames,
-	type SQLOperation,
-	type SQLInterceptor,
 } from "./durable-sqlite-collection";
 
 export {

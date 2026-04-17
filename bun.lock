@@ -355,6 +355,7 @@
       "name": "@firtoz/router-toolkit",
       "version": "8.0.1",
       "dependencies": {
+        "@firtoz/maybe-error": "workspace:*",
         "zod-form-data": "catalog:",
       },
       "devDependencies": {
@@ -365,7 +366,6 @@
         "jsdom": "^29.0.2",
       },
       "peerDependencies": {
-        "@firtoz/maybe-error": "^1.6.0",
         "react": "catalog:",
         "react-router": "catalog:",
         "zod": "catalog:",

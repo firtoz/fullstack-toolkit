@@ -1,10 +1,7 @@
 import type { DrizzleConfig } from "drizzle-orm";
 import { drizzle as drizzleSqliteProxy } from "drizzle-orm/sqlite-proxy";
 import type { ISqliteWorkerClient } from "../worker/client";
-import type {
-	SQLInterceptor,
-	SQLOperation,
-} from "../collections/sqlite-collection";
+import type { SQLInterceptor, SQLOperation } from "@firtoz/drizzle-utils";
 
 export const drizzleSqliteWasmWorker = <
 	TSchema extends Record<string, unknown> = Record<string, never>,

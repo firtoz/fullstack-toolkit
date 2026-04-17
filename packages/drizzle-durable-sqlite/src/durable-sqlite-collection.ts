@@ -18,10 +18,8 @@ import {
 	createInsertSchemaWithIdDefault,
 	createCollectionConfig,
 	createSqliteTableSyncBackend,
-	type SQLOperation,
 	type SQLInterceptor,
 } from "@firtoz/drizzle-utils";
-export type { SQLOperation, SQLInterceptor };
 
 /**
  * Drizzle database type for `drizzle-orm/durable-sqlite` (Cloudflare DO SQLite).

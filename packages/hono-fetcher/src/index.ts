@@ -1,31 +1,33 @@
 // Convenience wrapper for direct HTTP fetching
-export { honoDirectFetcher } from "./honoDirectFetcher";
+export { honoDirectFetcher } from "./honoDirectFetcher.js";
 // Durable Object integration
+export type {
+	DOSchemaKeys,
+	DOSchemaMap,
+	DOStubSchema,
+	DOWithHonoApp,
+	HonoDoFetcherStubInput,
+	TypedDoFetcher,
+} from "./honoDoFetcher.js";
 export {
-	type DOSchemaKeys,
-	type DOSchemaMap,
-	type DOStubSchema,
-	type DOWithHonoApp,
-	type HonoDoFetcherStubInput,
 	honoDoFetcher,
 	honoDoFetcherWithId,
 	honoDoFetcherWithName,
-	type TypedDoFetcher,
-} from "./honoDoFetcher";
+} from "./honoDoFetcher.js";
 // Core fetcher functionality
-export {
-	type BaseDisposableTypedHonoFetcher,
-	type BaseTypedHonoFetcher,
-	type HonoFetcherQueryParamValue,
-	type HonoFetcherQueryParams,
-	type HonoSchemaKeys,
-	type HttpMethod,
-	honoFetcher,
-	type JsonResponse,
-	type ParsePathParams,
-	type RpcDisposableJsonResponse,
-	type TypedDisposableWebSocketFetcher,
-	type TypedHonoFetcher,
-	type TypedWebSocketFetcher,
-	type WebSocketConfig,
-} from "./honoFetcher";
+export type {
+	BaseDisposableTypedHonoFetcher,
+	BaseTypedHonoFetcher,
+	HonoFetcherQueryParamValue,
+	HonoFetcherQueryParams,
+	HonoSchemaKeys,
+	HttpMethod,
+	JsonResponse,
+	ParsePathParams,
+	RpcDisposableJsonResponse,
+	TypedDisposableWebSocketFetcher,
+	TypedHonoFetcher,
+	TypedWebSocketFetcher,
+	WebSocketConfig,
+} from "./honoFetcher.js";
+export { honoFetcher } from "./honoFetcher.js";

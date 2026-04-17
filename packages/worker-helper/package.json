@@ -28,7 +28,7 @@
 		"CHANGELOG.md"
 	],
 	"scripts": {
-		"build": "tsup && bun ../../scripts/add-node-shebang.ts dist/cf-typegen.js",
+		"build": "tsup && tsc -p tsconfig.emit-index-dts.json && bun ../../scripts/add-node-shebang.ts dist/cf-typegen.js",
 		"prepack": "bun run build",
 		"typecheck": "tsgo --noEmit -p ./tsconfig.json",
 		"lint": "biome check --write src",

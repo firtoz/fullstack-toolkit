@@ -4,14 +4,13 @@ import { useSearchParams } from "react-router";
 import {
 	DrizzleSqliteProvider,
 	useDrizzleSqlite,
-	type SQLOperation,
 } from "@firtoz/drizzle-sqlite-wasm";
 import { useLiveQuery, count } from "@tanstack/react-db";
 import * as schema from "test-schema/schema";
 import migrations from "test-schema/drizzle/migrations";
 import SqliteWorker from "@firtoz/drizzle-sqlite-wasm/worker/sqlite.worker?worker";
 import { ClientOnly } from "~/components/shared/ClientOnly";
-import { makeId } from "@firtoz/drizzle-utils";
+import { makeId, type SQLOperation } from "@firtoz/drizzle-utils";
 import { todoTable, userTable, type Todo } from "test-schema/schema";
 
 /**
