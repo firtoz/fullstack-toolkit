@@ -5,15 +5,18 @@ description: React Router v7 routing patterns and environment variable configura
 
 # React Router Routes
 
-This project uses React Router v7 with file-based routing configured in `app/routes.ts` (in test-playground: `tests/test-playground/app/routes.ts`).
+This project uses React Router v7 with file-based routing configured in `app/routes.ts`. Playground apps live under `tests/`:
+
+- **Collections / SQLite / IndexedDB demos:** `tests/test-playground-collections/app/routes.ts`
+- **Router-toolkit demos:** `tests/test-playground-router/app/routes.ts`
 
 ## ⚠️ CRITICAL: Run Typegen After Editing routes.ts
 
-**WHENEVER you edit `app/routes.ts` (or `tests/test-playground/app/routes.ts`), run typegen:**
+**WHENEVER you edit `app/routes.ts` (or either playground’s `app/routes.ts` above), run typegen:**
 
 ```bash
-# From repo root for test-playground
-cd tests/test-playground
+# From the playground app directory (example: collections)
+cd tests/test-playground-collections
 bun run typegen
 ```
 
@@ -25,10 +28,10 @@ Or use the typecheck script (it runs typegen first): `bun run typecheck`.
 
 ### 1. Create the Route File
 
-Create the route file under `app/routes/` (or `tests/test-playground/app/routes/`):
-- Collections: `routes/collections/`
-- API: `routes/api/`
-- Router-toolkit: `routes/router-toolkit/`
+Create the route file under `app/routes/` in the correct playground:
+
+- **Collections app:** `tests/test-playground-collections/app/routes/collections/` (and `routes/api/` for API routes)
+- **Router app:** `tests/test-playground-router/app/routes/router-toolkit/`
 
 ### 2. Register the Route in routes.ts
 
@@ -43,7 +46,7 @@ Create the route file under `app/routes/` (or `tests/test-playground/app/routes/
 ### 3. Run React Router typegen
 
 ```bash
-cd tests/test-playground  # or the app that contains routes.ts
+cd tests/test-playground-collections  # or tests/test-playground-router — whichever owns routes.ts
 bun run typegen
 ```
 

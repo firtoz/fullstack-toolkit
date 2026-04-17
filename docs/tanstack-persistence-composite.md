@@ -20,4 +20,4 @@ The adapter owns **TanStack’s persisted layout** (collection tables, metadata,
 
 ## Demo in this repo
 
-See **`tests/test-playground`** route **`/collections/tanstack-06-virtual-props-demo`**: `@tanstack/query-db-collection` with delayed `onInsert` + **`collection.utils.refetch()`**, live queries on **`$synced` / `$origin`**, **`createEffect`**, **`queryOnce`**, and **`toArray`** includes — without replacing Drizzle-backed collection packages.
+See **`tests/test-playground-collections`** route **`/collections/tanstack-06-virtual-props-demo`**: `@tanstack/query-db-collection` with delayed `onInsert` + **`collection.utils.refetch()`**, live queries on **`$synced` / `$origin`**, **`createEffect`**, **`queryOnce`**, and **`toArray`** includes — without replacing Drizzle-backed collection packages.

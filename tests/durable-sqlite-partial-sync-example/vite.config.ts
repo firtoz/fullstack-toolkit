@@ -36,7 +36,7 @@ export default defineConfig({
 	] as PluginOption[],
 	server: {
 		// Keep in sync with `package.json` `dev` script (`--port ${DEV_PORT}`). Use 5199
-		// (not 5198) so `turbo run dev` does not collide with `test-playground` on 5198.
+		// (not 5198) so `turbo run dev` does not collide with `test-playground-collections` on 5198.
 		port: DEV_PORT,
 		strictPort: true,
 		host: "127.0.0.1",

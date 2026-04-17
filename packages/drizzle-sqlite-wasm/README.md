@@ -190,7 +190,7 @@ export default defineConfig({
 3. **Worker Format**: Ensures all workers are treated as ES modules
 4. **Exclude from Optimization**: Prevents Vite from pre-bundling sqlite-wasm, which can break worker creation
 
-For a complete example, see [`tests/test-playground/vite.config.ts`](../../tests/test-playground/vite.config.ts) in the repository.
+For a complete example, see [`tests/test-playground-collections/vite.config.ts`](../../tests/test-playground-collections/vite.config.ts) in the repository.
 
 ### Webpack 5+
 
@@ -682,7 +682,7 @@ import {
 ## Examples
 
 Check out the test playground for complete examples:
-- `tests/test-playground/e2e/` - E2E tests
+- `tests/test-playground-collections/e2e/` — E2E tests (collections / SQLite demos)
 
 ## Dependencies
 

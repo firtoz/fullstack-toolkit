@@ -1,0 +1,91 @@
+{
+	"$schema": "../../node_modules/turbo/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"inputs": ["app/**", "src/**", "public/**", "*.config.*", "package.json"],
+			"outputs": ["build/**"]
+		},
+		"typecheck": {
+			"dependsOn": ["^build"],
+			"inputs": [
+				"app/**",
+				"src/**",
+				"e2e/**",
+				"tsconfig.json",
+				"package.json",
+				"playwright.config.ts"
+			]
+		},
+		"lint": {
+			"inputs": ["app/**", "src/**", "../../biome.json"]
+		},
+		"lint:ci": {
+			"inputs": ["app/**", "src/**", "../../biome.json"]
+		},
+		"test": {
+			"dependsOn": [
+				"@firtoz/drizzle-sqlite-wasm#typecheck",
+				"@firtoz/drizzle-indexeddb#typecheck",
+				"@firtoz/maybe-error#typecheck",
+				"@firtoz/router-toolkit#typecheck",
+				"@firtoz/worker-helper#typecheck"
+			],
+			"inputs": ["app/**", "src/**", "e2e/**", "*.config.*", "package.json"]
+		},
+		"typegen": {
+			"inputs": [
+				"wrangler.jsonc",
+				"wrangler.toml",
+				".env",
+				".env.local",
+				".dev.vars",
+				"package.json",
+				"src/**"
+			],
+			"outputs": ["worker-configuration.d.ts"]
+		},
+		"dev": {
+			"dependsOn": ["typegen"],
+			"persistent": true,
+			"cache": false
+		},
+		"test:e2e": {
+			"dependsOn": ["^build", "typegen"],
+			"inputs": [
+				"app/**",
+				"src/**",
+				"e2e/**",
+				"public/**",
+				"tsconfig.json",
+				"package.json",
+				"playwright.config.ts",
+				"vite.config.ts",
+				"react-router.config.ts",
+				"wrangler.jsonc",
+				"wrangler.toml",
+				"../test-playground-shared/src/**/*.ts"
+			],
+			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH", "CI", "TEST_PLAYGROUND_PORT"]
+		},
+		"test:e2e:shard": {
+			"cache": false,
+			"dependsOn": ["^build", "typegen"],
+			"inputs": [
+				"app/**",
+				"src/**",
+				"e2e/**",
+				"public/**",
+				"tsconfig.json",
+				"package.json",
+				"playwright.config.ts",
+				"vite.config.ts",
+				"react-router.config.ts",
+				"wrangler.jsonc",
+				"wrangler.toml",
+				"../test-playground-shared/src/**/*.ts"
+			],
+			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH", "CI", "TEST_PLAYGROUND_PORT"]
+		}
+	}
+}

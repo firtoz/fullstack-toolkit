@@ -1,0 +1,11 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"composite": true,
+		"lib": ["ES2022", "WebWorker"],
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"skipLibCheck": true
+	},
+	"include": ["app/workers/**/*.worker.ts", "app/workers/**/*.schema.ts"]
+}

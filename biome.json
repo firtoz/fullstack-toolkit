@@ -10,7 +10,8 @@
 		"includes": [
 			"**",
 			"!tests/test-schema/drizzle",
-			"!tests/test-playground/.react-router"
+			"!tests/test-playground-collections/.react-router",
+			"!tests/test-playground-router/.react-router"
 		]
 	},
 	"formatter": {

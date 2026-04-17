@@ -2,6 +2,10 @@
 
 **Do not re-export symbols from other packages.** Each package should export only what it defines. Consumers that need types or functions from package A should import from A directly, not via package B. This keeps dependency graphs clear and avoids transitive API surface.
 
+**Refactoring:** That rule is about **cross-package** API surface (B acting as a passthrough for A). It does **not** mean “never move code.” When you extract symbols into a new module or package, **update importers** to import from the new location.
+
+**Anti-pattern:** Moving implementation out of `SomeComponent` but keeping `export { Thing } from "./newPlace"` (or similar) on `SomeComponent` **only** so existing files can keep importing from `SomeComponent`—that keeps the old module as an unnecessary facade. Prefer updating import paths to the real owner.
+
 # Backwards compatibility
 
 **Do not worry about backwards compatibility.** Prefer the right API and design. Use semver correctly: breaking changes get a major bump (or appropriate bump), and the changeset describes the change. No need to preserve old APIs, re-exports, or compatibility layers for existing users.
@@ -117,7 +121,7 @@ Only add secrets you are willing to grant to cloud agents. If a test is skipped 
 - **Install:** Already handled by `.cursor/environment.json`. If `bun` is missing on the VM, add a `.cursor/Dockerfile` (Debian/Ubuntu) that installs Bun and reference it from `environment.json` per [manual setup](https://cursor.com/docs/cloud-agent/setup).
 - **Verification:** Prefer `bun run typecheck`, `bun run lint`, then targeted `bun test` (single package or file) over the full monorepo test matrix.
 - **Memory:** Cloud VMs are limited. For broad test runs, use low Turbo concurrency (e.g. `bun turbo run test --concurrency=1` or similar), matching the spirit of CI which avoids parallel overload that can OOM (~7GB on `ubuntu-latest`).
-- **Playwright / browser E2E:** GitHub Actions runs the `test-playground` E2E job in a **Playwright Docker image** with browser deps preinstalled. Cursor Cloud Agents do not automatically replicate that; full Playwright E2E may require extra system deps or a custom Dockerfile—treat full E2E as optional in cloud unless you have explicitly set that up.
+- **Playwright / browser E2E:** GitHub Actions runs E2E for **`test-playground-collections`** and **`test-playground-router`** (sharded) in a **Playwright Docker image** with browser deps preinstalled. Cursor Cloud Agents do not automatically replicate that; full Playwright E2E may require extra system deps or a custom Dockerfile—treat full E2E as optional in cloud unless you have explicitly set that up.
 
 ---
 

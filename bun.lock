@@ -611,8 +611,50 @@
         "typescript": "catalog:",
       },
     },
-    "tests/test-playground": {
-      "name": "test-playground",
+    "tests/test-playground-collections": {
+      "name": "test-playground-collections",
+      "dependencies": {
+        "@firtoz/db-helpers": "workspace:*",
+        "@firtoz/drizzle-indexeddb": "workspace:*",
+        "@firtoz/drizzle-sqlite-wasm": "workspace:*",
+        "@firtoz/drizzle-utils": "workspace:*",
+        "@firtoz/idb-collections": "workspace:*",
+        "@firtoz/maybe-error": "workspace:*",
+        "@firtoz/router-toolkit": "workspace:*",
+        "@firtoz/worker-helper": "workspace:*",
+        "@react-router/node": "catalog:",
+        "@react-router/serve": "catalog:",
+        "@sqlite.org/sqlite-wasm": "catalog:",
+        "@tanstack/db": "catalog:",
+        "@tanstack/query-core": "catalog:",
+        "@tanstack/query-db-collection": "catalog:",
+        "@tanstack/react-db": "catalog:",
+        "drizzle-orm": "catalog:",
+        "isbot": "^5.1.39",
+        "react": "catalog:",
+        "react-dom": "catalog:",
+        "react-router": "catalog:",
+        "test-playground-shared": "workspace:*",
+        "test-schema": "workspace:*",
+        "zod": "catalog:",
+        "zod-form-data": "catalog:",
+      },
+      "devDependencies": {
+        "@playwright/test": "catalog:",
+        "@react-router/dev": "catalog:",
+        "@types/node": "catalog:",
+        "@types/react": "catalog:",
+        "@types/react-dom": "catalog:",
+        "@vitejs/plugin-basic-ssl": "^2.3.0",
+        "bun-types": "catalog:",
+        "playwright": "catalog:",
+        "typescript": "catalog:",
+        "vite": "catalog:",
+        "vite-plugin-devtools-json": "^1.0.0",
+      },
+    },
+    "tests/test-playground-router": {
+      "name": "test-playground-router",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/drizzle-indexeddb": "workspace:*",
@@ -650,6 +692,13 @@
         "typescript": "catalog:",
         "vite": "catalog:",
         "vite-plugin-devtools-json": "^1.0.0",
+      },
+    },
+    "tests/test-playground-shared": {
+      "name": "test-playground-shared",
+      "devDependencies": {
+        "@playwright/test": "catalog:",
+        "typescript": "catalog:",
       },
     },
     "tests/test-schema": {
@@ -2035,7 +2084,11 @@
 
     "term-size": ["term-size@2.2.1", "", {}, "sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg=="],
 
-    "test-playground": ["test-playground@workspace:tests/test-playground"],
+    "test-playground-collections": ["test-playground-collections@workspace:tests/test-playground-collections"],
+
+    "test-playground-router": ["test-playground-router@workspace:tests/test-playground-router"],
+
+    "test-playground-shared": ["test-playground-shared@workspace:tests/test-playground-shared"],
 
     "test-schema": ["test-schema@workspace:tests/test-schema"],
 

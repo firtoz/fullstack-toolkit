@@ -1,0 +1,12 @@
+{
+	"name": "test-playground-shared",
+	"private": true,
+	"type": "module",
+	"exports": {
+		"./e2e-worker-db": "./src/e2e-worker-db.ts"
+	},
+	"devDependencies": {
+		"@playwright/test": "catalog:",
+		"typescript": "catalog:"
+	}
+}
