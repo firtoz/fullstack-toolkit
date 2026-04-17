@@ -95,16 +95,8 @@ describe("WorkerClient", () => {
 	});
 
 	describe("sending validated messages", () => {
-		beforeEach(() => {
-			const worker = new Worker(
-				new URL("./test-worker.worker.ts", import.meta.url).href,
-			);
-			client = new WorkerClient({
-				worker,
-				clientSchema: ClientMessageSchema,
-				serverSchema: ServerMessageSchema,
-			});
-		});
+		// No shared beforeEach here: the "valid send" tests create their own WorkerClient;
+		// a beforeEach would leak the extra worker when those tests overwrite `client`.
 
 		it("should send valid add message", async () => {
 			const result = await new Promise<ServerMessage>((resolve) => {
@@ -155,33 +147,46 @@ describe("WorkerClient", () => {
 			});
 		});
 
-		it("should throw error when sending invalid message", () => {
-			expect(() => {
-				client.send({
-					type: "invalid",
-					data: "something",
-				} as unknown as ClientMessage);
-			}).toThrow();
-		});
+		describe("invalid client input", () => {
+			beforeEach(() => {
+				const worker = new Worker(
+					new URL("./test-worker.worker.ts", import.meta.url).href,
+				);
+				client = new WorkerClient({
+					worker,
+					clientSchema: ClientMessageSchema,
+					serverSchema: ServerMessageSchema,
+				});
+			});
 
-		it("should throw error when sending message with wrong types", () => {
-			expect(() => {
-				client.send({
-					type: "add",
-					a: "not a number",
-					b: 5,
-				} as unknown as ClientMessage);
-			}).toThrow();
-		});
+			it("should throw error when sending invalid message", () => {
+				expect(() => {
+					client.send({
+						type: "invalid",
+						data: "something",
+					} as unknown as ClientMessage);
+				}).toThrow();
+			});
 
-		it("should throw error when sending message with missing fields", () => {
-			expect(() => {
-				client.send({
-					type: "add",
-					a: 5,
-					// missing 'b'
-				} as unknown as ClientMessage);
-			}).toThrow();
+			it("should throw error when sending message with wrong types", () => {
+				expect(() => {
+					client.send({
+						type: "add",
+						a: "not a number",
+						b: 5,
+					} as unknown as ClientMessage);
+				}).toThrow();
+			});
+
+			it("should throw error when sending message with missing fields", () => {
+				expect(() => {
+					client.send({
+						type: "add",
+						a: 5,
+						// missing 'b'
+					} as unknown as ClientMessage);
+				}).toThrow();
+			});
 		});
 	});
 
