@@ -1,5 +1,11 @@
 # @firtoz/drizzle-indexeddb
 
+## 5.0.2
+
+### Patch Changes
+
+- [`65c1758`](https://github.com/firtoz/fullstack-toolkit/commit/65c1758a2d598865e341c0d72a536be3e8536ce9) Thanks [@firtoz](https://github.com/firtoz)! - Remove `any` / double cast in standalone collection creation; satisfy Biome in concurrent submitter tests (no non-null assertions).
+
 ## 5.0.1
 
 ### Patch Changes

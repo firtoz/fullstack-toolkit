@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 8.0.1
+
+### Patch Changes
+
+- [`65c1758`](https://github.com/firtoz/fullstack-toolkit/commit/65c1758a2d598865e341c0d72a536be3e8536ce9) Thanks [@firtoz](https://github.com/firtoz)! - Remove `any` / double cast in standalone collection creation; satisfy Biome in concurrent submitter tests (no non-null assertions).
+
 ## 8.0.0
 
 ### Minor Changes

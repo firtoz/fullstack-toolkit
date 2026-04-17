@@ -28,7 +28,7 @@
     },
     "examples/chatroom-bun": {
       "name": "chatroom-bun",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "zod": "catalog:",
@@ -41,7 +41,7 @@
     },
     "examples/chatroom-do": {
       "name": "chatroom-do",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "@firtoz/websocket-do": "workspace:*",
@@ -59,7 +59,7 @@
     },
     "examples/chatroom-hono": {
       "name": "chatroom-hono",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "@hono/node-server": "^1.19.14",
@@ -243,7 +243,7 @@
     },
     "packages/drizzle-indexeddb": {
       "name": "@firtoz/drizzle-indexeddb",
-      "version": "5.0.1",
+      "version": "5.0.2",
       "bin": {
         "drizzle-indexeddb-generate": "./dist/bin/generate-migrations.js",
       },
@@ -353,7 +353,7 @@
     },
     "packages/router-toolkit": {
       "name": "@firtoz/router-toolkit",
-      "version": "8.0.0",
+      "version": "8.0.1",
       "dependencies": {
         "zod-form-data": "catalog:",
       },
@@ -373,7 +373,7 @@
     },
     "packages/socka": {
       "name": "@firtoz/socka",
-      "version": "2.1.0",
+      "version": "3.0.0",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
         "@standard-schema/spec": "catalog:",

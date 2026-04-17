@@ -1,5 +1,19 @@
 # @firtoz/socka
 
+## 3.0.0
+
+### Major Changes
+
+- [`42b43de`](https://github.com/firtoz/fullstack-toolkit/commit/42b43de1427a01288a9ab0053c244db20a5bd8cc) Thanks [@firtoz](https://github.com/firtoz)! - **Breaking:** Strict HTTP upgrade is the default for `SockaWebSocketSession`. `createData` receives `SockaStrictWebSocketInit` unless you use `SockaWebSocketSessionConfigLoose` with `strictUpgradeRequest: false` (tests, Node `ws` without a `Request`, inner DO engine). New types: `SockaWebSocketSessionConfigLoose`, `SockaWebSocketSessionConfigUnion`. Sessions constructed without an upgrade `Request` now throw unless loose.
+
+### Minor Changes
+
+- [`0e07b4c`](https://github.com/firtoz/fullstack-toolkit/commit/0e07b4ccf7146289ea0d754fcfff56ebbcf098d1) Thanks [@firtoz](https://github.com/firtoz)! - Optional `output` on `defineSocka` calls enables fire-and-forget RPC: no `serverResponse` on success, client `send` resolves after the request is sent; failures still use `serverError` with optional `rpc`. `SockaError` and `reportError` gain related fields/kinds. Documentation updated (`z.void()` vs omitted `output`).
+
+### Patch Changes
+
+- [`d9657ba`](https://github.com/firtoz/fullstack-toolkit/commit/d9657baef5517c8dea08ba9f3a467d157fdde7e1) Thanks [@firtoz](https://github.com/firtoz)! - Set `ignoreDeprecations` to `6.0` in `tsconfig.json` so the declaration build succeeds on TypeScript 6 (silences TS5101 for deprecated `baseUrl` used by the DTS pipeline).
+
 ## 2.1.0
 
 ### Minor Changes
