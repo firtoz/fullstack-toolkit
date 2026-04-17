@@ -276,10 +276,9 @@ export function createStandaloneCollection<TTable extends Table>(
 		syncMode,
 	} as DrizzleIndexedDBCollectionConfig<TTable>);
 
-	// biome-ignore lint/suspicious/noExplicitAny: createCollection overloads can't resolve InsertToSelectSchema for generic TTable; collection is re-typed below
 	const collection = createCollection(
-		collectionConfig as any,
-	) as unknown as InternalCollection<TTable>;
+		collectionConfig,
+	) as InternalCollection<TTable>;
 
 	// Wait for collection to be ready
 	const collectionReady = new Promise<void>((resolve) => {

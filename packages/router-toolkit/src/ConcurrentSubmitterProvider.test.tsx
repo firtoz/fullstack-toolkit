@@ -65,6 +65,18 @@ function wrapper({ children }: { children: React.ReactNode }) {
 	return React.createElement(ConcurrentSubmitterProvider, null, children);
 }
 
+function assertDefined<T>(value: T | undefined | null, label = "value"): T {
+	if (value === undefined || value === null) {
+		throw new Error(`Expected ${label} to be defined`);
+	}
+	return value;
+}
+
+/** Mock fetcher state for an operation id — same as `assertDefined(fetcherSetters.get(id))`. */
+function getFetcherSetters(opId: string) {
+	return assertDefined(fetcherSetters.get(opId), `fetcher setters for ${opId}`);
+}
+
 describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	beforeEach(() => {
 		mockHref.mockClear();
@@ -102,10 +114,10 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 		act(() => {
 			out = api.submitJson("/api/upload", { name: "a" });
 		});
-		expect(out).toBeDefined();
-		expect(out!.id).toMatch(/^op-\d+$/);
-		expect(out!.promise).toBeInstanceOf(Promise);
-		const opId = out!.id;
+		const submitted = assertDefined(out);
+		expect(submitted.id).toMatch(/^op-\d+$/);
+		expect(submitted.promise).toBeInstanceOf(Promise);
+		const opId = submitted.id;
 		expect(result.current.operations[opId]).toBeDefined();
 		expect(result.current.operations[opId].status).toBe("pending");
 		expect(result.current.operations[opId].submittedData).toEqual({
@@ -116,22 +128,22 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	it("operation becomes done when fetcher settles with data", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
 		const api = result.current as unknown as NoParamsTestApi;
-		let opId!: string;
+		let opId = "";
 		act(() => {
 			const out = api.submitJson("/api/upload", {
 				name: "test",
 			});
 			opId = out.id;
 		});
+		expect(opId).toMatch(/^op-\d+$/);
 		await act(async () => {
 			// Flush so FetcherRunner mounts and submit() is called
 		});
-		const setters = fetcherSetters.get(opId);
-		expect(setters).toBeDefined();
 		const response = { success: true, id: "server-1" };
 		act(() => {
-			setters!.setData(response);
-			setters!.setState("idle");
+			const s = getFetcherSetters(opId);
+			s.setData(response);
+			s.setState("idle");
 		});
 		await waitFor(() => {
 			expect(result.current.operations[opId].status).toBe("done");
@@ -145,7 +157,7 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	it("promise from submitJson resolves with data when settled", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
 		const api = result.current as unknown as NoParamsTestApi;
-		let opId!: string;
+		let opId = "";
 		let resolved: unknown;
 		act(() => {
 			const out = api.submitJson("/api/upload", {
@@ -156,11 +168,13 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 				resolved = d;
 			});
 		});
+		expect(opId).toMatch(/^op-\d+$/);
 		await act(async () => {});
 		const response = { value: 42 };
 		act(() => {
-			fetcherSetters.get(opId)?.setData(response);
-			fetcherSetters.get(opId)?.setState("idle");
+			const s = getFetcherSetters(opId);
+			s.setData(response);
+			s.setState("idle");
 		});
 		await waitFor(() =>
 			expect(result.current.operations[opId].status).toBe("done"),
@@ -172,16 +186,17 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	it("operation becomes error when fetcher settles with error", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
 		const api = result.current as unknown as NoParamsTestApi;
-		let opId!: string;
+		let opId = "";
 		act(() => {
 			const out = api.submitJson("/api/upload", { x: 1 });
 			opId = out.id;
 			void out.promise.catch(() => {}); // consume rejection
 		});
+		expect(opId).toMatch(/^op-\d+$/);
 		await act(async () => {});
 		// FetcherRunner treats "idle" with no data as error (Submission failed)
 		act(() => {
-			fetcherSetters.get(opId)!.setState("idle");
+			getFetcherSetters(opId).setState("idle");
 			// leave data undefined -> onSettle gets error
 		});
 		await waitFor(() => {
@@ -193,9 +208,9 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	it("each operation has unique id and independent pending -> done", async () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
 		const api = result.current as unknown as NoParamsTestApi;
-		let aId!: string;
-		let bId!: string;
-		let cId!: string;
+		let aId = "";
+		let bId = "";
+		let cId = "";
 		act(() => {
 			aId = api.submitJson("/api/upload", {
 				name: "a",
@@ -211,6 +226,9 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 				name: "c",
 			}).id;
 		});
+		expect(aId).toMatch(/^op-\d+$/);
+		expect(bId).toMatch(/^op-\d+$/);
+		expect(cId).toMatch(/^op-\d+$/);
 		expect(new Set([aId, bId, cId]).size).toBe(3);
 		await act(async () => {});
 		expect(result.current.operations[aId].status).toBe("pending");
@@ -218,8 +236,9 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 		expect(result.current.operations[cId].status).toBe("pending");
 
 		act(() => {
-			fetcherSetters.get(aId)!.setData({ ok: "a" });
-			fetcherSetters.get(aId)!.setState("idle");
+			const s = getFetcherSetters(aId);
+			s.setData({ ok: "a" });
+			s.setState("idle");
 		});
 		await waitFor(() =>
 			expect(result.current.operations[aId].status).toBe("done"),
@@ -229,15 +248,17 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 		expect(result.current.operations[cId].status).toBe("pending");
 
 		act(() => {
-			fetcherSetters.get(bId)!.setData({ ok: "b" });
-			fetcherSetters.get(bId)!.setState("idle");
+			const s = getFetcherSetters(bId);
+			s.setData({ ok: "b" });
+			s.setState("idle");
 		});
 		await waitFor(() =>
 			expect(result.current.operations[bId].status).toBe("done"),
 		);
 		act(() => {
-			fetcherSetters.get(cId)!.setData({ ok: "c" });
-			fetcherSetters.get(cId)!.setState("idle");
+			const s = getFetcherSetters(cId);
+			s.setData({ ok: "c" });
+			s.setState("idle");
 		});
 		await waitFor(() =>
 			expect(result.current.operations[cId].status).toBe("done"),
@@ -253,15 +274,17 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 		const formData = new FormData();
 		formData.set("file", "blob" as unknown as File);
 		const displayData = { type: "upload", label: "photo.jpg" };
-		let opId!: string;
+		let opId = "";
 		act(() => {
 			opId = api.submitFormData("/api/upload", formData, displayData).id;
 		});
+		expect(opId).toMatch(/^op-\d+$/);
 		expect(result.current.operations[opId].submittedData).toEqual(displayData);
 		await act(async () => {});
 		act(() => {
-			fetcherSetters.get(opId)?.setData({ fileId: "abc" });
-			fetcherSetters.get(opId)?.setState("idle");
+			const s = getFetcherSetters(opId);
+			s.setData({ fileId: "abc" });
+			s.setState("idle");
 		});
 		await waitFor(() => {
 			expect(result.current.operations[opId].status).toBe("done");
@@ -275,10 +298,11 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	it("submitFormData defaults submittedData to empty object when omitted", () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
 		const api = result.current as unknown as NoParamsTestApi;
-		let opId!: string;
+		let opId = "";
 		act(() => {
 			opId = api.submitFormData("/api/upload", new FormData()).id;
 		});
+		expect(opId).toMatch(/^op-\d+$/);
 		expect(result.current.operations[opId].submittedData).toEqual({});
 	});
 
