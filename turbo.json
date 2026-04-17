@@ -62,6 +62,10 @@
 			"outputLogs": "new-only",
 			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
 		},
+		"test:e2e:shard": {
+			"outputLogs": "new-only",
+			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
+		},
 		"dev": {
 			"persistent": true,
 			"cache": false

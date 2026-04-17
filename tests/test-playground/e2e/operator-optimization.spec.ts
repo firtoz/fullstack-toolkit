@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+	clearOpfsRootEntriesWithPrefix,
 	deleteIdbSyncDb,
+	opfsSqliteFilePrefix,
+	sqliteSyncDbName,
 	sqliteSyncModeTestUrl,
 	syncModeTestUrl,
 } from "./e2e-worker-db";
@@ -191,24 +194,15 @@ test.describe("IndexedDB Operator Optimization", () => {
 	});
 });
 
-// Helper to clear OPFS using the worker-based clear-opfs page
-// OPFS file operations MUST be done from a worker context, not main thread
-async function clearOPFSViaWorker(page: Page): Promise<void> {
-	await page.goto("/api/clear-opfs", { waitUntil: "networkidle" });
-	await page.waitForSelector('button:has-text("Clear All OPFS Data")', {
-		timeout: 15000,
-	});
-	await page.click('button:has-text("Clear All OPFS Data")');
-	await page.waitForSelector("text=Successfully cleared", { timeout: 15000 });
-}
-
 test.describe("SQLite Operator Optimization", () => {
 	// Increase timeout for SQLite tests as they involve OPFS and worker initialization
 	test.setTimeout(60000);
 
 	test.beforeEach(async ({ page }, testInfo) => {
-		// Clear OPFS from worker context
-		await clearOPFSViaWorker(page);
+		await clearOpfsRootEntriesWithPrefix(
+			page,
+			opfsSqliteFilePrefix(sqliteSyncDbName(testInfo)),
+		);
 
 		// Navigate to test page
 		await page.goto(sqliteSyncModeTestUrl(testInfo, "on-demand"), {

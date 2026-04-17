@@ -14,6 +14,13 @@ import { TodoListContainer } from "~/components/shared/TodoListContainer";
 
 export const loader = todoLoader;
 
+function sqlitePlaygroundDbNameFromSearchParams(
+	searchParams: URLSearchParams,
+): string {
+	const w = searchParams.get("e2eWorker");
+	return w !== null && /^\d+$/.test(w) ? `test-w${w}.db` : "test.db";
+}
+
 const TodoList = () => {
 	const { useCollection } = useDrizzleSqlite<typeof schema>();
 
@@ -50,12 +57,15 @@ export default function SqliteTest() {
 		setEnableCheckpoint(newValue);
 		setSearchParams(
 			(prev) => {
-				prev.set("checkpoint", String(newValue));
-				return prev;
+				const next = new URLSearchParams(prev);
+				next.set("checkpoint", String(newValue));
+				return next;
 			},
 			{ replace: true },
 		);
 	}, [setSearchParams, enableCheckpoint]);
+
+	const dbName = sqlitePlaygroundDbNameFromSearchParams(searchParams);
 
 	return (
 		<ClientOnly>
@@ -82,7 +92,7 @@ export default function SqliteTest() {
 			</div>
 			<DrizzleSqliteProvider
 				worker={SqliteWorker}
-				dbName="test.db"
+				dbName={dbName}
 				schema={schema}
 				migrations={migrations}
 				debug={true}

@@ -6,12 +6,14 @@ const testPlaygroundBaseUrl = `http://${testPlaygroundHost}:${testPlaygroundPort
 
 export default defineConfig({
 	testDir: "./e2e",
-	fullyParallel: true,
+	// Serial within each file avoids races on shared DB names (e.g. migration tests);
+	// multiple spec files still run in parallel across workers.
+	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	// Multiple workers share one origin: global OPFS clear and IndexedDB would race
-	// without per-worker DB names. SQLite tests still clear all OPFS, so stay serial.
-	workers: 1,
+	// Parallel workers share one origin: DB names and OPFS clears are scoped per
+	// Playwright worker via `e2eWorker` / `parallelIndex` (see e2e-worker-db.ts).
+	workers: process.env.CI ? 4 : undefined,
 	reporter: [["list"], ["html", { open: "never" }]],
 	use: {
 		baseURL: testPlaygroundBaseUrl,

@@ -75,8 +75,15 @@ jobs:
           AI_GATEWAY_TOKEN: ${{ github.event_name == 'workflow_call' && secrets.AI_GATEWAY_TOKEN || '' }}
 
   e2e:
-    name: Playwright E2E (test-playground)
+    name: Playwright E2E (test-playground) shard ${{ matrix.shard }}
     needs: checks
+    env:
+      # Keep in sync with strategy.matrix.shard length (Playwright --shard=i/N).
+      PW_SHARD_TOTAL: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.59.1-noble
@@ -106,13 +113,13 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Run E2E Tests
-        run: TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e --filter='test-playground'
+        run: TURBO_TELEMETRY_DISABLED=1 bun turbo run test:e2e:shard --filter='test-playground' -- --shard=${{ matrix.shard }}/${{ env.PW_SHARD_TOTAL }}
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: |
             tests/test-playground/playwright-report/
             tests/test-playground/test-results/

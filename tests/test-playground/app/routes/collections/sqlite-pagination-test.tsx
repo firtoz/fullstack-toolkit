@@ -697,10 +697,20 @@ const SQLitePaginationTestContent = ({
 	);
 };
 
+function sqlitePaginationDbNameFromSearchParams(
+	searchParams: URLSearchParams,
+): string {
+	const w = searchParams.get("e2eWorker");
+	return w !== null && /^\d+$/.test(w)
+		? `test-sqlite-pagination-w${w}.db`
+		: "test-sqlite-pagination.db";
+}
+
 export default function SQLitePaginationTest() {
 	const [searchParams] = useSearchParams();
 	const syncMode =
 		(searchParams.get("mode") as "eager" | "on-demand") || "on-demand";
+	const dbName = sqlitePaginationDbNameFromSearchParams(searchParams);
 
 	// Track SQL operations
 	const [operations, setOperations] = useState<SQLOperation[]>([]);
@@ -729,7 +739,7 @@ export default function SQLitePaginationTest() {
 			</div>
 			<DrizzleSqliteProvider
 				worker={SqliteWorker}
-				dbName="test-sqlite-pagination.db"
+				dbName={dbName}
 				schema={schema}
 				migrations={migrations}
 				syncMode={syncMode}

@@ -1,4 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import {
+	clearOpfsRootEntriesWithPrefix,
+	indexeddbPlaygroundDbNameForE2e,
+	opfsSqliteFilePrefix,
+	sqlitePlaygroundDbNameForE2e,
+} from "./e2e-worker-db";
 
 /**
  * Unified E2E tests for both SQLite WASM and IndexedDB collections
@@ -14,66 +20,58 @@ import { expect, test, type Page } from "@playwright/test";
  * - Concurrent operations
  */
 
-const COLLECTION_CONFIGS = [
+type CollectionConfig = {
+	readonly name: string;
+	readonly buildUrl: (testInfo: TestInfo) => string;
+	readonly clearStorage: (page: Page, testInfo: TestInfo) => Promise<void>;
+};
+
+const COLLECTION_CONFIGS: readonly CollectionConfig[] = [
 	{
 		name: "SQLite WASM (with checkpoint)",
-		url: "/collections/sqlite-test?checkpoint=true",
-		dbName: "sqlite-unified",
-		hasCheckpoint: true,
-		clearDb: async (page: Page) => {
-			await clearOPFS(page);
+		buildUrl: (ti) =>
+			`/collections/sqlite-test?checkpoint=true&e2eWorker=${ti.parallelIndex}`,
+		clearStorage: async (page, ti) => {
+			await clearOpfsRootEntriesWithPrefix(
+				page,
+				opfsSqliteFilePrefix(sqlitePlaygroundDbNameForE2e(ti)),
+			);
 		},
 	},
 	{
 		name: "SQLite WASM (no checkpoint)",
-		url: "/collections/sqlite-test?checkpoint=false",
-		dbName: "sqlite-unified",
-		hasCheckpoint: false,
-		clearDb: async (page: Page) => {
-			await clearOPFS(page);
+		buildUrl: (ti) =>
+			`/collections/sqlite-test?checkpoint=false&e2eWorker=${ti.parallelIndex}`,
+		clearStorage: async (page, ti) => {
+			await clearOpfsRootEntriesWithPrefix(
+				page,
+				opfsSqliteFilePrefix(sqlitePlaygroundDbNameForE2e(ti)),
+			);
 		},
 	},
 	{
 		name: "IndexedDB",
-		url: "/collections/indexeddb-test",
-		dbName: "indexeddb-unified",
-		hasCheckpoint: undefined,
-		clearDb: async (page: Page) => {
-			await page.evaluate(() => {
-				indexedDB.deleteDatabase("test-indexeddb.db");
-			});
+		buildUrl: (ti) =>
+			`/collections/indexeddb-test?e2eWorker=${ti.parallelIndex}`,
+		clearStorage: async (page, ti) => {
+			const name = indexeddbPlaygroundDbNameForE2e(ti);
+			await page.evaluate((n) => {
+				indexedDB.deleteDatabase(n);
+			}, name);
 		},
 	},
-] as const;
-
-// Helper to clear OPFS storage (for SQLite)
-async function clearOPFS(page: Page) {
-	await page.evaluate(async () => {
-		try {
-			const root = await navigator.storage.getDirectory();
-			for await (const entry of root.values()) {
-				try {
-					await root.removeEntry(entry.name, { recursive: true });
-				} catch (e) {
-					console.log(`Failed to remove ${entry.name}:`, e);
-				}
-			}
-		} catch (e) {
-			console.log("Failed to clear OPFS:", e);
-		}
-	});
-}
+];
 
 for (const config of COLLECTION_CONFIGS) {
 	test.describe(`Unified Collections - ${config.name}`, () => {
-		test.beforeEach(async ({ page }) => {
+		test.beforeEach(async ({ page }, testInfo) => {
 			// Clear storage before each test
 			await page.goto("/");
-			await config.clearDb(page);
+			await config.clearStorage(page, testInfo);
 		});
 
-		test("should initialize and display empty state", async ({ page }) => {
-			await page.goto(config.url);
+		test("should initialize and display empty state", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Should show title and description
@@ -95,8 +93,8 @@ for (const config of COLLECTION_CONFIGS) {
 			await expect(page.getByText("No tasks yet")).toBeVisible();
 		});
 
-		test("should add and display a new task", async ({ page }) => {
-			await page.goto(config.url);
+		test("should add and display a new task", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			const input = page.getByTestId("todo-input");
@@ -119,8 +117,8 @@ for (const config of COLLECTION_CONFIGS) {
 			await expect(page.getByTestId("count-pending")).toHaveText("1");
 		});
 
-		test("should support inline editing", async ({ page }) => {
-			await page.goto(config.url);
+		test("should support inline editing", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -144,8 +142,8 @@ for (const config of COLLECTION_CONFIGS) {
 			await expect(taskInput).toHaveValue("Updated Title", { timeout: 2000 });
 		});
 
-		test("should toggle task completion", async ({ page }) => {
-			await page.goto(config.url);
+		test("should toggle task completion", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -179,8 +177,8 @@ for (const config of COLLECTION_CONFIGS) {
 			});
 		});
 
-		test("should support bulk selection and operations", async ({ page }) => {
-			await page.goto(config.url);
+		test("should support bulk selection and operations", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add multiple tasks
@@ -206,8 +204,8 @@ for (const config of COLLECTION_CONFIGS) {
 			});
 		});
 
-		test("should support soft delete and restore", async ({ page }) => {
-			await page.goto(config.url);
+		test("should support soft delete and restore", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -253,8 +251,8 @@ for (const config of COLLECTION_CONFIGS) {
 			await expect(purgeButton).toHaveText("Purge");
 		});
 
-		test("should handle concurrent operations", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle concurrent operations", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			const concurrentCount = 5;
@@ -298,8 +296,8 @@ for (const config of COLLECTION_CONFIGS) {
 			}
 		});
 
-		test("should handle batch add with multiple inputs", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle batch add with multiple inputs", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			const batchCount = 3;
@@ -331,8 +329,8 @@ for (const config of COLLECTION_CONFIGS) {
 			await expect(page.getByTestId("todo-input-1")).not.toBeVisible();
 		});
 
-		test("should auto-remove empty trailing input", async ({ page }) => {
-			await page.goto(config.url);
+		test("should auto-remove empty trailing input", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Fill first input
@@ -357,8 +355,8 @@ for (const config of COLLECTION_CONFIGS) {
 			await expect(page.getByTestId("todo-input-2")).not.toBeVisible();
 		});
 
-		test("should persist data across page reloads", async ({ page }) => {
-			await page.goto(config.url);
+		test("should persist data across page reloads", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add tasks
@@ -401,8 +399,8 @@ for (const config of COLLECTION_CONFIGS) {
 			});
 		});
 
-		test("should handle bulk delete with mixed states", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle bulk delete with mixed states", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add tasks
@@ -481,8 +479,8 @@ for (const config of COLLECTION_CONFIGS) {
 			});
 		});
 
-		test("should handle bulk restore", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle bulk restore", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add tasks
@@ -547,8 +545,8 @@ for (const config of COLLECTION_CONFIGS) {
 		// ACID & BULLETPROOF TESTS
 		// ============================================================
 
-		test("should handle special characters and unicode", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle special characters and unicode", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			const specialCases = [
@@ -591,10 +589,11 @@ for (const config of COLLECTION_CONFIGS) {
 			);
 		});
 
-		test("should handle rapid concurrent edits on same task", async ({
-			page,
-		}) => {
-			await page.goto(config.url);
+		test("should handle rapid concurrent edits on same task", async (
+			{ page },
+			testInfo,
+		) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -632,8 +631,8 @@ for (const config of COLLECTION_CONFIGS) {
 			expect(valueAfterReload).toMatch(/Edit \d+/);
 		});
 
-		test("should handle rapid toggle operations", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle rapid toggle operations", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -676,8 +675,8 @@ for (const config of COLLECTION_CONFIGS) {
 			expect(Number(pending) + Number(done)).toBe(1);
 		});
 
-		test("should handle mixed bulk operations rapidly", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle mixed bulk operations rapidly", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add multiple tasks
@@ -724,10 +723,11 @@ for (const config of COLLECTION_CONFIGS) {
 			expect(Number(pending)).toBe(10);
 		});
 
-		test("should maintain data integrity during delete/restore cycles", async ({
-			page,
-		}) => {
-			await page.goto(config.url);
+		test("should maintain data integrity during delete/restore cycles", async (
+			{ page },
+			testInfo,
+		) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task with specific content
@@ -798,8 +798,8 @@ for (const config of COLLECTION_CONFIGS) {
 			});
 		});
 
-		test("should purge deleted tasks permanently", async ({ page }) => {
-			await page.goto(config.url);
+		test("should purge deleted tasks permanently", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -854,8 +854,8 @@ for (const config of COLLECTION_CONFIGS) {
 			});
 		});
 
-		test("should handle stress test with many tasks", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle stress test with many tasks", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			const taskCount = 50;
@@ -919,8 +919,8 @@ for (const config of COLLECTION_CONFIGS) {
 			);
 		});
 
-		test("should prevent double-clicking issues", async ({ page }) => {
-			await page.goto(config.url);
+		test("should prevent double-clicking issues", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -937,10 +937,11 @@ for (const config of COLLECTION_CONFIGS) {
 			expect(Number(total)).toBeLessThanOrEqual(1);
 		});
 
-		test("should verify statistics consistency after complex operations", async ({
-			page,
-		}) => {
-			await page.goto(config.url);
+		test("should verify statistics consistency after complex operations", async (
+			{ page },
+			testInfo,
+		) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add 5 tasks
@@ -993,10 +994,11 @@ for (const config of COLLECTION_CONFIGS) {
 			expect(Number(pending) + Number(done)).toBe(Number(total));
 		});
 
-		test("should handle editing during pending operations", async ({
-			page,
-		}) => {
-			await page.goto(config.url);
+		test("should handle editing during pending operations", async (
+			{ page },
+			testInfo,
+		) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			// Add a task
@@ -1038,8 +1040,8 @@ for (const config of COLLECTION_CONFIGS) {
 			expect(valueAfterReload).toBeTruthy();
 		});
 
-		test("should handle very long task titles gracefully", async ({ page }) => {
-			await page.goto(config.url);
+		test("should handle very long task titles gracefully", async ({ page }, testInfo) => {
+			await page.goto(config.buildUrl(testInfo));
 			await page.waitForLoadState("networkidle");
 
 			const veryLongText = "A".repeat(10000);
