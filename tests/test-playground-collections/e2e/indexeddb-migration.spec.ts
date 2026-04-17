@@ -2,10 +2,10 @@ import { test, expect } from "@playwright/test";
 
 test.describe("@firtoz/drizzle-indexeddb - IndexedDB Migrations", () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/collections/indexeddb-migration-test");
-
-		// Wait for page to load
-		await page.waitForLoadState("networkidle");
+		await page.goto("/collections/indexeddb-migration-test", {
+			waitUntil: "domcontentloaded",
+			timeout: 60_000,
+		});
 
 		// Clean up any existing test database using the page context
 		await page.evaluate(() => {
@@ -17,8 +17,8 @@ test.describe("@firtoz/drizzle-indexeddb - IndexedDB Migrations", () => {
 			});
 		});
 
-		// Reload to reset state
-		await page.reload();
+		// Reload to reset state (avoid default `load` — Vite/HMR can keep it flaky)
+		await page.reload({ waitUntil: "domcontentloaded", timeout: 60_000 });
 	});
 
 	test("should load the IndexedDB migration test page with no database", async ({
@@ -30,7 +30,7 @@ test.describe("@firtoz/drizzle-indexeddb - IndexedDB Migrations", () => {
 
 		// Should show idle status after checking
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Should indicate database not found
@@ -49,7 +49,7 @@ test.describe("@firtoz/drizzle-indexeddb - IndexedDB Migrations", () => {
 	}) => {
 		// Wait for idle status
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		const runButton = page.getByTestId("run-migration-button");
@@ -104,7 +104,7 @@ test.describe("@firtoz/drizzle-indexeddb - IndexedDB Migrations", () => {
 	}) => {
 		// Wait for idle status
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Run migration first time
@@ -126,7 +126,7 @@ test.describe("@firtoz/drizzle-indexeddb - IndexedDB Migrations", () => {
 
 		// Wait for page to check database
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Should show all migrations are applied

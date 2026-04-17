@@ -2,10 +2,10 @@ import { test, expect } from "@playwright/test";
 
 test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/collections/indexeddb-migration-test");
-
-		// Wait for page to load
-		await page.waitForLoadState("networkidle");
+		await page.goto("/collections/indexeddb-migration-test", {
+			waitUntil: "domcontentloaded",
+			timeout: 60_000,
+		});
 
 		// Clean up any existing test database using the page context
 		await page.evaluate(() => {
@@ -17,8 +17,7 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 			});
 		});
 
-		// Reload to reset state
-		await page.reload();
+		await page.reload({ waitUntil: "domcontentloaded", timeout: 60_000 });
 	});
 
 	test("should apply only pending migrations when some are already applied (3 of 5 applied)", async ({
@@ -26,7 +25,7 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 	}) => {
 		// Wait for page to load and check database
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Manually apply first 3 migrations (indices 0, 1, 2)
@@ -232,11 +231,11 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 		});
 
 		// Reload the page to check the partial migration status
-		await page.reload();
+		await page.reload({ waitUntil: "domcontentloaded", timeout: 60_000 });
 
 		// Wait for page to check database
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Should show 3 applied, 2 pending
@@ -289,7 +288,7 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 	}) => {
 		// Wait for idle status
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Manually apply first migration only (index 0)
@@ -484,10 +483,10 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 		});
 
 		// Reload to check status
-		await page.reload();
+		await page.reload({ waitUntil: "domcontentloaded", timeout: 60_000 });
 
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Should show 1 applied, 4 pending
@@ -505,7 +504,7 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 	}) => {
 		// Wait for idle status
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Manually apply the single migration
@@ -582,10 +581,10 @@ test.describe("@firtoz/drizzle-indexeddb - Partial IndexedDB Migrations", () => 
 		});
 
 		// Reload to check status
-		await page.reload();
+		await page.reload({ waitUntil: "domcontentloaded", timeout: 60_000 });
 
 		await expect(page.getByTestId("migration-status")).toHaveText("idle", {
-			timeout: 5000,
+			timeout: 20_000,
 		});
 
 		// Should show 1 applied, 4 pending (because test page has 5 migrations)

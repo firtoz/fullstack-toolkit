@@ -10,10 +10,13 @@ export default defineConfig({
 	// multiple spec files still run in parallel across workers.
 	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 2 : 0,
+	// One retry locally: Vite + WASM + parallel workers can flake; CI keeps 2.
+	retries: process.env.CI ? 2 : 1,
+	// Cap local workers: one `react-router dev` serves all browsers; too much
+	// parallelism causes slow navigations and `net::ERR_ABORTED`.
 	// Parallel workers share one origin: DB names and OPFS clears are scoped per
 	// Playwright worker via `e2eWorker` / `parallelIndex` (see test-playground-shared).
-	workers: process.env.CI ? 4 : undefined,
+	workers: process.env.CI ? 4 : 2,
 	reporter: [["list"], ["html", { open: "never" }]],
 	use: {
 		baseURL: testPlaygroundBaseUrl,

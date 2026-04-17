@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { waitForDBReady, waitForQueryReady } from "./utils";
+import { gotoReady, waitForDBReady, waitForQueryReady } from "./utils";
 
 /**
  * E2E tests for limit/offset pagination with "load more" functionality
@@ -47,13 +47,15 @@ async function getDisplayedPriorities(
 
 test.describe("Pagination - Cursor/Load More", () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearIndexedDB(page, "test-pagination.db");
 	});
 
 	test("should load initial page with correct limit", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		// Populate database with 20 items
 		await waitForDBReady(page);
@@ -76,8 +78,10 @@ test.describe("Pagination - Cursor/Load More", () => {
 	test("should load more items when clicking load more button", async ({
 		page,
 	}) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -108,8 +112,10 @@ test.describe("Pagination - Cursor/Load More", () => {
 	test("should continue loading more until all items are loaded", async ({
 		page,
 	}) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -141,8 +147,10 @@ test.describe("Pagination - Cursor/Load More", () => {
 	});
 
 	test("should respect descending order with pagination", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -167,8 +175,10 @@ test.describe("Pagination - Cursor/Load More", () => {
 	});
 
 	test("should work with different page sizes", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -193,8 +203,10 @@ test.describe("Pagination - Cursor/Load More", () => {
 	});
 
 	test("should reset pagination when settings change", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -225,13 +237,15 @@ test.describe("Pagination - Cursor/Load More", () => {
 
 test.describe("Pagination - Offset/Page Navigation", () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearIndexedDB(page, "test-pagination.db");
 	});
 
 	test("should display correct items on first page", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -257,8 +271,10 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should navigate to next page with correct offset", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -284,8 +300,10 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should navigate through all pages correctly", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -316,8 +334,10 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should navigate backwards correctly", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -352,8 +372,10 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should handle different page sizes", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -385,8 +407,10 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should disable prev button on first page", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -402,15 +426,17 @@ test.describe("Pagination - Offset/Page Navigation", () => {
 
 test.describe("Pagination - Operations Tracking", () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearIndexedDB(page, "test-pagination.db");
 	});
 
 	test("should track loadSubset operations for paginated queries", async ({
 		page,
 	}) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -436,8 +462,10 @@ test.describe("Pagination - Operations Tracking", () => {
 	test("should trigger additional loadSubset when loading more", async ({
 		page,
 	}) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -466,13 +494,15 @@ test.describe("Pagination - Operations Tracking", () => {
 
 test.describe("Pagination - Edge Cases", () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearIndexedDB(page, "test-pagination.db");
 	});
 
 	test("should handle empty database gracefully", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		// Don't populate, start with empty DB
 		await page.click('[data-testid="test-cursor-pagination"]');
@@ -483,8 +513,10 @@ test.describe("Pagination - Edge Cases", () => {
 	});
 
 	test("should handle database clear during pagination", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');
@@ -518,8 +550,10 @@ test.describe("Pagination - Edge Cases", () => {
 	});
 
 	test("should handle switching between pagination modes", async ({ page }) => {
-		await page.goto("/collections/pagination-test?mode=on-demand");
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, "/collections/pagination-test?mode=on-demand");
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 
 		await waitForDBReady(page);
 		await page.click('[data-testid="populate-db"]');

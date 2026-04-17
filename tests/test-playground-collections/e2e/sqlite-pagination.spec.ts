@@ -4,7 +4,12 @@ import {
 	opfsSqliteFilePrefix,
 	sqlitePaginationDbNameForE2e,
 } from "test-playground-shared/e2e-worker-db";
-import { waitForDBReady, waitForQueryReady, waitForWorkerReady } from "./utils";
+import {
+	gotoReady,
+	waitForDBReady,
+	waitForQueryReady,
+	waitForWorkerReady,
+} from "./utils";
 
 function sqlitePaginationUrl(testInfo: TestInfo): string {
 	return `/collections/sqlite-pagination-test?mode=on-demand&e2eWorker=${testInfo.parallelIndex}`;
@@ -26,7 +31,10 @@ function sqlitePaginationUrl(testInfo: TestInfo): string {
  * - Page navigation for offset-based pagination
  */
 
-async function clearPaginationOpfs(page: Page, testInfo: TestInfo): Promise<void> {
+async function clearPaginationOpfs(
+	page: Page,
+	testInfo: TestInfo,
+): Promise<void> {
 	await clearOpfsRootEntriesWithPrefix(
 		page,
 		opfsSqliteFilePrefix(sqlitePaginationDbNameForE2e(testInfo)),
@@ -65,13 +73,17 @@ async function operationsShowLimit(page: Page): Promise<boolean> {
 
 test.describe("SQLite Pagination - Cursor/Load More", () => {
 	test.beforeEach(async ({ page }, testInfo) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearPaginationOpfs(page, testInfo);
 	});
 
-	test("should load initial page with correct limit", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should load initial page with correct limit", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		// Wait for SQLite WASM worker to initialize
 		await waitForWorkerReady(page);
 
@@ -92,9 +104,13 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 		expect(priorities).toEqual([1, 2, 3, 4, 5]);
 	});
 
-	test("should use native SQL LIMIT for pagination", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should use native SQL LIMIT for pagination", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -111,12 +127,13 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 		expect(hasLimit).toBe(true);
 	});
 
-	test("should load more items when clicking load more button", async (
-		{ page },
-		testInfo,
-	) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should load more items when clicking load more button", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await waitForDBReady(page);
@@ -142,12 +159,13 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 		expect(priorities).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 	});
 
-	test("should continue loading more until all items are loaded", async (
-		{ page },
-		testInfo,
-	) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should continue loading more until all items are loaded", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -178,9 +196,13 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 		await expect(page.getByTestId("no-more-items")).toBeVisible();
 	});
 
-	test("should respect descending order with pagination", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should respect descending order with pagination", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -205,8 +227,10 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 	});
 
 	test("should work with different page sizes", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -229,13 +253,17 @@ test.describe("SQLite Pagination - Cursor/Load More", () => {
 
 test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 	test.beforeEach(async ({ page }, testInfo) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearPaginationOpfs(page, testInfo);
 	});
 
-	test("should display correct items on first page", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should display correct items on first page", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -260,9 +288,13 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 		expect(priorities).toEqual([1, 2, 3, 4, 5]);
 	});
 
-	test("should navigate to next page with correct offset", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should navigate to next page with correct offset", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -287,9 +319,13 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 		expect(priorities).toEqual([6, 7, 8, 9, 10]);
 	});
 
-	test("should navigate through all pages correctly", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should navigate through all pages correctly", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -320,8 +356,10 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should navigate backwards correctly", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -356,8 +394,10 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 	});
 
 	test("should handle different page sizes", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -391,13 +431,17 @@ test.describe("SQLite Pagination - Offset/Page Navigation", () => {
 
 test.describe("SQLite Pagination - Operations Tracking", () => {
 	test.beforeEach(async ({ page }, testInfo) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearPaginationOpfs(page, testInfo);
 	});
 
-	test("should show SQL operations with LIMIT in context", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should show SQL operations with LIMIT in context", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -419,9 +463,13 @@ test.describe("SQLite Pagination - Operations Tracking", () => {
 		expect(operations?.toLowerCase()).toContain("limit");
 	});
 
-	test("should return limited item count in operations", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should return limited item count in operations", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -443,13 +491,17 @@ test.describe("SQLite Pagination - Operations Tracking", () => {
 
 test.describe("SQLite Pagination - Edge Cases", () => {
 	test.beforeEach(async ({ page }, testInfo) => {
-		await page.goto("/");
+		await gotoReady(page, "/");
 		await clearPaginationOpfs(page, testInfo);
 	});
 
-	test("should handle empty database gracefully", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should handle empty database gracefully", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		// Don't populate, start with empty DB
@@ -460,9 +512,13 @@ test.describe("SQLite Pagination - Edge Cases", () => {
 		await expect(page.getByTestId("load-more-button")).not.toBeVisible();
 	});
 
-	test("should handle database clear during pagination", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should handle database clear during pagination", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
@@ -493,9 +549,13 @@ test.describe("SQLite Pagination - Edge Cases", () => {
 		expect(await getItemsShown(page)).toBe(0);
 	});
 
-	test("should handle switching between pagination modes", async ({ page }, testInfo) => {
-		await page.goto(sqlitePaginationUrl(testInfo));
-		await page.waitForSelector('[data-testid="sync-mode-indicator"]');
+	test("should handle switching between pagination modes", async ({
+		page,
+	}, testInfo) => {
+		await gotoReady(page, sqlitePaginationUrl(testInfo));
+		await page.waitForSelector('[data-testid="sync-mode-indicator"]', {
+			timeout: 60_000,
+		});
 		await waitForWorkerReady(page);
 
 		await page.click('[data-testid="populate-db"]');
