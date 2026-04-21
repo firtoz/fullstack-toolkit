@@ -1,4 +1,8 @@
-import { type RoutePath, useDynamicSubmitter } from "@firtoz/router-toolkit";
+import {
+	type RoutePath,
+	useDynamicSubmitter,
+	useDynamicSubmitterFetcher,
+} from "@firtoz/router-toolkit";
 import { useId } from "react";
 import { Link } from "react-router";
 import { z } from "zod";
@@ -53,10 +57,12 @@ export const formSchema = z.object({
 	email: z.email(),
 });
 
+const ACTION_TEST_PATH = "/router-toolkit/action-test" as const;
+
 export default function ActionTest() {
-	const submitter = useDynamicSubmitter<typeof import("./action-test")>(
-		"/router-toolkit/action-test",
-	);
+	const submitter =
+		useDynamicSubmitter<typeof import("./action-test")>(ACTION_TEST_PATH);
+	const fetcher = useDynamicSubmitterFetcher(submitter);
 
 	const nameId = useId();
 	const emailId = useId();
@@ -78,28 +84,28 @@ export default function ActionTest() {
 					<input id={emailId} name="email" type="email" required />
 				</div>
 
-				<button type="submit" disabled={submitter.state === "submitting"}>
-					{submitter.state === "submitting" ? "Submitting..." : "Submit"}
+				<button type="submit" disabled={fetcher.state === "submitting"}>
+					{fetcher.state === "submitting" ? "Submitting..." : "Submit"}
 				</button>
 			</submitter.Form>
 
 			<div>
 				<h2>Fetcher State:</h2>
-				<pre>{JSON.stringify({ state: submitter.state }, null, 2)}</pre>
+				<pre>{JSON.stringify({ state: fetcher.state }, null, 2)}</pre>
 			</div>
 
-			{submitter.data && (
+			{fetcher.data && (
 				<div>
 					<h2>Action Result:</h2>
-					<pre>{JSON.stringify(submitter.data, null, 2)}</pre>
+					<pre>{JSON.stringify(fetcher.data, null, 2)}</pre>
 
-					{submitter.data.success ? (
+					{fetcher.data.success ? (
 						<div>
-							<p>✅ {submitter.data.message}</p>
+							<p>✅ {fetcher.data.message}</p>
 						</div>
 					) : (
 						<div>
-							<p>❌ {submitter.data.message}</p>
+							<p>❌ {fetcher.data.message}</p>
 						</div>
 					)}
 				</div>

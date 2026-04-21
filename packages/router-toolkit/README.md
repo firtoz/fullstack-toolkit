@@ -106,9 +106,15 @@ export default function Dashboard() {
 
 ### 3. Forms with Actions
 
+`useDynamicSubmitter` returns a **stable** `{ submit, submitJson, Form, fetcherKey }` and does not expose `state` / `data`. Use `useDynamicSubmitterFetcher(submitter)` when you need reactive loading or action results in JSX (or `submitter.fetcherKey` with `useFetcher` for advanced cases).
+
 ```tsx
 // app/routes/create-user.tsx
-import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
+import {
+  useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
+  type RoutePath,
+} from '@firtoz/router-toolkit';
 
 export const route: RoutePath<"/create-user"> = "/create-user";
 
@@ -119,15 +125,17 @@ export async function action({ request }) {
 }
 
 export default function CreateUser() {
-  const submitter = useDynamicSubmitter<typeof import("./create-user")>("/create-user");
-  
+  const path = "/create-user" as const;
+  const submitter = useDynamicSubmitter<typeof import("./create-user")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
+
   return (
     <submitter.Form method="post">
       <input name="name" placeholder="User name" required />
       <button type="submit">
-        {submitter.state === "submitting" ? "Creating..." : "Create"}
+        {fetcher.state === "submitting" ? "Creating..." : "Create"}
       </button>
-      {submitter.data?.success && <p>✅ User created!</p>}
+      {fetcher.data?.success && <p>✅ User created!</p>}
     </submitter.Form>
   );
 }
@@ -136,8 +144,8 @@ export default function CreateUser() {
 **Key Points:**
 - Export `route: RoutePath<"your-path">` in every route file
 - Use `useDynamicFetcher<typeof import("./route-file")>` for type-safe data fetching
-- Use `useDynamicSubmitter<typeof import("./route-file")>` for type-safe form submission
-- Full TypeScript inference for `fetcher.data` and `submitter.data`
+- Use `useDynamicSubmitter<typeof import("./route-file")>` for type-safe `submit` / `submitJson` / `Form`; use `useDynamicSubmitterFetcher(submitter)` for reactive `state` / `data` on the same submission (optional `keySuffix` when two submitters share one URL)
+- Await `submit` / `submitJson` for programmatic flows; full TypeScript inference on the resolved payload
 
 > **💡 Tip**: Start with `useDynamicFetcher` for data loading, then add `useDynamicSubmitter` for forms. The `useFetcherStateChanged` hook is great for notifications and side effects.
 
@@ -196,11 +204,15 @@ export default function UsersPage() {
 
 ### `useDynamicSubmitter`
 
-Type-safe form submission with Zod validation and enhanced submit functionality. Works seamlessly with route modules for full type inference.
+Type-safe `submit`, `submitJson`, and `Form` with a **stable** return object (`fetcherKey` included). Use `await submitJson(...)` (or `await submit(...)`) for action payloads; use `useDynamicSubmitterFetcher(submitter)` when you need `fetcher.state` / `fetcher.data` in the UI.
 
 ```tsx
 // app/routes/contact.tsx
-import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
+import {
+  useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
+  type RoutePath,
+} from '@firtoz/router-toolkit';
 import { z } from 'zod';
 import type { Route } from './+types/contact';
 
@@ -234,9 +246,11 @@ export async function action({ request }: Route.ActionArgs) {
   };
 }
 
-// 4. Use the hook with typeof import for full type inference
+// 4. Submitter + matching fetcher for reactive UI
 export default function ContactForm() {
-  const submitter = useDynamicSubmitter<typeof import("./contact")>("/contact");
+  const path = "/contact" as const;
+  const submitter = useDynamicSubmitter<typeof import("./contact")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
 
   return (
     <div>
@@ -263,18 +277,18 @@ export default function ContactForm() {
         
         <button
           type="submit"
-          disabled={submitter.state === "submitting"}
+          disabled={fetcher.state === "submitting"}
         >
-          {submitter.state === "submitting" ? "Submitting..." : "Submit"}
+          {fetcher.state === "submitting" ? "Submitting..." : "Submit"}
         </button>
       </submitter.Form>
 
-      {submitter.data && (
+      {fetcher.data && (
         <div>
-          {submitter.data.success ? (
-            <p>✅ {submitter.data.message}</p>
+          {fetcher.data.success ? (
+            <p>✅ {fetcher.data.message}</p>
           ) : (
-            <p>❌ {submitter.data.message}</p>
+            <p>❌ {fetcher.data.message}</p>
           )}
         </div>
       )}
@@ -282,6 +296,22 @@ export default function ContactForm() {
   );
 }
 ```
+
+#### Local `useState` vs `useDynamicSubmitterFetcher`
+
+Both are valid; pick based on how you want loading and action feedback to show up.
+
+**Local state around `await` (e.g. `saving` + `try` / `finally`)**
+
+- **Pros:** Matches the promise-first API; no extra hook; the pending flag tracks exactly your async handler (including extra `await`s in the same function); easy to reason about when you reload data after save (e.g. `useDynamicFetcher.load()`).
+- **Cons:** You must remember `finally` (or equivalent); one flag is awkward if several overlapping operations need distinct UX; you do not get declarative `fetcher.data` for the action unless you store the awaited value yourself.
+
+**`useDynamicSubmitterFetcher(submitter)`**
+
+- **Pros:** Declarative `fetcher.state` / `fetcher.data` / `fetcher.error` in JSX—good for `<submitter.Form>`, inline validation or handler errors, and staying aligned with React Router’s fetcher lifecycle on `submitter.fetcherKey`.
+- **Cons:** Second `useFetcher` subscription; UI follows RR’s state machine, not only “my handler,” unless you isolate keys with `keySuffix` when two widgets share one URL.
+
+**Rule of thumb:** Use **local pending state** when the flow is “run this async function, disable until it finishes.” Use **`useDynamicSubmitterFetcher`** when you want **reactive** fetcher fields in render without mirroring them into state.
 
 ### `ConcurrentSubmitterProvider` + `useConcurrentSubmitter`
 
@@ -345,7 +375,12 @@ Track changes in fetcher state and react to them. Perfect for triggering side ef
 
 ```tsx
 // app/routes/notification-form.tsx
-import { useDynamicSubmitter, useFetcherStateChanged, type RoutePath } from '@firtoz/router-toolkit';
+import {
+  useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
+  useFetcherStateChanged,
+  type RoutePath,
+} from '@firtoz/router-toolkit';
 import { useState } from 'react';
 import { z } from 'zod';
 import type { Route } from './+types/notification-form';
@@ -373,17 +408,19 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function NotificationForm() {
-  const submitter = useDynamicSubmitter<typeof import("./notification-form")>("/notification-form");
+  const path = "/notification-form" as const;
+  const submitter = useDynamicSubmitter<typeof import("./notification-form")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
   const [notifications, setNotifications] = useState<string[]>([]);
 
-  // Track fetcher state changes for side effects
-  useFetcherStateChanged(submitter, (lastState, newState) => {
+  // Track fetcher state changes for side effects (pass the parallel fetcher, not submitter)
+  useFetcherStateChanged(fetcher, (lastState, newState) => {
     console.log(`Fetcher state changed from ${lastState} to ${newState}`);
     
     // Show success notification when form submission completes
     if (newState === 'idle' && lastState === 'submitting') {
-      if (submitter.data?.success) {
-        setNotifications(prev => [...prev, `✅ ${submitter.data.message}`]);
+      if (fetcher.data?.success) {
+        setNotifications(prev => [...prev, `✅ ${fetcher.data.message}`]);
       } else {
         setNotifications(prev => [...prev, `❌ Submission failed`]);
       }
@@ -421,12 +458,12 @@ export default function NotificationForm() {
         
         <button 
           type="submit" 
-          disabled={submitter.state === 'submitting'}
+          disabled={fetcher.state === 'submitting'}
         >
-          {submitter.state === 'submitting' ? 'Sending...' : 'Send Notification'}
+          {fetcher.state === 'submitting' ? 'Sending...' : 'Send Notification'}
         </button>
         
-        <p>Current state: <strong>{submitter.state}</strong></p>
+        <p>Current state: <strong>{fetcher.state}</strong></p>
       </submitter.Form>
 
       {/* Show notifications triggered by state changes */}
@@ -520,18 +557,23 @@ The `formAction` utility works seamlessly with `useDynamicSubmitter` when you ex
 
 ```tsx
 // app/routes/register.tsx (component)
-import { useDynamicSubmitter } from "@firtoz/router-toolkit";
+import {
+  useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
+} from "@firtoz/router-toolkit";
 
 export default function Register() {
-  const submitter = useDynamicSubmitter<typeof import("./register")>("/register");
+  const path = "/register" as const;
+  const submitter = useDynamicSubmitter<typeof import("./register")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
 
   return (
     <submitter.Form method="post">
       <input name="email" type="email" required />
       <input name="password" type="password" required />
       <input name="confirmPassword" type="password" required />
-      <button type="submit" disabled={submitter.state === "submitting"}>
-        {submitter.state === "submitting" ? "Registering..." : "Register"}
+      <button type="submit" disabled={fetcher.state === "submitting"}>
+        {fetcher.state === "submitting" ? "Registering..." : "Register"}
       </button>
     </submitter.Form>
   );
@@ -540,26 +582,25 @@ export default function Register() {
 
 #### Error Handling
 
-The `formAction` utility returns structured errors that you can handle in your components:
+The `formAction` utility returns structured errors. Inspect `fetcher.data` from `useDynamicSubmitterFetcher(submitter)`, or `await submitter.submitJson(...)` in an async handler:
 
 ```tsx
 export default function Register() {
-  const submitter = useDynamicSubmitter<typeof import("./register")>("/register");
+  const path = "/register" as const;
+  const submitter = useDynamicSubmitter<typeof import("./register")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
 
-  if (submitter.data && !submitter.data.success) {
-    const error = submitter.data.error;
-    
+  if (fetcher.data && !fetcher.data.success) {
+    const error = fetcher.data.error;
+
     switch (error.type) {
       case "validation":
-        // Handle Zod validation errors
         console.log("Validation errors:", error.error);
         break;
       case "handler":
-        // Handle business logic errors
         console.log("Handler error:", error.error);
         break;
       case "unknown":
-        // Handle unexpected errors
         console.log("Unknown error occurred");
         break;
     }
@@ -843,7 +884,11 @@ export default function LoaderTest() {
 
 ```tsx
 // app/routes/action-test.tsx
-import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
+import {
+  useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
+  type RoutePath,
+} from '@firtoz/router-toolkit';
 import { z } from 'zod';
 import type { Route } from './+types/action-test';
 
@@ -887,7 +932,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
 }
 
 export default function ActionTest() {
-  const submitter = useDynamicSubmitter<typeof import("./action-test")>("/action-test");
+  const path = "/action-test" as const;
+  const submitter = useDynamicSubmitter<typeof import("./action-test")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
 
   return (
     <div className="p-6">
@@ -923,27 +970,27 @@ export default function ActionTest() {
 
         <button
           type="submit"
-          disabled={submitter.state === "submitting"}
+          disabled={fetcher.state === "submitting"}
           className="bg-green-500 text-white px-4 py-2 rounded disabled:opacity-50"
         >
-          {submitter.state === "submitting" ? "Submitting..." : "Submit"}
+          {fetcher.state === "submitting" ? "Submitting..." : "Submit"}
         </button>
       </submitter.Form>
 
-      {submitter.data && (
+      {fetcher.data && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-2">Action Result:</h2>
           <pre className="bg-gray-200 p-3 rounded text-sm text-gray-800">
-            {JSON.stringify(submitter.data, null, 2)}
+            {JSON.stringify(fetcher.data, null, 2)}
           </pre>
 
-          {submitter.data.success ? (
+          {fetcher.data.success ? (
             <div className="mt-4 p-3 bg-green-100 rounded">
-              <p className="text-green-800">✅ {submitter.data.message}</p>
+              <p className="text-green-800">✅ {fetcher.data.message}</p>
             </div>
           ) : (
             <div className="mt-4 p-3 bg-red-100 rounded">
-              <p className="text-red-800">❌ {submitter.data.message}</p>
+              <p className="text-red-800">❌ {fetcher.data.message}</p>
             </div>
           )}
         </div>
@@ -958,8 +1005,8 @@ export default function ActionTest() {
 ```tsx
 // app/routes/combined-test.tsx
 import {
-  useDynamicFetcher,
   useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
   type RoutePath,
 } from '@firtoz/router-toolkit';
 import { useLoaderData } from 'react-router';
@@ -1033,8 +1080,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
 
 export default function CombinedTest() {
   const loaderData = useLoaderData<LoaderData>();
-  const fetcher = useDynamicFetcher<typeof import("./combined-test")>("/combined-test");
-  const submitter = useDynamicSubmitter<typeof import("./combined-test")>("/combined-test");
+  const path = "/combined-test" as const;
+  const submitter = useDynamicSubmitter<typeof import("./combined-test")>(path);
+  const actionFetcher = useDynamicSubmitterFetcher(submitter);
 
   return (
     <div className="p-6">
@@ -1087,10 +1135,10 @@ export default function CombinedTest() {
 
             <button
               type="submit"
-              disabled={submitter.state === "submitting"}
+              disabled={actionFetcher.state === "submitting"}
               className="bg-purple-500 text-white px-4 py-2 rounded disabled:opacity-50"
             >
-              {submitter.state === "submitting" ? "Updating..." : "Update User"}
+              {actionFetcher.state === "submitting" ? "Updating..." : "Update User"}
             </button>
           </submitter.Form>
         </div>
@@ -1100,21 +1148,21 @@ export default function CombinedTest() {
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Action Status:</h2>
         <pre className="bg-gray-200 p-3 rounded text-sm text-gray-800">
-          {JSON.stringify({ state: submitter.state }, null, 2)}
+          {JSON.stringify({ state: actionFetcher.state }, null, 2)}
         </pre>
       </div>
 
-      {submitter.data && (
+      {actionFetcher.data && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-2">Action Result:</h2>
           <pre className="bg-gray-200 p-3 rounded text-sm text-gray-800">
-            {JSON.stringify(submitter.data, null, 2)}
+            {JSON.stringify(actionFetcher.data, null, 2)}
           </pre>
 
-          {submitter.data.success ? (
+          {actionFetcher.data.success ? (
             <div className="mt-4 p-3 bg-green-100 rounded">
-              <p className="text-green-800">✅ {submitter.data.message}</p>
-              {submitter.data.updatedUser && (
+              <p className="text-green-800">✅ {actionFetcher.data.message}</p>
+              {actionFetcher.data.updatedUser && (
                 <p className="text-sm text-green-700 mt-1">
                   Tip: Reload the page to see if data persists (it won't in this demo)
                 </p>
@@ -1122,7 +1170,7 @@ export default function CombinedTest() {
             </div>
           ) : (
             <div className="mt-4 p-3 bg-red-100 rounded">
-              <p className="text-red-800">❌ {submitter.data.message}</p>
+              <p className="text-red-800">❌ {actionFetcher.data.message}</p>
             </div>
           )}
         </div>
@@ -1232,7 +1280,11 @@ export default function UserProfile() {
 ```tsx
 // app/routes/create-user.tsx
 import { success, fail, type MaybeError } from '@firtoz/maybe-error';
-import { useDynamicSubmitter, type RoutePath } from '@firtoz/router-toolkit';
+import {
+  useDynamicSubmitter,
+  useDynamicSubmitterFetcher,
+  type RoutePath,
+} from '@firtoz/router-toolkit';
 import { z } from 'zod';
 import type { Route } from './+types/create-user';
 
@@ -1282,7 +1334,9 @@ export async function action({ request }: Route.ActionArgs): Promise<MaybeError<
 }
 
 export default function CreateUser() {
-  const submitter = useDynamicSubmitter<typeof import("./create-user")>("/create-user");
+  const path = "/create-user" as const;
+  const submitter = useDynamicSubmitter<typeof import("./create-user")>(path);
+  const fetcher = useDynamicSubmitterFetcher(submitter);
 
   return (
     <div>
@@ -1299,24 +1353,24 @@ export default function CreateUser() {
           <input id="email" name="email" type="email" required />
         </div>
         
-        <button type="submit" disabled={submitter.state === "submitting"}>
-          {submitter.state === "submitting" ? "Creating..." : "Create User"}
+        <button type="submit" disabled={fetcher.state === "submitting"}>
+          {fetcher.state === "submitting" ? "Creating..." : "Create User"}
         </button>
       </submitter.Form>
 
-      {submitter.data && (
+      {fetcher.data && (
         <div>
-          {submitter.data.success ? (
+          {fetcher.data.success ? (
             <div className="success">
               <h3>User Created!</h3>
-              <p>Name: {submitter.data.result.name}</p>
-              <p>Email: {submitter.data.result.email}</p>
+              <p>Name: {fetcher.data.result.name}</p>
+              <p>Email: {fetcher.data.result.email}</p>
             </div>
           ) : (
             <div className="errors">
               <h3>Validation Errors:</h3>
               <ul>
-                {submitter.data.error.map((error, index) => (
+                {fetcher.data.error.map((error, index) => (
                   <li key={index}>
                     <strong>{error.field}:</strong> {error.message}
                   </li>

@@ -97,28 +97,33 @@
  *
  * ```tsx
  * import { useDynamicFetcher, useDynamicSubmitter } from "@firtoz/router-toolkit";
+ * import { useEffect, useState } from "react";
  *
  * function PostEditor({ postId }: { postId: string }) {
- *   // Fetch post data
  *   const fetcher = useDynamicFetcher<typeof import("./api.posts.$postId")>(
  *     "/api/posts/:postId",
  *     { postId }
  *   );
  *
- *   // Submit updates
  *   const submitter = useDynamicSubmitter<typeof import("./api.posts.$postId")>(
  *     "/api/posts/:postId",
  *     { postId }
  *   );
+ *
+ *   const [saving, setSaving] = useState(false);
  *
  *   useEffect(() => {
  *     fetcher.load();
  *   }, [fetcher.load]);
  *
  *   const handleSave = async (title: string, content: string) => {
- *     await submitter.submitJson({ title, content }, { method: "PUT" });
- *     // Reload after save
- *     fetcher.load();
+ *     setSaving(true);
+ *     try {
+ *       await submitter.submitJson({ title, content }, { method: "PUT" });
+ *       fetcher.load();
+ *     } finally {
+ *       setSaving(false);
+ *     }
  *   };
  *
  *   if (!fetcher.data) return <div>Loading...</div>;
@@ -127,17 +132,22 @@
  *     <form onSubmit={(e) => {
  *       e.preventDefault();
  *       const form = new FormData(e.currentTarget);
- *       handleSave(form.get("title") as string, form.get("content") as string);
+ *       void handleSave(form.get("title") as string, form.get("content") as string);
  *     }}>
  *       <input name="title" defaultValue={fetcher.data.post.title} />
  *       <textarea name="content" defaultValue={fetcher.data.post.content} />
- *       <button disabled={submitter.state !== "idle"}>
- *         {submitter.state === "submitting" ? "Saving..." : "Save"}
+ *       <button type="submit" disabled={saving}>
+ *         {saving ? "Saving..." : "Save"}
  *       </button>
  *     </form>
  *   );
  * }
  * ```
+ *
+ * **Submitter UX:** Local `saving` around `await submitter.submitJson` fits a promise-first save +
+ * reload flow. For declarative `fetcher.state` / `fetcher.data` in JSX (e.g. with `submitter.Form`),
+ * use {@link useDynamicSubmitterFetcher} instead. The package README documents trade-offs under
+ * **useDynamicSubmitter** (heading “Local useState vs useDynamicSubmitterFetcher”).
  */
 
 import { useCallback, useMemo } from "react";

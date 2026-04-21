@@ -108,6 +108,85 @@ test.describe("useDynamicSubmitter & formAction", () => {
 		).toBeVisible();
 	});
 
+	test("submitJson await resolves after action completes", async ({ page }) => {
+		await page.getByTestId("await-submit-json-button").click();
+		await expect(page.getByTestId("await-submit-json-result")).toHaveText(
+			"await-json-success",
+			{ timeout: 15_000 },
+		);
+	});
+
+	test("submitJson await resolves handler-fail payload (promise does not reject)", async ({
+		page,
+	}) => {
+		await page.getByTestId("await-submit-json-handler-fail-button").click();
+		await expect(page.getByTestId("await-submit-json-result")).toHaveText(
+			"await-json-fail-handler",
+			{ timeout: 15_000 },
+		);
+	});
+
+	test("submitJson await resolves validation-fail payload (promise does not reject)", async ({
+		page,
+	}) => {
+		await page.getByTestId("await-submit-json-validation-fail-button").click();
+		await expect(page.getByTestId("await-submit-json-result")).toHaveText(
+			"await-json-fail-validation",
+			{ timeout: 15_000 },
+		);
+	});
+
+	test("form Register then await submitJson both complete", async ({ page }) => {
+		await page.getByLabel(/name/i).fill("Form Then Json");
+		await page.getByLabel(/email/i).fill("sequential@example.com");
+		await page.getByLabel(/age/i).fill("28");
+		await page.getByLabel(/accept the terms and conditions/i).check();
+		await page.getByRole("button", { name: /register/i }).click();
+		await expect(page.getByText("✅ Registration successful!")).toBeVisible({
+			timeout: 15_000,
+		});
+
+		await page.getByTestId("await-submit-json-button").click();
+		await expect(page.getByTestId("await-submit-json-result")).toHaveText(
+			"await-json-success",
+			{ timeout: 15_000 },
+		);
+	});
+
+	test("second submitJson supersedes first; first promise is superseded", async ({
+		page,
+	}) => {
+		await page.getByTestId("supersede-demo-button").click();
+		await expect(page.getByTestId("supersede-first-outcome")).toHaveText(
+			"superseded",
+			{ timeout: 15_000 },
+		);
+		await expect(page.getByTestId("supersede-second-email")).toHaveText(
+			"fast-supersede@example.com",
+			{ timeout: 15_000 },
+		);
+	});
+
+	test("submitJson await happy paths do not use catch:* status tokens", async ({
+		page,
+	}) => {
+		await page.getByTestId("await-submit-json-button").click();
+		const result = page.getByTestId("await-submit-json-result");
+		await expect(result).toHaveText("await-json-success", { timeout: 15_000 });
+		await expect(result).not.toContainText("catch:");
+	});
+
+	test("unmount during pending submitJson yields catch:SubmitterUnmountedError", async ({
+		page,
+	}) => {
+		await page.goto("/router-toolkit/form-action-unmount-test");
+		await page.getByTestId("unmount-while-pending-button").click();
+		await expect(page.getByTestId("unmount-submitter-catch-result")).toHaveText(
+			"catch:SubmitterUnmountedError",
+			{ timeout: 15_000 },
+		);
+	});
+
 	test("should show submitting state from useDynamicSubmitter", async ({
 		page,
 	}) => {
@@ -128,6 +207,65 @@ test.describe("useDynamicSubmitter & formAction", () => {
 
 		// Wait for completion
 		await expect(page.getByText("✅ Registration successful!")).toBeVisible();
+	});
+});
+
+test.describe("useDynamicSubmitter keySuffix (dual same route)", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/router-toolkit/key-suffix-dual-submitter-test");
+	});
+
+	test("overlapping submitJson on both panes both resolve", async ({ page }) => {
+		// Sequential clicks (not Promise.all on click): parallel Playwright clicks can drop one;
+		// both requests still overlap while the action waits ~400ms.
+		await page.getByTestId("dual-fire-a").click();
+		await page.getByTestId("dual-fire-b").click();
+		await expect(page.getByTestId("dual-await-a")).toHaveText("ok:which=a", {
+			timeout: 15_000,
+		});
+		await expect(page.getByTestId("dual-await-b")).toHaveText("ok:which=b", {
+			timeout: 15_000,
+		});
+		await expect(page.getByTestId("dual-await-a")).not.toContainText(
+			"SubmitterSuperseded",
+		);
+		await expect(page.getByTestId("dual-await-b")).not.toContainText(
+			"SubmitterSuperseded",
+		);
+	});
+});
+
+test.describe("useDynamicSubmitter shared fetcher key (dual same route)", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/router-toolkit/shared-fetcher-key-dual-submitter-test");
+	});
+
+	test("overlapping submitJson: first pane superseded, second resolves", async ({
+		page,
+	}) => {
+		await page.getByTestId("shared-dual-fire-a").click();
+		await page.getByTestId("shared-dual-fire-b").click();
+		await expect(page.getByTestId("shared-dual-await-a")).toHaveText(
+			"err:SubmitterSupersededError",
+			{ timeout: 15_000 },
+		);
+		await expect(page.getByTestId("shared-dual-await-b")).toHaveText(
+			/^ok:which=b$/,
+			{ timeout: 15_000 },
+		);
+	});
+
+	test("single submit updates fetcher.data on both panes", async ({ page }) => {
+		await page.getByTestId("shared-dual-fire-a").click();
+		await expect(page.getByTestId("shared-dual-await-a")).toHaveText(
+			/^ok:which=a$/,
+			{ timeout: 15_000 },
+		);
+		const dataA = await page.getByTestId("shared-dual-fetcher-data-a").innerText();
+		const dataB = await page.getByTestId("shared-dual-fetcher-data-b").innerText();
+		expect(dataA).toBe(dataB);
+		expect(dataA).toContain("which");
+		expect(dataA).toContain("a");
 	});
 });
 

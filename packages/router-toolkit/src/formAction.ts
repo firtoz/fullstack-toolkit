@@ -52,13 +52,26 @@
  * @example
  * ### Using with useDynamicSubmitter
  *
- * The route above can be used with `useDynamicSubmitter` for type-safe form submissions:
+ * The route above can be used with `useDynamicSubmitter` for type-safe form submissions.
+ * The hook exposes {@link UseDynamicSubmitterResult.fetcherKey} (built with
+ * {@link dynamicSubmitterFetcherKey}) so a parallel `useFetcher` stays aligned; prefer
+ * {@link useDynamicSubmitterFetcher} instead of hand-rolling the key.
+ *
+ * The **optional** {@link useDynamicSubmitterFetcher} below is only for declarative UI that reads
+ * `fetcher.state` / `fetcher.data` in render (same submission as `submitter`). For promise-first
+ * flows, omit it and use `await submitter.submitJson(...)` plus local `useState` for pending.
+ * Use {@link UseDynamicSubmitterOptions.keySuffix} when two submitters target the same URL and
+ * must not share fetcher state.
  *
  * ```tsx
- * import { useDynamicSubmitter } from "@firtoz/router-toolkit";
+ * import {
+ *   useDynamicSubmitter,
+ *   useDynamicSubmitterFetcher,
+ * } from "@firtoz/router-toolkit";
  *
  * function LoginForm() {
  *   const submitter = useDynamicSubmitter<typeof import("./auth.login")>("/auth/login");
+ *   const fetcher = useDynamicSubmitterFetcher(submitter);
  *
  *   // Option 1: Submit as JSON (defaults to POST)
  *   const handleLoginJson = async () => {
@@ -69,7 +82,7 @@
  *     });
  *   };
  *
- *   // Option 2: Use the Form component (defaults to POST)
+ *   // Option 2: Form + useDynamicSubmitterFetcher for reactive state/data
  *   return (
  *     <submitter.Form>
  *       <input name="email" type="email" placeholder="Email" />
@@ -77,16 +90,16 @@
  *       <label>
  *         <input name="rememberMe" type="checkbox" /> Remember me
  *       </label>
- *       <button disabled={submitter.state !== "idle"}>
- *         {submitter.state === "submitting" ? "Logging in..." : "Login"}
+ *       <button type="submit" disabled={fetcher.state === "submitting"}>
+ *         {fetcher.state === "submitting" ? "Logging in..." : "Login"}
  *       </button>
  *
- *       {submitter.data && !submitter.data.success && (
+ *       {fetcher.data && !fetcher.data.success && (
  *         <div className="error">
- *           {submitter.data.error.type === "validation"
+ *           {fetcher.data.error.type === "validation"
  *             ? "Please check your inputs"
- *             : submitter.data.error.type === "handler"
- *               ? submitter.data.error.error // "Invalid email or password"
+ *             : fetcher.data.error.type === "handler"
+ *               ? fetcher.data.error.error
  *               : "An unexpected error occurred"}
  *         </div>
  *       )}
@@ -139,20 +152,20 @@
  *
  * ```tsx
  * import { useDynamicFetcher, useDynamicSubmitter } from "@firtoz/router-toolkit";
- * import { useEffect } from "react";
+ * import { useEffect, useState } from "react";
  *
  * function PostEditor({ postId }: { postId: string }) {
- *   // Fetch post data
  *   const fetcher = useDynamicFetcher<typeof import("./admin.posts.$id")>(
  *     "/admin/posts/:id",
  *     { id: postId }
  *   );
  *
- *   // Submit updates
  *   const submitter = useDynamicSubmitter<typeof import("./admin.posts.$id")>(
  *     "/admin/posts/:id",
  *     { id: postId }
  *   );
+ *
+ *   const [saving, setSaving] = useState(false);
  *
  *   useEffect(() => {
  *     fetcher.load();
@@ -165,15 +178,28 @@
  *   const post = fetcher.data?.post;
  *
  *   return (
- *     <submitter.Form method="PUT">
+ *     <submitter.Form
+ *       method="PUT"
+ *       onSubmit={async (e) => {
+ *         e.preventDefault();
+ *         setSaving(true);
+ *         try {
+ *           const fd = new FormData(e.currentTarget);
+ *           await submitter.submit(fd, { method: "PUT" });
+ *           fetcher.load();
+ *         } finally {
+ *           setSaving(false);
+ *         }
+ *       }}
+ *     >
  *       <input name="title" defaultValue={post?.title} />
  *       <textarea name="content" defaultValue={post?.content} />
  *       <label>
  *         <input name="published" type="checkbox" defaultChecked={post?.published} />
  *         Published
  *       </label>
- *       <button disabled={submitter.state !== "idle"}>
- *         {submitter.state === "submitting" ? "Saving..." : "Save"}
+ *       <button type="submit" disabled={saving}>
+ *         {saving ? "Saving..." : "Save"}
  *       </button>
  *     </submitter.Form>
  *   );

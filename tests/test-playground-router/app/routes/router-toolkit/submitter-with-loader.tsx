@@ -1,4 +1,8 @@
-import { type RoutePath, useDynamicSubmitter } from "@firtoz/router-toolkit";
+import {
+	type RoutePath,
+	useDynamicSubmitter,
+	useDynamicSubmitterFetcher,
+} from "@firtoz/router-toolkit";
 import { useId } from "react";
 import { Link, useLoaderData } from "react-router";
 import { z } from "zod";
@@ -99,11 +103,14 @@ export const formSchema = z.object({
 	email: z.email(),
 });
 
+const SUBMITTER_LOADER_PATH = "/router-toolkit/submitter-with-loader" as const;
+
 export default function SubmitterWithLoader() {
 	const loaderData = useLoaderData<LoaderData>();
 	const submitter = useDynamicSubmitter<
 		typeof import("./submitter-with-loader")
-	>("/router-toolkit/submitter-with-loader");
+	>(SUBMITTER_LOADER_PATH);
+	const fetcher = useDynamicSubmitterFetcher(submitter);
 	const nameId = useId();
 	const emailId = useId();
 	return (
@@ -148,10 +155,10 @@ export default function SubmitterWithLoader() {
 
 						<button
 							type="submit"
-							disabled={submitter.state === "submitting"}
+							disabled={fetcher.state === "submitting"}
 							data-testid="submitter-submit-button"
 						>
-							{submitter.state === "submitting" ? "Updating..." : "Update User"}
+							{fetcher.state === "submitting" ? "Updating..." : "Update User"}
 						</button>
 					</submitter.Form>
 				</div>
@@ -160,28 +167,28 @@ export default function SubmitterWithLoader() {
 			<div>
 				<h2>Submitter Status:</h2>
 				<pre data-testid="submitter-status">
-					{JSON.stringify({ state: submitter.state }, null, 2)}
+					{JSON.stringify({ state: fetcher.state }, null, 2)}
 				</pre>
 			</div>
 
-			{submitter.data && (
+			{fetcher.data && (
 				<div data-testid="action-result">
 					<h2>Action Result:</h2>
-					<pre>{JSON.stringify(submitter.data, null, 2)}</pre>
+					<pre>{JSON.stringify(fetcher.data, null, 2)}</pre>
 
-					{submitter.data.success ? (
+					{fetcher.data.success ? (
 						<div>
-							<p>✅ {submitter.data.message}</p>
-							{submitter.data.updatedUser && (
+							<p>✅ {fetcher.data.message}</p>
+							{fetcher.data.updatedUser && (
 								<p>
-									Updated: {submitter.data.updatedUser.name} (
-									{submitter.data.updatedUser.email})
+									Updated: {fetcher.data.updatedUser.name} (
+									{fetcher.data.updatedUser.email})
 								</p>
 							)}
 						</div>
 					) : (
 						<div>
-							<p>❌ {submitter.data.message}</p>
+							<p>❌ {fetcher.data.message}</p>
 						</div>
 					)}
 				</div>

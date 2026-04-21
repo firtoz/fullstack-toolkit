@@ -49,6 +49,18 @@ const routerToolkitRoutes: RouteItem[] = [
 		description: "Form validation with Zod schema and type-safe error handling",
 	},
 	{
+		path: href("/router-toolkit/key-suffix-dual-submitter-test"),
+		text: "useDynamicSubmitter keySuffix (dual)",
+		description:
+			"Two submitters to the same action with different fetcher keys; E2E overlap",
+	},
+	{
+		path: href("/router-toolkit/shared-fetcher-key-dual-submitter-test"),
+		text: "useDynamicSubmitter shared key (dual)",
+		description:
+			"No keySuffix: shared fetcher state/data; overlapping submit supersedes earlier",
+	},
+	{
 		path: "/router-toolkit/concurrent-submitter-test",
 		text: "useConcurrentSubmitter (Provider)",
 		description:

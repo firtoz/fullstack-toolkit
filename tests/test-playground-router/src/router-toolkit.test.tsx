@@ -7,14 +7,18 @@ import { z } from "zod";
 // Test imports
 describe("Router Toolkit Imports", () => {
 	it("should be able to import router-toolkit hooks", async () => {
-		const { useDynamicFetcher, useDynamicSubmitter } = await import(
-			"@firtoz/router-toolkit"
-		);
+		const {
+			useDynamicFetcher,
+			useDynamicSubmitter,
+			useDynamicSubmitterFetcher,
+		} = await import("@firtoz/router-toolkit");
 
 		expect(useDynamicFetcher).toBeDefined();
 		expect(useDynamicSubmitter).toBeDefined();
+		expect(useDynamicSubmitterFetcher).toBeDefined();
 		expect(typeof useDynamicFetcher).toBe("function");
 		expect(typeof useDynamicSubmitter).toBe("function");
+		expect(typeof useDynamicSubmitterFetcher).toBe("function");
 	});
 
 	it("should be able to import maybe-error utilities", async () => {

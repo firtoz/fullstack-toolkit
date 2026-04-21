@@ -4,6 +4,30 @@
  * This module provides a hook that creates a type-safe fetcher for submitting forms
  * to dynamic routes with full TypeScript inference for the form schema and route params.
  *
+ * **Awaiting results:** `submit` and `submitJson` return a `Promise` that resolves with the
+ * action payload after the submission completes (fetcher leaves `submitting` / `loading` for
+ * `idle`). The hook does **not** expose `data` or `state`—use the promise result (and local
+ * React state) for outcomes and loading UX. For declarative UI tied to the same fetcher, use
+ * {@link useDynamicSubmitterFetcher} (or {@link dynamicSubmitterFetcherKey} with `useFetcher`).
+ * Use **one awaited submit at
+ * a time** per hook instance; React Router’s
+ * single fetcher replaces an in-flight request when you submit again. If you call `submit` or
+ * `submitJson` again before the previous promise settles, the previous promise is **rejected**
+ * with {@link SubmitterSupersededError}. That applies **per React Router fetcher key** (same
+ * resolved URL and {@link UseDynamicSubmitterOptions.keySuffix}): two hook instances that share
+ * the same key also supersede one another’s in-flight promise. Use distinct `keySuffix` values
+ * when you need independent overlapping submissions to the same route. For many overlapping
+ * operations, use `ConcurrentSubmitterProvider` / `useConcurrentSubmitter` instead.
+ *
+ * **Unmount:** If the component unmounts while a returned promise is still pending, that
+ * promise is **rejected** with {@link SubmitterUnmountedError}.
+ *
+ * **Local `useState` vs {@link useDynamicSubmitterFetcher}:** For programmatic
+ * `await submitter.submitJson`, a local pending flag and `try` / `finally` is often enough for
+ * disabled buttons and matches the promise-first API. Use {@link useDynamicSubmitterFetcher} when
+ * you want declarative `fetcher.state` / `fetcher.data` in JSX (especially with `submitter.Form`
+ * or inline errors). The package README documents trade-offs in more detail.
+ *
  * @example
  * ### Route Setup (`app/routes/admin.posts.$id.tsx`)
  *
@@ -51,17 +75,24 @@
  *     { id: postId }
  *   );
  *
- *   // submitter.data is the typed response from the action
- *   // submitter.state is "idle" | "loading" | "submitting"
+ *   const [pending, setPending] = useState(false);
  *
  *   // Option 1: Submit as JSON (recommended for programmatic submissions)
  *   // Defaults to POST if no options provided
  *   const handleSubmitJson = async () => {
- *     await submitter.submitJson({
- *       title: "My Post",
- *       content: "Post content here",
- *       published: true,
- *     });
+ *     setPending(true);
+ *     try {
+ *       const data = await submitter.submitJson({
+ *         title: "My Post",
+ *         content: "Post content here",
+ *         published: true,
+ *       });
+ *       if (data?.success) {
+ *         console.log("Saved");
+ *       }
+ *     } finally {
+ *       setPending(false);
+ *     }
  *   };
  *
  *   // Option 2: Submit with FormData or SubmitTarget
@@ -69,43 +100,12 @@
  *     await submitter.submit(formData, { method: "POST" });
  *   };
  *
- *   // Option 3: Use the Form component (defaults to POST)
+ *   // Option 3: Use the Form component (defaults to POST); pair with useDynamicSubmitterFetcher(submitter) if you need reactive state
  *   return (
  *     <submitter.Form>
  *       <input name="title" />
  *       <textarea name="content" />
- *       <button type="submit">Save</button>
- *     </submitter.Form>
- *   );
- * }
- * ```
- *
- * @example
- * ### Handling responses
- *
- * ```tsx
- * function LoginForm() {
- *   const submitter = useDynamicSubmitter<typeof import("./auth.login")>("/auth/login");
- *
- *   useEffect(() => {
- *     if (submitter.data?.success) {
- *       // Handle success
- *       console.log("Logged in as:", submitter.data.value.user.email);
- *     } else if (submitter.data && !submitter.data.success) {
- *       // Handle error
- *       if (submitter.data.error.type === "validation") {
- *         console.log("Validation errors:", submitter.data.error.error);
- *       }
- *     }
- *   }, [submitter.data]);
- *
- *   return (
- *     <submitter.Form>
- *       <input name="email" type="email" />
- *       <input name="password" type="password" />
- *       <button disabled={submitter.state !== "idle"}>
- *         {submitter.state === "submitting" ? "Logging in..." : "Login"}
- *       </button>
+ *       <button type="submit" disabled={pending}>Save</button>
  *     </submitter.Form>
  *   );
  * }
@@ -113,9 +113,10 @@
  */
 
 // biome-ignore lint/style/useImportType: We need to import React here.
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
 	type FetcherFormProps,
+	type HTMLFormMethod,
 	href,
 	type SubmitOptions,
 	type SubmitTarget,
@@ -124,6 +125,127 @@ import {
 import type { z } from "zod";
 import type { HrefArgs } from "./types/HrefArgs";
 import type { RouteWithActionModule } from "./types/RouteWithActionModule";
+
+/**
+ * Thrown when a new `submit` or `submitJson` runs before a prior returned promise has settled.
+ * The new submission proceeds; catch this error if overlapping calls are expected.
+ */
+export class SubmitterSupersededError extends Error {
+	override readonly name = "SubmitterSupersededError";
+	constructor(
+		message = "This submission was superseded by a newer submit before it completed.",
+	) {
+		super(message);
+	}
+}
+
+/**
+ * Thrown when the component that owns the submitter unmounts before a `submit` /
+ * `submitJson` promise has settled.
+ */
+export class SubmitterUnmountedError extends Error {
+	override readonly name = "SubmitterUnmountedError";
+	constructor(
+		message = "The submitter was unmounted before this submission completed.",
+	) {
+		super(message);
+	}
+}
+
+/**
+ * Action payload type resolved by `submit` / `submitJson` (same shape React Router puts on `fetcher.data` after the action runs).
+ */
+export type DynamicSubmitterData<TInfo extends RouteWithActionModule> =
+	ReturnType<typeof useFetcher<TInfo["action"]>>["data"];
+
+/**
+ * Options for {@link useDynamicSubmitter}.
+ */
+export type UseDynamicSubmitterOptions = {
+	/**
+	 * Appended to the default fetcher key so multiple submitters can target the same resolved URL
+	 * without sharing React Router fetcher state. Omit to use the default key for that URL.
+	 */
+	keySuffix?: string;
+};
+
+/**
+ * React Router `useFetcher` key used by {@link useDynamicSubmitter} for a resolved href.
+ * Pass the same string as {@link UseDynamicSubmitterResult.fetcherKey} (or call with the same
+ * `resolvedHref` and `keySuffix` as the submitter) so a parallel `useFetcher({ key })` observes
+ * the same submission lifecycle.
+ *
+ * When `keySuffix` is set, it is encoded and joined with a fixed delimiter so arbitrary strings
+ * are safe in the key.
+ */
+export function dynamicSubmitterFetcherKey(
+	resolvedHref: string,
+	keySuffix?: string,
+): string {
+	const base = `submitter-${resolvedHref}`;
+	if (keySuffix === undefined || keySuffix === "") {
+		return base;
+	}
+	return `${base}::${encodeURIComponent(keySuffix)}`;
+}
+
+function isSubmitterOptions(x: unknown): x is UseDynamicSubmitterOptions {
+	if (x === null || typeof x !== "object") return false;
+	const keys = Object.keys(x as object);
+	if (keys.length === 0) return false;
+	return keys.every((k) => k === "keySuffix");
+}
+
+function parseUseDynamicSubmitterRestArgs(args: readonly unknown[]): {
+	hrefArgs: unknown[];
+	options: UseDynamicSubmitterOptions;
+} {
+	if (args.length === 0) {
+		return { hrefArgs: [], options: {} };
+	}
+	const last = args[args.length - 1];
+	if (args.length >= 2 && isSubmitterOptions(last)) {
+		return { hrefArgs: [...args.slice(0, -1)], options: last };
+	}
+	if (args.length === 1 && isSubmitterOptions(args[0])) {
+		return { hrefArgs: [], options: args[0] };
+	}
+	return { hrefArgs: [...args], options: {} };
+}
+
+type UseDynamicSubmitterRest<R extends RouteWithActionModule["route"]> =
+	HrefArgs<R> extends readonly []
+		? [options?: UseDynamicSubmitterOptions]
+		: [...hrefArgs: HrefArgs<R>, options?: UseDynamicSubmitterOptions];
+
+type PendingAwait = {
+	gen: number;
+	ownerId: number;
+	reject: (reason: unknown) => void;
+	/** Called when the shared fetcher reaches `idle` for this submission generation. */
+	finishIdle: (data: unknown, error: unknown | undefined) => void;
+};
+
+type SubmitterKeyBucket = {
+	submitGen: number;
+	pending: PendingAwait | null;
+};
+
+const submitterKeyBuckets = new Map<string, SubmitterKeyBucket>();
+
+function getSubmitterKeyBucket(key: string): SubmitterKeyBucket {
+	let b = submitterKeyBuckets.get(key);
+	if (!b) {
+		b = { submitGen: 0, pending: null };
+		submitterKeyBuckets.set(key, b);
+	}
+	return b;
+}
+
+let nextSubmitterOwnerId = 1;
+function allocateSubmitterOwnerId(): number {
+	return nextSubmitterOwnerId++;
+}
 
 /**
  * Function type for submitting form data with a SubmitTarget.
@@ -145,7 +267,7 @@ type SubmitFunc<TModule extends RouteWithActionModule> = (
 	options: Omit<SubmitOptions, "action" | "method" | "encType"> & {
 		method: Exclude<SubmitOptions["method"], "GET">;
 	},
-) => Promise<void>;
+) => Promise<DynamicSubmitterData<TModule>>;
 
 /**
  * Options for submitJson function.
@@ -183,7 +305,7 @@ type SubmitJsonOptions = Omit<
 type SubmitJsonFunc<TModule extends RouteWithActionModule> = (
 	data: z.infer<TModule["formSchema"]>,
 	options?: SubmitJsonOptions,
-) => Promise<void>;
+) => Promise<DynamicSubmitterData<TModule>>;
 
 /**
  * Form component type with pre-bound action URL.
@@ -215,6 +337,19 @@ type SubmitForm = (
 ) => React.ReactElement;
 
 /**
+ * Stable object returned by {@link useDynamicSubmitter}: `submit`, `submitJson`, `Form`, and
+ * `fetcherKey`. The reference is memoized and does not change when the internal fetcher’s
+ * `state` / `data` update.
+ */
+export type UseDynamicSubmitterResult<TInfo extends RouteWithActionModule> = {
+	submit: SubmitFunc<TInfo>;
+	submitJson: SubmitJsonFunc<TInfo>;
+	Form: SubmitForm;
+	/** Pass to {@link useDynamicSubmitterFetcher} or `useFetcher({ key })` for reactive `state` / `data`. */
+	fetcherKey: string;
+};
+
+/**
  * Creates a type-safe fetcher for submitting forms to dynamic routes.
  *
  * This hook provides full TypeScript inference for:
@@ -225,15 +360,13 @@ type SubmitForm = (
  * @template TInfo - The route module type (use `typeof import("./route-file")`)
  *
  * @param path - The route path (must match the route's `route` export)
- * @param args - Route parameters (if the route has dynamic segments like `:id`)
+ * @param rest - Route parameters (if any), then optional {@link UseDynamicSubmitterOptions}. For
+ * static routes, you may pass only options as the second argument (e.g. `{ keySuffix: "a" }`).
+ * Options are recognized only when the object contains exclusively the `keySuffix` key (do not use
+ * a route param object whose only field is named `keySuffix` unless it is meant as options).
  *
- * @returns An extended fetcher object with:
- * - `submit` - Submit with FormData/SubmitTarget (includes schema type)
- * - `submitJson` - Submit a plain object as JSON (schema type only)
- * - `Form` - Pre-bound form component
- * - `data` - Response data from the action (typed)
- * - `state` - Fetcher state ("idle" | "loading" | "submitting")
- * - All other useFetcher properties
+ * @returns Stable `{ submit, submitJson, Form, fetcherKey }`. Await the promises for action results;
+ * use {@link useDynamicSubmitterFetcher} or local state for reactive loading/data.
  *
  * @example
  * ### Basic usage with route parameters
@@ -254,86 +387,164 @@ type SubmitForm = (
  *   { userId: "123" }
  * );
  *
- * // Submit using submitJson (type-safe, no FormData needed, defaults to POST)
- * await submitter.submitJson({
+ * const data = await submitter.submitJson({
  *   displayName: "John Doe",
  *   email: "john@example.com",
  *   notifications: true,
  * });
  *
- * // Check the response
- * if (submitter.data?.success) {
+ * if (data?.success) {
  *   console.log("Settings updated!");
  * }
  * ```
  */
-export const useDynamicSubmitter = <TInfo extends RouteWithActionModule>(
+export function useDynamicSubmitter<TInfo extends RouteWithActionModule>(
 	path: TInfo["route"],
-	...args: TInfo["route"] extends "undefined"
-		? HrefArgs<"/">
-		: HrefArgs<TInfo["route"]>
-): Omit<
-	ReturnType<typeof useFetcher<TInfo["action"]>>,
-	"load" | "submit" | "Form"
-> & {
-	/** Submit with FormData or SubmitTarget (schema type & SubmitTarget) */
-	submit: SubmitFunc<TInfo>;
-	/** Submit a plain object as JSON (schema type only, defaults to POST) */
-	submitJson: SubmitJsonFunc<TInfo>;
-	/** Pre-bound Form component with action URL already set (defaults to POST) */
-	Form: SubmitForm;
-} => {
+	...rest: UseDynamicSubmitterRest<TInfo["route"]>
+): UseDynamicSubmitterResult<TInfo> {
+	const { hrefArgs, options } = parseUseDynamicSubmitterRestArgs(rest);
+	const keySuffix = options.keySuffix;
+
 	const url = useMemo(() => {
 		// biome-ignore lint/suspicious/noExplicitAny: Intentional
-		return href(path, ...(args as any));
-	}, [path, args]);
+		return href(path, ...(hrefArgs as any));
+	}, [path, keySuffix, ...(hrefArgs as unknown[])]);
+
+	const fetcherKey = useMemo(
+		() => dynamicSubmitterFetcherKey(url, keySuffix),
+		[url, keySuffix],
+	);
 
 	const fetcher = useFetcher<TInfo["action"]>({
-		key: `submitter-${url}`,
+		key: fetcherKey,
 	});
+
+	const fetcherRef = useRef(fetcher);
+	fetcherRef.current = fetcher;
+
+	const ownerIdRef = useRef(allocateSubmitterOwnerId());
+	const prevStateRef = useRef(fetcher.state);
+
+	const beginSubmit = useCallback(
+		(runSubmit: () => void) => {
+			return new Promise<DynamicSubmitterData<TInfo>>((resolve, reject) => {
+				const bucket = getSubmitterKeyBucket(fetcherKey);
+				const prevPending = bucket.pending;
+				if (prevPending) {
+					prevPending.reject(new SubmitterSupersededError());
+				}
+				bucket.submitGen += 1;
+				const gen = bucket.submitGen;
+				bucket.pending = {
+					gen,
+					ownerId: ownerIdRef.current,
+					reject,
+					finishIdle: (data, error) => {
+						if (data !== undefined) {
+							resolve(data as DynamicSubmitterData<TInfo>);
+						} else {
+							reject(error ?? new Error("Submission failed"));
+						}
+					},
+				};
+				runSubmit();
+			});
+		},
+		[fetcherKey],
+	);
+
+	useEffect(() => {
+		return () => {
+			const bucket = getSubmitterKeyBucket(fetcherKey);
+			const pending = bucket.pending;
+			if (pending && pending.ownerId === ownerIdRef.current) {
+				bucket.pending = null;
+				pending.reject(new SubmitterUnmountedError());
+			}
+		};
+	}, [fetcherKey]);
+
+	const fetcherError = (fetcher as { error?: unknown }).error;
+
+	useEffect(() => {
+		const prev = prevStateRef.current;
+		prevStateRef.current = fetcher.state;
+		const wasWorking = prev === "submitting" || prev === "loading";
+		if (!wasWorking || fetcher.state !== "idle") {
+			return;
+		}
+		const bucket = getSubmitterKeyBucket(fetcherKey);
+		const p = bucket.pending;
+		if (!p || p.gen !== bucket.submitGen) {
+			return;
+		}
+		bucket.pending = null;
+		p.finishIdle(fetcher.data, fetcherError);
+	}, [fetcherKey, fetcher.state, fetcher.data, fetcherError]);
 
 	const submit: SubmitFunc<TInfo> = useCallback(
 		(target, options) => {
-			return fetcher.submit(target, {
-				...options,
-				method: (options?.method ??
-					"POST") as import("react-router").HTMLFormMethod,
-				action: url,
-				encType: "multipart/form-data",
-			} as Parameters<typeof fetcher.submit>[1]);
+			return beginSubmit(() => {
+				const f = fetcherRef.current;
+				void f.submit(target, {
+					...options,
+					method: (options?.method ?? "POST") as HTMLFormMethod,
+					action: url,
+					encType: "multipart/form-data",
+				} as Parameters<typeof f.submit>[1]);
+			});
 		},
-		[fetcher.submit, url],
+		[beginSubmit, url],
 	);
 
 	const submitJson: SubmitJsonFunc<TInfo> = useCallback(
 		(data, options = {}) => {
-			return fetcher.submit(
-				data as SubmitTarget,
-				{
-					...options,
-					method: (options.method ??
-						"POST") as import("react-router").HTMLFormMethod,
-					action: url,
-					encType: "application/json",
-				} as Parameters<typeof fetcher.submit>[1],
-			);
+			return beginSubmit(() => {
+				const f = fetcherRef.current;
+				void f.submit(
+					data as SubmitTarget,
+					{
+						...options,
+						method: (options.method ?? "POST") as HTMLFormMethod,
+						action: url,
+						encType: "application/json",
+					} as Parameters<typeof f.submit>[1],
+				);
+			});
 		},
-		[fetcher.submit, url],
+		[beginSubmit, url],
 	);
 
-	const OriginalForm = fetcher.Form;
+	const fetcherFormRef = useRef(fetcher.Form);
+	fetcherFormRef.current = fetcher.Form;
 
 	const Form: SubmitForm = useCallback(
 		({ method = "POST", ...props }) => {
+			const OriginalForm = fetcherFormRef.current;
 			return <OriginalForm action={url} method={method} {...props} />;
 		},
-		[url, OriginalForm],
+		[url],
 	);
 
-	return {
-		...fetcher,
-		submit,
-		submitJson,
-		Form,
-	};
-};
+	return useMemo(
+		() => ({
+			submit,
+			submitJson,
+			Form,
+			fetcherKey,
+		}),
+		[submit, submitJson, Form, fetcherKey],
+	);
+}
+
+/**
+ * React Router `useFetcher` bound to the same key as {@link useDynamicSubmitter}, so `state` /
+ * `data` reflect the same submissions as `submitter.submit` / `submitter.Form`.
+ *
+ * Call at component top level next to `useDynamicSubmitter`.
+ */
+export function useDynamicSubmitterFetcher<TInfo extends RouteWithActionModule>(
+	submitter: UseDynamicSubmitterResult<TInfo>,
+) {
+	return useFetcher<TInfo["action"]>({ key: submitter.fetcherKey });
+}

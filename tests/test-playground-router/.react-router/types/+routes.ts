@@ -23,6 +23,15 @@ type Pages = {
   "/router-toolkit/form-action-test": {
     params: {};
   };
+  "/router-toolkit/form-action-unmount-test": {
+    params: {};
+  };
+  "/router-toolkit/key-suffix-dual-submitter-test": {
+    params: {};
+  };
+  "/router-toolkit/shared-fetcher-key-dual-submitter-test": {
+    params: {};
+  };
   "/router-toolkit/concurrent-submitter-test": {
     params: {};
   };
@@ -40,7 +49,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/form-action-unmount-test" | "/router-toolkit/key-suffix-dual-submitter-test" | "/router-toolkit/shared-fetcher-key-dual-submitter-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -57,6 +66,18 @@ type RouteFiles = {
   "routes/router-toolkit/form-action-test.tsx": {
     id: "routes/router-toolkit/form-action-test";
     page: "/router-toolkit/form-action-test";
+  };
+  "routes/router-toolkit/form-action-unmount-test.tsx": {
+    id: "routes/router-toolkit/form-action-unmount-test";
+    page: "/router-toolkit/form-action-unmount-test";
+  };
+  "routes/router-toolkit/key-suffix-dual-submitter-test.tsx": {
+    id: "routes/router-toolkit/key-suffix-dual-submitter-test";
+    page: "/router-toolkit/key-suffix-dual-submitter-test";
+  };
+  "routes/router-toolkit/shared-fetcher-key-dual-submitter-test.tsx": {
+    id: "routes/router-toolkit/shared-fetcher-key-dual-submitter-test";
+    page: "/router-toolkit/shared-fetcher-key-dual-submitter-test";
   };
   "routes/router-toolkit/concurrent-submitter-test.tsx": {
     id: "routes/router-toolkit/concurrent-submitter-test";
@@ -82,6 +103,9 @@ type RouteModules = {
   "routes/router-toolkit/loader-test": typeof import("./app/routes/router-toolkit/loader-test.tsx");
   "routes/router-toolkit/action-test": typeof import("./app/routes/router-toolkit/action-test.tsx");
   "routes/router-toolkit/form-action-test": typeof import("./app/routes/router-toolkit/form-action-test.tsx");
+  "routes/router-toolkit/form-action-unmount-test": typeof import("./app/routes/router-toolkit/form-action-unmount-test.tsx");
+  "routes/router-toolkit/key-suffix-dual-submitter-test": typeof import("./app/routes/router-toolkit/key-suffix-dual-submitter-test.tsx");
+  "routes/router-toolkit/shared-fetcher-key-dual-submitter-test": typeof import("./app/routes/router-toolkit/shared-fetcher-key-dual-submitter-test.tsx");
   "routes/router-toolkit/concurrent-submitter-test": typeof import("./app/routes/router-toolkit/concurrent-submitter-test.tsx");
   "routes/router-toolkit/submitter-with-loader": typeof import("./app/routes/router-toolkit/submitter-with-loader.tsx");
   "routes/router-toolkit/fetcher-data-refresh": typeof import("./app/routes/router-toolkit/fetcher-data-refresh.tsx");

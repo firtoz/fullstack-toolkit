@@ -12,6 +12,18 @@ export default [
 		route("action-test", "routes/router-toolkit/action-test.tsx"),
 		route("form-action-test", "routes/router-toolkit/form-action-test.tsx"),
 		route(
+			"form-action-unmount-test",
+			"routes/router-toolkit/form-action-unmount-test.tsx",
+		),
+		route(
+			"key-suffix-dual-submitter-test",
+			"routes/router-toolkit/key-suffix-dual-submitter-test.tsx",
+		),
+		route(
+			"shared-fetcher-key-dual-submitter-test",
+			"routes/router-toolkit/shared-fetcher-key-dual-submitter-test.tsx",
+		),
+		route(
 			"concurrent-submitter-test",
 			"routes/router-toolkit/concurrent-submitter-test.tsx",
 		),
