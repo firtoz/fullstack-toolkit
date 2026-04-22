@@ -1,5 +1,27 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 2.0.0
+
+### Major Changes
+
+- [`c7bf9d5`](https://github.com/firtoz/fullstack-toolkit/commit/c7bf9d57094b9d4348410ed0d824eb8416639469) Thanks [@firtoz](https://github.com/firtoz)! - **@firtoz/drizzle-sqlite-wasm:** `DrizzleSqliteProvider` now requires a `loadingFallback` and gates `children` until the worker and migrations are ready; optional `errorFallback` and `data-testid="sqlite-db-error"`. `useDrizzleSqliteDb` exposes `sessionStatus` and `sessionError` with a per-`dbName` `readyPromise`. Collections are created only in the ready subtree, with checkpoint closing over the real client (no provider checkpoint ref). Exports `DrizzleSqliteSessionStatus`. Document `key={dbName}` (or a composite) when switching databases. Removes the `drizzleCollectionOptions` entry-point alias: import `sqliteCollectionOptions` (or deep import `@firtoz/drizzle-sqlite-wasm/sqliteCollectionOptions`) instead of the former `./drizzleCollectionOptions` subpath.
+
+- [`1e057aa`](https://github.com/firtoz/fullstack-toolkit/commit/1e057aad4b252223f4269a9bc6bd01a744cf56a8) Thanks [@firtoz](https://github.com/firtoz)! - **@firtoz/router-toolkit:** Stop re-exporting `@firtoz/maybe-error` from the package entry so `.d.ts` matches runtime. `@firtoz/maybe-error` is now a regular dependency; import `success`, `fail`, `MaybeError`, `exhaustiveGuard`, and related symbols from `@firtoz/maybe-error` directly.
+
+  **@firtoz/hono-fetcher** and **@firtoz/worker-helper:** Regenerate root `index.d.ts` after tsup so type-only symbols use `export type { ... }`, for compatibility with stricter consumer compiler settings.
+
+  **@firtoz/drizzle-sqlite-wasm:** Remove re-exports of `@firtoz/drizzle-utils` (`syncableTable`, `makeId`, branded/schema types, `SQLOperation`, `SQLInterceptor`) from the package entry. Import those from `@firtoz/drizzle-utils` directly.
+
+  **@firtoz/drizzle-durable-sqlite:** Stop re-exporting `SQLOperation` and `SQLInterceptor` from the package entry; import them from `@firtoz/drizzle-utils` when needed.
+
+### Patch Changes
+
+- [`c7bf9d5`](https://github.com/firtoz/fullstack-toolkit/commit/c7bf9d57094b9d4348410ed0d824eb8416639469) Thanks [@firtoz](https://github.com/firtoz)! - Use `OpfsDb` when the constructor is present instead of `"opfs" in sqlite3`, because sqlite-wasm removes the `opfs` helper namespace after init in non-test builds (which incorrectly forced a transient database). Wire WAL checkpoint through a ref so collections created before the worker client is ready still flush to OPFS after mutations.
+
+- Updated dependencies [[`1e057aa`](https://github.com/firtoz/fullstack-toolkit/commit/1e057aad4b252223f4269a9bc6bd01a744cf56a8)]:
+  - @firtoz/worker-helper@1.6.2
+  - @firtoz/collection-sync@6.0.2
+
 ## 1.1.2
 
 ### Patch Changes

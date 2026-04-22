@@ -1,5 +1,27 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 9.0.0
+
+### Major Changes
+
+- [`1e057aa`](https://github.com/firtoz/fullstack-toolkit/commit/1e057aad4b252223f4269a9bc6bd01a744cf56a8) Thanks [@firtoz](https://github.com/firtoz)! - **@firtoz/router-toolkit:** Stop re-exporting `@firtoz/maybe-error` from the package entry so `.d.ts` matches runtime. `@firtoz/maybe-error` is now a regular dependency; import `success`, `fail`, `MaybeError`, `exhaustiveGuard`, and related symbols from `@firtoz/maybe-error` directly.
+
+  **@firtoz/hono-fetcher** and **@firtoz/worker-helper:** Regenerate root `index.d.ts` after tsup so type-only symbols use `export type { ... }`, for compatibility with stricter consumer compiler settings.
+
+  **@firtoz/drizzle-sqlite-wasm:** Remove re-exports of `@firtoz/drizzle-utils` (`syncableTable`, `makeId`, branded/schema types, `SQLOperation`, `SQLInterceptor`) from the package entry. Import those from `@firtoz/drizzle-utils` directly.
+
+  **@firtoz/drizzle-durable-sqlite:** Stop re-exporting `SQLOperation` and `SQLInterceptor` from the package entry; import them from `@firtoz/drizzle-utils` when needed.
+
+- [`2cea54b`](https://github.com/firtoz/fullstack-toolkit/commit/2cea54b7c6c9310c6d54f5d72b2f4c9b9ecf5dc5) Thanks [@firtoz](https://github.com/firtoz)! - **Breaking:** `useDynamicSubmitter` now returns only a stable, memoized `{ submit, submitJson, Form }`. It no longer spreads the React Router fetcher, so `state`, `data`, `error`, and other fetcher fields are not on the hook result. Use `await submit` / `await submitJson` for action payloads; use local React state for loading flags, or pair with `useFetcher({ key: dynamicSubmitterFetcherKey(href(path, ...args)) })` for the same submission lifecycle in JSX. New helper: `dynamicSubmitterFetcherKey(resolvedHref)`.
+
+### Minor Changes
+
+- [`2cea54b`](https://github.com/firtoz/fullstack-toolkit/commit/2cea54b7c6c9310c6d54f5d72b2f4c9b9ecf5dc5) Thanks [@firtoz](https://github.com/firtoz)! - Add `fetcherKey` and optional `keySuffix` to `useDynamicSubmitter`, export `useDynamicSubmitterFetcher(submitter)` for reactive `state` / `data`, and extend `dynamicSubmitterFetcherKey(resolvedHref, keySuffix?)` so manual `useFetcher` keys stay aligned.
+
+### Patch Changes
+
+- [`2cea54b`](https://github.com/firtoz/fullstack-toolkit/commit/2cea54b7c6c9310c6d54f5d72b2f4c9b9ecf5dc5) Thanks [@firtoz](https://github.com/firtoz)! - `useDynamicSubmitter`: reject in-flight `submit` / `submitJson` promises with `SubmitterSupersededError` when a newer submission starts on the **same React Router fetcher key**, including across separate hook instances. Unmount cleanup only rejects the pending promise owned by that instance.
+
 ## 8.0.1
 
 ### Patch Changes
