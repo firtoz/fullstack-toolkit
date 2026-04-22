@@ -958,6 +958,9 @@ export default function SqliteSyncModeTest() {
 				syncMode={syncMode}
 				debug={true}
 				interceptor={interceptor}
+				loadingFallback={
+					<div data-testid="sqlite-db-loading">Loading database…</div>
+				}
 			>
 				<SqliteSyncModeTestContent
 					operations={operations}

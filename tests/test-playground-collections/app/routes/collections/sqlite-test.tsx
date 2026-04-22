@@ -1,6 +1,6 @@
 import type { RoutePath } from "@firtoz/router-toolkit";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useSearchParams } from "react-router";
 import {
 	DrizzleSqliteProvider,
 	useDrizzleSqlite,
@@ -46,9 +46,21 @@ const TodoList = () => {
 };
 
 export default function SqliteTest() {
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [, setSearchParams] = useSearchParams();
+	const location = useLocation();
+	/** Prefer router location so db file name matches the real URL (avoids wrong DB on first paint / reload). */
+	const dbName = useMemo(
+		() =>
+			sqlitePlaygroundDbNameFromSearchParams(
+				new URLSearchParams(location.search),
+			),
+		[location.search],
+	);
 	const [enableCheckpoint, setEnableCheckpoint] = useState(() => {
-		const param = searchParams.get("checkpoint");
+		if (typeof window === "undefined") {
+			return true;
+		}
+		const param = new URLSearchParams(window.location.search).get("checkpoint");
 		return param === null || param === "true";
 	});
 
@@ -64,8 +76,6 @@ export default function SqliteTest() {
 			{ replace: true },
 		);
 	}, [setSearchParams, enableCheckpoint]);
-
-	const dbName = sqlitePlaygroundDbNameFromSearchParams(searchParams);
 
 	return (
 		<ClientOnly>
@@ -97,6 +107,9 @@ export default function SqliteTest() {
 				migrations={migrations}
 				debug={true}
 				enableCheckpoint={enableCheckpoint}
+				loadingFallback={
+					<div data-testid="sqlite-db-loading">Loading database…</div>
+				}
 			>
 				<TodoList />
 			</DrizzleSqliteProvider>

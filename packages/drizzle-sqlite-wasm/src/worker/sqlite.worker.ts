@@ -165,7 +165,10 @@ class SqliteWorkerHelper extends WorkerHelper<
 		const dbFileName = `${dbName}.sqlite3`;
 		let db: Database;
 
-		if ("opfs" in sqlite3) {
+		// After full init, sqlite-wasm removes `sqlite3.opfs` in non-test builds
+		// (`asyncPostInit`), so `"opfs" in sqlite3` is a false negative. Prefer the
+		// OpfsDb constructor installed by the OPFS VFS initializer.
+		if (typeof sqlite3.oo1.OpfsDb === "function") {
 			db = new sqlite3.oo1.OpfsDb(dbFileName);
 			this.log("OPFS database created:", db.filename);
 			this.applyOpenPragmas(db, openOptions);

@@ -19,7 +19,7 @@
 			"types": "./dist/migration/migrator.d.ts",
 			"import": "./dist/migration/migrator.js"
 		},
-		"./drizzleCollectionOptions": {
+		"./sqliteCollectionOptions": {
 			"types": "./dist/collections/sqlite-collection.d.ts",
 			"import": "./dist/collections/sqlite-collection.js"
 		},

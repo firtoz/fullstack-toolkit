@@ -70,10 +70,27 @@ function App() {
       dbName="my-app"
       schema={schema}
       migrations={migrations}
+      loadingFallback={<div>Loading database…</div>}
     >
       <TodoApp />
     </DrizzleSqliteProvider>
   );
+}
+```
+
+### Database session and loading
+
+- **When `dbName` or `workerOpenOptions` change:** the provider’s `children` and collections are for the new file (previous in-provider UI state from the old file does not carry over). State **above** the provider (layout, URL-driven shell, etc.) is unchanged—handle that in your app if it should follow the new database.
+- **`loadingFallback`:** The worker and migrations run asynchronously. Until the session is ready, the provider renders **`loadingFallback`** (not the main `children`). Put routes that use `useDrizzleSqlite` / `useSqliteCollection` *inside* the provider, but they only mount in the “ready” phase—use this slot for “Loading…”, skeletons, or a minimal shell. Keep app chrome (nav, layout) **above** the gated region if you want it to stay stable.
+- **Errors:** If migrations fail, the provider can render `errorFallback` (or a default error area with `data-testid="sqlite-db-error"` for tests).
+
+```typescript
+// useDrizzleSqliteDb without the provider: gate on sessionStatus before using drizzle / createCollection
+import { useDrizzleSqliteDb } from "@firtoz/drizzle-sqlite-wasm";
+// …
+const { drizzle, readyPromise, sessionStatus } = useDrizzleSqliteDb(...);
+if (sessionStatus !== "ready") {
+  return <p>Loading…</p>;
 }
 ```
 
@@ -236,11 +253,11 @@ Create TanStack DB collections backed by SQLite:
 ```typescript
 import { createCollection } from "@tanstack/db";
 import type { DrizzleSqliteTableCollection } from "@firtoz/drizzle-utils";
-import { drizzleCollectionOptions } from "@firtoz/drizzle-sqlite-wasm";
+import { sqliteCollectionOptions } from "@firtoz/drizzle-sqlite-wasm";
 import * as schema from "./schema";
 
 const collection = createCollection(
-  drizzleCollectionOptions({
+  sqliteCollectionOptions({
     drizzle,
     tableName: "todos",
     readyPromise,

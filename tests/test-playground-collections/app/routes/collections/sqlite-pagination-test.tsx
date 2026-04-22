@@ -746,6 +746,9 @@ export default function SQLitePaginationTest() {
 				interceptor={{
 					onOperation: handleOperation,
 				}}
+				loadingFallback={
+					<div data-testid="sqlite-db-loading">Loading database…</div>
+				}
 			>
 				<SQLitePaginationTestContent
 					operations={operations}

@@ -1,10 +1,18 @@
 export { drizzleSqliteWasm } from "./drizzle/direct";
 export {
-	sqliteCollectionOptions as drizzleCollectionOptions,
+	sqliteCollectionOptions,
 	type SqliteCollectionConfig,
 } from "./collections/sqlite-collection";
 export { createSyncedSqliteCollection } from "./collections/synced-sqlite-collection";
-export { useDrizzleSqliteDb } from "./hooks/useDrizzleSqliteDb";
+export {
+	toDrizzleSqliteSessionError,
+	useDrizzleSqliteDb,
+} from "./hooks/useDrizzleSqliteDb";
+export type {
+	DrizzleSqliteSessionError,
+	DrizzleSqliteSessionStatus,
+	UseDrizzleSqliteDbResult,
+} from "./hooks/useDrizzleSqliteDb";
 // SQLite WASM Provider
 export {
 	DrizzleSqliteProvider,

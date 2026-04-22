@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import {
 	customSqliteMigrate,
 	type DurableSqliteMigrationConfig,
@@ -15,6 +16,83 @@ import {
 import type { SQLInterceptor } from "@firtoz/drizzle-utils";
 import type { SqliteWasmWorkerOpenOptions } from "../worker/sqlite-open-options";
 
+/**
+ * `useEffect` can run in Node (e.g. unit tests) with no `window`. We only install the no-op
+ * DB stub there when a test runner is active — not for arbitrary headless Node usage.
+ *
+ * Playwright E2E is irrelevant here: the app under test runs in a real browser (`window` exists),
+ * so the normal client path is used, not this stub.
+ */
+function isNodeTestRuntime(): boolean {
+	if (typeof window !== "undefined") {
+		return false;
+	}
+	if (typeof process === "undefined" || typeof process.env === "undefined") {
+		return false;
+	}
+	const e = process.env;
+	if (e.NODE_ENV === "test") {
+		return true;
+	}
+	// Vitest sets this; avoids relying on NODE_ENV alone
+	if (e.VITEST !== undefined) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * `connecting` — no worker client yet, or migrations not finished.
+ * `ready` — migrations applied, `readyPromise` resolved.
+ * `error` — migration (or init) failed; see `sessionError`.
+ */
+export type DrizzleSqliteSessionStatus = "connecting" | "ready" | "error";
+
+/**
+ * Error payload when the hook reports `sessionStatus: "error"`.
+ * Add further `| { kind: … }` members later; discriminate on `kind` in UI or logging.
+ */
+export type DrizzleSqliteSessionError = {
+	kind: "migration_failed";
+	/** String for display or logs */
+	message: string;
+	/** The value that was thrown (often an `Error`) */
+	original: unknown;
+};
+
+/** Normalises `catch` bindings so UI can rely on a stable shape. */
+export function toDrizzleSqliteSessionError(
+	caught: unknown,
+): DrizzleSqliteSessionError {
+	const message =
+		caught instanceof Error
+			? caught.message
+			: typeof caught === "string"
+				? caught
+				: "Database error";
+	return { kind: "migration_failed", message, original: caught };
+}
+
+type InternalSessionState =
+	| { status: "connecting" | "ready"; error: null }
+	| { status: "error"; error: DrizzleSqliteSessionError };
+
+export type UseDrizzleSqliteDbResult<TSchema extends Record<string, unknown>> =
+	| {
+			drizzle: SqliteRemoteDatabase<TSchema>;
+			readyPromise: Promise<void>;
+			sqliteClient: ISqliteWorkerClient | null;
+			sessionStatus: "connecting" | "ready";
+			sessionError: null;
+	  }
+	| {
+			drizzle: SqliteRemoteDatabase<TSchema>;
+			readyPromise: Promise<void>;
+			sqliteClient: ISqliteWorkerClient | null;
+			sessionStatus: "error";
+			sessionError: DrizzleSqliteSessionError;
+	  };
+
 export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	WorkerConstructor: new () => Worker,
 	dbName: string,
@@ -28,33 +106,48 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	 * Ignored if that database was already started (same global worker + dbName).
 	 */
 	workerOpenOptions?: SqliteWasmWorkerOpenOptions,
-) => {
+): UseDrizzleSqliteDbResult<TSchema> => {
 	const resolveRef = useRef<null | (() => void)>(null);
 	const rejectRef = useRef<null | ((error: unknown) => void)>(null);
+	// "ready" = migrations done and `readyPromise` resolved (or the rare Node `useEffect` stub).
+	// Start as "connecting" on every first paint so we do not show "ready" and then go backward
+	// to "connecting" when the first client `useEffect` runs.
+	const [internalSession, setInternalSession] = useState<InternalSessionState>(
+		() => ({ status: "connecting", error: null }),
+	);
 	const [sqliteClient, setSqliteClient] = useState<ISqliteWorkerClient | null>(
 		null,
 	);
 	const sqliteClientRef = useRef<ISqliteWorkerClient | null>(null);
 
+	/** New promise per logical DB open so a resolved session does not mask the next `dbName`. */
 	const readyPromise = useMemo(() => {
 		return new Promise<void>((resolve, reject) => {
 			resolveRef.current = resolve;
 			rejectRef.current = reject;
 		});
-	}, []);
+	}, [dbName]);
 
 	// Initialize the global manager and get db instance
 	useEffect(() => {
 		if (typeof window === "undefined") {
-			// SSR stub
-			setSqliteClient({
-				performRemoteCallback: () => {},
-				checkpoint: () => Promise.resolve(),
-				onStarted: () => {},
-				terminate: () => {},
-			});
+			if (isNodeTestRuntime()) {
+				// e.g. Vitest without jsdom: no worker; unlock `ready` + `readyPromise` for the test tree
+				setInternalSession({ status: "ready", error: null });
+				setSqliteClient({
+					performRemoteCallback: () => {},
+					checkpoint: () => Promise.resolve(),
+					onStarted: () => {},
+					terminate: () => {},
+				});
+				queueMicrotask(() => {
+					resolveRef.current?.();
+				});
+			}
 			return;
 		}
+
+		setInternalSession({ status: "connecting", error: null });
 
 		let mounted = true;
 
@@ -146,6 +239,9 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 	}, [schema, dbName, !!interceptor]); // Only recreate if interceptor presence changes, not on every render
 
 	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
 		if (!sqliteClient) {
 			if (debug) {
 				console.log(`[DEBUG] ${dbName} - waiting for sqliteClient...`);
@@ -154,19 +250,41 @@ export const useDrizzleSqliteDb = <TSchema extends Record<string, unknown>>(
 		}
 
 		sqliteClient.onStarted(async () => {
+			if (typeof window === "undefined") {
+				return;
+			}
 			try {
+				setInternalSession({ status: "connecting", error: null });
 				await customSqliteMigrate(drizzle, migrations);
 				resolveRef.current?.();
-			} catch (error) {
-				console.error(`Migration error for ${dbName}:`, error);
-				rejectRef.current?.(error);
+				setInternalSession({ status: "ready", error: null });
+			} catch (caught) {
+				console.error(`Migration error for ${dbName}:`, caught);
+				const err = toDrizzleSqliteSessionError(caught);
+				setInternalSession({ status: "error", error: err });
+				rejectRef.current?.(caught);
 			}
 		});
 
 		return () => {
 			sqliteClient.terminate();
 		};
-	}, [sqliteClient, drizzle, migrations, dbName]);
+	}, [sqliteClient, drizzle, migrations, dbName, debug]);
 
-	return { drizzle, readyPromise, sqliteClient };
+	if (internalSession.status === "error") {
+		return {
+			drizzle,
+			readyPromise,
+			sqliteClient,
+			sessionStatus: "error" as const,
+			sessionError: internalSession.error,
+		};
+	}
+	return {
+		drizzle,
+		readyPromise,
+		sqliteClient,
+		sessionStatus: internalSession.status,
+		sessionError: null,
+	};
 };
