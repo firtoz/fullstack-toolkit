@@ -1,5 +1,12 @@
 # @firtoz/websocket-do
 
+## 13.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`1e057aa`](https://github.com/firtoz/fullstack-toolkit/commit/1e057aad4b252223f4269a9bc6bd01a744cf56a8)]:
+  - @firtoz/hono-fetcher@2.7.1
+
 ## 13.0.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/drizzle-durable-sqlite",
-	"version": "2.1.1",
+	"version": "3.0.0",
 	"description": "TanStack DB collections backed by Drizzle on Cloudflare Durable Object SQLite",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",

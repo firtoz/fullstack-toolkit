@@ -1,5 +1,12 @@
 # chatroom-bun
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/socka@3.0.1
+
 ## 0.0.2
 
 ### Patch Changes
