@@ -28,6 +28,10 @@ export default [
 			"routes/router-toolkit/concurrent-submitter-test.tsx",
 		),
 		route(
+			"plain-json-action-test",
+			"routes/router-toolkit/plain-json-action-test.tsx",
+		),
+		route(
 			"submitter-with-loader",
 			"routes/router-toolkit/submitter-with-loader.tsx",
 		),

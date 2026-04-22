@@ -42,6 +42,7 @@ import {
 	type FormDataSubmittedData,
 	type SubmitFormDataOptions,
 	type SubmitJsonOptions,
+	type SubmitJsonResult,
 } from "./ConcurrentSubmitterProvider";
 import { useConcurrentSubmitter } from "./useConcurrentSubmitter";
 
@@ -52,13 +53,13 @@ type NoParamsTestApi = {
 		path: string,
 		data: unknown,
 		options?: SubmitJsonOptions,
-	) => { id: string; promise: Promise<unknown> };
+	) => SubmitJsonResult<unknown>;
 	submitFormData: (
 		path: string,
 		formData: FormData,
 		submittedData?: FormDataSubmittedData,
 		options?: SubmitFormDataOptions,
-	) => { id: string; promise: Promise<unknown> };
+	) => SubmitJsonResult<unknown>;
 };
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -110,11 +111,10 @@ describe("ConcurrentSubmitterProvider + useConcurrentSubmitter", () => {
 	it("submitJson adds operation with pending status and returns id and promise", () => {
 		const { result } = renderHook(() => useConcurrentSubmitter(), { wrapper });
 		const api = result.current as unknown as NoParamsTestApi;
-		let out: { id: string; promise: Promise<unknown> } | undefined;
+		let submitted!: SubmitJsonResult<unknown>;
 		act(() => {
-			out = api.submitJson("/api/upload", { name: "a" });
+			submitted = api.submitJson("/api/upload", { name: "a" });
 		});
-		const submitted = assertDefined(out);
 		expect(submitted.id).toMatch(/^op-\d+$/);
 		expect(submitted.promise).toBeInstanceOf(Promise);
 		const opId = submitted.id;

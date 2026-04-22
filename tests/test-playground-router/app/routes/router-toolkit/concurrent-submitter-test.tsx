@@ -1,4 +1,5 @@
 import { useConcurrentSubmitter } from "@firtoz/router-toolkit";
+import { useCallback, useState } from "react";
 import { Link } from "react-router";
 
 const FORM_ACTION_PATH = "/router-toolkit/form-action-test" as const;
@@ -17,6 +18,31 @@ export function meta() {
 export default function ConcurrentSubmitterTest() {
 	const { operations, submitJson } =
 		useConcurrentSubmitter<typeof import("./form-action-test")>();
+	const [concurrentAwaitResult, setConcurrentAwaitResult] = useState("idle");
+
+	const handleAwaitSubmitJson = useCallback(async () => {
+		setConcurrentAwaitResult("pending");
+		try {
+			const { promise } = submitJson(
+				FORM_ACTION_PATH,
+				{
+					name: "Await Flow",
+					email: "concurrent-await@test.com",
+					age: 30,
+					terms: "on",
+				},
+				{ method: "POST" },
+			);
+			const data = await promise;
+			if (data.success && data.result) {
+				setConcurrentAwaitResult(`await-ok:${data.result.message}`);
+			} else {
+				setConcurrentAwaitResult("await-fail");
+			}
+		} catch {
+			setConcurrentAwaitResult("await-error");
+		}
+	}, [submitJson]);
 
 	const handleSubmit = (label: string) => {
 		const { id, promise } = submitJson(
@@ -48,6 +74,9 @@ export default function ConcurrentSubmitterTest() {
 			</p>
 
 			<div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+				<button type="button" onClick={handleAwaitSubmitJson}>
+					Await submitJson (formAction)
+				</button>
 				<button type="button" onClick={() => handleSubmit("Alice")}>
 					Submit Alice
 				</button>
@@ -58,6 +87,9 @@ export default function ConcurrentSubmitterTest() {
 					Submit Carol
 				</button>
 			</div>
+			<p data-testid="concurrent-submit-json-await-result">
+				{concurrentAwaitResult}
+			</p>
 
 			<h2>Operations ({Object.keys(operations).length})</h2>
 			<ul style={{ listStyle: "none", padding: 0 }}>

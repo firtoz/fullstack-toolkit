@@ -87,7 +87,7 @@
  *         content: "Post content here",
  *         published: true,
  *       });
- *       if (data?.success) {
+ *       if (data.success) {
  *         console.log("Saved");
  *       }
  *     } finally {
@@ -153,10 +153,21 @@ export class SubmitterUnmountedError extends Error {
 }
 
 /**
- * Action payload type resolved by `submit` / `submitJson` (same shape React Router puts on `fetcher.data` after the action runs).
+ * Action payload type on the fetcher (same shape React Router puts on `fetcher.data` after the action runs).
+ * Includes `undefined` while idle or in flight—use {@link SubmitterSettledData} for the value after
+ * `await submitter.submit` / `await submitter.submitJson`.
  */
 export type DynamicSubmitterData<TInfo extends RouteWithActionModule> =
 	ReturnType<typeof useFetcher<TInfo["action"]>>["data"];
+
+/**
+ * Payload type after a successful `await submitter.submit` / `await submitter.submitJson`.
+ * Omits `undefined` from {@link DynamicSubmitterData}: the promise only resolves when `fetcher.data`
+ * is defined (otherwise it rejects). Inner success values may still be void / optional `result` for
+ * `MaybeError<undefined>` from `formAction` + `success()`.
+ */
+export type SubmitterSettledData<TInfo extends RouteWithActionModule> =
+	NonNullable<DynamicSubmitterData<TInfo>>;
 
 /**
  * Options for {@link useDynamicSubmitter}.
@@ -267,7 +278,7 @@ type SubmitFunc<TModule extends RouteWithActionModule> = (
 	options: Omit<SubmitOptions, "action" | "method" | "encType"> & {
 		method: Exclude<SubmitOptions["method"], "GET">;
 	},
-) => Promise<DynamicSubmitterData<TModule>>;
+) => Promise<SubmitterSettledData<TModule>>;
 
 /**
  * Options for submitJson function.
@@ -305,7 +316,7 @@ type SubmitJsonOptions = Omit<
 type SubmitJsonFunc<TModule extends RouteWithActionModule> = (
 	data: z.infer<TModule["formSchema"]>,
 	options?: SubmitJsonOptions,
-) => Promise<DynamicSubmitterData<TModule>>;
+) => Promise<SubmitterSettledData<TModule>>;
 
 /**
  * Form component type with pre-bound action URL.
@@ -393,7 +404,7 @@ export type UseDynamicSubmitterResult<TInfo extends RouteWithActionModule> = {
  *   notifications: true,
  * });
  *
- * if (data?.success) {
+ * if (data.success) {
  *   console.log("Settings updated!");
  * }
  * ```
@@ -427,7 +438,7 @@ export function useDynamicSubmitter<TInfo extends RouteWithActionModule>(
 
 	const beginSubmit = useCallback(
 		(runSubmit: () => void) => {
-			return new Promise<DynamicSubmitterData<TInfo>>((resolve, reject) => {
+			return new Promise<SubmitterSettledData<TInfo>>((resolve, reject) => {
 				const bucket = getSubmitterKeyBucket(fetcherKey);
 				const prevPending = bucket.pending;
 				if (prevPending) {
@@ -441,7 +452,7 @@ export function useDynamicSubmitter<TInfo extends RouteWithActionModule>(
 					reject,
 					finishIdle: (data, error) => {
 						if (data !== undefined) {
-							resolve(data as DynamicSubmitterData<TInfo>);
+							resolve(data as SubmitterSettledData<TInfo>);
 						} else {
 							reject(error ?? new Error("Submission failed"));
 						}

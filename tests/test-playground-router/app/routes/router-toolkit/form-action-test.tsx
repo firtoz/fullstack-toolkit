@@ -97,7 +97,7 @@ export default function FormActionTest() {
 				terms: "on",
 			});
 			setAwaitJsonStatus(
-				data?.success ? "await-json-success" : "await-json-fail",
+				data.success ? "await-json-success" : "await-json-fail",
 			);
 		} catch (err: unknown) {
 			setAwaitJsonStatus(classifySubmitterAwaitError(err));
@@ -114,7 +114,7 @@ export default function FormActionTest() {
 				terms: "on",
 			});
 			setAwaitJsonStatus(
-				data?.success === false && data.error.type === "handler"
+				data.success === false && data.error.type === "handler"
 					? "await-json-fail-handler"
 					: "await-json-unexpected",
 			);
@@ -133,7 +133,7 @@ export default function FormActionTest() {
 				terms: "on",
 			});
 			setAwaitJsonStatus(
-				data?.success === false && data.error.type === "validation"
+				data.success === false && data.error.type === "validation"
 					? "await-json-fail-validation"
 					: "await-json-unexpected",
 			);
@@ -169,7 +169,7 @@ export default function FormActionTest() {
 		try {
 			const second = await p2;
 			setSupersedeFirst(await firstOutcomeP);
-			if (second?.success && second.result) {
+			if (second.success && second.result) {
 				setSupersedeSecondEmail(second.result.user.email);
 			} else {
 				setSupersedeSecondEmail("fail");

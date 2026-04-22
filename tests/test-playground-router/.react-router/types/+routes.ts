@@ -35,6 +35,9 @@ type Pages = {
   "/router-toolkit/concurrent-submitter-test": {
     params: {};
   };
+  "/router-toolkit/plain-json-action-test": {
+    params: {};
+  };
   "/router-toolkit/submitter-with-loader": {
     params: {};
   };
@@ -49,7 +52,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/form-action-unmount-test" | "/router-toolkit/key-suffix-dual-submitter-test" | "/router-toolkit/shared-fetcher-key-dual-submitter-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
+    page: "/" | "/router-toolkit/loader-test" | "/router-toolkit/action-test" | "/router-toolkit/form-action-test" | "/router-toolkit/form-action-unmount-test" | "/router-toolkit/key-suffix-dual-submitter-test" | "/router-toolkit/shared-fetcher-key-dual-submitter-test" | "/router-toolkit/concurrent-submitter-test" | "/router-toolkit/plain-json-action-test" | "/router-toolkit/submitter-with-loader" | "/router-toolkit/fetcher-data-refresh" | "/router-toolkit/fetcher-invalidation";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -83,6 +86,10 @@ type RouteFiles = {
     id: "routes/router-toolkit/concurrent-submitter-test";
     page: "/router-toolkit/concurrent-submitter-test";
   };
+  "routes/router-toolkit/plain-json-action-test.tsx": {
+    id: "routes/router-toolkit/plain-json-action-test";
+    page: "/router-toolkit/plain-json-action-test";
+  };
   "routes/router-toolkit/submitter-with-loader.tsx": {
     id: "routes/router-toolkit/submitter-with-loader";
     page: "/router-toolkit/submitter-with-loader";
@@ -107,6 +114,7 @@ type RouteModules = {
   "routes/router-toolkit/key-suffix-dual-submitter-test": typeof import("./app/routes/router-toolkit/key-suffix-dual-submitter-test.tsx");
   "routes/router-toolkit/shared-fetcher-key-dual-submitter-test": typeof import("./app/routes/router-toolkit/shared-fetcher-key-dual-submitter-test.tsx");
   "routes/router-toolkit/concurrent-submitter-test": typeof import("./app/routes/router-toolkit/concurrent-submitter-test.tsx");
+  "routes/router-toolkit/plain-json-action-test": typeof import("./app/routes/router-toolkit/plain-json-action-test.tsx");
   "routes/router-toolkit/submitter-with-loader": typeof import("./app/routes/router-toolkit/submitter-with-loader.tsx");
   "routes/router-toolkit/fetcher-data-refresh": typeof import("./app/routes/router-toolkit/fetcher-data-refresh.tsx");
   "routes/router-toolkit/fetcher-invalidation": typeof import("./app/routes/router-toolkit/fetcher-invalidation.tsx");

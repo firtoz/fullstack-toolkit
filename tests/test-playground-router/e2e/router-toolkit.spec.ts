@@ -136,7 +136,9 @@ test.describe("useDynamicSubmitter & formAction", () => {
 		);
 	});
 
-	test("form Register then await submitJson both complete", async ({ page }) => {
+	test("form Register then await submitJson both complete", async ({
+		page,
+	}) => {
 		await page.getByLabel(/name/i).fill("Form Then Json");
 		await page.getByLabel(/email/i).fill("sequential@example.com");
 		await page.getByLabel(/age/i).fill("28");
@@ -215,7 +217,9 @@ test.describe("useDynamicSubmitter keySuffix (dual same route)", () => {
 		await page.goto("/router-toolkit/key-suffix-dual-submitter-test");
 	});
 
-	test("overlapping submitJson on both panes both resolve", async ({ page }) => {
+	test("overlapping submitJson on both panes both resolve", async ({
+		page,
+	}) => {
 		// Sequential clicks (not Promise.all on click): parallel Playwright clicks can drop one;
 		// both requests still overlap while the action waits ~400ms.
 		await page.getByTestId("dual-fire-a").click();
@@ -261,8 +265,12 @@ test.describe("useDynamicSubmitter shared fetcher key (dual same route)", () => 
 			/^ok:which=a$/,
 			{ timeout: 15_000 },
 		);
-		const dataA = await page.getByTestId("shared-dual-fetcher-data-a").innerText();
-		const dataB = await page.getByTestId("shared-dual-fetcher-data-b").innerText();
+		const dataA = await page
+			.getByTestId("shared-dual-fetcher-data-a")
+			.innerText();
+		const dataB = await page
+			.getByTestId("shared-dual-fetcher-data-b")
+			.innerText();
 		expect(dataA).toBe(dataB);
 		expect(dataA).toContain("which");
 		expect(dataA).toContain("a");
@@ -373,20 +381,34 @@ test.describe("useConcurrentSubmitter", () => {
 	test("should show concurrent submitter page and submit one operation", async ({
 		page,
 	}) => {
-		await expect(page.getByRole("heading", { name: /Concurrent Submitter/ })).toBeVisible();
-		await expect(page.getByRole("button", { name: /Submit Alice/i })).toBeVisible();
-		await expect(page.getByRole("button", { name: /Submit Bob/i })).toBeVisible();
-		await expect(page.getByRole("button", { name: /Submit Carol/i })).toBeVisible();
+		await expect(
+			page.getByRole("heading", { name: /Concurrent Submitter/ }),
+		).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: /Submit Alice/i }),
+		).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: /Submit Bob/i }),
+		).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: /Submit Carol/i }),
+		).toBeVisible();
 
 		// Submit Alice
 		await page.getByRole("button", { name: /Submit Alice/i }).click();
 
 		// Operation should appear and complete with success (scope to operations list to avoid matching the button)
 		const operationsList = page.getByRole("list");
-		await expect(operationsList.getByText(/op-1/)).toBeVisible({ timeout: 3000 });
-		await expect(operationsList.getByText(/status: done/)).toBeVisible({ timeout: 5000 });
+		await expect(operationsList.getByText(/op-1/)).toBeVisible({
+			timeout: 3000,
+		});
+		await expect(operationsList.getByText(/status: done/)).toBeVisible({
+			timeout: 5000,
+		});
 		await expect(operationsList.getByText(/— Alice/)).toBeVisible();
-		await expect(operationsList.getByText(/Registration successful!/)).toBeVisible({ timeout: 5000 });
+		await expect(
+			operationsList.getByText(/Registration successful!/),
+		).toBeVisible({ timeout: 5000 });
 		await expect(operationsList.getByText(/alice@test\.com/)).toBeVisible();
 	});
 
@@ -397,17 +419,54 @@ test.describe("useConcurrentSubmitter", () => {
 		await page.getByRole("button", { name: /Submit Carol/i }).click();
 
 		// Operations list should show 3 entries
-		await expect(page.getByRole("heading", { name: /Operations \(3\)/ })).toBeVisible({
+		await expect(
+			page.getByRole("heading", { name: /Operations \(3\)/ }),
+		).toBeVisible({
 			timeout: 8000,
 		});
 
 		// All three should complete with done status and names (scope to list to avoid button matches)
 		const operationsList = page.getByRole("list");
-		await expect(operationsList.getByText(/status: done/).first()).toBeVisible({ timeout: 8000 });
+		await expect(operationsList.getByText(/status: done/).first()).toBeVisible({
+			timeout: 8000,
+		});
 		await expect(operationsList.getByText(/— Alice/)).toBeVisible();
 		await expect(operationsList.getByText(/— Bob/)).toBeVisible();
 		await expect(operationsList.getByText(/— Carol/)).toBeVisible();
-		await expect(operationsList.getByText(/Registration successful!/).first()).toBeVisible();
+		await expect(
+			operationsList.getByText(/Registration successful!/).first(),
+		).toBeVisible();
+	});
+
+	test("await submitJson promise surfaces formAction payload", async ({
+		page,
+	}) => {
+		await page
+			.getByRole("button", { name: /Await submitJson \(formAction\)/i })
+			.click();
+		await expect(
+			page.getByTestId("concurrent-submit-json-await-result"),
+		).toHaveText("await-ok:Registration successful!", { timeout: 15_000 });
+	});
+});
+
+test.describe("useConcurrentSubmitter (plain JSON action)", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/router-toolkit/plain-json-action-test");
+	});
+
+	test("await submitJson resolves custom non–formAction payload", async ({
+		page,
+	}) => {
+		await page
+			.getByRole("button", { name: /Await submitJson \(plain\)/i })
+			.click();
+		await expect(page.getByTestId("plain-json-await-result")).toHaveText(
+			"await-plain-ok",
+			{
+				timeout: 15_000,
+			},
+		);
 	});
 });
 
