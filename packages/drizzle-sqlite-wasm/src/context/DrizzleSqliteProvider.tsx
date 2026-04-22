@@ -307,7 +307,8 @@ export function DrizzleSqliteProvider<TSchema extends Record<string, unknown>>({
 }: DrizzleSqliteProviderProps<TSchema>) {
 	/** Drives a fresh `DrizzleSqliteSessionBody` + `children` when the DB file or open options change. */
 	const readySubtreeKey = useMemo(
-		() => `drizzle-sqlite:${dbName}:${JSON.stringify(workerOpenOptions ?? null)}`,
+		() =>
+			`drizzle-sqlite:${dbName}:${JSON.stringify(workerOpenOptions ?? null)}`,
 		[dbName, workerOpenOptions],
 	);
 
