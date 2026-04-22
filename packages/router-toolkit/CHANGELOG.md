@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 9.0.1
+
+### Patch Changes
+
+- [`fbd892a`](https://github.com/firtoz/fullstack-toolkit/commit/fbd892a221ec5c97cab581c3b3293ad6cb96739a) Thanks [@firtoz](https://github.com/firtoz)! - Align **`submit`** / **`submitJson`** promise types with existing behavior: they already only resolved when `fetcher.data` was defined. Add **`SubmitterSettledData<TInfo>`** (`NonNullable` of fetcher `data`) for that settled value; **`DynamicSubmitterData`** still reflects optional `data` over the fetcher lifecycle. **`useDynamicSubmitterFetcher`** unchanged.
+
 ## 9.0.0
 
 ### Major Changes
