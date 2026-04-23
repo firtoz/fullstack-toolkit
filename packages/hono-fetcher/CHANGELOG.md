@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.7.2
+
+### Patch Changes
+
+- [`bf246d7`](https://github.com/firtoz/fullstack-toolkit/commit/bf246d7ae9c1555886d39aab56378bc024d82c14) Thanks [@firtoz](https://github.com/firtoz)! - Align WebSocket close handling with Cloudflare’s pre- and post–2026-04-07 close semantics: complete the Close handshake with the peer’s `code`/`reason` in `webSocketClose`, and make `webSocketError` close idempotent. Add optional `pairServerWebSocketAcceptOptions` on `BaseWebSocketDO` / `StandardSchemaWebSocketDO` and `SockaWebSocketDO` for `WebSocket#accept` (e.g. `allowHalfOpen`), and optional `acceptOptions` on the hono fetcher’s WebSocket config for the same.
+
 ## 2.7.1
 
 ### Patch Changes

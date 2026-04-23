@@ -1,6 +1,6 @@
 {
 	"name": "chatroom-do",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"private": true,
 	"type": "module",
 	"description": "Multi-room chat over socka on Cloudflare Durable Objects + Drizzle SQLite (self-contained example)",
