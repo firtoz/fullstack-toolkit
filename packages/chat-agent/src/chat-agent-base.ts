@@ -1059,10 +1059,12 @@ export abstract class ChatAgentBase<
 
 			const stream = await openRouter.chat.send(
 				{
-					model: this.getModel(),
-					messages: apiMessages,
-					stream: true,
-					...(tools.length > 0 && { tools }),
+					chatRequest: {
+						model: this.getModel(),
+						messages: apiMessages,
+						stream: true,
+						...(tools.length > 0 && { tools }),
+					},
 				},
 				{
 					...(headers && { headers }),
@@ -1224,7 +1226,9 @@ export abstract class ChatAgentBase<
 			}
 		};
 
-		await this.experimental_waitUntil(runStream);
+		const streamPromise = runStream();
+		this.ctx.waitUntil(streamPromise);
+		await streamPromise;
 	}
 
 	/**

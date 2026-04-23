@@ -38,6 +38,11 @@ export type StandardSchemaWebSocketDOOptions<
 		websocket: WebSocket,
 		options: StandardSchemaSessionOptions<TClientMessage, TServerMessage>,
 	) => TSession | Promise<TSession>;
+	/**
+	 * Optional `WebSocket#accept` options for the server side of the `WebSocketPair` (see
+	 * `pairServerWebSocketAcceptOptions` on `BaseWebSocketDO` constructor options).
+	 */
+	pairServerWebSocketAcceptOptions?: WebSocketAcceptOptions;
 };
 
 export abstract class StandardSchemaWebSocketDO<
@@ -83,6 +88,8 @@ export abstract class StandardSchemaWebSocketDO<
 					schemaOptions,
 				);
 			},
+			pairServerWebSocketAcceptOptions:
+				options.pairServerWebSocketAcceptOptions,
 		});
 		this.standardSchemaSessionOptions = options.standardSchemaSessionOptions;
 		this.createStandardSchemaSessionFn = options.createStandardSchemaSession;

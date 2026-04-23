@@ -20,6 +20,8 @@ export type SockaWebSocketDOOptions<
 		ctx: Context<{ Bindings: TEnv }> | undefined,
 		websocket: WebSocket,
 	) => TSession | Promise<TSession>;
+	/** Same as `pairServerWebSocketAcceptOptions` on `BaseWebSocketDOOptions` from `@firtoz/websocket-do`. */
+	pairServerWebSocketAcceptOptions?: WebSocketAcceptOptions;
 };
 
 /**
@@ -51,6 +53,8 @@ export abstract class SockaWebSocketDO<
 		super(ctx, env, {
 			createSession: (sessionCtx, websocket) =>
 				options.createSockaSession(sessionCtx, websocket),
+			pairServerWebSocketAcceptOptions:
+				options.pairServerWebSocketAcceptOptions,
 		});
 	}
 }

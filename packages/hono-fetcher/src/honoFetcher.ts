@@ -174,6 +174,12 @@ export interface WebSocketConfig {
 	 * @default true
 	 */
 	autoAccept?: boolean;
+	/**
+	 * Arguments for Cloudflare’s `WebSocket#accept` (e.g. `{ allowHalfOpen: true }` when
+	 * [proxying](https://developers.cloudflare.com/workers/runtime-apis/websockets/#close-behavior)
+	 * and coordinating close on both sides). Used only when `autoAccept` is true.
+	 */
+	acceptOptions?: WebSocketAcceptOptions;
 }
 
 export type TypedWebSocketFetcher<T extends Hono> = <
@@ -294,7 +300,8 @@ const createWebSocketFetcher = <T extends Hono>(
 		let finalUrl: string = request.url;
 
 		const { init = {}, params, query, config } = request;
-		const autoAccept = config?.autoAccept ?? true; // Default to true
+		const autoAccept = config?.autoAccept ?? true;
+		const acceptOptions = config?.acceptOptions;
 
 		if (params && typeof params === "object") {
 			finalUrl = Object.entries(params).reduce((acc, [key, value]) => {
@@ -316,9 +323,8 @@ const createWebSocketFetcher = <T extends Hono>(
 				headers: newHeaders,
 			});
 
-			// Auto-accept the WebSocket if configured (default: true)
 			if (autoAccept && response.webSocket) {
-				response.webSocket.accept();
+				response.webSocket.accept(acceptOptions);
 			}
 
 			return response;

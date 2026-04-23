@@ -28,3 +28,6 @@ playwright-report/
 # Cursor agent debug ingest / session logs (local only)
 .cursor/debug.log
 .cursor/debug-*.log
+
+# tsup may emit a temp bundled config next to tsup.config.ts (do not commit)
+tsup.config.bundled_*.mjs

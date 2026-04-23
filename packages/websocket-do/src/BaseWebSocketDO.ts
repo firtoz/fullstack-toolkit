@@ -16,6 +16,14 @@ export type BaseWebSocketDOOptions<
 		ctx: Context<{ Bindings: TEnv }> | undefined,
 		websocket: WebSocket,
 	) => TSession | Promise<TSession>;
+	/**
+	 * If set, called on the WebSocketPair **server** socket before
+	 * {@link DurableObjectState#acceptWebSocket}. Use `{ allowHalfOpen: true }` when you need
+	 * to coordinate close independently (e.g. proxying). Omit for the usual hibernation-only path
+	 * (no `WebSocket#accept` before `acceptWebSocket`), which matches
+	 * [Durable Object WebSocket examples](https://developers.cloudflare.com/durable-objects/best-practices/websockets/).
+	 */
+	pairServerWebSocketAcceptOptions?: WebSocketAcceptOptions;
 };
 
 export abstract class BaseWebSocketDO<
@@ -101,6 +109,10 @@ export abstract class BaseWebSocketDO<
 		ctx: Context<{ Bindings: TEnv }>,
 		ws: WebSocket,
 	): Promise<void> {
+		const acceptOpts = this.options.pairServerWebSocketAcceptOptions;
+		if (acceptOpts !== undefined) {
+			ws.accept(acceptOpts);
+		}
 		this.ctx.acceptWebSocket(ws);
 		try {
 			const session = await this.options.createSession(ctx, ws);
@@ -149,8 +161,8 @@ export abstract class BaseWebSocketDO<
 
 	override async webSocketClose(
 		ws: WebSocket,
-		_code: number,
-		_reason: string,
+		code: number,
+		reason: string,
 		_wasClean: boolean,
 	) {
 		const session = this.sessions.get(ws);
@@ -161,27 +173,19 @@ export abstract class BaseWebSocketDO<
 		} catch (error) {
 			console.error(`Error during session close: ${error}`);
 		} finally {
-			// Call close() for both OPEN and CLOSING states
-			// For CLOSING, this can help ensure the WebSocket fully transitions to CLOSED
-			if (
-				ws.readyState === WebSocket.OPEN ||
-				ws.readyState === WebSocket.CLOSING
-			) {
-				ws.close(1000, "Normal closure");
-			}
+			// Pre–2026-04-07 (manual close reply): required to complete the Close handshake and avoid
+			// abnormal client closure. With web_socket_auto_reply_to_close (default on 2026-04-07+),
+			// the runtime already replied; `close()` is a no-op if already CLOSED.
+			ws.close(code, reason);
 		}
 	}
 
 	override async webSocketError(ws: WebSocket, error: unknown) {
 		const session = this.sessions.get(ws);
 		if (!session) {
-			// Call close() for both OPEN and CLOSING states
-			if (
-				ws.readyState === WebSocket.OPEN ||
-				ws.readyState === WebSocket.CLOSING
-			) {
-				ws.close(1011, "Error during session setup.");
-			}
+			// Idempotent: safe when the socket is already closed (auto close reply) or in CLOSING
+			// (legacy manual reply to complete the handshake).
+			ws.close(1011, "Error during session setup.");
 			return;
 		}
 
@@ -191,13 +195,7 @@ export abstract class BaseWebSocketDO<
 		} catch (error) {
 			console.error(`Error during session close: ${error}`);
 		} finally {
-			// Call close() for both OPEN and CLOSING states
-			if (
-				ws.readyState === WebSocket.OPEN ||
-				ws.readyState === WebSocket.CLOSING
-			) {
-				ws.close(1011, "Error during session.");
-			}
+			ws.close(1011, "Error during session.");
 		}
 	}
 
