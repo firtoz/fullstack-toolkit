@@ -15,7 +15,7 @@
 		"format": "biome format src --write"
 	},
 	"dependencies": {
-		"@firtoz/hono-fetcher": "^2.7.1",
+		"@firtoz/hono-fetcher": "^2.7.2",
 		"@firtoz/websocket-do": "workspace:*",
 		"hono": "catalog:",
 		"zod": "catalog:",
