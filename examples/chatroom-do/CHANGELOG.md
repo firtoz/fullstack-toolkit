@@ -1,5 +1,12 @@
 # chatroom-do
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`0615c27`](https://github.com/firtoz/fullstack-toolkit/commit/0615c275c65474b57b7650bf8e82674818855055), [`c1d45f1`](https://github.com/firtoz/fullstack-toolkit/commit/c1d45f119845e9ff97cbab010a9120cddff7f392)]:
+  - @firtoz/socka@3.0.3
+
 ## 0.0.4
 
 ### Patch Changes
