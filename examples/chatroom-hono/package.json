@@ -1,6 +1,6 @@
 {
 	"name": "chatroom-hono",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"private": true,
 	"type": "module",
 	"description": "Multi-room chat over socka on Hono + @hono/node-ws with JSON file history (self-contained example)",

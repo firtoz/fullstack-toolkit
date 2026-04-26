@@ -1,5 +1,13 @@
 # @firtoz/socka
 
+## 3.0.3
+
+### Patch Changes
+
+- [`0615c27`](https://github.com/firtoz/fullstack-toolkit/commit/0615c275c65474b57b7650bf8e82674818855055) Thanks [@firtoz](https://github.com/firtoz)! - Documentation: add React + Cloudflare Durable Objects and collaborative-realtime guides; call `output` decision table in README; expand client/reference/pushes/durable-objects with SSR WebSocket URLs, `InferSockaPushHandlers`, `exactOptionalPropertyTypes` notes, fire-and-forget observability, and `SockaDoSession` app typing.
+
+- [`c1d45f1`](https://github.com/firtoz/fullstack-toolkit/commit/c1d45f119845e9ff97cbab010a9120cddff7f392) Thanks [@firtoz](https://github.com/firtoz)! - Fix generic contract bounds: add `SockaContractConfigBound` / `SockaContractBound` and use them (with `InferSocka*` helpers) so `defineSocka` contracts **with** server `pushes` assign to `SockaDoSession`, `SockaSession`, and related APIs. The previous `extends SockaContract<SockaContractConfig>` shape incorrectly required `pushes` to match `Record<string, never>`.
+
 ## 3.0.2
 
 ### Patch Changes
