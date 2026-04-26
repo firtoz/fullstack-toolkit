@@ -2,18 +2,14 @@ import type { DependencyList, ReactElement, ReactNode, RefObject } from "react";
 import { createContext, useContext, useMemo } from "react";
 import type { SockaSession } from "../client/SockaSession";
 import type { SockaConnectionStatus } from "../client/SockaWebSocketClient";
-import type {
-	SockaContract,
-	SockaContractConfig,
-	InferSockaSend,
-} from "../core/contract";
+import type { SockaContractBound, InferSockaSend } from "../core/contract";
 import {
 	createSockaSendProxyFromSession,
 	useSockaSession,
 	type UseSockaSessionOptions,
 } from "./useSockaSession";
 
-type AnySockaContract = SockaContract<SockaContractConfig>;
+type AnySockaContract = SockaContractBound;
 
 /**
  * Session slice stored on React context by {@link SockaSessionProvider}. The typed
@@ -21,7 +17,7 @@ type AnySockaContract = SockaContract<SockaContractConfig>;
  * so children do not open duplicate WebSockets.
  */
 export type SockaSessionContextValue<
-	TContract extends SockaContract<SockaContractConfig> = AnySockaContract,
+	TContract extends SockaContractBound = AnySockaContract,
 > = {
 	readonly contract: TContract;
 	readonly ready: boolean;
@@ -34,18 +30,14 @@ export type SockaSessionContextValue<
 const SockaSessionContext =
 	createContext<SockaSessionContextValue<AnySockaContract> | null>(null);
 
-function contextMatchesContract<
-	TContract extends SockaContract<SockaContractConfig>,
->(
+function contextMatchesContract<TContract extends SockaContractBound>(
 	ctx: SockaSessionContextValue<AnySockaContract>,
 	contract: TContract,
 ): ctx is SockaSessionContextValue<TContract> {
 	return ctx.contract === contract;
 }
 
-export type SockaSessionProviderProps<
-	TContract extends SockaContract<SockaContractConfig>,
-> = {
+export type SockaSessionProviderProps<TContract extends SockaContractBound> = {
 	readonly contract: TContract;
 	readonly deps: DependencyList;
 	readonly children: ReactNode;
@@ -56,9 +48,9 @@ export type SockaSessionProviderProps<
  * {@link useSockaSessionContext}. Mount once per connection (e.g. layout); avoid
  * calling {@link useSockaSession} in every leaf—use the context hook instead.
  */
-export function SockaSessionProvider<
-	TContract extends SockaContract<SockaContractConfig>,
->(props: SockaSessionProviderProps<TContract>): ReactElement {
+export function SockaSessionProvider<TContract extends SockaContractBound>(
+	props: SockaSessionProviderProps<TContract>,
+): ReactElement {
 	const { contract, deps, children, ...sessionOptions } = props;
 	const value = useSockaSession(contract, sessionOptions, deps);
 	const merged: SockaSessionContextValue<TContract> = {
@@ -82,9 +74,7 @@ SockaSessionProvider.displayName = "SockaSessionProvider";
  * Reads the socka session from the nearest {@link SockaSessionProvider}.
  * Pass the **same** `contract` reference as the provider for typing and validation.
  */
-export function useSockaSessionContext<
-	TContract extends SockaContract<SockaContractConfig>,
->(
+export function useSockaSessionContext<TContract extends SockaContractBound>(
 	contract: TContract,
 ): {
 	ready: boolean;

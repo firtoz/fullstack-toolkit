@@ -22,6 +22,37 @@ export type SockaContractConfig = {
 	readonly pushes?: Record<string, StandardSchemaV1>;
 };
 
+/** Runtime contract returned by {@link defineSocka}, preserving full generic types. */
+export type SockaContract<T extends SockaContractConfig = SockaContractConfig> =
+	{
+		readonly calls: T["calls"];
+		readonly pushes: T extends { pushes: Record<string, StandardSchemaV1> }
+			? T["pushes"]
+			: Record<string, never>;
+	};
+
+/**
+ * Wide config shape for generic *bounds* on APIs that must accept any `defineSocka`
+ * result, including contracts with **server pushes**.
+ *
+ * `SockaContract` instantiated with {@link SockaContractConfig} alone resolves
+ * `pushes` to `Record<string, never>` (because `pushes` is optional, so the
+ * conditional in {@link SockaContract} does not keep concrete push fields). A generic
+ * bound of `extends SockaContract<SockaContractConfig>` therefore **rejects** real
+ * contracts with named server pushes. Use {@link SockaContractBound} (equivalently
+ * `extends SockaContract<SockaContractConfigBound>`) for those constraints.
+ */
+export type SockaContractConfigBound = {
+	readonly calls: Record<string, SockaProcedureDef>;
+	readonly pushes: Record<string, StandardSchemaV1>;
+};
+
+/**
+ * Widen any concrete `defineSocka` contract for use in `extends` constraints
+ * (e.g. `SockaDoSession`, `SockaSession`, `useSockaSession`).
+ */
+export type SockaContractBound = SockaContract<SockaContractConfigBound>;
+
 /**
  * When call keys are a **narrow** object type, rejects keys in
  * {@link ReservedSockaProcedureName} (thenable / `Object.prototype` hazards on
@@ -35,15 +66,6 @@ export type ValidateSockaCallKeys<P extends Record<string, SockaProcedureDef>> =
 		: keyof P & ReservedSockaProcedureName extends never
 			? P
 			: never;
-
-/** Runtime contract returned by {@link defineSocka}, preserving full generic types. */
-export type SockaContract<T extends SockaContractConfig = SockaContractConfig> =
-	{
-		readonly calls: T["calls"];
-		readonly pushes: T extends { pushes: Record<string, StandardSchemaV1> }
-			? T["pushes"]
-			: Record<string, never>;
-	};
 
 /** Inferred client return type for a call: payload type or `void` when `output` is omitted. */
 type InferSockaCallReturn<P extends SockaProcedureDef> =
@@ -61,7 +83,7 @@ type CallFn<P extends SockaProcedureDef> = P extends {
 /**
  * Infers the typed `session.send.*` method map for a contract.
  */
-export type InferSockaSend<C extends SockaContract> = {
+export type InferSockaSend<C extends SockaContractBound> = {
 	[K in keyof C["calls"]]: CallFn<C["calls"][K]>;
 };
 
@@ -85,7 +107,7 @@ type HandlerFn<P extends SockaProcedureDef, TSession> = P extends {
  * When `output` is omitted (fire-and-forget), the handler should return `void`; the
  * server does not send a success response.
  */
-export type InferSockaHandlers<C extends SockaContract, TSession> = {
+export type InferSockaHandlers<C extends SockaContractBound, TSession> = {
 	[K in keyof C["calls"]]: HandlerFn<C["calls"][K], TSession>;
 };
 
@@ -96,7 +118,7 @@ type InferPushPayload<S extends StandardSchemaV1> =
  * Payload type for a contract push (output of the push's Standard Schema).
  */
 export type InferSockaPushPayload<
-	C extends SockaContract<SockaContractConfig>,
+	C extends SockaContractBound,
 	K extends keyof C["pushes"],
 > = C["pushes"][K] extends StandardSchemaV1
 	? InferPushPayload<C["pushes"][K]>
@@ -105,7 +127,7 @@ export type InferSockaPushPayload<
 /**
  * Infers the typed push subscription handler map for a contract's `pushes`.
  */
-export type InferSockaPushHandlers<C extends SockaContract> = {
+export type InferSockaPushHandlers<C extends SockaContractBound> = {
 	[K in keyof C["pushes"]]: C["pushes"][K] extends StandardSchemaV1
 		? (payload: InferPushPayload<C["pushes"][K]>) => void | Promise<void>
 		: never;

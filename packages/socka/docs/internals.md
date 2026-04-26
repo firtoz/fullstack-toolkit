@@ -45,7 +45,7 @@ Clients generate **`id`** strings per request; servers echo them on **`serverRes
 
 ## TypeScript: `SockaWebSocketDO` and contract erasure
 
-`@firtoz/socka/do` **erases** the contract slot on **`SockaWebSocketDO`** so concrete `defineSocka(...)` contracts stay strict under TypeScript. If a generic base class rejects your session type, keep using **your** contract type from the module where you called **`defineSocka`**—do not expect an unconstrained `SockaContract<SockaContractConfig>` to accept every concrete contract without that erasure.
+`@firtoz/socka/do` uses **`any` for the contract type parameter on `SockaWebSocketDO`’s session generic** because **`SockaDoSession` is invariant in `TContract`**: `SockaDoSession<typeof myContract, …>` does not extend `SockaDoSession<SockaContractBound, …>` at the class level even when `typeof myContract` satisfies **`SockaContractBound`**. Session *values* and APIs that take **`TContract extends SockaContractBound`** (not a `SockaDoSession` subclass) should use **`typeof myContract`** from the module where you called **`defineSocka`**—that bound is wide enough for contracts **with** server pushes; the old `extends SockaContract<SockaContractConfig>` shape was not.
 
 ---
 

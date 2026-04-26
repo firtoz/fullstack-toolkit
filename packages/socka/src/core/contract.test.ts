@@ -6,6 +6,7 @@ import {
 	type InferSockaSend,
 	type InferSockaHandlers,
 	type InferSockaPushHandlers,
+	type SockaContractBound,
 } from "./contract";
 
 const messageSchema = z.object({
@@ -74,6 +75,23 @@ describe("defineSocka", () => {
 			},
 		});
 		expect(Object.keys(noPushes.pushes)).toEqual([]);
+	});
+});
+
+function acceptSockaContractBound(_c: SockaContractBound) {}
+
+describe("SockaContractBound", () => {
+	test("defineSocka result with pushes is assignable (regression: was not with SockaContract<SockaContractConfig>)", () => {
+		acceptSockaContractBound(contract);
+	});
+
+	test("defineSocka result without pushes is assignable", () => {
+		const noPushes = defineSocka({
+			calls: {
+				ping: { output: z.void() },
+			},
+		});
+		acceptSockaContractBound(noPushes);
 	});
 });
 

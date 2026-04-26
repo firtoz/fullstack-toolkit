@@ -1,8 +1,4 @@
-import type {
-	SockaContract,
-	SockaContractConfig,
-	InferSockaHandlers,
-} from "../core/contract";
+import type { SockaContractBound, InferSockaHandlers } from "../core/contract";
 import type { SockaReportError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 
@@ -66,12 +62,12 @@ type SockaWebSocketCreateDataStrict<TData> = [TData] extends [
 		};
 
 type SockaSessionForHandlers<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 > = import("./SockaWebSocketSession").SockaWebSocketSession<TContract, TData>;
 
 type SockaWebSocketSessionConfigBase<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 > = {
 	contract: TContract;
@@ -131,7 +127,7 @@ type SockaWebSocketSessionConfigBase<
  * **Strict upgrade request** in the package docs.
  */
 export type SockaWebSocketSessionConfig<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData = EmptySockaSessionData,
 > = SockaWebSocketSessionConfigBase<TContract, TData> &
 	SockaWebSocketCreateDataStrict<TData>;
@@ -154,7 +150,7 @@ export type SockaWebSocketSessionConfig<
  * or switch to {@link SockaWebSocketSessionConfig} and wire the real **`Request`** through.
  */
 export type SockaWebSocketSessionConfigLoose<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData = EmptySockaSessionData,
 > = SockaWebSocketSessionConfigBase<TContract, TData> & {
 	strictUpgradeRequest: false;
@@ -166,7 +162,7 @@ export type SockaWebSocketSessionConfigLoose<
  * **`attachSockaWebSocket`**, **`createSockaBunWebSocketHandlers`**, and Hono socka helpers.
  */
 export type SockaWebSocketSessionConfigUnion<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData = EmptySockaSessionData,
 > =
 	| SockaWebSocketSessionConfig<TContract, TData>

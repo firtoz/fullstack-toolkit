@@ -1,6 +1,5 @@
 import type {
-	SockaContract,
-	SockaContractConfig,
+	SockaContractBound,
 	InferSockaSend,
 	InferSockaPushHandlers,
 	InferSockaPushPayload,
@@ -35,7 +34,7 @@ type PushListenerFn = (payload: unknown) => void | Promise<void>;
 const RESERVED_CALL_NAMES = new Set<string>(RESERVED_SOCKA_PROCEDURE_NAMES);
 
 export type SockaSessionPushWaitOptions<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	K extends keyof TContract["pushes"] & string,
 > = {
 	signal?: AbortSignal;
@@ -43,9 +42,7 @@ export type SockaSessionPushWaitOptions<
 	predicate?: (payload: InferSockaPushPayload<TContract, K>) => boolean;
 };
 
-export type SockaSessionSubscribeApi<
-	TContract extends SockaContract<SockaContractConfig>,
-> = {
+export type SockaSessionSubscribeApi<TContract extends SockaContractBound> = {
 	on<K extends keyof TContract["pushes"] & string>(
 		name: K,
 		handler: (
@@ -77,9 +74,7 @@ function waitForPushAbortError(): Error {
 	return new Error("socka: waitForPush aborted");
 }
 
-export type SockaSessionOptions<
-	TContract extends SockaContract<SockaContractConfig>,
-> = Omit<
+export type SockaSessionOptions<TContract extends SockaContractBound> = Omit<
 	SockaWebSocketClientOptions<TContract>,
 	"onResponse" | "onServerError" | "onEvent"
 > & {
@@ -99,7 +94,7 @@ export type SockaSessionOptions<
  * Browser WebSocket session: **`session.send`** for contract calls, **`session.subscribe`**
  * for server pushes, **`session.client`** for low-level wire access.
  */
-class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
+class SockaSessionBase<TContract extends SockaContractBound> {
 	readonly client: SockaWebSocketClient<TContract>;
 	readonly send: InferSockaSend<TContract>;
 	readonly subscribe: SockaSessionSubscribeApi<TContract>;
@@ -441,11 +436,11 @@ class SockaSessionBase<TContract extends SockaContract<SockaContractConfig>> {
 	}
 }
 
-export type SockaSession<TContract extends SockaContract<SockaContractConfig>> =
+export type SockaSession<TContract extends SockaContractBound> =
 	SockaSessionBase<TContract>;
 
 export interface SockaSessionConstructor {
-	new <TContract extends SockaContract<SockaContractConfig>>(
+	new <TContract extends SockaContractBound>(
 		options: SockaSessionOptions<TContract>,
 	): SockaSession<TContract>;
 }

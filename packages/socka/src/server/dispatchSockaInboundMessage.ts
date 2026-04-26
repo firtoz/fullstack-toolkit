@@ -1,4 +1,4 @@
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import type { SockaWireFormat } from "../core/wire-codec";
 import type { SockaWebSocketSession } from "./SockaWebSocketSession";
 
@@ -9,7 +9,7 @@ import type { SockaWebSocketSession } from "./SockaWebSocketSession";
  * (e.g. Bun {@link ServerWebSocket}) or when handling messages manually.
  */
 export async function dispatchSockaInboundMessage<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	session: SockaWebSocketSession<TContract, TData>,

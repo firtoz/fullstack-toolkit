@@ -3,12 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import type { SockaSession } from "../client/SockaSession";
 import type {
 	InferSockaPushPayload,
-	SockaContract,
-	SockaContractConfig,
+	SockaContractBound,
 } from "../core/contract";
 
 export type SockaPresenceOptions<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TUser extends { userId: string },
 	KJoin extends keyof TContract["pushes"] & string,
 	KLeave extends keyof TContract["pushes"] & string,
@@ -28,7 +27,7 @@ export type SockaPresenceOptions<
  * Options are read from a ref so you do not need to memoize the **`options`** object.
  */
 export function useSockaPresence<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TUser extends { userId: string },
 	KJoin extends keyof TContract["pushes"] & string,
 	KLeave extends keyof TContract["pushes"] & string,

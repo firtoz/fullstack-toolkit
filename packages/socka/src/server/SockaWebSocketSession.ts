@@ -2,8 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { exhaustiveGuard } from "@firtoz/maybe-error";
 import type {
 	InferSockaPushPayload,
-	SockaContract,
-	SockaContractConfig,
+	SockaContractBound,
 } from "../core/contract";
 import {
 	SockaWireError,
@@ -41,10 +40,7 @@ export type {
 	SockaWebSocketSessionConfigUnion,
 };
 
-function isLooseUpgradeConfig<
-	TContract extends SockaContract<SockaContractConfig>,
-	TData,
->(
+function isLooseUpgradeConfig<TContract extends SockaContractBound, TData>(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 ): config is SockaWebSocketSessionConfigLoose<TContract, TData> {
 	return (
@@ -60,9 +56,7 @@ export type SockaEmitCapable = {
 /**
  * Contract-typed session surface for handlers that push to clients.
  */
-export interface SockaPushSession<
-	TContract extends SockaContract<SockaContractConfig>,
-> {
+export interface SockaPushSession<TContract extends SockaContractBound> {
 	emitPush<K extends keyof TContract["pushes"] & string>(
 		name: K,
 		body: InferSockaPushPayload<TContract, K>,
@@ -100,7 +94,7 @@ export function broadcastSockaEventToPeers(
  * dispatch without Cloudflare Durable Object APIs.
  */
 export class SockaWebSocketSession<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData = EmptySockaSessionData,
 > implements SockaPushSession<TContract>
 {
@@ -443,7 +437,7 @@ export class SockaWebSocketSession<
  * registered in the shared map.
  */
 export function runSockaSessionOnAttached<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,

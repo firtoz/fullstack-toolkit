@@ -2,8 +2,7 @@ import type { Context } from "hono";
 import { BaseSession } from "@firtoz/websocket-do";
 import type {
 	InferSockaPushPayload,
-	SockaContract,
-	SockaContractConfig,
+	SockaContractBound,
 	InferSockaHandlers,
 } from "../core/contract";
 import {
@@ -19,7 +18,7 @@ import type { SockaWireFormat } from "../core/wire-codec";
 type EmptySockaSessionData = Record<string, never>;
 
 type SockaDoOuterSession<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TEnv extends object,
 > = import("./SockaDoSession").SockaDoSession<TContract, TData, TEnv>;
@@ -35,7 +34,7 @@ type SockaDoSessionCreateData<TData, TEnv extends object> = [TData] extends [
 		};
 
 export type SockaDoSessionConfig<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TEnv extends object,
 > = {
@@ -77,7 +76,7 @@ export type SockaDoSessionConfig<
 } & SockaDoSessionCreateData<TData, TEnv>;
 
 function runSockaDoSessionOnAttached<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TEnv extends object,
 >(
@@ -100,7 +99,7 @@ function runSockaDoSessionOnAttached<
 }
 
 function wrapHandlersForInnerSockaEngine<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TEnv extends object,
 >(
@@ -164,7 +163,7 @@ function wrapHandlersForInnerSockaEngine<
  * input/output via Standard Schema, and auto-sends response/error frames.
  */
 export class SockaDoSession<
-		TContract extends SockaContract<SockaContractConfig>,
+		TContract extends SockaContractBound,
 		TData = EmptySockaSessionData,
 		TEnv extends object = Cloudflare.Env,
 	>

@@ -1,4 +1,4 @@
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import {
 	SockaWireError,
 	decodeSockaWire,
@@ -16,7 +16,7 @@ import {
 } from "../core/wire-codec";
 
 export interface SockaWebSocketClientOptions<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 > {
 	contract: TContract;
 	/** Default `"json"` (text frames). Use `"msgpack"` for binary `ArrayBuffer` frames. */
@@ -87,9 +87,7 @@ export type SockaConnectionStatus =
  * Browser WebSocket client driven by a socka contract. Sends client request
  * frames and dispatches decoded server frames to callbacks.
  */
-export class SockaWebSocketClient<
-	TContract extends SockaContract<SockaContractConfig>,
-> {
+export class SockaWebSocketClient<TContract extends SockaContractBound> {
 	private ws: WebSocket | undefined;
 	private readonly opts: SockaWebSocketClientOptions<TContract>;
 	private readonly wireFormat: SockaWireFormat;

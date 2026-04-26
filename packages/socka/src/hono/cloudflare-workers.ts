@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { WSEvents } from "hono/ws";
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import { reportSockaError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
@@ -13,7 +13,7 @@ import {
 import { sockaHonoStrictInitFromContext } from "./strict-init-context";
 
 export type SockaHonoCloudflareOptions<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 > = {
 	sessions?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
@@ -29,7 +29,7 @@ export type SockaHonoCloudflareOptions<
  * the session is created on first `onMessage`).
  */
 export function sockaHonoCloudflare<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,

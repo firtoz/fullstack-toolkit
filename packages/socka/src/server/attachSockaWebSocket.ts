@@ -1,4 +1,4 @@
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import { reportSockaError } from "../core/socka-report-error";
 import { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
 import {
@@ -9,7 +9,7 @@ import {
 } from "./SockaWebSocketSession";
 
 export type AttachedSockaWebSocket<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 > = {
 	session: SockaWebSocketSession<TContract, TData>;
@@ -24,7 +24,7 @@ export type AttachedSockaWebSocket<
  * (also triggered by `close`).
  */
 export function attachSockaWebSocket<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	websocket: WebSocket,

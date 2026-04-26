@@ -1,11 +1,8 @@
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import type { SockaWebSocketSession } from "./SockaWebSocketSession";
 import type { SockaWebSocketSessionConfig } from "./SockaWebSocketSessionConfig";
 
-export type SockaRoomBundle<
-	TContract extends SockaContract<SockaContractConfig>,
-	TData,
-> = {
+export type SockaRoomBundle<TContract extends SockaContractBound, TData> = {
 	sessionMap: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
 	config: SockaWebSocketSessionConfig<TContract, TData>;
 };
@@ -15,7 +12,7 @@ export type SockaRoomBundle<
  * apps (one bundle per `roomId`).
  */
 export function createSockaRoomRegistry<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	makeConfig: (

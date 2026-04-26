@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import { reportSockaError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
@@ -53,7 +53,7 @@ export function sockaBunUpgrade<TExtra extends Record<string, unknown>>(
 }
 
 export type SockaBunResolveScope<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TWsData = undefined,
 > = (ws: ServerWebSocket<TWsData>) => {
@@ -62,7 +62,7 @@ export type SockaBunResolveScope<
 };
 
 export type SockaBunWebSocketHandlers<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TWsData = undefined,
 > = {
@@ -80,7 +80,7 @@ export type SockaBunWebSocketHandlers<
 };
 
 function bunHandlersFromResolveScope<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TWsData,
 >(
@@ -150,10 +150,7 @@ function bunHandlersFromResolveScope<
 	};
 }
 
-function bunHandlersFromConfig<
-	TContract extends SockaContract<SockaContractConfig>,
-	TData,
->(
+function bunHandlersFromConfig<TContract extends SockaContractBound, TData>(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	maybeOptions?: {
 		sessionMap?: Map<WebSocket, SockaWebSocketSession<TContract, TData>>;
@@ -232,7 +229,7 @@ function bunHandlersFromConfig<
  * The returned `sessionMap` is an empty placeholder; real maps come from `resolveScope`.
  */
 export function createSockaBunWebSocketHandlers<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
@@ -242,7 +239,7 @@ export function createSockaBunWebSocketHandlers<
 ): SockaBunWebSocketHandlers<TContract, TData, undefined>;
 
 export function createSockaBunWebSocketHandlers<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 	TWsData,
 >(options: {
@@ -250,7 +247,7 @@ export function createSockaBunWebSocketHandlers<
 }): SockaBunWebSocketHandlers<TContract, TData, TWsData>;
 
 export function createSockaBunWebSocketHandlers<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 >(
 	configOrOptions:

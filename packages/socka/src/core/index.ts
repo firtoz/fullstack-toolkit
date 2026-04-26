@@ -2,6 +2,8 @@ export {
 	defineSocka,
 	type SockaContract,
 	type SockaContractConfig,
+	type SockaContractConfigBound,
+	type SockaContractBound,
 	type SockaProcedureDef,
 	type ValidateSockaCallKeys,
 	type InferSockaSend,

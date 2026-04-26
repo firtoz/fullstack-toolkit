@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import type { WSEvents } from "hono/ws";
 import type { WebSocket as NodeWebSocket } from "ws";
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import { reportSockaError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
 import { dispatchSockaInboundMessage } from "../server/dispatchSockaInboundMessage";
@@ -16,7 +16,7 @@ import { sockaHonoStrictInitFromContext } from "./strict-init-context";
 export { sockaHonoStrictInitFromContext } from "./strict-init-context";
 
 export type SockaHonoNodeWsOptions<
-	TContract extends SockaContract<SockaContractConfig>,
+	TContract extends SockaContractBound,
 	TData,
 > = {
 	/** Shared map; default is a new `Map`. */
@@ -42,10 +42,7 @@ export type SockaHonoNodeWsOptions<
  * {@link https://github.com/honojs/middleware/tree/main/packages/node-ws @hono/node-ws}
  * `createNodeWebSocket({ app }).upgradeWebSocket`.
  */
-export function sockaHonoNodeWs<
-	TContract extends SockaContract<SockaContractConfig>,
-	TData,
->(
+export function sockaHonoNodeWs<TContract extends SockaContractBound, TData>(
 	config: SockaWebSocketSessionConfigUnion<TContract, TData>,
 	options?: SockaHonoNodeWsOptions<TContract, TData>,
 ): (c: Context) => WSEvents<NodeWebSocket> {

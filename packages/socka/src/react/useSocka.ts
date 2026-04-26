@@ -1,19 +1,18 @@
 import type { DependencyList, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { SockaContract, SockaContractConfig } from "../core/contract";
+import type { SockaContractBound } from "../core/contract";
 import { SockaSession, type SockaSessionOptions } from "../client/SockaSession";
 import type { SockaConnectionStatus } from "../client/SockaWebSocketClient";
 
 /** Options for {@link useSocka}. */
-export type UseSockaOptions<
-	TContract extends SockaContract<SockaContractConfig>,
-> = SockaSessionOptions<TContract>;
+export type UseSockaOptions<TContract extends SockaContractBound> =
+	SockaSessionOptions<TContract>;
 
 /**
  * Connects a {@link SockaSession} in an effect: rejects all pending calls and closes
  * the socket on cleanup or when `deps` change.
  */
-export function useSocka<TContract extends SockaContract<SockaContractConfig>>(
+export function useSocka<TContract extends SockaContractBound>(
 	options: UseSockaOptions<TContract>,
 	deps: DependencyList,
 ): {
