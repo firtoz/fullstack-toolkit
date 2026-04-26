@@ -13,6 +13,23 @@ export const myContract = defineSocka({
 });
 ```
 
+## Typing `pushHandlers`
+
+On **`SockaSession`** and **`useSockaSession`**, the **`pushHandlers`** option is **`Partial<InferSockaPushHandlers<typeof myContract>>`**. You can use **`satisfies`** to check an object literal without changing its inferred payload types (payloads for each key still narrow from the contract):
+
+```ts
+import type { InferSockaPushHandlers } from "@firtoz/socka/core";
+import { myContract } from "./contract";
+
+const pushHandlers = {
+  itemsChanged: (payload) => {
+    // `payload` is typed from the contract
+  },
+} satisfies Partial<InferSockaPushHandlers<typeof myContract>>;
+```
+
+Types are exported from **`@firtoz/socka/core`** (same as **`@firtoz/socka`**) — see **[Reference — Type inference](./reference.md#type-inference)**.
+
 ## Server: emit and broadcast
 
 - **`await session.emitPush("itemsChanged", payload)`** — send one **validated** push to **this** socket (typical for private notifications).
@@ -36,7 +53,7 @@ const payload = await session.subscribe.waitForPush("itemsChanged", {
 });
 ```
 
-Use **`InferSockaPushPayload<typeof myContract, "itemsChanged">`** (from **`@firtoz/socka/core`**) when typing callbacks or reducers. If the server never emits a push your client subscribed to, **`waitForPush`** can time out—handle **`AbortSignal`** and UI loading states.
+Use **`InferSockaPushPayload<typeof myContract, "itemsChanged">`** (from **`@firtoz/socka/core`**) when typing callbacks or reducers one-off. For tables of handlers, prefer **`InferSockaPushHandlers`** (see [Typing `pushHandlers`](#typing-pushhandlers) above). If the server never emits a push your client subscribed to, **`waitForPush`** can time out—handle **`AbortSignal`** and UI loading states.
 
 ## Who receives `broadcastPush`?
 

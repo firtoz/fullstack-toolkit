@@ -7,6 +7,30 @@ On Cloudflare **Durable Objects**, socka splits into two pieces:
 
 You still define one **`defineSocka`** contract; this page is only about hosting it on a **Durable Object**.
 
+## Typing `SockaDoSession` in app code
+
+**Prefer** a concrete contract on the session class, not **`any`**, so **`InferSockaHandlers`**, pushes, and **`session.data`** stay accurate:
+
+```ts
+export class MySockaSession extends SockaDoSession<
+  typeof myContract,
+  SessionData,
+  Env
+> {
+  constructor(
+    ws: WebSocket,
+    sessions: Map<WebSocket, MySockaSession>,
+    config: SockaDoSessionConfig<typeof myContract, SessionData, Env>,
+  ) {
+    super(ws, sessions, config);
+  }
+}
+```
+
+A runnable example is **[`examples/chatroom-do/src/do.ts`](../../../examples/chatroom-do/src/do.ts)** (`ChatSockaSession` extends **`SockaDoSession<typeof chatContract, …>`**).
+
+**Library note:** The **`SockaWebSocketDO`** base class in **`@firtoz/socka/do`** uses a session generic that erases the contract in a few **`any`** positions for variance across **`SockaDoSession`** subclasses. That is an internal detail—**application code** should still pass **`typeof myContract`** to **`SockaDoSession`** / **`SockaDoSessionConfig`** and use **`class MySession extends SockaDoSession<typeof myContract, …>`** as above. Do not copy **`any`** from library typings into your own session types.
+
 ## Cloudflare Worker checklist
 
 This is the **Cloudflare** side (bindings, Wrangler, generated types)—not socka-specific, but you need it before **`SockaWebSocketDO`** can run.

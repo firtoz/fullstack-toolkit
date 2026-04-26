@@ -20,6 +20,13 @@ Full list: **[Reference — Client configuration](./reference.md#client-configur
 
 Calls that **omit** **`output`** resolve **`await session.send.*`** as soon as the request is sent; they do **not** wait for **`serverResponse`**. If the server returns **`serverError`**, handle it with **`reportError`** (see **[Reference — Errors](./reference.md#errors-and-observability)**) — there is no rejected promise for that call. Prefer **`output: z.void()`** when you still want **`await`** to track success or failure through the returned promise.
 
+### Fire-and-forget observability
+
+For **output-less** calls, the **`send`** method returns a **`Promise<void>`** that resolves when the **outbound request is queued**; it does **not** reject if the server later answers with **`serverError`**. Patterns like **`void send.sendCursor({ ... }).catch(() => undefined)`** therefore **do not** observe **server-side** handler failures, validation errors on the response path, or structured **`SockaError`** for that procedure.
+
+- **Client** — pass **`reportError`** to **`SockaSession`** or **`useSockaSession`** / **`useSocka`** (and **`SockaSessionProvider`**, which forwards session options). Inspect **`event.kind`**; fire-and-forget server failures often surface as **`clientFireAndForgetRpcError`**. See **[Reference — Optional output (fire-and-forget)](./reference.md#optional-output-fire-and-forget)** and **[Reference — RPC handler errors](./reference.md#rpc-handler-errors)**.
+- **Server** — use **`onHandlerError`** and **`onValidationError`** on **`SockaWebSocketSessionConfig`** / **`SockaDoSessionConfig`** for logs and metrics when a handler throws or inbound frames fail before your handler.
+
 **Call names** — For literal `calls` objects, **`defineSocka`** rejects names that would make **`session.send`** Promise-like or clash with object shape (e.g. **`then`**, **`toString`**). If you use a wide **`Record<string, SockaProcedureDef>`**, TypeScript cannot apply that check; **`SockaSession`** still validates at construction (see **`RESERVED_SOCKA_PROCEDURE_NAMES`** in **`@firtoz/socka/core`**).
 
 ```ts
@@ -53,6 +60,16 @@ function App() {
 // Binary frames — set the same `wireFormat` on the server session
 useSockaSession(myContract, { url: "wss://...", wireFormat: "msgpack" }, []);
 ```
+
+Optional **`pushHandlers`** in the second argument matches **`Partial<InferSockaPushHandlers<typeof myContract>>`** — see **[Pushes — Typing `pushHandlers`](./pushes.md#typing-pushhandlers)**.
+
+### SSR and WebSocket URLs
+
+`useSockaSession` and **`SockaSessionProvider`** need a real **`url`** for **`new WebSocket(url)`**. In **React Router SSR** (or any **SSR** tree), `window` is missing on the server, and derived **`ws:` / `wss:`** URLs must not run during **render** with a **fake** placeholder like `ws://127.0.0.1/...` (it can connect to the wrong place or open before you know the page origin).
+
+**Recommended pattern:** In the route module, set **`const [url, setUrl] = useState<string | null>(null)`**, and in **`useEffect`** (browser-only), build a **`wss://` / `ws://`** URL from **`window.location`** (protocol, host, path to your Worker’s WebSocket route). If **`url === null`**, render a **loading** shell; only render a child component that calls **`useSockaSession(myContract, { url, pushHandlers? }, [url])`** when **`url`** is set. Keep **`url`** in the hook **`deps`** so identity changes re-open the right socket.
+
+**React + Durable Object** end-to-end wiring: **[React + Durable Objects](./react-durable-objects.md)**.
 
 ### `useSocka` — hold a `SockaSession` ref
 

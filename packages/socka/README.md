@@ -16,6 +16,20 @@
 
 **npm:** [`@firtoz/socka`](https://www.npmjs.com/package/@firtoz/socka). *Socka* is the project name in prose; **install and `import` paths always use `@firtoz/socka` or `@firtoz/socka/...`**. The published artifact is **compiled ESM + `.d.ts` in `dist/`** (see `package.json` `exports`).
 
+## Call `output` shapes (at a glance)
+
+| Goal | In `defineSocka` `calls` |
+|------|--------------------------|
+| Fire-and-forget (cursors, live drafts, high frequency) | **Omit** `output` |
+| Request/response **`await`** after the handler runs | Normal **`output`** schema |
+| Correlated **ack** with no payload | **`output: z.void()`** |
+
+Details: **[Client — Fire-and-forget](./docs/client.md#fire-and-forget)** · **[Reference — Optional output](./docs/reference.md#optional-output-fire-and-forget)**. For **output-less** calls, **`void send.foo(...).catch(...)`** does not observe **`serverError`**—use **`reportError`** on **`SockaSession`** / **`useSockaSession`** (see **[Client — Fire-and-forget observability](./docs/client.md#fire-and-forget-observability)**).
+
+**React + Cloudflare Durable Objects** — **[React + Durable Objects](./docs/react-durable-objects.md)** (shared contract, **`SockaWebSocketDO`**, **`useSockaSession`**, no casts). **Canvas / whiteboard-style** contract sketch: **[Collaborative realtime](./docs/collaborative-realtime.md)**.
+
+Hand-written types next to Zod under **`exactOptionalPropertyTypes`** can break inference—see **[Reference — TypeScript and exact optional properties](./docs/reference.md#typescript-and-exact-optional-properties)**.
+
 ## Minimal example: multi-room chat (Bun)
 
 Join/leave and live messages use **`pushes`**; persisted lines use **`listHistory`**; who is connected uses **`listPresence`**; **`clearHistory`** wipes stored messages and **`historyCleared`** notifies the room (examples also show presence in the UI). This snippet keeps **history in memory** so it stays short—see **[chatroom-bun](../../examples/chatroom-bun)** for **SQLite**, **[chatroom-hono](../../examples/chatroom-hono)** for **file JSON**, and **[chatroom-do](../../examples/chatroom-do)** for **Durable Object SQLite**.
@@ -255,7 +269,7 @@ Pick how the socket is upgraded, then use the matching import path and guide:
 
 ## Documentation
 
-Hub: **[`docs/README.md`](./docs/README.md)** (getting started, peers, lifecycle, multi-room, reference).
+Hub: **[`docs/README.md`](./docs/README.md)** (getting started, peers, lifecycle, multi-room, reference). **React + Cloudflare DO:** **[`docs/react-durable-objects.md`](./docs/react-durable-objects.md)** · **Collaborative / canvas contracts:** **[`docs/collaborative-realtime.md`](./docs/collaborative-realtime.md)**.
 
 **Roadmap:** [deferred ideas and future work](./roadmap.md). Agent skills: [`skills/`](./skills/).
 

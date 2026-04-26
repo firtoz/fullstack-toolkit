@@ -29,7 +29,7 @@ description: Standard Schema socka contracts (defineSocka), v1 wire envelopes, S
 
 ## Durable Objects
 
-- **`SockaDoSession`** / **`SockaWebSocketDO`** in **`@firtoz/socka/do`**—see **`@firtoz/socka/do-session`** skill.
+- **`SockaDoSession`** / **`SockaWebSocketDO`** in **`@firtoz/socka/do`**—see **`@firtoz/socka/do-session`** skill. Human-oriented wiring for **React + DO**: [React + Durable Objects](../../../docs/react-durable-objects.md); **canvas / whiteboard** contract sketch: [Collaborative realtime](../../../docs/collaborative-realtime.md).
 
 ## Low-level
 

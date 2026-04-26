@@ -5,20 +5,33 @@ User-facing **API** and **configuration**. For **wire protocol details** (frame 
 ## Type inference
 
 ```ts
-import type { InferSockaSend, InferSockaHandlers } from "@firtoz/socka/core";
+import type {
+  InferSockaSend,
+  InferSockaHandlers,
+  InferSockaPushHandlers,
+  InferSockaPushPayload,
+} from "@firtoz/socka/core";
 
 type Send = InferSockaSend<typeof myContract>;
 type Handlers = InferSockaHandlers<
   typeof myContract,
   SockaWebSocketSession<typeof myContract>
 >;
+type PushHandlers = Partial<InferSockaPushHandlers<typeof myContract>>;
+type RoomMessagePayload = InferSockaPushPayload<typeof myContract, "roomMessage">;
 ```
 
-**`InferSockaSend`** — Call names become methods on **`session.send`**; inputs/outputs follow the contract. **`InferSockaHandlers`** — Server handler arity matches **`calls`** (with or without `input`).
+**`InferSockaSend`** — Call names become methods on **`session.send`**; inputs/outputs follow the contract. **`InferSockaHandlers`** — server handler arity matches **`calls`** (with or without `input`). **`InferSockaPushPayload`** — payload type for a given push name. Use **`Partial<InferSockaPushHandlers<typeof myContract>>`** (or **`satisfies Partial<...>`** on an object literal) to type **`pushHandlers`** on **`SockaSession`** / **`useSockaSession`** — see **[Pushes — Typing `pushHandlers`](./pushes.md#typing-pushhandlers)**.
+
+### TypeScript and exact optional properties
+
+If you define **hand-written** types next to Zod (or other Standard Schema) objects with **`z.optional()`** (or **`.optional()`** on a field) and you enable TypeScript’s **`exactOptionalPropertyTypes`**, a property that is “optional” in the schema is often **inferred** as **`name?: T | undefined`**, not **`name?: T`**. A plain **`pressure?: number`** in your `type` can therefore **widen** differently from `z.infer<typeof pointSchema>`, and **contract** inference (or assignment to a handler parameter) can fail.
+
+**Remedies:** prefer **`z.infer<typeof pointSchema>`** (or the inferred output type of your field) for the type; or in hand-written types, include **`| undefined`**, e.g. **`pressure?: number | undefined`**, so they match the schema end to end.
 
 ### Optional output (fire-and-forget)
 
-If a call omits **`output`**, the server sends **no** **`serverResponse`** on success, and the client **`send`** method returns **`Promise<void>`** that resolves after the request is queued to the socket (not after the server runs the handler). **`output: z.void()`** keeps full request/response: the server still sends **`serverResponse`** and the client **`await`** waits for it. For output-less calls, server **`serverError`** frames include an optional **`rpc`** field so **`reportError`** can attribute failures when there is no pending promise.
+If a call omits **`output`**, the server sends **no** **`serverResponse`** on success, and the client **`send`** method returns **`Promise<void>`** that resolves after the request is queued to the socket (not after the server runs the handler). **`output: z.void()`** keeps full request/response: the server still sends **`serverResponse`** and the client **`await`** waits for it. For output-less calls, server **`serverError`** frames include an optional **`rpc`** field so **`reportError`** can attribute failures when there is no pending promise. For **client** observability when you cannot rely on **`.catch`** on **`send`**, see **[Client — Fire-and-forget observability](./client.md#fire-and-forget-observability)**.
 
 ## Errors and observability
 

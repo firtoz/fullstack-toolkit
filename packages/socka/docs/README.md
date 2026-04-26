@@ -5,6 +5,8 @@ In-repo guides for the **[Socka](../README.md)** library (**npm** [`@firtoz/sock
 | Doc | Description |
 |-----|-------------|
 | [Getting started](./getting-started.md) | Multi-room chat tutorial (RPC + pushes + history); links to **chatroom-*** examples |
+| [React + Durable Objects](./react-durable-objects.md) | Shared `defineSocka`, `SockaWebSocketDO`, `useSockaSession`, `pushHandlers`—no casts |
+| [Collaborative realtime](./collaborative-realtime.md) | Canvas / whiteboard-style contract sketch (ops, drafts, batched cursors) |
 | [Peers](./peers.md) | Which dependencies to install per import path and why |
 | [Multi-room](./multi-room.md) | Scopes, patterns per runtime, pitfalls |
 | [Lifecycle](./lifecycle.md) | `onAttached`, inbound RPCs, `handleClose` ordering |
