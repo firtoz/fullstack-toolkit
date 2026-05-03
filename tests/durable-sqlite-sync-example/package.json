@@ -42,7 +42,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.33.1",
+		"@cloudflare/vite-plugin": "^1.35.0",
 		"@cloudflare/workers-types": "catalog:",
 		"@playwright/test": "catalog:",
 		"@react-router/dev": "catalog:",
