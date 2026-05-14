@@ -1,3 +1,10 @@
 [test]
 preload = ["./test-setup.ts"]
 
+# https://bun.com/docs/runtime/bunfig
+#
+# minimumReleaseAge: npm versions must be published ≥2 days before install.
+# https://bun.com/docs/cli/install#minimum-release-age
+
+[install]
+minimumReleaseAge = 172800 # seconds (2 days)

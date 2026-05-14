@@ -1,9 +1,3 @@
-[test]
-# Global setup that runs before all tests
-preload = ["./tests/setup.ts"]
-# Increase timeout for CI where wrangler takes longer to start
-timeout = 60000
-
 # https://bun.com/docs/runtime/bunfig
 #
 # minimumReleaseAge: npm versions must be published ≥2 days before install.

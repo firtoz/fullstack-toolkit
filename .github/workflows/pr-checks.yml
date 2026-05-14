@@ -7,7 +7,6 @@ env:
 
 permissions:
   contents: read
-  actions: write
 
 on:
   pull_request:
@@ -34,9 +33,14 @@ jobs:
   checks:
     name: Run Checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js 24
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -92,6 +96,9 @@ jobs:
         playground: [test-playground-collections, test-playground-router]
         shard: [1, 2, 3, 4]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     container:
       image: mcr.microsoft.com/playwright:v1.59.1-noble
       # Browsers + OS deps are in the image; see https://playwright.dev/docs/ci#via-containers
@@ -102,6 +109,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       # setup-bun downloads bun-linux-x64.zip and shells out to `unzip`; minimal images omit it.
       - name: Install unzip (for setup-bun)
