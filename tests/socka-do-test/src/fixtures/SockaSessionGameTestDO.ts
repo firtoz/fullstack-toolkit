@@ -18,7 +18,9 @@ export class SockaSessionGameTestDO extends SockaWebSocketDO<
 	readonly world = createSessionGameWorld();
 
 	protected buildSockaSessionConfig() {
-		const { handlers, createData, onAttached } = createSessionGameHandlers(this.world);
+		const { handlers, createData, onAttached } = createSessionGameHandlers(
+			this.world,
+		);
 		return {
 			wireFormat: "json" as const,
 			handlers,

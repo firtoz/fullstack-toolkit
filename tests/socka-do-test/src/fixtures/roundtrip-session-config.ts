@@ -1,7 +1,7 @@
 import { SockaError } from "@firtoz/socka/core";
 import type { SockaWireFormat } from "@firtoz/socka/core";
 import type { SockaDoSessionConfigInput } from "@firtoz/socka/do";
-import { roundtripContract } from "./roundtrip-contract";
+import type { roundtripContract } from "./roundtrip-contract";
 
 export function roundtripSessionConfig(
 	wireFormat: SockaWireFormat,
