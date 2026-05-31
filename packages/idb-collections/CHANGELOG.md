@@ -1,5 +1,12 @@
 # @firtoz/idb-collections
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/db-helpers@2.2.2
+
 ## 0.3.1
 
 ### Patch Changes
