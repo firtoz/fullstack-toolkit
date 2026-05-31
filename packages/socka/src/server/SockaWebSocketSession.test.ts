@@ -8,7 +8,11 @@ import { rpcTestContract } from "../test-utils/rpc-contract-for-tests";
 import { createFakeWebSocket } from "../test-utils/fake-websocket";
 import { attachSockaWebSocket } from "./attachSockaWebSocket";
 import { dispatchSockaInboundMessage } from "./dispatchSockaInboundMessage";
-import { SockaWebSocketSession } from "./SockaWebSocketSession";
+import {
+	SockaWebSocketSession,
+	broadcastContractPushToAll,
+	broadcastSockaEventToAll,
+} from "./SockaWebSocketSession";
 
 describe("SockaWebSocketSession", () => {
 	test("echo RPC responds with serverResponse", async () => {
@@ -185,6 +189,94 @@ describe("SockaWebSocketSession", () => {
 		expect(sa.listPeers({ excludeSelf: true }).length).toBe(1);
 		expect(sa.listPeersWith((s) => s).length).toBe(2);
 		expect(sa.listPeersWith((s) => s, { excludeSelf: true }).length).toBe(1);
+	});
+
+	test("broadcastContractPushToAll reaches every session without a caller", async () => {
+		const a = createFakeWebSocket();
+		const b = createFakeWebSocket();
+		a.dispatchOpen();
+		b.dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		const sa = new SockaWebSocketSession(a.socket, sessions, {
+			strictUpgradeRequest: false,
+			contract: rpcTestContract,
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		const sb = new SockaWebSocketSession(b.socket, sessions, {
+			strictUpgradeRequest: false,
+			contract: rpcTestContract,
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(a.socket, sa);
+		sessions.set(b.socket, sb);
+
+		await broadcastContractPushToAll(
+			sessions,
+			rpcTestContract,
+			"notify",
+			{ msg: "room-wide" },
+		);
+		expect(a.sent.length).toBe(1);
+		expect(b.sent.length).toBe(1);
+	});
+
+	test("broadcastContractPushToAll is a no-op for empty sessions map", async () => {
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		await broadcastContractPushToAll(
+			sessions,
+			rpcTestContract,
+			"notify",
+			{ msg: "x" },
+		);
+	});
+
+	test("broadcastSockaEventToAll emits pre-validated payload to every session", () => {
+		const a = createFakeWebSocket();
+		const b = createFakeWebSocket();
+		a.dispatchOpen();
+		b.dispatchOpen();
+		const sessions = new Map<
+			WebSocket,
+			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
+		>();
+		const sa = new SockaWebSocketSession(a.socket, sessions, {
+			strictUpgradeRequest: false,
+			contract: rpcTestContract,
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		const sb = new SockaWebSocketSession(b.socket, sessions, {
+			strictUpgradeRequest: false,
+			contract: rpcTestContract,
+			handlers: {
+				echo: async (input) => ({ text: input.text }),
+				ping: async () => ({ pong: true as const }),
+			},
+			handleClose: async () => {},
+		});
+		sessions.set(a.socket, sa);
+		sessions.set(b.socket, sb);
+
+		broadcastSockaEventToAll(sessions, "notify", { msg: "raw" });
+		expect(a.sent.length).toBe(1);
+		expect(b.sent.length).toBe(1);
 	});
 
 	test("default strict upgrade throws without init.request", () => {

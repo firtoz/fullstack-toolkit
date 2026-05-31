@@ -124,8 +124,8 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 | `@firtoz/socka/client` | `SockaSession`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
 | `@firtoz/socka/test` | `createFakeWebSocket` for unit tests — see **[Testing](./testing.md)** |
 | `@firtoz/socka/react` | `useSocka`, `useSockaSession`, `useSockaPresence`, provider + context |
-| `@firtoz/socka/do` | `SockaDoSession`, `SockaWebSocketDO` |
-| `@firtoz/socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastSockaEventToPeers` |
+| `@firtoz/socka/do` | `SockaDoSession`, `SockaDoHost`, `SockaWebSocketDO`, `SockaWebSocketDOBase`, `SockaDoSessionConfigInput`, `broadcastPushToAll` (on DO) |
+| `@firtoz/socka/server` | `SockaWebSocketSession`, `attachSockaWebSocket`, `dispatchSockaInboundMessage`, `broadcastContractPushToAll`, `broadcastSockaEventToAll`, `broadcastSockaEventToPeers` |
 | `@firtoz/socka/bun` | `createSockaBunWebSocketHandlers` for **`Bun.serve`** |
 | `@firtoz/socka/hono` | `sockaHonoNodeWs` for **`@hono/node-ws`** |
 | `@firtoz/socka/hono/cloudflare` | `sockaHonoCloudflare` for **`hono/cloudflare-workers`** |

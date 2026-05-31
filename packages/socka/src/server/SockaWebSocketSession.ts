@@ -75,6 +75,9 @@ export interface SockaPushSession<TContract extends SockaContractBound> {
  * Exclusion uses the **WebSocket** identity (`self.websocket`), not the session
  * object reference, so the same `sessions` map can hold `SockaDoSession` while
  * `broadcastPush` runs on `this.socka` (inner {@link SockaWebSocketSession}).
+ *
+ * When there is no caller session, use {@link broadcastSockaEventToAll} or
+ * {@link broadcastContractPushToAll} instead of picking an arbitrary anchor.
  */
 export function broadcastSockaEventToPeers(
 	sessions: Map<WebSocket, SockaEmitCapable>,
@@ -87,6 +90,49 @@ export function broadcastSockaEventToPeers(
 		if (excludeSelf && ws === self.websocket) continue;
 		session.emitWireEvent(event, body);
 	}
+}
+
+/**
+ * Broadcast a socka server event to **every** session in the map. Payload must
+ * already be contract-validated.
+ *
+ * Use when there is no originating WebSocket session (HTTP admin routes, alarms,
+ * cron). Prefer {@link broadcastContractPushToAll} so validation stays centralized.
+ */
+export function broadcastSockaEventToAll(
+	sessions: Map<WebSocket, SockaEmitCapable>,
+	event: string,
+	body: unknown,
+): void {
+	for (const session of sessions.values()) {
+		session.emitWireEvent(event, body);
+	}
+}
+
+/**
+ * Validate a contract push payload and broadcast it to every session in the map.
+ *
+ * Works with any session type that implements {@link SockaEmitCapable} (including
+ * {@link SockaDoSession} on Durable Objects). No-op when `sessions` is empty.
+ */
+export async function broadcastContractPushToAll<
+	TContract extends SockaContractBound,
+	K extends keyof TContract["pushes"] & string,
+>(
+	sessions: Map<WebSocket, SockaEmitCapable>,
+	contract: TContract,
+	name: K,
+	body: InferSockaPushPayload<TContract, K>,
+): Promise<void> {
+	const schema = contract.pushes[name];
+	if (!schema) {
+		throw new Error(`socka: unknown push ${String(name)}`);
+	}
+	const validated = await parseStandardSchema(
+		schema as StandardSchemaV1<unknown, InferSockaPushPayload<TContract, K>>,
+		body,
+	);
+	broadcastSockaEventToAll(sessions, name, validated);
 }
 
 /**

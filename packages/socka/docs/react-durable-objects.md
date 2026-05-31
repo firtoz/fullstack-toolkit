@@ -38,41 +38,30 @@ export const roomContract = defineSocka({
 
 ## Durable Object
 
-Subclass **`SockaWebSocketDO`** and return a **`SockaDoSession`** (or subclass) from **`createSockaSession`**. Type your session with **`typeof roomContract`**, not `any` (see **[Durable Objects — Typing `SockaDoSession` in app code](./durable-objects.md#typing-sockadosession-in-app-code)**). Full patterns: **[Durable Objects](./durable-objects.md)**, example **[`examples/chatroom-do/src/do.ts`](../../examples/chatroom-do/src/do.ts)**.
+Subclass **`SockaWebSocketDO`**. Declare **`protected readonly contract`** and implement **`buildSockaSessionConfig`**. Full patterns: **[Durable Objects](./durable-objects.md)**, example **[`examples/chatroom-do/src/do.ts`](../../examples/chatroom-do/src/do.ts)**.
 
 ```ts
 // do.ts (sketch)
 import {
-	SockaDoSession,
 	SockaWebSocketDO,
-	type SockaDoSessionConfig,
+	type SockaDoSessionConfigInput,
 } from "@firtoz/socka/do";
 import { roomContract } from "./contract";
 
 type SessionData = { userId: string };
 
-export class RoomSockaSession extends SockaDoSession<
+export class RoomDo extends SockaWebSocketDO<
 	typeof roomContract,
 	SessionData,
 	Env
 > {
-	constructor(
-		ws: WebSocket,
-		sessions: Map<WebSocket, RoomSockaSession>,
-		config: SockaDoSessionConfig<typeof roomContract, SessionData, Env>,
-	) {
-		super(ws, sessions, config);
-	}
-}
+	protected readonly contract = roomContract;
 
-export class RoomDo extends SockaWebSocketDO<RoomSockaSession, Env> {
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, {
-			createSockaSession: (_c, ws) =>
-				new RoomSockaSession(ws, this.sessions, this.buildConfig()),
-		});
+	protected buildSockaSessionConfig(
+		ctx: Context<{ Bindings: Env }> | undefined,
+	): SockaDoSessionConfigInput<typeof roomContract, SessionData, Env> {
+		return { handlers: { … }, handleClose: async () => {} };
 	}
-	// `buildConfig()` returns SockaDoSessionConfig<typeof roomContract, SessionData, Env>
 }
 ```
 

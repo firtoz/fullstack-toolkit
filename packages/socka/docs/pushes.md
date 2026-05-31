@@ -35,7 +35,20 @@ Types are exported from **`@firtoz/socka/core`** (same as **`@firtoz/socka`**) �
 - **`await session.emitPush("itemsChanged", payload)`** — send one **validated** push to **this** socket (typical for private notifications).
 - **`await session.broadcastPush("itemsChanged", payload, excludeSelf?)`** — send to **every session in the same **`sessions`** map**, optionally skipping the caller.
 
-Lower-level helpers (for example **`broadcastSockaEventToPeers`** from **`@firtoz/socka/server`**) exist for advanced cases; prefer **`broadcastPush`** when you already have a session so schemas stay centralized.
+### Pushes from HTTP / non-WebSocket handlers
+
+When the origin is **not** a connected client (admin HTTP routes on the DO Hono `app`, alarms, cron, service bindings), there is no WebSocket session to call **`broadcastPush`** on.
+
+- **`await this.broadcastPushToAll("itemsChanged", payload)`** on **`SockaWebSocketDO`** — validates against the DO **`contract`** and fans out to **every** session in **`this.sessions`**. No **`excludeSelf`**, no anchor session. No-op when the room is empty.
+- **`await broadcastContractPushToAll(sessions, contract, name, body)`** from **`@firtoz/socka/server`** — same semantics when you have the shared **`sessions`** map and contract but are not inside a **`SockaWebSocketDO`** subclass.
+
+Pass **`contract`** on the DO (`protected readonly contract = myContract`) so **`broadcastPushToAll`** stays typed and validated — see **[Durable Objects](./durable-objects.md)**.
+
+**Do not** loop over **`sessions`** and call **`broadcastPush`** on each session — **`broadcastPush`** already iterates the whole map once. A loop would multiply traffic if every iteration ran a full fan-out.
+
+**Do not** pick an arbitrary session (for example **`sessions.values().next().value`**) as an anchor for room-wide pushes — that reads like a bug and is easy to misuse with **`excludeSelf: true`**.
+
+Lower-level helpers (for example **`broadcastSockaEventToPeers`** / **`broadcastSockaEventToAll`** from **`@firtoz/socka/server`**) exist for advanced cases; prefer **`broadcastPushToAll`** or **`broadcastContractPushToAll`** so schemas stay centralized.
 
 **Ordering** — Delivery order is per connection; there is no cross-client guarantee beyond your own handler ordering. For causal ordering across clients, include a **version** or **timestamp** in the payload.
 

@@ -1,16 +1,16 @@
 import { SockaWebSocketDO } from "@firtoz/socka/do";
-import { SockaRoundtripSession } from "./SockaRoundtripSession";
+import { roundtripContract } from "./roundtrip-contract";
+import { roundtripSessionConfig } from "./roundtrip-session-config";
 
 export class SockaMsgpackTestDO extends SockaWebSocketDO<
-	SockaRoundtripSession,
+	typeof roundtripContract,
+	Record<string, never>,
 	Env
 > {
+	protected readonly contract = roundtripContract;
 	app = this.getBaseApp();
 
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, {
-			createSockaSession: (_ctx, websocket) =>
-				new SockaRoundtripSession(websocket, this.sessions, "msgpack"),
-		});
+	protected buildSockaSessionConfig() {
+		return roundtripSessionConfig("msgpack");
 	}
 }

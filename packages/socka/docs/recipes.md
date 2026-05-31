@@ -63,7 +63,7 @@ app.get("/ws/:roomId", upgradeWebSocket((c) => {
 
 ## Durable Objects
 
-Subclass **`SockaWebSocketDO`**, implement **`createSockaSession`** returning **`SockaDoSession`** — see **[Durable Objects](./durable-objects.md)** and **[chatroom-do](../../examples/chatroom-do/src/do.ts)**.
+- **`SockaWebSocketDO`**: extend with **`contract`** + **`buildSockaSessionConfig`** — see **[Durable Objects](./durable-objects.md)** and **[chatroom-do](../../examples/chatroom-do/src/do.ts)**.
 
 ## Client (browser)
 

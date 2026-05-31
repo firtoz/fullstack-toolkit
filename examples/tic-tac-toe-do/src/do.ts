@@ -1,52 +1,48 @@
-import { SockaDoSession, SockaWebSocketDO } from "@firtoz/socka/do";
+import { SockaWebSocketDO, type SockaDoSessionConfigInput } from "@firtoz/socka/do";
 import { ticTacToeContract } from "./contract";
 import { TicTacToeGame } from "./game";
 
 type EmptySessionData = Record<string, never>;
 
-export class TicTacToeSockaSession extends SockaDoSession<
+export class TicTacToeDO extends SockaWebSocketDO<
 	typeof ticTacToeContract,
 	EmptySessionData,
 	Env
 > {
-	constructor(
-		websocket: WebSocket,
-		sessions: Map<WebSocket, TicTacToeSockaSession>,
-		game: TicTacToeGame,
-	) {
-		super(websocket, sessions, {
-			contract: ticTacToeContract,
-			wireFormat: "json",
-			handlers: {
-				join: async (session) => {
-					const { player } = game.join(session.websocket);
-					const snap = game.snapshot();
-					await session.broadcastPush("stateChanged", snap);
-					return { ...snap, you: player };
-				},
-				move: async (input, session) => {
-					const snap = game.move(session.websocket, input.row, input.col);
-					await session.broadcastPush("stateChanged", snap);
-					return snap;
-				},
-			},
-			handleClose: async (session) => {
-				game.release(session.websocket);
-			},
-		});
-	}
-}
+	protected readonly contract = ticTacToeContract;
 
-export class TicTacToeDO extends SockaWebSocketDO<TicTacToeSockaSession, Env> {
 	/** One game per Durable Object instance (one room). */
 	readonly game = new TicTacToeGame();
 
 	app = this.getBaseApp();
 
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, {
-			createSockaSession: (_ctx, websocket) =>
-				new TicTacToeSockaSession(websocket, this.sessions, this.game),
-		});
+	protected buildSockaSessionConfig(): SockaDoSessionConfigInput<
+		typeof ticTacToeContract,
+		EmptySessionData,
+		Env
+	> {
+		return {
+			wireFormat: "json" as const,
+			handlers: {
+				join: async (session) => {
+					const { player } = this.game.join(session.websocket);
+					const snap = this.game.snapshot();
+					await session.broadcastPush("stateChanged", snap);
+					return { ...snap, you: player };
+				},
+				move: async (input, session) => {
+					const snap = this.game.move(
+						session.websocket,
+						input.row,
+						input.col,
+					);
+					await session.broadcastPush("stateChanged", snap);
+					return snap;
+				},
+			},
+			handleClose: async (session) => {
+				this.game.release(session.websocket);
+			},
+		};
 	}
 }

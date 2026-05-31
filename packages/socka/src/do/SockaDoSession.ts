@@ -13,6 +13,8 @@ import {
 import { reportSockaError } from "../core/socka-report-error";
 import type { SockaReportError } from "../core/socka-report-error";
 import type { SockaWireFormat } from "../core/wire-codec";
+import type { SockaDoHost } from "./SockaDoHost";
+import { isSockaDoHost } from "./SockaDoHost";
 
 /** Session data with no fields — `createData` may be omitted (defaults to `{}`). */
 type EmptySockaSessionData = Record<string, never>;
@@ -33,12 +35,11 @@ type SockaDoSessionCreateData<TData, TEnv extends object> = [TData] extends [
 			createData: (ctx: Context<{ Bindings: TEnv }>) => TData;
 		};
 
-export type SockaDoSessionConfig<
+type SockaDoSessionConfigFields<
 	TContract extends SockaContractBound,
 	TData,
 	TEnv extends object,
 > = {
-	contract: TContract;
 	/** Default `"json"`. Use `"msgpack"` for binary frames (must match client). */
 	wireFormat?: SockaWireFormat;
 	handlers: InferSockaHandlers<
@@ -73,7 +74,23 @@ export type SockaDoSessionConfig<
 	) => void | Promise<void>;
 	serializeJson?: (value: unknown) => string;
 	deserializeJson?: (raw: string) => unknown;
-} & SockaDoSessionCreateData<TData, TEnv>;
+};
+
+/** {@link SockaDoSessionConfig} without `contract` — supplied by the DO host. */
+export type SockaDoSessionConfigInput<
+	TContract extends SockaContractBound,
+	TData,
+	TEnv extends object,
+> = SockaDoSessionConfigFields<TContract, TData, TEnv> &
+	SockaDoSessionCreateData<TData, TEnv>;
+
+export type SockaDoSessionConfig<
+	TContract extends SockaContractBound,
+	TData,
+	TEnv extends object,
+> = {
+	contract: TContract;
+} & SockaDoSessionConfigInput<TContract, TData, TEnv>;
 
 function runSockaDoSessionOnAttached<
 	TContract extends SockaContractBound,
@@ -157,6 +174,43 @@ function wrapHandlersForInnerSockaEngine<
 	>;
 }
 
+function resolveSockaDoSessionInit<
+	TContract extends SockaContractBound,
+	TData,
+	TEnv extends object,
+	TSession extends SockaDoSession<TContract, TData, TEnv>,
+>(
+	sessionsOrHost:
+		| Map<WebSocket, SockaDoSession<TContract, TData, TEnv>>
+		| SockaDoHost<TContract, TData, TEnv, TSession>,
+	configOrAttachCtx?:
+		| SockaDoSessionConfig<TContract, TData, TEnv>
+		| Context<{ Bindings: TEnv }>,
+): {
+	sessions: Map<WebSocket, SockaDoSession<TContract, TData, TEnv>>;
+	config: SockaDoSessionConfig<TContract, TData, TEnv>;
+} {
+	if (isSockaDoHost(sessionsOrHost)) {
+		const attachCtx = configOrAttachCtx as
+			| Context<{ Bindings: TEnv }>
+			| undefined;
+		return {
+			sessions: sessionsOrHost.sessions as Map<
+				WebSocket,
+				SockaDoSession<TContract, TData, TEnv>
+			>,
+			config: {
+				contract: sessionsOrHost.contract,
+				...sessionsOrHost.buildSockaSessionConfig(attachCtx),
+			},
+		};
+	}
+	return {
+		sessions: sessionsOrHost,
+		config: configOrAttachCtx as SockaDoSessionConfig<TContract, TData, TEnv>,
+	};
+}
+
 /**
  * Durable Object WebSocket session driven by a socka contract.
  * Dispatches client requests to typed handler functions, validates
@@ -174,9 +228,37 @@ export class SockaDoSession<
 
 	constructor(
 		websocket: WebSocket,
+		host: SockaDoHost<
+			TContract,
+			TData,
+			TEnv,
+			SockaDoSession<TContract, TData, TEnv>
+		>,
+		attachCtx?: Context<{ Bindings: TEnv }> | undefined,
+	);
+	constructor(
+		websocket: WebSocket,
 		sessions: Map<WebSocket, SockaDoSession<TContract, TData, TEnv>>,
 		config: SockaDoSessionConfig<TContract, TData, TEnv>,
+	);
+	constructor(
+		websocket: WebSocket,
+		sessionsOrHost:
+			| Map<WebSocket, SockaDoSession<TContract, TData, TEnv>>
+			| SockaDoHost<
+					TContract,
+					TData,
+					TEnv,
+					SockaDoSession<TContract, TData, TEnv>
+			  >,
+		configOrAttachCtx?:
+			| SockaDoSessionConfig<TContract, TData, TEnv>
+			| Context<{ Bindings: TEnv }>,
 	) {
+		const { sessions, config } = resolveSockaDoSessionInit(
+			sessionsOrHost,
+			configOrAttachCtx,
+		);
 		const wireFormat = config.wireFormat ?? "json";
 		super(
 			websocket,

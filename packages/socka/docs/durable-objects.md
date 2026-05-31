@@ -2,34 +2,74 @@
 
 On Cloudflare **Durable Objects**, socka splits into two pieces:
 
-1. **`SockaDoSession`** — one instance per connected **`WebSocket`**. You pass **`handlers`**, **`handleClose`**, and optional **`onAttached`**; **`broadcastPush`** uses the shared **`sessions`** map you pass into the constructor.
-2. **`SockaWebSocketDO`** — subclasses **`BaseWebSocketDO`** from **`@firtoz/websocket-do`**. It connects HTTP → WebSocket upgrade → **`createSockaSession(ctx, websocket)`** so your session class gets the right **`sessions`** map and, when needed, a Hono **`Context`**.
+1. **`SockaDoSession`** — one instance per connected **`WebSocket`**. Handlers, **`handleClose`**, and optional **`onAttached`** live in config; **`broadcastPush`** fans out over the shared **`sessions`** map.
+2. **`SockaWebSocketDO`** — subclasses **`BaseWebSocketDO`** from **`@firtoz/websocket-do`**. You declare the **`contract`** once on the DO and implement **`buildSockaSessionConfig`**; the base wires HTTP → WebSocket upgrade → **`new SockaDoSession(websocket, host)`**.
 
 You still define one **`defineSocka`** contract; this page is only about hosting it on a **Durable Object**.
 
-## Typing `SockaDoSession` in app code
+## Recommended: `SockaWebSocketDO` (default session)
 
-**Prefer** a concrete contract on the session class, not **`any`**, so **`InferSockaHandlers`**, pushes, and **`session.data`** stay accurate:
+Most apps do **not** need a custom **`SockaDoSession`** subclass. Extend **`SockaWebSocketDO`**, set **`contract`**, and implement **`buildSockaSessionConfig`**. Add a constructor only when you need setup beyond **`super(ctx, env)`** (for example **`ctx.blockConcurrencyWhile`** for SQLite migrations).
+
+Runnable example: **[`examples/chatroom-do/src/do.ts`](../../../examples/chatroom-do/src/do.ts)**.
 
 ```ts
-export class MySockaSession extends SockaDoSession<
+import {
+  SockaWebSocketDO,
+  type SockaDoSessionConfigInput,
+} from "@firtoz/socka/do";
+import { myContract } from "./contract";
+
+type SessionData = { userId: string; displayName: string };
+
+export class MyDO extends SockaWebSocketDO<
   typeof myContract,
   SessionData,
   Env
 > {
-  constructor(
-    ws: WebSocket,
-    sessions: Map<WebSocket, MySockaSession>,
-    config: SockaDoSessionConfig<typeof myContract, SessionData, Env>,
-  ) {
-    super(ws, sessions, config);
+  protected readonly contract = myContract;
+  app = this.getBaseApp();
+
+  protected buildSockaSessionConfig(
+    ctx: Context<{ Bindings: Env }> | undefined,
+  ): SockaDoSessionConfigInput<typeof myContract, SessionData, Env> {
+    return {
+      wireFormat: "json",
+      createData: (c) => ({ userId: crypto.randomUUID(), displayName: "…" }),
+      handlers: {
+        sendMessage: async (input, session) => {
+          await this.db.insert(…);
+          await session.broadcastPush("roomMessage", row);
+          return { ok: true as const };
+        },
+      },
+      handleClose: async (session) => { … },
+    };
+  }
+
+  // HTTP admin — no WebSocket session on this path
+  async deleteMessage(id: string) {
+    await this.db.delete(…);
+    await this.broadcastPushToAll("messageDeleted", { id });
   }
 }
 ```
 
-A runnable example is **[`examples/chatroom-do/src/do.ts`](../../../examples/chatroom-do/src/do.ts)** (`ChatSockaSession` extends **`SockaDoSession<typeof chatContract, …>`**).
+**`buildSockaSessionConfig`** omits **`contract`** (the DO owns it). See **[Hibernation and `session.data`](#hibernation-and-sessiondata)** for when **`ctx`** and **`createData`** run (including after hibernate resume).
 
-**Library note:** The **`SockaWebSocketDO`** base class in **`@firtoz/socka/do`** uses a session generic that erases the contract in a few **`any`** positions for variance across **`SockaDoSession`** subclasses. That is an internal detail—**application code** should still pass **`typeof myContract`** to **`SockaDoSession`** / **`SockaDoSessionConfig`** and use **`class MySession extends SockaDoSession<typeof myContract, …>`** as above. Do not copy **`any`** from library typings into your own session types.
+## Custom `SockaDoSession` subclass (optional)
+
+Override **`createSockaSession`** on **`SockaWebSocketDOBase`** (four type parameters) when you need a session subtype. Or construct from the host:
+
+```ts
+class MySession extends SockaDoSession<typeof myContract, SessionData, Env> {
+  constructor(ws: WebSocket, do: MyDO, ctx?: Context<{ Bindings: Env }>) {
+    super(ws, do, ctx);
+  }
+}
+```
+
+The legacy **`(websocket, sessions, config)`** constructor remains for tests and non-DO tooling.
 
 ## Cloudflare Worker checklist
 
@@ -44,53 +84,38 @@ This is the **Cloudflare** side (bindings, Wrangler, generated types)—not sock
 
 **`wireFormat`** defaults to **`"json"`** (text frames). Use **`"msgpack"`** only if the client also uses **`msgpack`**. Mismatched **`wireFormat`** between client and session config will fail to decode. See **[Reference](./reference.md#wire-encoding-json-and-msgpack)** and **[Internals](./internals.md)**.
 
-## `SockaDoSession`
+## `SockaDoSession` (manual wiring)
+
+For tests or advanced cases, you can still construct a session directly:
 
 ```ts
-import { SockaDoSession } from "@firtoz/socka/do";
-import { myContract } from "./contract";
-
-new SockaDoSession(websocket, sessions, {
-  contract: myContract,
-  // wireFormat: "msgpack", // optional; default JSON text — must match client
-  handlers: {
-    list: async (session) => fetchMessages(),
-    insert: async (input, session) => saveMessage(input.message),
-  },
-  handleClose: async (session) => {
-    // e.g. remove session.websocket from your game / presence tables
-  },
-});
+new SockaDoSession(websocket, doHost, attachCtx);
+// or
+new SockaDoSession(websocket, sessions, { contract, handlers, handleClose, … });
 ```
 
 Handler types use **`InferSockaHandlers<typeof myContract, SockaDoSession<typeof myContract, …>>`**. Same semantics as **`SockaWebSocketSession`**: calls **with** **`output`** get a validated **`serverResponse`**; calls **without** **`output`** are fire-and-forget on success (no success frame). Throw **`SockaError`** for expected domain failures so the client receives a structured **`serverError`** frame (with optional **`rpc`** on the wire). For client-side **`reportError`** when using output-less calls, see **[Reference](./reference.md#optional-output-fire-and-forget)** and **[Client](./client.md#fire-and-forget)**.
 
-**`createData`** — If your session needs typed **`session.data`**, provide **`createData: (ctx) => …`** where **`ctx`** is a Hono **`Context`** (bindings, request, etc.). That runs when the DO accepts the socket; data participates in **hibernation** via **`@firtoz/websocket-do`** **`BaseSession`** (see **`session.update()`** below).
+## Hibernation and `session.data`
 
-## `SockaWebSocketDO` and routing
+**Fresh WebSocket upgrade** — **`buildSockaSessionConfig(ctx)`** runs with the Hono **`Context`**. **`createData`** runs once via **`BaseSession.startFresh(ctx)`** and can read **`ctx.req`** (query params, headers, etc.).
 
-Subclass **`SockaWebSocketDO`** and pass **`createSockaSession`** to connect upgrades to your session class. The base class exposes **`getBaseApp()`** for a Hono app that matches **`BaseWebSocketDO`** routing (see **`@firtoz/websocket-do`** for env typing and routes).
+**Hibernation resume** — **`@firtoz/websocket-do`** calls **`createSession(undefined, websocket)`** then **`session.resume()`**, **not** **`startFresh`**. So:
 
-Minimal shape (full game example: [`examples/tic-tac-toe-do`](../../../examples/tic-tac-toe-do/src/do.ts)):
+- **`buildSockaSessionConfig(undefined)`** runs again to rebuild handlers (they may close over **`this`** — that is fine).
+- **`createData` is not called on resume.** **`session.data`** is restored from the WebSocket attachment. Do not assume **`ctx`** exists inside **`createData`** on resume — it will not run.
 
-```ts
-export class MyDO extends SockaWebSocketDO<MySession, Env> {
-  app = this.getBaseApp();
-
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env, {
-      createSockaSession: (_ctx, websocket) =>
-        new MySession(websocket, this.sessions /*, … */),
-    });
-  }
-}
-```
+If you mutate **`session.data`** after connect, call **`await session.update()`** so the attachment is rewritten before hibernate. If you skip **`update`**, resume can observe stale **`session.data`**. For large or authoritative state, keep a **stable id** in **`session.data`** and use **D1 / KV / SQLite** as the source of truth—the attachment is for small, session-scoped working state.
 
 **One Durable Object instance per room** is a common pattern: derive the DO id from your room key so each instance has its own **`sessions`** map—see **[Multi-room](./multi-room.md)**.
 
-## Hibernation and `session.data`
+## Pushes from HTTP / non-WebSocket handlers
 
-After you mutate **`session.data`**, call **`await session.update()`** (from **`@firtoz/websocket-do`**) so the attachment is rewritten for **hibernation**. If you skip **`update`**, **resume** can observe stale **`session.data`**. For large or authoritative state, keep a **stable id** in **`session.data`** and use **D1 / KV / SQLite** as the source of truth—the attachment is for small, session-scoped working state.
+Many DO apps expose **Hono HTTP routes** on **`app`** (admin moderation, internal APIs, alarms) in addition to **`/websocket`**. After mutating storage from those handlers, you often need a contract-typed push to **every** connected client — with **no** originating WebSocket session.
+
+Use **`await this.broadcastPushToAll("messageDeleted", { id })`** on your DO subclass. The DO **`contract`** is the single source of truth. See **[Pushes — Pushes from HTTP / non-WebSocket handlers](./pushes.md#pushes-from-http--non-websocket-handlers)**.
+
+Without a DO subclass, use **`broadcastContractPushToAll(this.sessions, contract, name, body)`** from **`@firtoz/socka/server`**.
 
 ## See also
 

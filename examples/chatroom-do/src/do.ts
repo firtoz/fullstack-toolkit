@@ -1,4 +1,7 @@
-import { SockaDoSession, type SockaDoSessionConfig, SockaWebSocketDO } from "@firtoz/socka/do";
+import {
+	SockaWebSocketDO,
+	type SockaDoSessionConfigInput,
+} from "@firtoz/socka/do";
 import { desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -10,34 +13,18 @@ import { chatMessagesTable } from "./schema";
 
 type SessionData = { userId: string; displayName: string };
 
-export class ChatSockaSession extends SockaDoSession<
+export class ChatRoomDO extends SockaWebSocketDO<
 	typeof chatContract,
 	SessionData,
 	Env
 > {
-	constructor(
-		websocket: WebSocket,
-		sessions: Map<WebSocket, ChatSockaSession>,
-		config: SockaDoSessionConfig<typeof chatContract, SessionData, Env>,
-	) {
-		super(websocket, sessions, config);
-	}
-}
-
-export class ChatRoomDO extends SockaWebSocketDO<ChatSockaSession, Env> {
+	protected readonly contract = chatContract;
 	app = this.getBaseApp();
 
 	private db!: ReturnType<typeof drizzle<typeof schema>>;
 
 	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env, {
-			createSockaSession: (_c, websocket) =>
-				new ChatSockaSession(
-					websocket,
-					this.sessions as Map<WebSocket, ChatSockaSession>,
-					this.buildConfig(),
-				),
-		});
+		super(ctx, env);
 
 		ctx.blockConcurrencyWhile(async () => {
 			const db = drizzle(ctx.storage, { schema });
@@ -46,9 +33,12 @@ export class ChatRoomDO extends SockaWebSocketDO<ChatSockaSession, Env> {
 		});
 	}
 
-	private buildConfig(): SockaDoSessionConfig<typeof chatContract, SessionData, Env> {
+	protected buildSockaSessionConfig(): SockaDoSessionConfigInput<
+		typeof chatContract,
+		SessionData,
+		Env
+	> {
 		return {
-			contract: chatContract,
 			wireFormat: "json",
 			createData: (ctx) => {
 				const u = new URL(ctx.req.url);

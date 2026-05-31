@@ -8,7 +8,7 @@ description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objectsâ€
 ## Components
 
 - **`SockaDoSession`** (**`@firtoz/socka/do`**): extends **`BaseSession`** from **`@firtoz/websocket-do`**. Incoming messages are decoded with **`decodeSockaWire`** after JSON parse (text) or **`parseWirePayload`** (msgpack). Valid **`clientRequest`** frames are dispatched to **`handlers`** (typed **`InferSockaHandlers<typeof contract>`**). Calls **with** **`output`** get **`encodeServerResponse`** on success; calls **without** **`output`** send **`encodeServerError`** only on failure; optional **`encodeServerEvent`** for contract pushes.
-- **`SockaWebSocketDO`**: thin **`BaseWebSocketDO`** wrapper; you supply **`createSockaSession(ctx, websocket)`** returning a **`SockaDoSession`** (or subclass).
+- **`SockaWebSocketDO`**: extend with **`protected readonly contract`**, **`buildSockaSessionConfig(ctx)`** (constructor only when you need extra setup, e.g. DB migrate). Default session wiring is built-in; use **`SockaWebSocketDOBase`** only for a custom **`SockaDoSession`** subclass.
 
 ## Session config (`SockaDoSessionConfig`)
 

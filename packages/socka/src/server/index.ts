@@ -1,5 +1,7 @@
 export {
 	SockaWebSocketSession,
+	broadcastContractPushToAll,
+	broadcastSockaEventToAll,
 	broadcastSockaEventToPeers,
 	runSockaSessionOnAttached,
 	type SockaEmitCapable,
