@@ -28,11 +28,7 @@ export class SockaSessionGameTestDO extends SockaWebSocketDO<
 		Env
 	> {
 		const { handlers, createData, onAttached } = createSessionGameHandlers<
-			SockaDoSession<
-				typeof sessionGameContract,
-				SessionGameSessionData,
-				Env
-			>
+			SockaDoSession<typeof sessionGameContract, SessionGameSessionData, Env>
 		>(this.world);
 		return {
 			wireFormat: "json" as const,
