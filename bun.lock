@@ -30,7 +30,7 @@
     },
     "examples/chatroom-bun": {
       "name": "chatroom-bun",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "zod": "catalog:",
@@ -43,7 +43,7 @@
     },
     "examples/chatroom-do": {
       "name": "chatroom-do",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "@firtoz/websocket-do": "workspace:*",
@@ -61,7 +61,7 @@
     },
     "examples/chatroom-hono": {
       "name": "chatroom-hono",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "@hono/node-server": "^2.0.1",
@@ -375,7 +375,7 @@
     },
     "packages/socka": {
       "name": "@firtoz/socka",
-      "version": "3.0.3",
+      "version": "4.0.0",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
         "@standard-schema/spec": "catalog:",
