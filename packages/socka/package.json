@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/socka",
-	"version": "5.0.0",
+	"version": "5.0.1",
 	"type": "module",
 	"description": "Standard Schema–first WebSocket RPC for TypeScript — Bun, Hono, Node ws, Cloudflare Workers, Durable Objects",
 	"main": "./dist/core/index.js",

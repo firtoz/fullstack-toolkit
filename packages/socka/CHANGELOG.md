@@ -1,5 +1,12 @@
 # @firtoz/socka
 
+## 5.0.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/websocket-do@14.0.1
+
 ## 5.0.0
 
 ### Patch Changes
