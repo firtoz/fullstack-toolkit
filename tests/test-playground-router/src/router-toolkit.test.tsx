@@ -69,8 +69,8 @@ describe("formAction", () => {
 		request: createMockRequest(formData),
 		params: {},
 		context: {},
-		unstable_pattern: "match",
-		unstable_url: new URL("http://localhost/"),
+		pattern: "match",
+		url: new URL("http://localhost/"),
 	});
 
 	it("should successfully validate and process form data", async () => {
@@ -372,7 +372,8 @@ describe("formAction", () => {
 			} as unknown as Request,
 			params: {},
 			context: {},
-			unstable_pattern: "match",
+			pattern: "match",
+			url: new URL("http://localhost/"),
 		} as ActionFunctionArgs;
 
 		const result = await action(args);
@@ -416,7 +417,8 @@ describe("formAction", () => {
 			} as unknown as Request,
 			params: {},
 			context: {},
-			unstable_pattern: "match",
+			pattern: "match",
+			url: new URL("http://localhost/"),
 		} as ActionFunctionArgs;
 
 		const result = await action(args);

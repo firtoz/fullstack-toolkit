@@ -112,6 +112,27 @@ type TypedMethodFetcher<T extends Hono, M extends HttpMethod> = <
 		(M extends "get" | "delete" ? EmptyObject : BodyParams<T, M, SchemaPath>),
 ) => Promise<SchemaOutput<T, M, SchemaPath>>;
 
+/**
+ * `@hono/zod-validator` (0.8+) unions Zod 400 JSON bodies into route `output`.
+ * Fetcher clients only model successful handler responses.
+ */
+type ExcludeZodValidatorFailureOutput<T> = Exclude<
+	T,
+	{ success: false; error: unknown }
+>;
+
+type HonoRouteOutput<
+	T extends Hono,
+	M extends HttpMethod,
+	SchemaPath extends string & keyof HonoSchema<T>[M],
+	DollarM extends `$${M}` & keyof HonoSchema<T>[M][SchemaPath] = `$${M}` &
+		keyof HonoSchema<T>[M][SchemaPath],
+> = "output" extends keyof HonoSchema<T>[M][SchemaPath][DollarM]
+	? ExcludeZodValidatorFailureOutput<
+			HonoSchema<T>[M][SchemaPath][DollarM]["output"]
+		>
+	: never;
+
 type SchemaOutput<
 	T extends Hono,
 	M extends HttpMethod,
@@ -119,7 +140,7 @@ type SchemaOutput<
 	DollarM extends `$${M}` & keyof HonoSchema<T>[M][SchemaPath] = `$${M}` &
 		keyof HonoSchema<T>[M][SchemaPath],
 > = "output" extends keyof HonoSchema<T>[M][SchemaPath][DollarM]
-	? JsonResponse<HonoSchema<T>[M][SchemaPath][DollarM]["output"]>
+	? JsonResponse<HonoRouteOutput<T, M, SchemaPath, DollarM>>
 	: never;
 
 type DoSchemaOutput<
@@ -129,7 +150,7 @@ type DoSchemaOutput<
 	DollarM extends `$${M}` & keyof HonoSchema<T>[M][SchemaPath] = `$${M}` &
 		keyof HonoSchema<T>[M][SchemaPath],
 > = "output" extends keyof HonoSchema<T>[M][SchemaPath][DollarM]
-	? RpcDisposableJsonResponse<HonoSchema<T>[M][SchemaPath][DollarM]["output"]>
+	? RpcDisposableJsonResponse<HonoRouteOutput<T, M, SchemaPath, DollarM>>
 	: never;
 
 type BodyParams<

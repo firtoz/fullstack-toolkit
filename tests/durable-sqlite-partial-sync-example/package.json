@@ -28,7 +28,7 @@
 		"@react-router/serve": "catalog:",
 		"@tanstack/db": "catalog:",
 		"@tanstack/react-db": "catalog:",
-		"@tanstack/react-virtual": "^3.13.24",
+		"@tanstack/react-virtual": "^3.13.26",
 		"drizzle-orm": "catalog:",
 		"hono": "catalog:",
 		"msgpackr": "catalog:",
@@ -39,7 +39,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.35.0",
+		"@cloudflare/vite-plugin": "^1.39.0",
 		"@cloudflare/workers-types": "catalog:",
 		"@playwright/test": "catalog:",
 		"@react-router/dev": "catalog:",

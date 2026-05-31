@@ -36,7 +36,7 @@
 		"@tanstack/query-db-collection": "catalog:",
 		"@tanstack/react-db": "catalog:",
 		"drizzle-orm": "catalog:",
-		"isbot": "^5.1.39",
+		"isbot": "^5.1.40",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"react-router": "catalog:",
