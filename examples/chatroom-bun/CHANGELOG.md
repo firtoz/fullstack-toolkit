@@ -1,5 +1,12 @@
 # chatroom-bun
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`1d094ab`](https://github.com/firtoz/fullstack-toolkit/commit/1d094ab0ab0d065e8ba7afbe58c63d07dbb7204c)]:
+  - @firtoz/socka@4.0.0
+
 ## 0.0.5
 
 ### Patch Changes
