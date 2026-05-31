@@ -1,5 +1,12 @@
 # @firtoz/chat-agent-drizzle
 
+## 2.0.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/chat-agent@2.1.2
+
 ## 2.0.2
 
 ### Patch Changes

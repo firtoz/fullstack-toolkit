@@ -1,5 +1,13 @@
 # chatroom-do
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`1656f83`](https://github.com/firtoz/fullstack-toolkit/commit/1656f8383ef99cdf698a6660789d8e42632ea69e)]:
+  - @firtoz/socka@5.0.0
+  - @firtoz/websocket-do@14.0.0
+
 ## 0.0.6
 
 ### Patch Changes

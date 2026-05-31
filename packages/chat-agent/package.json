@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/chat-agent",
-	"version": "2.1.1",
+	"version": "2.1.2",
 	"description": "Wire protocol, tools, and ChatAgentBase for Cloudflare Durable Objects with OpenRouter (use @firtoz/chat-agent-drizzle or @firtoz/chat-agent-sql for persistence)",
 	"type": "module",
 	"main": "./dist/index.js",

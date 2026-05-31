@@ -1,5 +1,13 @@
 # @firtoz/drizzle-utils
 
+## 1.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`1656f83`](https://github.com/firtoz/fullstack-toolkit/commit/1656f8383ef99cdf698a6660789d8e42632ea69e)]:
+  - @firtoz/maybe-error@1.6.2
+  - @firtoz/db-helpers@2.2.2
+
 ## 1.3.1
 
 ### Patch Changes
