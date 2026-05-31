@@ -41,6 +41,31 @@ describe("BaseWebSocketDO Integration Tests", () => {
 			expect(text).toBe("Expected websocket");
 		});
 
+		it("should reject WebSocket upgrade when beforeWebSocket returns 401", async () => {
+			const roomId = "gated-room-deny";
+			const resp = await exports.default.fetch(
+				`http://example.com/gated-room/${roomId}/websocket`,
+				{ headers: { Upgrade: "websocket" } },
+			);
+			expect(resp.status).toBe(401);
+			await resp.text();
+		});
+
+		it("should allow WebSocket upgrade when beforeWebSocket passes", async () => {
+			const roomId = "gated-room-allow";
+			const resp = await exports.default.fetch(
+				`http://example.com/gated-room/${roomId}/websocket`,
+				{
+					headers: {
+						Upgrade: "websocket",
+						"X-Test-Auth": "ok",
+					},
+				},
+			);
+			expect(resp.status).toBe(101);
+			expect(resp.webSocket).toBeDefined();
+		});
+
 		it("should respond to /info endpoint on the DO", async () => {
 			const roomId = "test-room-info";
 			const resp = await exports.default.fetch(

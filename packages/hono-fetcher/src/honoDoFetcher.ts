@@ -14,6 +14,20 @@ export type DOWithHonoApp<S extends Schema = Schema> =
 		app: Hono<any, S>;
 	};
 
+/**
+ * Nameable RPC surface for a Durable Object class that exposes a Hono `app`.
+ * Use when exporting types for `Env` bindings (avoids Alchemy `TS2883` when the
+ * full DO class type cannot be named in generated declarations).
+ *
+ * @example
+ * ```ts
+ * export type ChatroomDoRpc = DoRpcWithApp<ChatroomDo>;
+ * // Env: { CHATROOM: DurableObjectNamespace<ChatroomDoRpc> }
+ * ```
+ */
+export type DoRpcWithApp<T extends { app: Hono }> = Rpc.DurableObjectBranded &
+	Pick<T, "app">;
+
 export type DOSchemaMap<T extends DOWithHonoApp> = T extends DOWithHonoApp
 	? ExtractSchema<T["app"]>
 	: never;

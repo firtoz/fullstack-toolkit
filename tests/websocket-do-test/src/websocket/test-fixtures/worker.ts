@@ -11,6 +11,7 @@
 
 import { Hono } from "hono";
 import { ChatRoomDO } from "./ChatRoomDO";
+import { GatedChatRoomDO } from "./GatedChatRoomDO";
 import { StandardSchemaChatRoomDO } from "./StandardSchemaChatRoomDO";
 import { StandardSchemaChatRoomDO_CustomProtocolError } from "./StandardSchemaChatRoomDO_CustomProtocolError";
 import { StandardSchemaChatRoomDO_Dynamic } from "./StandardSchemaChatRoomDO_Dynamic";
@@ -38,6 +39,17 @@ app.post("/room/:roomId/*", async (c) => {
 
 	const url = new URL(c.req.url);
 	const path = url.pathname.replace(`/room/${roomId}`, "");
+	url.pathname = path || "/";
+
+	return stub.fetch(new Request(url.toString(), c.req.raw));
+});
+
+app.all("/gated-room/:roomId/*", async (c) => {
+	const roomId = c.req.param("roomId");
+	const stub = c.env.GATED_CHAT_ROOM.getByName(roomId);
+
+	const url = new URL(c.req.url);
+	const path = url.pathname.replace(`/gated-room/${roomId}`, "");
 	url.pathname = path || "/";
 
 	return stub.fetch(new Request(url.toString(), c.req.raw));
@@ -99,6 +111,7 @@ export default app;
 
 export {
 	ChatRoomDO,
+	GatedChatRoomDO,
 	StandardSchemaChatRoomDO,
 	StandardSchemaChatRoomDO_CustomProtocolError,
 	StandardSchemaChatRoomDO_Dynamic,

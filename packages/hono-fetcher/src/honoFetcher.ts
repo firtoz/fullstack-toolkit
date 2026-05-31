@@ -91,13 +91,13 @@ type FetcherParams<SchemaPath extends string> =
 	HasPathParams<SchemaPath> extends true
 		? {
 				params: ParsePathParams<SchemaPath>;
-				query?: HonoFetcherQueryParams;
-				init?: RequestInit;
+				query?: HonoFetcherQueryParams | undefined;
+				init?: RequestInit | undefined;
 			}
 		: {
 				params?: never;
-				query?: HonoFetcherQueryParams;
-				init?: RequestInit;
+				query?: HonoFetcherQueryParams | undefined;
+				init?: RequestInit | undefined;
 			};
 
 // biome-ignore lint/complexity/noBannedTypes: We need an empty object to remove the body and form keys from the request object
@@ -173,13 +173,13 @@ export interface WebSocketConfig {
 	 *
 	 * @default true
 	 */
-	autoAccept?: boolean;
+	autoAccept?: boolean | undefined;
 	/**
 	 * Arguments for Cloudflare’s `WebSocket#accept` (e.g. `{ allowHalfOpen: true }` when
 	 * [proxying](https://developers.cloudflare.com/workers/runtime-apis/websockets/#close-behavior)
 	 * and coordinating close on both sides). Used only when `autoAccept` is true.
 	 */
-	acceptOptions?: WebSocketAcceptOptions;
+	acceptOptions?: WebSocketAcceptOptions | undefined;
 }
 
 export type TypedWebSocketFetcher<T extends Hono> = <

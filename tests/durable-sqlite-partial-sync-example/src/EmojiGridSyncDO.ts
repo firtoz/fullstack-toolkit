@@ -12,7 +12,7 @@ import type { Context } from "hono";
 import { count, eq } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import superjson from "superjson";
-import emojiMigrations from "../drizzle-emoji/migrations.js";
+import emojiMigrations from "../drizzle-emoji/migrations";
 import { demoRandomizeVisibleJsonSchema } from "./demo-randomize-visible-schema";
 import * as schema from "./emoji-grid-schema";
 import { EMOJI_GRID_PARTIAL_SYNC_COLLECTION_ID } from "./partial-sync-collection-ids";

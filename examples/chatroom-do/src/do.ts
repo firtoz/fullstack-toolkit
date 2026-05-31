@@ -5,7 +5,7 @@ import {
 import { desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import type { ChatMessageRow } from "./contract";
 import { chatContract } from "./contract";
 import * as schema from "./schema";
@@ -111,7 +111,10 @@ export class ChatRoomDO extends SockaWebSocketDO<
 			handleClose: async (session) => {
 				await session.broadcastPush(
 					"userLeft",
-					{ userId: session.data.userId, displayName: session.data.displayName },
+					{
+						userId: session.data.userId,
+						displayName: session.data.displayName,
+					},
 					true,
 				);
 			},

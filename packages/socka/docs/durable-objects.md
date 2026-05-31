@@ -28,7 +28,12 @@ export class MyDO extends SockaWebSocketDO<
   Env
 > {
   protected readonly contract = myContract;
-  app = this.getBaseApp();
+  app = this.getBaseApp().delete("/admin/messages/:messageId", async (c) => {
+    const messageId = c.req.param("messageId");
+    await this.db.delete(messageId);
+    await this.broadcastPushToAll("messageDeleted", { id: messageId });
+    return c.json({ ok: true as const });
+  });
 
   protected buildSockaSessionConfig(
     ctx: Context<{ Bindings: Env }> | undefined,
@@ -47,7 +52,7 @@ export class MyDO extends SockaWebSocketDO<
     };
   }
 
-  // HTTP admin — no WebSocket session on this path
+  // Same logic as the HTTP route above — callable from alarms or internal helpers
   async deleteMessage(id: string) {
     await this.db.delete(…);
     await this.broadcastPushToAll("messageDeleted", { id });
@@ -111,9 +116,18 @@ If you mutate **`session.data`** after connect, call **`await session.update()`*
 
 ## Pushes from HTTP / non-WebSocket handlers
 
-Many DO apps expose **Hono HTTP routes** on **`app`** (admin moderation, internal APIs, alarms) in addition to **`/websocket`**. After mutating storage from those handlers, you often need a contract-typed push to **every** connected client — with **no** originating WebSocket session.
+Many DO apps expose **Hono HTTP routes** on **`app`** (admin moderation, internal APIs, alarms) in addition to **`/websocket`**. Chain routes on **`this.getBaseApp()`** — socka registers **`GET /websocket`**; your handlers share the same **`app`** instance:
 
-Use **`await this.broadcastPushToAll("messageDeleted", { id })`** on your DO subclass. The DO **`contract`** is the single source of truth. See **[Pushes — Pushes from HTTP / non-WebSocket handlers](./pushes.md#pushes-from-http--non-websocket-handlers)**.
+```ts
+app = this.getBaseApp().delete("/admin/messages/:messageId", async (c) => {
+  const id = c.req.param("messageId");
+  await this.db.delete(id);
+  await this.broadcastPushToAll("messageDeleted", { id });
+  return c.json({ ok: true as const });
+});
+```
+
+After mutating storage from those handlers, **`broadcastPushToAll`** fans out to every connected client. The DO **`contract`** is the single source of truth. See **[Pushes — Pushes from HTTP / non-WebSocket handlers](./pushes.md#pushes-from-http--non-websocket-handlers)**.
 
 Without a DO subclass, use **`broadcastContractPushToAll(this.sessions, contract, name, body)`** from **`@firtoz/socka/server`**.
 

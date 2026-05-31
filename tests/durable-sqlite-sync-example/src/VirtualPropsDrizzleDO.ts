@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { Hono } from "hono";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import * as schema from "./schema";
 import { VP_SLOW_INSERT_DELAY_MS } from "./vp-demo-constants";
 import { vpMessageSchema } from "./vp-ws-protocol";

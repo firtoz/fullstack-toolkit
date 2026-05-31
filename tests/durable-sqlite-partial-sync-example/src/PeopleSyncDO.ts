@@ -12,7 +12,7 @@ import type { Context } from "hono";
 import { count, eq, sql } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 import superjson from "superjson";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import { demoRandomizeVisibleJsonSchema } from "./demo-randomize-visible-schema";
 import { PEOPLE_PARTIAL_SYNC_COLLECTION_ID } from "./partial-sync-collection-ids";
 import * as schema from "./schema";

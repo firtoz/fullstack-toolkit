@@ -9,43 +9,63 @@
 	"exports": {
 		".": {
 			"types": "./dist/core/index.d.ts",
-			"import": "./dist/core/index.js"
+			"import": "./dist/core/index.js",
+			"require": "./dist/core/index.js",
+			"default": "./dist/core/index.js"
 		},
 		"./core": {
 			"types": "./dist/core/index.d.ts",
-			"import": "./dist/core/index.js"
+			"import": "./dist/core/index.js",
+			"require": "./dist/core/index.js",
+			"default": "./dist/core/index.js"
 		},
 		"./client": {
 			"types": "./dist/client/index.d.ts",
-			"import": "./dist/client/index.js"
+			"import": "./dist/client/index.js",
+			"require": "./dist/client/index.js",
+			"default": "./dist/client/index.js"
 		},
 		"./react": {
 			"types": "./dist/react/index.d.ts",
-			"import": "./dist/react/index.js"
+			"import": "./dist/react/index.js",
+			"require": "./dist/react/index.js",
+			"default": "./dist/react/index.js"
 		},
 		"./do": {
 			"types": "./dist/do/index.d.ts",
-			"import": "./dist/do/index.js"
+			"import": "./dist/do/index.js",
+			"require": "./dist/do/index.js",
+			"default": "./dist/do/index.js"
 		},
 		"./server": {
 			"types": "./dist/server/index.d.ts",
-			"import": "./dist/server/index.js"
+			"import": "./dist/server/index.js",
+			"require": "./dist/server/index.js",
+			"default": "./dist/server/index.js"
 		},
 		"./bun": {
 			"types": "./dist/bun/index.d.ts",
-			"import": "./dist/bun/index.js"
+			"import": "./dist/bun/index.js",
+			"require": "./dist/bun/index.js",
+			"default": "./dist/bun/index.js"
 		},
 		"./hono": {
 			"types": "./dist/hono/index.d.ts",
-			"import": "./dist/hono/index.js"
+			"import": "./dist/hono/index.js",
+			"require": "./dist/hono/index.js",
+			"default": "./dist/hono/index.js"
 		},
 		"./hono/cloudflare": {
 			"types": "./dist/hono/cloudflare-workers.d.ts",
-			"import": "./dist/hono/cloudflare-workers.js"
+			"import": "./dist/hono/cloudflare-workers.js",
+			"require": "./dist/hono/cloudflare-workers.js",
+			"default": "./dist/hono/cloudflare-workers.js"
 		},
 		"./test": {
 			"types": "./dist/test/index.d.ts",
-			"import": "./dist/test/index.js"
+			"import": "./dist/test/index.js",
+			"require": "./dist/test/index.js",
+			"default": "./dist/test/index.js"
 		}
 	},
 	"files": [

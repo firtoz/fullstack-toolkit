@@ -120,7 +120,7 @@ Anything that implements **Standard Schema v1** works — **Zod**, **Valibot**, 
 | Path | Use for |
 |------|---------|
 | `@firtoz/socka` | Same as **`@firtoz/socka/core`** — `defineSocka`, wire helpers, errors, types (prefer explicit **`/core`** in examples) |
-| `@firtoz/socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types |
+| `@firtoz/socka/core` | `defineSocka`, wire helpers, `SockaError`, `SockaReportError`, `reportSockaError`, types. Export map includes **`require`** / **`default`** for Node tooling (e.g. drizzle-kit) that resolves CJS. Keep **constants-only** modules (no socka import) beside Drizzle schema when possible. |
 | `@firtoz/socka/client` | `SockaSession`, `SockaWebSocketClient` (also re-exports `SockaReportError`, `reportSockaError`) |
 | `@firtoz/socka/test` | `createFakeWebSocket` for unit tests — see **[Testing](./testing.md)** |
 | `@firtoz/socka/react` | `useSocka`, `useSockaSession`, `useSockaPresence`, provider + context |

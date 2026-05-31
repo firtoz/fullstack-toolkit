@@ -1,19 +1,28 @@
 // Convenience wrapper for direct HTTP fetching
-export { honoDirectFetcher } from "./honoDirectFetcher.js";
+export { honoDirectFetcher } from "./honoDirectFetcher";
+// Mounted sub-app client
+export type {
+	HonoClientApp,
+	MountedClientApp,
+	MountPathParams,
+	ValidMountPrefix,
+} from "./honoFetcherMounted";
+export { honoFetcherMounted } from "./honoFetcherMounted";
 // Durable Object integration
 export type {
+	DoRpcWithApp,
 	DOSchemaKeys,
 	DOSchemaMap,
 	DOStubSchema,
 	DOWithHonoApp,
 	HonoDoFetcherStubInput,
 	TypedDoFetcher,
-} from "./honoDoFetcher.js";
+} from "./honoDoFetcher";
 export {
 	honoDoFetcher,
 	honoDoFetcherWithId,
 	honoDoFetcherWithName,
-} from "./honoDoFetcher.js";
+} from "./honoDoFetcher";
 // Core fetcher functionality
 export type {
 	BaseDisposableTypedHonoFetcher,
@@ -29,5 +38,5 @@ export type {
 	TypedHonoFetcher,
 	TypedWebSocketFetcher,
 	WebSocketConfig,
-} from "./honoFetcher.js";
-export { honoFetcher } from "./honoFetcher.js";
+} from "./honoFetcher";
+export { honoFetcher } from "./honoFetcher";

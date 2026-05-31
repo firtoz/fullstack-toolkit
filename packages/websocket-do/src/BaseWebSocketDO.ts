@@ -82,6 +82,11 @@ export abstract class BaseWebSocketDO<
 					return ctx.text("Expected websocket", 400);
 				}
 
+				const gate = await this.beforeWebSocket(ctx);
+				if (gate instanceof Response) {
+					return gate;
+				}
+
 				const [client, server] = Object.values(new WebSocketPair()) as [
 					WebSocket,
 					WebSocket,
@@ -103,6 +108,18 @@ export abstract class BaseWebSocketDO<
 				}
 			},
 		);
+	}
+
+	/**
+	 * Optional gate before the WebSocket upgrade creates a {@link WebSocketPair}.
+	 * Return an HTTP {@link Response} (e.g. `401` / `403`) to reject the upgrade;
+	 * return `undefined` / `void` to proceed. Override on your DO subclass or use
+	 * Hono middleware on a chained `app` for route-level checks.
+	 */
+	protected beforeWebSocket(
+		_ctx: Context<{ Bindings: TEnv }>,
+	): Response | undefined | Promise<Response | undefined> {
+		return;
 	}
 
 	async handleSession(

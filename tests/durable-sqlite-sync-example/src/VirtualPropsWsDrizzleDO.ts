@@ -6,7 +6,7 @@ import {
 import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import * as schema from "./schema";
 import { vpContract } from "./vp-ws-protocol";
 import { VP_SLOW_INSERT_DELAY_MS } from "./vp-demo-constants";

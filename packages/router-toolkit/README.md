@@ -506,7 +506,7 @@ Type-safe form action wrapper that provides Zod validation and structured error 
 
 - ✅ **Automatic form data validation** using Zod schemas
 - 🛡️ **Type-safe error handling** with structured error types
-- 🔄 **MaybeError integration** for consistent error patterns
+- 🔄 **MaybeError integration** for consistent error patterns — import **`success`** / **`fail`** from [`@firtoz/maybe-error`](../maybe-error/README.md), not from router-toolkit (see [MaybeError Utility](#maybeerror-utility))
 - 🚀 **React Router compatibility** preserves redirects and responses
 - 📝 **Full TypeScript support** with inferred types from schemas
 
@@ -1184,6 +1184,8 @@ export default function CombinedTest() {
 
 `@firtoz/maybe-error` is a **dependency** of router-toolkit (it is installed with this package), but it is **not** re-exported from `@firtoz/router-toolkit`. Import `success`, `fail`, `MaybeError`, `exhaustiveGuard`, and related symbols **from `@firtoz/maybe-error`** so your imports match runtime and dependency boundaries stay clear.
 
+For the full API (`MaybeError`, `success`, `fail`, `exhaustiveGuard`, `AssumeSuccess`), see the [`@firtoz/maybe-error` README](../maybe-error/README.md).
+
 ### Basic Usage
 
 ```tsx
@@ -1387,27 +1389,7 @@ export default function CreateUser() {
 
 ### MaybeError API Reference
 
-```tsx
-// Type definitions
-type MaybeError<T = undefined, TError = string> = DefiniteSuccess<T> | DefiniteError<TError>;
-
-type DefiniteSuccess<T> = {
-  success: true;
-  result: T; // Optional if T is undefined
-};
-
-type DefiniteError<TError> = {
-  success: false;
-  error: TError;
-};
-
-// Utility functions
-const success = <T>(value: T): DefiniteSuccess<T> => ({ success: true, result: value });
-const fail = <TError>(error: TError): DefiniteError<TError> => ({ success: false, error });
-
-// Type utility
-type AssumeSuccess<T extends MaybeError<unknown>> = /* extracts the success type */;
-```
+See [`@firtoz/maybe-error` README](../maybe-error/README.md) for type definitions and utilities.
 
 **Benefits:**
 - **Type Safety**: TypeScript enforces error handling at compile time

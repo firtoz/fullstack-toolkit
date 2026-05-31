@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { Hono } from "hono";
 import { z } from "zod";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import * as schema from "./schema";
 
 type InsertTestItem = (typeof schema.testItemsTable)["$inferInsert"];

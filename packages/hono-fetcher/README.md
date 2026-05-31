@@ -136,7 +136,7 @@ export class ChatRoomDO extends DurableObject {
 }
 
 // `using api` disposes the stub. Returning the DO `Response` directly is a common pass-through pattern;
-// if you consume the body in this worker instead, also dispose the RPC result (e.g. `using res`).
+// do not `using res` when you return the value to the client (see disposal section below).
 // See https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -468,7 +468,7 @@ Cloudflare Workers RPC gives **separate disposers** for the **Durable Object stu
 
 - **Stub (`using api = honoDoFetcherWithName(...)`):** Releases the **stub** when the block ends. This does **not** release RPC **`Response`** objects from individual requests.
 - **Response (HTTP / WebSocket upgrade):** On a **real stub** (`TypedDoFetcher`), TypeScript types those results as **`Disposable`** so **`using res`** / **`using wsRes`** is valid. At runtime, **`[Symbol.dispose]`** is present when Workers RPC attaches it (often in production); **minimal `fetch`-only mocks** are typed as **non-**`Disposable` **`Response`**s because disposers are usually absent. Prefer **`using res`** when types allow it; otherwise call **`res[Symbol.dispose]()`** or use a **`DisposableStack`** as described in Cloudflare’s **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)** documentation. Reading the body does **not** implicitly dispose the RPC result in this library.
-- **Returning `Response` to the client:** **Do not** use **`using res`** on a response you **`return`** from your Worker—disposal can run on scope exit before the runtime finishes serving it. Return the value directly; see **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)** for pass-through patterns.
+- **Returning `Response` to the client:** **Do not** use **`using res`** on a response you **`return`** from your Worker—disposal can run on scope exit before the runtime finishes serving it. Return the value directly (`return api.get(...)`). In **local dev** (Miniflare, Alchemy), RPC responses may **not** implement **`Symbol.dispose`** even when TypeScript types them as **`Disposable`** — **`using res = await …`** can throw **`TypeError: Object not disposable`**. Prefer **`using api`** on the stub only and **`const res`** / direct **`return`** for individual responses. **`TypedDoFetcher`** HTTP results are **`RpcDisposableJsonResponse`** (not Hono’s **`HandlerResponse`** union); that typing mismatch for proxy routes is a known gap—track fixing return types rather than papering over with casts.
 - **Vite SSR, some Miniflare setups, or test mocks** may expose stubs or **`Response`** objects without **`Symbol.dispose`**; there is nothing to call in that case.
 - **Errors from `Symbol.dispose`:** If the runtime’s dispose implementation throws (for example during unwind after your code threw), the library catches the error and logs it with **`console.error`**. It does **not** rethrow, so your original error is not masked by a `SuppressedError`.
 - **TypeScript `using`:** Add **`"ESNext.Disposable"`** to the `compilerOptions.lib` array in your **`tsconfig.json`** (alongside your existing libs) so `using` and `Disposable` type-check. TypeScript 5.2+ is required for `using`. That applies to **`TypedDoFetcher`** (full **`DurableObjectStub`** path): **`RpcDisposableJsonResponse`** / **`Response & Disposable`** on **`websocket`**. **`Pick<stub, "fetch">`** clients get ordinary **`TypedHonoFetcher`** return types without **`Disposable`** on responses. Cloudflare’s runtime rules for RPC disposal are documented under **[Workers RPC lifecycle](https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle/)**.
@@ -541,6 +541,97 @@ export class MyDO extends DurableObject implements DOWithHonoApp {
   app = new Hono()
     .get('/status', (c) => c.json({ status: 'ok' }));
 }
+```
+
+### `DoRpcWithApp<T>`
+
+Nameable RPC surface for `Env` bindings and generated worker types (avoids Alchemy **`TS2883`** when the full DO class cannot be named in exports):
+
+```typescript
+import type { DoRpcWithApp } from '@firtoz/hono-fetcher';
+
+export class ChatroomDo extends DurableObject {
+  app = new Hono().get('/messages', (c) => c.json({ messages: [] }));
+}
+
+export type ChatroomDoRpc = DoRpcWithApp<ChatroomDo>;
+
+type Env = {
+  CHATROOM: DurableObjectNamespace<ChatroomDoRpc>;
+};
+```
+
+### Query parameters
+
+All HTTP methods accept an optional **`query`** object. **`null`** and **`undefined`** values are omitted from the serialized string:
+
+```typescript
+await api.get({
+  url: '/items',
+  query: { sort: 'name', limit: 10, active: undefined },
+});
+
+// With exactOptionalPropertyTypes, optional query may be omitted or set — not `{ query: undefined }`:
+const limit: number | undefined = undefined;
+await api.get({
+  url: '/items',
+  ...(limit === undefined ? {} : { query: { limit } }),
+});
+```
+
+### `honoFetcherMounted(appOrFetcher, mountPath)`
+
+Typed client for routes under a mount prefix (auth worker `/admin`, service binding sub-app, etc.).
+
+**Local / in-process** — pass the Hono app; types and transport (`app.request`) are inferred:
+
+```typescript
+const admin = honoFetcherMounted(workerApp, '/admin');
+await admin.get({ url: '/users' }); // GET /admin/users, admin response type
+```
+
+**Production** — pass a fetcher when transport is not `app.request` (service bindings, DO stubs, browser `fetch`):
+
+```typescript
+const admin = honoFetcherMounted<typeof workerApp, '/admin'>(
+  (url, init) => env.AUTH.fetch(new Request(`https://auth${url}`, init)),
+  '/admin',
+);
+```
+
+When you pass a fetcher, you must supply the app type (`typeof workerApp`) because the callback carries no route schema. The second type arg (`'/admin'`) is only needed if you also wrote an explicit first type arg — otherwise `'/admin'` is inferred from the argument.
+
+**Sub-app type** — routes on the type omit the mount (`/users`); pass the worker mount string:
+
+```typescript
+const admin = honoFetcherMounted<typeof adminRoutes>(
+  (url, init) => env.AUTH.fetch(new Request(`https://auth${url}`, init)),
+  '/admin',
+);
+
+await admin.get({ url: '/users' }); // GET …/admin/users
+```
+
+**Worker app type** — schema keys are full paths (`/admin/users`, `/admin/users/:id`). `mountPath` must be a {@link ValidMountPrefix} (derived from routes like `/admin/...`). Client `url` values are **after** the mount:
+
+```typescript
+import { honoFetcherMounted } from '@firtoz/hono-fetcher';
+
+// Routes: /users, /admin/users, /admin/users/:id, /a/b, /a/c, /a/:d
+
+const admin = honoFetcherMounted(workerApp, '/admin');
+await admin.get({ url: '/users' }); // GET …/admin/users — not url: '/admin/users'
+
+const aRoutes = honoFetcherMounted(workerApp, '/a');
+await aRoutes.get({ url: '/b' }); // GET …/a/b
+await aRoutes.get({ url: '/:d', params: { d: 'room-1' } }); // GET …/a/room-1
+
+const deep = honoFetcherMounted(workerApp, '/nested/deep');
+await deep.get({ url: '/foo' }); // GET …/nested/deep/foo
+
+const level1 = honoFetcherMounted(workerApp, '/level1/:param', { param: 'room-1' });
+await level1.get({ url: '/foo' }); // GET …/level1/room-1/foo
+await level1.get({ url: '/bar' }); // GET …/level1/room-1/bar
 ```
 
 ## Advanced Usage

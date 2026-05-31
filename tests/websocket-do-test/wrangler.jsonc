@@ -29,6 +29,10 @@
 			{
 				"name": "SCHEMA_CHAT_ROOM_CUSTOM_ERROR",
 				"class_name": "StandardSchemaChatRoomDO_CustomProtocolError"
+			},
+			{
+				"name": "GATED_CHAT_ROOM",
+				"class_name": "GatedChatRoomDO"
 			}
 		]
 	},
@@ -70,6 +74,10 @@
 					"to": "StandardSchemaChatRoomDO_CustomProtocolError"
 				}
 			]
+		},
+		{
+			"tag": "v6",
+			"new_classes": ["GatedChatRoomDO"]
 		}
 	]
 }

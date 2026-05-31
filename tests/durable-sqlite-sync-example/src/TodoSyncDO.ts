@@ -1,6 +1,6 @@
 import { SyncableDurableObject } from "@firtoz/drizzle-durable-sqlite";
 import superjson from "superjson";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import * as schema from "./schema";
 
 export class TodoSyncDO extends SyncableDurableObject<

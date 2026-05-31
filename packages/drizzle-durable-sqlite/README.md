@@ -72,7 +72,7 @@ Run migrations in `ctx.blockConcurrencyWhile` before handling requests so schema
 import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import * as schema from "./schema";
 
 export class MyDurableObject extends DurableObject {
@@ -133,7 +133,7 @@ import { durableSqliteCollectionOptions } from "@firtoz/drizzle-durable-sqlite";
 import type { DrizzleSqliteTableCollection } from "@firtoz/drizzle-utils";
 import { Hono } from "hono";
 import { z } from "zod";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 import * as schema from "./schema";
 
 type TodosCollection = DrizzleSqliteTableCollection<typeof schema.todosTable>;

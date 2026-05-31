@@ -9,7 +9,7 @@ import {
 	streamChunksTable,
 	streamMetadataTable,
 } from "./db/schema";
-import migrations from "../drizzle/migrations.js";
+import migrations from "../drizzle/migrations";
 
 /**
  * ChatAgent implementation using Drizzle ORM

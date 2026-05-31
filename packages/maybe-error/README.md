@@ -242,6 +242,10 @@ async function fetchMultipleUsers(ids: string[]): Promise<MaybeError<User[]>> {
 }
 ```
 
+## Used with @firtoz/router-toolkit
+
+`formAction` handlers and typed loaders/actions expect `MaybeError` results. Import **`success`**, **`fail`**, and related helpers from **`@firtoz/maybe-error`**; import **`formAction`**, **`useDynamicSubmitter`**, and route utilities from **`@firtoz/router-toolkit`**. See [router-toolkit README — Form Action Utilities & MaybeError Utility](../router-toolkit/README.md#form-action-utilities).
+
 ## Contributing
 
 Contributions are welcome! This package is part of the [fullstack-toolkit monorepo](https://github.com/firtoz/fullstack-toolkit).

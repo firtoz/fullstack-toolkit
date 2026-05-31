@@ -69,6 +69,14 @@ Optional **`pushHandlers`** in the second argument matches **`Partial<InferSocka
 
 **Recommended pattern:** In the route module, set **`const [url, setUrl] = useState<string | null>(null)`**, and in **`useEffect`** (browser-only), build a **`wss://` / `ws://`** URL from **`window.location`** (protocol, host, path to your Worker’s WebSocket route). If **`url === null`**, render a **loading** shell; only render a child component that calls **`useSockaSession(myContract, { url, pushHandlers? }, [url])`** when **`url`** is set. Keep **`url`** in the hook **`deps`** so identity changes re-open the right socket.
 
+**SSR checklist:**
+
+1. **Never** call **`useSockaSession`** with a placeholder URL during SSR — the hook connects in **`useEffect`** and will throw if **`url`** is missing at runtime.
+2. **Parent gates the child** — render **`ClientOnly`** / **`url === null ? <Loading /> : <ChatWithSocket url={url} />`** so the hook runs only in the browser with a real URL.
+3. **Build the URL in `useEffect`** — derive **`wss:`** from **`window.location`**, room id from route params, and optional auth query params there (not during render).
+4. **Pass `[url]` in hook deps** — room or tenant changes should remount the connection.
+5. **`SockaSessionProvider`** follows the same rules — wrap only after **`url`** is known.
+
 **React + Durable Object** end-to-end wiring: **[React + Durable Objects](./react-durable-objects.md)**.
 
 ### `useSocka` — hold a `SockaSession` ref

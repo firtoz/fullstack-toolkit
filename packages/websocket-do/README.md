@@ -574,6 +574,25 @@ Low-level wrapper for typed WebSocket operations.
 
 ## Advanced Usage
 
+### Pre-upgrade auth (`beforeWebSocket`)
+
+Override **`beforeWebSocket(ctx)`** on your DO subclass to reject the WebSocket handshake **before** `101 Switching Protocols` (HTTP `401` / `403`). Runs after the `Upgrade: websocket` check and before `WebSocketPair` is created:
+
+```typescript
+export class ChatRoomDO extends BaseWebSocketDO<ChatSession, Env> {
+  app = this.getBaseApp();
+
+  protected beforeWebSocket(ctx: Context<{ Bindings: Env }>): Response | undefined {
+    const token = ctx.req.header('X-Room-Auth');
+    if (token !== this.env.ROOM_SECRET) {
+      return ctx.text('Unauthorized', 401);
+    }
+  }
+}
+```
+
+Use this when a web worker forwards attested identity via headers. Auth inside **`createData`** runs **after** upgrade — see socka **[Authentication](./auth.md)** for when to use each.
+
 ### Custom Routes
 
 You can extend the base app with custom routes:
