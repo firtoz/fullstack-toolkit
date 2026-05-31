@@ -1,4 +1,9 @@
-import { SockaWebSocketDO } from "@firtoz/socka/do";
+import {
+	SockaWebSocketDO,
+	type SockaDoSession,
+	type SockaDoSessionConfigInput,
+} from "@firtoz/socka/do";
+import type { Context } from "hono";
 import {
 	createSessionGameHandlers,
 	createSessionGameWorld,
@@ -17,15 +22,23 @@ export class SockaSessionGameTestDO extends SockaWebSocketDO<
 	/** One arena per DO — shared by all sockets attached to this instance. */
 	readonly world = createSessionGameWorld();
 
-	protected buildSockaSessionConfig() {
-		const { handlers, createData, onAttached } = createSessionGameHandlers(
-			this.world,
-		);
+	protected buildSockaSessionConfig(): SockaDoSessionConfigInput<
+		typeof sessionGameContract,
+		SessionGameSessionData,
+		Env
+	> {
+		const { handlers, createData, onAttached } = createSessionGameHandlers<
+			SockaDoSession<
+				typeof sessionGameContract,
+				SessionGameSessionData,
+				Env
+			>
+		>(this.world);
 		return {
 			wireFormat: "json" as const,
 			handlers,
 			handleClose: async () => {},
-			createData: (_ctx) => createData(),
+			createData: (_ctx: Context<{ Bindings: Env }>) => createData(),
 			onAttached,
 		};
 	}
