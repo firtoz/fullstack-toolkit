@@ -94,12 +94,7 @@ export abstract class SockaWebSocketDOBase<
 		name: K,
 		body: InferSockaPushPayload<TContract, K>,
 	): Promise<void> {
-		return broadcastContractPushToAll(
-			this.sessions,
-			this.contract,
-			name,
-			body,
-		);
+		return broadcastContractPushToAll(this.sessions, this.contract, name, body);
 	}
 }
 

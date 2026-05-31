@@ -51,12 +51,9 @@ export function isSockaDoHost<
 	TEnv extends object,
 	TSession extends SockaDoSession<TContract, TData, TEnv>,
 >(
-	value: Map<WebSocket, SockaDoSession<TContract, TData, TEnv>> | SockaDoHost<
-		TContract,
-		TData,
-		TEnv,
-		TSession
-	>,
+	value:
+		| Map<WebSocket, SockaDoSession<TContract, TData, TEnv>>
+		| SockaDoHost<TContract, TData, TEnv, TSession>,
 ): value is SockaDoHost<TContract, TData, TEnv, TSession> {
 	return !(value instanceof Map) && hasSockaDoHostShape(value);
 }

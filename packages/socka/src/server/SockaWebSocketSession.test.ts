@@ -221,12 +221,9 @@ describe("SockaWebSocketSession", () => {
 		sessions.set(a.socket, sa);
 		sessions.set(b.socket, sb);
 
-		await broadcastContractPushToAll(
-			sessions,
-			rpcTestContract,
-			"notify",
-			{ msg: "room-wide" },
-		);
+		await broadcastContractPushToAll(sessions, rpcTestContract, "notify", {
+			msg: "room-wide",
+		});
 		expect(a.sent.length).toBe(1);
 		expect(b.sent.length).toBe(1);
 	});
@@ -236,12 +233,9 @@ describe("SockaWebSocketSession", () => {
 			WebSocket,
 			SockaWebSocketSession<typeof rpcTestContract, Record<string, never>>
 		>();
-		await broadcastContractPushToAll(
-			sessions,
-			rpcTestContract,
-			"notify",
-			{ msg: "x" },
-		);
+		await broadcastContractPushToAll(sessions, rpcTestContract, "notify", {
+			msg: "x",
+		});
 	});
 
 	test("broadcastSockaEventToAll emits pre-validated payload to every session", () => {
