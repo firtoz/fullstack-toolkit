@@ -1,5 +1,12 @@
 # @firtoz/drizzle-sqlite-wasm
 
+## 2.0.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/collection-sync@7.0.2
+
 ## 2.0.3
 
 ### Patch Changes

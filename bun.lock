@@ -30,7 +30,7 @@
     },
     "examples/chatroom-bun": {
       "name": "chatroom-bun",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "zod": "catalog:",
@@ -43,7 +43,7 @@
     },
     "examples/chatroom-do": {
       "name": "chatroom-do",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "@firtoz/websocket-do": "workspace:*",
@@ -61,7 +61,7 @@
     },
     "examples/chatroom-hono": {
       "name": "chatroom-hono",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "dependencies": {
         "@firtoz/socka": "workspace:*",
         "@hono/node-server": "^2.0.4",
@@ -176,7 +176,7 @@
     },
     "packages/collection-sync": {
       "name": "@firtoz/collection-sync",
-      "version": "7.0.1",
+      "version": "7.0.2",
       "dependencies": {
         "@firtoz/db-helpers": "workspace:*",
         "@firtoz/maybe-error": "workspace:*",
@@ -218,7 +218,7 @@
     },
     "packages/drizzle-durable-sqlite": {
       "name": "@firtoz/drizzle-durable-sqlite",
-      "version": "3.0.3",
+      "version": "3.0.4",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -275,7 +275,7 @@
     },
     "packages/drizzle-sqlite-wasm": {
       "name": "@firtoz/drizzle-sqlite-wasm",
-      "version": "2.0.3",
+      "version": "2.0.4",
       "dependencies": {
         "@firtoz/collection-sync": "workspace:*",
         "@firtoz/db-helpers": "workspace:*",
@@ -317,7 +317,7 @@
     },
     "packages/hono-fetcher": {
       "name": "@firtoz/hono-fetcher",
-      "version": "2.8.1",
+      "version": "2.8.2",
       "devDependencies": {
         "@hono/node-server": "^2.0.4",
         "@hono/zod-validator": "catalog:",
@@ -375,7 +375,7 @@
     },
     "packages/socka": {
       "name": "@firtoz/socka",
-      "version": "5.0.1",
+      "version": "5.0.2",
       "dependencies": {
         "@firtoz/maybe-error": "workspace:*",
         "@standard-schema/spec": "catalog:",
@@ -419,7 +419,7 @@
     },
     "packages/websocket-do": {
       "name": "@firtoz/websocket-do",
-      "version": "14.0.1",
+      "version": "14.0.2",
       "dependencies": {
         "@standard-schema/spec": "catalog:",
         "msgpackr": "catalog:",

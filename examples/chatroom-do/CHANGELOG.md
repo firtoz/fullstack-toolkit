@@ -1,5 +1,13 @@
 # chatroom-do
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @firtoz/websocket-do@14.0.2
+  - @firtoz/socka@5.0.2
+
 ## 0.0.8
 
 ### Patch Changes

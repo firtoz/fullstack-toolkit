@@ -1,5 +1,11 @@
 # @firtoz/hono-fetcher
 
+## 2.8.2
+
+### Patch Changes
+
+- [`3795953`](https://github.com/firtoz/fullstack-toolkit/commit/37959534c7d174b9d6a8e0537778a30f068de0da) Thanks [@firtoz](https://github.com/firtoz)! - Fix `honoFetcherMounted` root route requests with query strings so mounted roots use `/mount?query=...` instead of `/mount/?query=...`.
+
 ## 2.8.1
 
 ### Patch Changes
