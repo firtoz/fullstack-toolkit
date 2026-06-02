@@ -116,6 +116,19 @@ function substitutePathParams(
 	);
 }
 
+function joinMountedRequest(prefix: string, request: string): string {
+	const qIndex = request.indexOf("?");
+	const pathPart = qIndex === -1 ? request : request.slice(0, qIndex);
+	const queryPart = qIndex === -1 ? "" : request.slice(qIndex);
+	const normalized = pathPart.startsWith("/") ? pathPart : `/${pathPart}`;
+	const suffix = normalized === "/" ? "" : normalized;
+
+	if (prefix === "") {
+		return `${suffix || "/"}${queryPart}`;
+	}
+	return `${prefix}${suffix}${queryPart}`;
+}
+
 type ParentFetcher = (
 	request: string,
 	init?: RequestInit,
@@ -137,8 +150,7 @@ function createMountedFetcher<
 			? normalized
 			: substitutePathParams(normalized, mountParams as Record<string, string>);
 	return honoFetcher<ClientAppForMount<T, M>>((request, init) => {
-		const path = request.startsWith("/") ? request : `/${request}`;
-		const url = prefix === "" ? path : `${prefix}${path}`;
+		const url = joinMountedRequest(prefix, request);
 		return parentFetcher(url, init) as ReturnType<
 			ClientAppForMount<T, M>["request"]
 		>;

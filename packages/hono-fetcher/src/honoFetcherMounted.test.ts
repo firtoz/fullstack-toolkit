@@ -50,6 +50,12 @@ const deepSubApp = new Hono()
 	.get("/foo", (c) => c.json(deepFoo))
 	.get("/bar", (c) => c.json(deepBar));
 
+const accountSubApp = new Hono()
+	.get("/", (c) => c.json({ account: "root", query: c.req.query() }))
+	.get("/sessions", (c) =>
+		c.json({ account: "sessions", query: c.req.query() }),
+	);
+
 const level1SubApp = new Hono()
 	.get("/foo", (c) => c.json({ ...level1Foo, level: c.req.param("param") }))
 	.get("/bar", (c) => c.json({ ...level1Bar, level: c.req.param("param") }));
@@ -122,6 +128,39 @@ describe("honoFetcherMounted", () => {
 
 		await client.get({ url: "/users" });
 		expect(requests).toEqual(["/admin/users"]);
+	});
+
+	it("joins mounted root and query strings without adding a trailing slash", async () => {
+		const requests: string[] = [];
+		const account = honoFetcherMounted<typeof accountSubApp>((url) => {
+			requests.push(url);
+			return new Response("{}");
+		}, "/api/account");
+
+		await account.get({ url: "/", query: { includeSessions: "1" } });
+		await account.get({ url: "/" });
+		await account.get({ url: "/sessions" });
+		await account.get({ url: "/sessions", query: { foo: "1" } });
+
+		expect(requests).toEqual([
+			"/api/account?includeSessions=1",
+			"/api/account",
+			"/api/account/sessions",
+			"/api/account/sessions?foo=1",
+		]);
+	});
+
+	it("preserves root requests when mounted at the parent root", async () => {
+		const requests: string[] = [];
+		const account = honoFetcherMounted<typeof accountSubApp>((url) => {
+			requests.push(url);
+			return new Response("{}");
+		}, "");
+
+		await account.get({ url: "/", query: { q: "1" } });
+		await account.get({ url: "/" });
+
+		expect(requests).toEqual(["/?q=1", "/"]);
 	});
 
 	it("typed mount exposes only routes under the prefix", async () => {
