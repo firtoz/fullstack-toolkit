@@ -2,6 +2,15 @@
 	"$schema": "../../node_modules/turbo/schema.json",
 	"extends": ["//"],
 	"tasks": {
+		"build": {
+			"inputs": [
+				"src/**",
+				"examples/**",
+				"tsconfig.json",
+				"tsup.config.ts",
+				"package.json"
+			]
+		},
 		"typecheck": {
 			"dependsOn": ["^build", "build"],
 			"inputs": [

@@ -83,8 +83,10 @@
 		"access": "public"
 	},
 	"devDependencies": {
+		"@firtoz/hono-fetcher": "workspace:*",
 		"@types/react": "catalog:",
 		"bun-types": "catalog:",
+		"hono": "catalog:",
 		"typescript": "catalog:",
 		"zod": "catalog:"
 	}

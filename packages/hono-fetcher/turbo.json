@@ -2,6 +2,15 @@
 	"$schema": "../../node_modules/turbo/schema.json",
 	"extends": ["//"],
 	"tasks": {
+		"build": {
+			"inputs": [
+				"src/**",
+				"tsconfig.json",
+				"tsconfig.emit-index-dts.json",
+				"tsup.config.ts",
+				"package.json"
+			]
+		},
 		"typecheck": {
 			"dependsOn": ["^build"],
 			"inputs": ["src/**", "tsconfig.json", "package.json"]
