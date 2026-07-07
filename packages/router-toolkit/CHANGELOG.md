@@ -1,5 +1,11 @@
 # [@firtoz/router-toolkit-v1.1.0](https://github.com/firtoz/fullstack-toolkit/compare/@firtoz/router-toolkit@1.0.3...@firtoz/router-toolkit@1.1.0) (2025-07-13)
 
+## 9.1.0
+
+### Minor Changes
+
+- [`36f1d36`](https://github.com/firtoz/fullstack-toolkit/commit/36f1d369e58fe66c3b1ebc33d069cb393a1b25f5) Thanks [@firtoz](https://github.com/firtoz)! - Official React Router 8 support. Peer dependencies now accept `react-router@^7.14.2 || ^8.0.0` and `react@^19.2.7`. `formAction` handler args use RR8's `RouterContextProvider` for `context` (middleware always enabled in RR8). README updated for RR7/RR8.
+
 ## 9.0.2
 
 ### Patch Changes
