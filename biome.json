@@ -37,6 +37,16 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["packages/router-toolkit/src/**/*.test.ts", "packages/router-toolkit/src/**/*.test.tsx"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"useHookAtTopLevel": "off"
+					}
+				}
+			}
 		}
 	],
 	"javascript": {

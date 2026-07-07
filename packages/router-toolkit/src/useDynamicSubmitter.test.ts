@@ -690,7 +690,7 @@ describe("useDynamicSubmitter", () => {
 		expect(data as unknown).toEqual({ phase: "done" });
 	});
 
-	it("rejects with fetcher.error when idle has no data but error is set", async () => {
+	it("rejects when idle with undefined data (React Router 8 has no fetcher.error)", async () => {
 		const { result } = renderApiSubmitter();
 		const key = submitterFetcherKey("/api/submit");
 
@@ -707,7 +707,8 @@ describe("useDynamicSubmitter", () => {
 		const r = await outcome;
 		expect(r.kind).toBe("err");
 		if (r.kind === "err") {
-			expect(r.error).toBe(simulatedErr);
+			expect(r.error).toBeInstanceOf(Error);
+			expect((r.error as Error).message).toBe("Submission failed");
 		}
 	});
 

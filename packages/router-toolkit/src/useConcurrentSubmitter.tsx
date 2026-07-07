@@ -20,6 +20,18 @@ import type {
 
 export type { ActionResult };
 
+function isRouteParams(obj: unknown): obj is Record<string, string> {
+	return (
+		typeof obj === "object" &&
+		obj !== null &&
+		!Array.isArray(obj) &&
+		obj instanceof FormData === false &&
+		Object.values(obj as Record<string, unknown>).every(
+			(v) => typeof v === "string",
+		)
+	);
+}
+
 type RouteParams<R extends keyof RegisterPages> = RegisterPages[R]["params"];
 
 /**
@@ -108,18 +120,6 @@ export function useConcurrentSubmitter<
 	if (!ctx) {
 		throw new Error(
 			"useConcurrentSubmitter must be used within a ConcurrentSubmitterProvider",
-		);
-	}
-
-	function isRouteParams(obj: unknown): obj is Record<string, string> {
-		return (
-			typeof obj === "object" &&
-			obj !== null &&
-			!Array.isArray(obj) &&
-			obj instanceof FormData === false &&
-			Object.values(obj as Record<string, unknown>).every(
-				(v) => typeof v === "string",
-			)
 		);
 	}
 

@@ -308,7 +308,7 @@ Both are valid; pick based on how you want loading and action feedback to show u
 
 **`useDynamicSubmitterFetcher(submitter)`**
 
-- **Pros:** Declarative `fetcher.state` / `fetcher.data` / `fetcher.error` in JSX—good for `<submitter.Form>`, inline validation or handler errors, and staying aligned with React Router’s fetcher lifecycle on `submitter.fetcherKey`.
+- **Pros:** Declarative `fetcher.state` / `fetcher.data` in JSX—good for `<submitter.Form>`, inline validation or handler errors, and staying aligned with React Router’s fetcher lifecycle on `submitter.fetcherKey`.
 - **Cons:** Second `useFetcher` subscription; UI follows RR’s state machine, not only “my handler,” unless you isolate keys with `keySuffix` when two widgets share one URL.
 
 **Rule of thumb:** Use **local pending state** when the flow is “run this async function, disable until it finishes.” Use **`useDynamicSubmitterFetcher`** when you want **reactive** fetcher fields in render without mirroring them into state.

@@ -152,10 +152,7 @@ function FetcherRunner({
 			if (fetcher.data !== undefined) {
 				onSettle(id, fetcher.data, undefined);
 			} else {
-				const err =
-					(fetcher as { error?: unknown }).error ??
-					new Error("Submission failed");
-				onSettle(id, undefined, err);
+				onSettle(id, undefined, new Error("Submission failed"));
 			}
 		}
 	}, [id, fetcher.state, fetcher.data, onSettle]);

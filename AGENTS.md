@@ -66,6 +66,10 @@ When writing or modifying TypeScript, **always use the strict typing skill**:
 
 - [.cursor/skills/strict-types-no-escape-hatches/SKILL.md](.cursor/skills/strict-types-no-escape-hatches/SKILL.md)
 
+## Red flag: `x as …`
+
+**Whenever you need `value as SomeType`, treat it as a red flag.** Do not reach for a cast to silence the compiler — read the real upstream types, align behavior with the API, and fix generics/interfaces/narrowing instead. Ad-hoc casts (e.g. `(fetcher as { error?: unknown })` for a field RR8 no longer exposes) hide bugs.
+
 ## Mandatory Restrictions
 
 - Never use `any`
@@ -73,6 +77,7 @@ When writing or modifying TypeScript, **always use the strict typing skill**:
 - Never use `as never`
 - Never use double-casts like `as unknown as T`
 - Never use `@ts-ignore` / `@ts-expect-error` to bypass type errors
+- Never use `as SomeType` to access properties the type system says are missing
 
 If typing is difficult, improve the types/interfaces/generics instead of bypassing the compiler.
 

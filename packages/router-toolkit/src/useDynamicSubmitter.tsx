@@ -416,6 +416,7 @@ export function useDynamicSubmitter<TInfo extends RouteWithActionModule>(
 	const { hrefArgs, options } = parseUseDynamicSubmitterRestArgs(rest);
 	const keySuffix = options.keySuffix;
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: hrefArgs spread tracks dynamic route params
 	const url = useMemo(() => {
 		// biome-ignore lint/suspicious/noExplicitAny: Intentional
 		return href(path, ...(hrefArgs as any));
@@ -475,8 +476,6 @@ export function useDynamicSubmitter<TInfo extends RouteWithActionModule>(
 		};
 	}, [fetcherKey]);
 
-	const fetcherError = (fetcher as { error?: unknown }).error;
-
 	useEffect(() => {
 		const prev = prevStateRef.current;
 		prevStateRef.current = fetcher.state;
@@ -490,8 +489,8 @@ export function useDynamicSubmitter<TInfo extends RouteWithActionModule>(
 			return;
 		}
 		bucket.pending = null;
-		p.finishIdle(fetcher.data, fetcherError);
-	}, [fetcherKey, fetcher.state, fetcher.data, fetcherError]);
+		p.finishIdle(fetcher.data, undefined);
+	}, [fetcherKey, fetcher.state, fetcher.data]);
 
 	const submit: SubmitFunc<TInfo> = useCallback(
 		(target, options) => {
