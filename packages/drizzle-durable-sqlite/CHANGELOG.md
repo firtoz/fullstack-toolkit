@@ -1,5 +1,16 @@
 # @firtoz/drizzle-durable-sqlite
 
+## 3.0.5
+
+### Patch Changes
+
+- [`36f1d36`](https://github.com/firtoz/fullstack-toolkit/commit/36f1d369e58fe66c3b1ebc33d069cb393a1b25f5) Thanks [@firtoz](https://github.com/firtoz)! - Align peer dependency minimums with the workspace catalog: `@tanstack/db` >=0.6.14, `@tanstack/react-db` >=0.1.92, `react` >=19.2.7, and `valibot` >=1.4.2.
+
+- Updated dependencies [[`36f1d36`](https://github.com/firtoz/fullstack-toolkit/commit/36f1d369e58fe66c3b1ebc33d069cb393a1b25f5)]:
+  - @firtoz/collection-sync@7.0.3
+  - @firtoz/db-helpers@2.2.4
+  - @firtoz/drizzle-utils@1.3.4
+
 ## 3.0.4
 
 ### Patch Changes

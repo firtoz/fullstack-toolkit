@@ -1,6 +1,6 @@
 {
 	"name": "@firtoz/drizzle-sqlite-wasm",
-	"version": "2.0.4",
+	"version": "2.0.5",
 	"description": "Drizzle SQLite WASM bindings",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",

@@ -1,5 +1,14 @@
 # @firtoz/idb-collections
 
+## 0.3.4
+
+### Patch Changes
+
+- [`36f1d36`](https://github.com/firtoz/fullstack-toolkit/commit/36f1d369e58fe66c3b1ebc33d069cb393a1b25f5) Thanks [@firtoz](https://github.com/firtoz)! - Align peer dependency minimums with the workspace catalog: `@tanstack/db` >=0.6.14, `@tanstack/react-db` >=0.1.92, `react` >=19.2.7, and `valibot` >=1.4.2.
+
+- Updated dependencies [[`36f1d36`](https://github.com/firtoz/fullstack-toolkit/commit/36f1d369e58fe66c3b1ebc33d069cb393a1b25f5)]:
+  - @firtoz/db-helpers@2.2.4
+
 ## 0.3.3
 
 ### Patch Changes
