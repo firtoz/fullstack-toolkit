@@ -222,6 +222,18 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 
 			ws1.close();
 			ws2.close();
+
+			await vi.waitFor(
+				async () => {
+					const drainResponse = await exports.default.fetch(
+						"http://example.com/schema-chat-dynamic/info",
+						{ method: "POST" },
+					);
+					const drained = await drainResponse.json<{ sessionCount: number }>();
+					expect(drained.sessionCount).toBe(0);
+				},
+				{ timeout: 1000, interval: 20 },
+			);
 		});
 
 		it("should enforce protocol based on query param", async () => {
@@ -252,17 +264,26 @@ describe("StandardSchemaWebSocketDO (dynamic transport) Integration Tests", () =
 			// Try to send JSON message when buffer format is expected
 			ws.send(JSON.stringify({ type: "message", text: "Should fail" }));
 
-			// Wait for protocol error
+			const protocolErrorText =
+				"String messages are not allowed. Please use buffer messages.";
+
+			// Wait for protocol error (prior disconnects may emit userLeft first)
 			await vi.waitFor(
 				() => {
-					expect(messages).toHaveLength(1);
+					expect(
+						messages.find(
+							(m): m is { error: string } =>
+								"error" in m && m.error === protocolErrorText,
+						),
+					).toBeDefined();
 				},
 				{ timeout: 1000, interval: 20 },
 			);
 
-			// Should receive protocol error
-			expect(messages[0]).toMatchObject({
-				error: "String messages are not allowed. Please use buffer messages.",
+			expect(
+				messages.find((m): m is { error: string } => "error" in m),
+			).toMatchObject({
+				error: protocolErrorText,
 			});
 
 			ws.close();
