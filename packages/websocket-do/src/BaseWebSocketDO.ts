@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import type { DOWithHonoApp } from "@firtoz/hono-fetcher/honoDoFetcher";
+import type { DOWithHonoApp } from "@firtoz/hono-fetcher";
 import { type Context, Hono } from "hono";
 import type {
 	BaseSession,
