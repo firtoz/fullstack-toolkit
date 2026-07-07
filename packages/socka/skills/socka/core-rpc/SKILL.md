@@ -1,5 +1,5 @@
 ---
-name: socka/core-rpc
+name: core-rpc
 description: Standard Schema socka contracts (defineSocka), v1 wire envelopes, SockaSession/SockaWebSocketClient, React useSockaSession and SockaSessionProvider, SockaError.
 ---
 

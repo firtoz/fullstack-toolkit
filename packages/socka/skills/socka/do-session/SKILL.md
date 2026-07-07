@@ -1,5 +1,5 @@
 ---
-name: socka/do-session
+name: do-session
 description: SockaDoSession and SockaWebSocketDO on Cloudflare Durable Objects—contract, handlers, wireFormat, SockaError; extends websocket-do BaseSession.
 ---
 

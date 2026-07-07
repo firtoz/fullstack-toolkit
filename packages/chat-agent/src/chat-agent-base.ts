@@ -420,7 +420,7 @@ export abstract class ChatAgentBase<
 			return true;
 		}
 		const last = this.messages[this.messages.length - 1];
-		if (!last || last.role !== "assistant") {
+		if (last?.role !== "assistant") {
 			return false;
 		}
 		if (!last.toolCalls?.length) {
@@ -924,7 +924,7 @@ export abstract class ChatAgentBase<
 			}
 		}
 		const last = this.messages[this.messages.length - 1];
-		if (!last || last.role !== "user") {
+		if (last?.role !== "user") {
 			this._broadcast({
 				type: "error",
 				message:
