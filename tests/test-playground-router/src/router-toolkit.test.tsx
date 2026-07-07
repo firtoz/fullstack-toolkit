@@ -2,6 +2,7 @@
 
 import { describe, expect, it, mock } from "bun:test";
 import type { ActionFunctionArgs } from "react-router";
+import { RouterContextProvider } from "react-router";
 import { z } from "zod";
 
 // Test imports
@@ -68,7 +69,7 @@ describe("formAction", () => {
 	): ActionFunctionArgs => ({
 		request: createMockRequest(formData),
 		params: {},
-		context: {},
+		context: new RouterContextProvider(),
 		pattern: "match",
 		url: new URL("http://localhost/"),
 	});
@@ -371,7 +372,7 @@ describe("formAction", () => {
 				},
 			} as unknown as Request,
 			params: {},
-			context: {},
+			context: new RouterContextProvider(),
 			pattern: "match",
 			url: new URL("http://localhost/"),
 		} as ActionFunctionArgs;
@@ -416,7 +417,7 @@ describe("formAction", () => {
 				},
 			} as unknown as Request,
 			params: {},
-			context: {},
+			context: new RouterContextProvider(),
 			pattern: "match",
 			url: new URL("http://localhost/"),
 		} as ActionFunctionArgs;

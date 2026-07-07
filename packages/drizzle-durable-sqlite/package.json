@@ -67,7 +67,7 @@
 		"@tanstack/db": "catalog:",
 		"drizzle-orm": "catalog:",
 		"drizzle-valibot": ">=0.4.0",
-		"valibot": ">=1.4.1"
+		"valibot": ">=1.4.2"
 	},
 	"dependencies": {
 		"@firtoz/collection-sync": "workspace:*",

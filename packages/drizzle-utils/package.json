@@ -72,10 +72,10 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"@tanstack/db": ">=0.6.7",
+		"@tanstack/db": ">=0.6.14",
 		"drizzle-orm": ">=0.45.2",
 		"drizzle-valibot": ">=0.4.0",
-		"valibot": ">=1.4.1"
+		"valibot": ">=1.4.2"
 	},
 	"devDependencies": {
 		"@tanstack/db": "catalog:",

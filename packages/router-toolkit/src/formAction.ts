@@ -1,5 +1,5 @@
 /**
- * @fileoverview Type-safe form action utility for React Router 7
+ * @fileoverview Type-safe form action utility for React Router 7/8
  *
  * This module provides a wrapper for React Router actions that handles form data and JSON
  * validation using Zod schemas and provides structured error handling with MaybeError.
@@ -106,6 +106,28 @@
  *     </submitter.Form>
  *   );
  * }
+ * ```
+ *
+ * @example
+ * ### Middleware context (React Router 8)
+ *
+ * In RR8, middleware is always enabled and `context` is a `RouterContextProvider`.
+ * Use `createContext` from `react-router` and read values with `context.get()`:
+ *
+ * ```typescript
+ * import { createContext } from "react-router";
+ * import { formAction } from "@firtoz/router-toolkit";
+ * import { success } from "@firtoz/maybe-error";
+ *
+ * const authContext = createContext<{ userId: string }>();
+ *
+ * export const action = formAction({
+ *   schema: mySchema,
+ *   handler: async ({ context }, data) => {
+ *     const auth = context.get(authContext);
+ *     return success({ ok: true, userId: auth.userId });
+ *   },
+ * });
  * ```
  *
  * @example
