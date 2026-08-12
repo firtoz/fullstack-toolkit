@@ -83,7 +83,7 @@ bun add @firtoz/worker-helper zod
 
 ## Development
 
-Uses [Bun](https://bun.sh/), [Turborepo](https://turbo.build/), and [Changesets](https://github.com/changesets/changesets) for releases.
+Uses [Bun](https://bun.sh/), [Turborepo](https://turbo.build/), and [Changesets](https://changesets.dev) v3 for releases.
 
 ```bash
 bun install

@@ -1,31 +1,32 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
-  "changelog": [
-    "@changesets/changelog-github",
-    {
-      "repo": "firtoz/router-toolkit"
-    }
-  ],
-  "commit": false,
-  "fixed": [],
-  "linked": [],
-  "access": "public",
-  "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": [
-    "chat-agent-e2e",
-    "drizzle-durable-sqlite-test",
-    "durable-sqlite-partial-sync-example",
-    "durable-sqlite-sync-example",
-    "socka-do-test",
-    "socka-server-test",
-    "test-playground-collections",
-    "test-playground-router",
-    "test-playground-shared",
-    "test-schema",
-    "tic-tac-toe-bun",
-    "tic-tac-toe-do",
-    "tic-tac-toe-hono",
-    "websocket-do-test"
-  ]
+	"$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
+	"changelog": [
+		"@changesets/changelog-github",
+		{
+			"repo": "firtoz/fullstack-toolkit"
+		}
+	],
+	"commit": false,
+	"fixed": [],
+	"linked": [],
+	"access": "public",
+	"baseBranch": "main",
+	"format": "auto",
+	"updateInternalDependencies": "patch",
+	"ignore": [
+		"chat-agent-e2e",
+		"drizzle-durable-sqlite-test",
+		"durable-sqlite-partial-sync-example",
+		"durable-sqlite-sync-example",
+		"socka-do-test",
+		"socka-server-test",
+		"test-playground-collections",
+		"test-playground-router",
+		"test-playground-shared",
+		"test-schema",
+		"tic-tac-toe-bun",
+		"tic-tac-toe-do",
+		"tic-tac-toe-hono",
+		"websocket-do-test"
+	]
 }

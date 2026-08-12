@@ -85,7 +85,7 @@ bun run --filter="@firtoz/router-toolkit" format
 
 We use [Conventional Commits](https://www.conventionalcommits.org/) for consistency. Format: `<type>[scope]: <description>`
 
-**Important:** Commit messages are for organization only. **[Changesets](https://github.com/changesets/changesets) handle all versioning and releases.**
+**Important:** Commit messages are for organization only. **[Changesets](https://changesets.dev) handle all versioning and releases.**
 
 ### Types & Scopes
 - **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
@@ -109,7 +109,7 @@ docs: update README with new examples
 
 ## Release Process
 
-Releases use [Changesets](https://github.com/changesets/changesets) with GitHub Actions automation.
+Releases use [Changesets](https://changesets.dev) v3 with GitHub Actions automation (`changesets/action@v2`).
 
 ### Workflow
 
