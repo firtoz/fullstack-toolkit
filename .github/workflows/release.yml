@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
       actions: write
-    uses: ./.github/workflows/pr-checks.yml
+    uses: $/.github/workflows/pr-checks.yml
     secrets:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
