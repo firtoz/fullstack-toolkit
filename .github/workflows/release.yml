@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
       actions: write
-    uses: ./.github/workflows/pr-checks.yml
+    uses: $/.github/workflows/pr-checks.yml
     secrets:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -40,7 +40,7 @@ jobs:
       - name: Setup Node.js 24
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24
+          node-version: "24.22.1"
           registry-url: https://registry.npmjs.org/
 
       - name: Install Bun
