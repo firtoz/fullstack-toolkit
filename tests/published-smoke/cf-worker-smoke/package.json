@@ -30,9 +30,14 @@
 		"zod-form-data": "^3.0.1"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.13.5",
+		"@cloudflare/vitest-pool-workers": "^0.18.0",
 		"typescript": "^6.0.2",
-		"vitest": "4.1.2",
+		"vitest": "4.1.12",
 		"wrangler": "^4.78.0"
+	},
+	"overrides": {
+		"miniflare>sharp": "0.35.5",
+		"miniflare>undici": "7.29.1",
+		"@modelcontextprotocol/sdk": "1.32.1"
 	}
 }
