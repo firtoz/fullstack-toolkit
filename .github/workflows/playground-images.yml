@@ -39,7 +39,7 @@ jobs:
             test "$(docker run --rm --entrypoint node "$image" --version)" = "v24.22.1"
             container="toolkit-$playground"
             docker run --detach --name "$container" --publish 127.0.0.1:3000:3000 "$image"
-            curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 1 --max-time 5 \
+            curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-connrefused --retry-delay 1 --max-time 5 \
               http://127.0.0.1:3000/ --output /tmp/playground-index.html
             grep -q '<html' /tmp/playground-index.html
             cleanup
