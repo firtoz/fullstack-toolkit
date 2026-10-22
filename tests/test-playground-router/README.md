@@ -58,23 +58,23 @@ bun run test:e2e
 
 ## Building for Production
 
-Create a production build:
+Create a production build from the repository root:
 
 ```bash
-npm run build
+bunx turbo run build --filter=test-playground-router --concurrency=1
 ```
 
 ## Deployment
 
 ### Docker Deployment
 
-To build and run using Docker:
+Run these commands from the **repository root**. The image installs the frozen Bun workspace lockfile, builds the workspace packages, and serves the app with patched Node 24.22.1:
 
 ```bash
-docker build -t my-app .
+docker build --pull -f tests/test-playground-router/Dockerfile -t test-playground-router .
 
 # Run the container
-docker run -p 3000:3000 my-app
+docker run --rm -p 3000:3000 test-playground-router
 ```
 
 The containerized application can be deployed to any platform that supports Docker, including:
@@ -88,17 +88,13 @@ The containerized application can be deployed to any platform that supports Dock
 
 ### DIY Deployment
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
+These apps depend on Bun workspace/catalog packages. A copy of this directory alone
+is not a complete deployment; use the repository-root Docker build above, or retain
+the built workspace packages and their production dependency links alongside the app.
 
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
+SQLite/OPFS routes also require `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp` from your deployment's reverse proxy.
+The development server configures those headers automatically.
 
 ## Styling
 
