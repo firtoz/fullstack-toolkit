@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/.turbo
+**/.cache
+**/.wrangler
+**/.react-router
+**/dist
+**/build
+**/playwright-report
+**/test-results
+**/.env
+**/.env.*
+**/.dev.vars
+**/.dev.vars.*
+**/.npmrc
+**/*.log
+.DS_Store

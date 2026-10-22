@@ -23,6 +23,11 @@ on:
       AI_GATEWAY_TOKEN:
         required: false
 
+# Keep reusable checks distinct from the caller's own concurrency group.
+concurrency:
+  group: toolkit-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Playwright Docker image tag must match the resolved `playwright` / `@playwright/test`
 # version in bun.lock (see catalog). Bump both together when upgrading Playwright.
 # Turbo 2 strict env mode does not forward PLAYWRIGHT_BROWSERS_PATH from the image unless
@@ -37,6 +42,34 @@ jobs:
       contents: read
       actions: write
     steps:
+      - name: Cancel obsolete checks for this pull request
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { data: current } = await github.rest.actions.getWorkflowRun({
+              ...context.repo, run_id: context.runId,
+            });
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: current.workflow_id,
+              event: "pull_request", per_page: 100,
+            });
+            for (const run of data.workflow_runs) {
+              if (run.run_number >= current.run_number ||
+                  run.head_sha === pr.head.sha ||
+                  run.status === "completed" ||
+                  !run.pull_requests.some(item => item.number === pr.number)) continue;
+              try {
+                await github.rest.actions.cancelWorkflowRun({
+                  ...context.repo, run_id: run.id,
+                });
+                core.info("Cancelled obsolete check run " + run.id);
+              } catch {
+                core.warning("Could not cancel obsolete check run " + run.id);
+              }
+            }
+
       - name: Checkout Repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -103,8 +136,6 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       # Browsers + OS deps are in the image; see https://playwright.dev/docs/ci#via-containers
       # --ipc=host: avoid Chromium OOM in Docker (https://playwright.dev/docs/docker#recommended-docker-configuration)
-      # Do not set --user: runner must be root here so we can `apt-get install unzip`
-      # (required by oven-sh/setup-bun to extract the Bun zip). Browser dirs are world-readable in the image.
       options: --ipc=host --init
     steps:
       - name: Checkout Repo
@@ -112,14 +143,22 @@ jobs:
         with:
           persist-credentials: false
 
-      # setup-bun downloads bun-linux-x64.zip and shells out to `unzip`; minimal images omit it.
-      - name: Install unzip (for setup-bun)
-        run: apt-get update && apt-get install -y unzip
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      # npm extracts its tarballs in-process; no apt/unzip setup is needed.
+      - name: Use patched project Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          bun-version-file: package.json
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Install pinned Bun without system package dependencies
+        shell: bash
+        run: |
+          BUN_VERSION="$(node -e 'const match = /^bun@(\d+\.\d+\.\d+)$/.exec(require("./package.json").packageManager); if (!match) throw Error("Expected a numeric bun@ packageManager"); process.stdout.write(match[1]);')"
+          test "$(node -p 'require("./.github/bun-bootstrap/package.json").dependencies.bun')" = "$BUN_VERSION"
+          npm ci --prefix .github/bun-bootstrap --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/.github/bun-bootstrap/node_modules/.bin" >> "$GITHUB_PATH"
+          test "$(.github/bun-bootstrap/node_modules/.bin/bun --version)" = "$BUN_VERSION"
+          test "$(.github/bun-bootstrap/node_modules/.bin/bunx --version)" = "$BUN_VERSION"
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile

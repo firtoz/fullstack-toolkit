@@ -1,0 +1,46 @@
+name: Playground Docker images
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playground-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Build and start both playgrounds sequentially
+        shell: bash
+        run: |
+          set -euo pipefail
+          container=""
+          cleanup() {
+            if [[ -n "$container" ]]; then
+              docker logs "$container" || true
+              docker rm -f "$container" >/dev/null 2>&1 || true
+              container=""
+            fi
+          }
+          trap cleanup EXIT
+          for playground in test-playground-collections test-playground-router; do
+            image="toolkit-$playground:ci"
+            docker build --pull --progress=plain --tag "$image" --file "tests/$playground/Dockerfile" .
+            test "$(docker run --rm --entrypoint node "$image" --version)" = "v24.22.1"
+            container="toolkit-$playground"
+            docker run --detach --name "$container" --publish 127.0.0.1:3000:3000 "$image"
+            curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-connrefused --retry-delay 1 --max-time 5 \
+              http://127.0.0.1:3000/ --output /tmp/playground-index.html
+            grep -q '<html' /tmp/playground-index.html
+            cleanup
+          done

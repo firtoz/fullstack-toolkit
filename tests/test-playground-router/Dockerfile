@@ -1,22 +1,31 @@
-FROM node:24.22.1-alpine AS development-dependencies-env
-COPY . /app
+# Build from the repository root: docker build -f tests/test-playground-router/Dockerfile .
+FROM node:24.22.1-bookworm-slim AS workspace
+COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
+ENV HUSKY=0 TURBO_TELEMETRY_DISABLED=1
 WORKDIR /app
-RUN npm ci
+COPY . .
 
-FROM node:24.22.1-alpine AS production-dependencies-env
-COPY ./package.json package-lock.json /app/
-WORKDIR /app
-RUN npm ci --omit=dev
+FROM workspace AS development-dependencies
+RUN bun install --frozen-lockfile
 
-FROM node:24.22.1-alpine AS build-env
-COPY . /app/
-COPY --from=development-dependencies-env /app/node_modules /app/node_modules
-WORKDIR /app
-RUN npm run build
+FROM development-dependencies AS build
+# Keep the common package-build layer reusable between both playground images.
+RUN bunx turbo run build --filter='./packages/*' --concurrency=1
+RUN bunx turbo run build --filter=test-playground-router --concurrency=1
+RUN mkdir -p /runtime \
+    && cp -a --parents tests/test-playground-router/build /runtime \
+    && find packages -mindepth 2 -maxdepth 2 -type d -name dist -exec cp -a --parents {} /runtime \;
 
-FROM node:24.22.1-alpine
-COPY ./package.json package-lock.json /app/
-COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-COPY --from=build-env /app/build /app/build
-WORKDIR /app
+FROM workspace AS production-dependencies
+RUN bun install --frozen-lockfile --production --ignore-scripts
+
+FROM node:24.22.1-bookworm-slim
+ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0
+# Preserve workspace links and any workspace-local production dependencies.
+COPY --from=production-dependencies /app /app
+COPY --from=build /runtime/ /app/
+WORKDIR /app/tests/test-playground-router
+USER node
+EXPOSE 3000
 CMD ["npm", "run", "start"]

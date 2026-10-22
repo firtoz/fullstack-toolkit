@@ -3,15 +3,31 @@
 	"ui": "tui",
 	"tasks": {
 		"build": {
-			"dependsOn": ["^build", "typegen", "db:generate", "db:generate:emoji"],
-			"outputs": ["dist/**"],
+			"dependsOn": [
+				"^build",
+				"typegen",
+				"db:generate",
+				"db:generate:emoji"
+			],
+			"outputs": [
+				"dist/**"
+			],
 			"outputLogs": "new-only"
 		},
 		"ci": {
-			"dependsOn": ["typecheck", "lint:ci", "test"]
+			"dependsOn": [
+				"typecheck",
+				"lint:ci",
+				"test"
+			]
 		},
 		"typecheck": {
-			"dependsOn": ["^build", "typegen", "db:generate", "db:generate:emoji"],
+			"dependsOn": [
+				"^build",
+				"typegen",
+				"db:generate",
+				"db:generate:emoji"
+			],
 			"outputLogs": "new-only"
 		},
 		"lint": {
@@ -24,7 +40,9 @@
 			"outputLogs": "new-only"
 		},
 		"test": {
-			"dependsOn": ["^build"],
+			"dependsOn": [
+				"^build"
+			],
 			"outputLogs": "new-only",
 			"env": [
 				"OPENROUTER_API_KEY",
@@ -32,26 +50,54 @@
 				"AI_GATEWAY_NAME",
 				"AI_GATEWAY_TOKEN"
 			],
-			"passThroughEnv": ["CI", "GITHUB_ACTIONS", "CHAT_AGENT_E2E_PORT"]
+			"passThroughEnv": [
+				"CI",
+				"GITHUB_ACTIONS",
+				"CHAT_AGENT_E2E_PORT"
+			]
 		},
 		"test:ci": {
 			"outputLogs": "new-only"
 		},
 		"typegen": {
-			"inputs": ["wrangler.jsonc", "wrangler.toml", "package.json"],
-			"outputs": ["worker-configuration.d.ts"],
+			"inputs": [
+				"wrangler.jsonc",
+				"wrangler.toml",
+				"package.json"
+			],
+			"outputs": [
+				"worker-configuration.d.ts"
+			],
 			"outputLogs": "new-only"
 		},
 		"db:generate": {
-			"dependsOn": ["^build"],
-			"inputs": ["drizzle.config.ts", "package.json", "src/**/*.ts", "app/**/*.ts"],
-			"outputs": ["drizzle/**"],
+			"dependsOn": [
+				"^build"
+			],
+			"inputs": [
+				"drizzle.config.ts",
+				"package.json",
+				"src/**/*.ts",
+				"app/**/*.ts"
+			],
+			"outputs": [
+				"drizzle/**"
+			],
 			"outputLogs": "new-only"
 		},
 		"db:generate:emoji": {
-			"dependsOn": ["^build"],
-			"inputs": ["drizzle-emoji.config.ts", "package.json", "src/**/*.ts", "app/**/*.ts"],
-			"outputs": ["drizzle-emoji/**"],
+			"dependsOn": [
+				"^build"
+			],
+			"inputs": [
+				"drizzle-emoji.config.ts",
+				"package.json",
+				"src/**/*.ts",
+				"app/**/*.ts"
+			],
+			"outputs": [
+				"drizzle-emoji/**"
+			],
 			"outputLogs": "new-only"
 		},
 		"test:watch": {
@@ -60,15 +106,23 @@
 		},
 		"test:e2e": {
 			"outputLogs": "new-only",
-			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
+			"passThroughEnv": [
+				"PLAYWRIGHT_BROWSERS_PATH"
+			]
 		},
 		"test:e2e:shard": {
 			"outputLogs": "new-only",
-			"passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
+			"passThroughEnv": [
+				"PLAYWRIGHT_BROWSERS_PATH"
+			]
 		},
 		"dev": {
 			"persistent": true,
 			"cache": false
 		}
-	}
+	},
+	"globalDependencies": [
+		"package.json",
+		".nvmrc"
+	]
 }
