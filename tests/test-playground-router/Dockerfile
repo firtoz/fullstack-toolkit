@@ -1,6 +1,6 @@
 # Build from the repository root: docker build -f tests/test-playground-router/Dockerfile .
 FROM node:24.22.1-bookworm-slim AS workspace
-COPY --from=oven/bun:1.4.3 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
 RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
 ENV HUSKY=0 TURBO_TELEMETRY_DISABLED=1
 WORKDIR /app
