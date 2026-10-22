@@ -97,6 +97,20 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
+      - name: Audit dependency security
+        run: bun audit
+
+      - name: Smoke patched Worker runtimes and MCP SDK
+        run: node scripts/dependency-smoke.mjs
+
+      - name: Check standalone published-package fixtures
+        run: |
+          for fixture in node-smoke react-router-smoke cf-worker-smoke; do
+            bun install --cwd "tests/published-smoke/$fixture" --frozen-lockfile
+            bun audit --cwd "tests/published-smoke/$fixture"
+            bun run --cwd "tests/published-smoke/$fixture" smoke
+          done
+
       - name: Run Typecheck and Lint
         run: TURBO_TELEMETRY_DISABLED=1 bun turbo run typecheck lint:ci
 

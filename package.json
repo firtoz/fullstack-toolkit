@@ -33,7 +33,7 @@
 		"msgpackr": "^2.0.4",
 		"react": "^19.2.7",
 		"react-router": "^8.1.0",
-		"vitest": "4.1.9",
+		"vitest": "4.1.12",
 		"wrangler": "^4.107.0",
 		"@tanstack/cloudflare-durable-objects-db-sqlite-persistence": "^0.2.6",
 		"@tanstack/db": "^0.6.14",
@@ -95,5 +95,12 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@openrouter/sdk": "^0.13.24",
 		"agents": "^0.17.3"
+	},
+	"overrides": {
+		"miniflare>sharp": "0.35.5",
+		"miniflare>undici": "7.29.1",
+		"@modelcontextprotocol/sdk": "1.32.1",
+		"@esbuild-kit/core-utils>esbuild": "0.25.12",
+		"tsup>esbuild": "0.28.2"
 	}
 }
