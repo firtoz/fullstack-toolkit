@@ -1,5 +1,11 @@
 # @firtoz/socka
 
+## 5.0.3
+
+### Patch Changes
+
+- [#90](https://github.com/firtoz/fullstack-toolkit/pull/90) [`d800564`](https://github.com/firtoz/fullstack-toolkit/commit/d8005645be60d833bc3446c6359240a25f330d5a) Thanks [@firtoz](https://github.com/firtoz)! - Require the patched Hono release for the optional Hono adapter peer dependency.
+
 ## 5.0.2
 
 ### Patch Changes
