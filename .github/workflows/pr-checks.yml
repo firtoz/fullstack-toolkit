@@ -136,8 +136,6 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       # Browsers + OS deps are in the image; see https://playwright.dev/docs/ci#via-containers
       # --ipc=host: avoid Chromium OOM in Docker (https://playwright.dev/docs/docker#recommended-docker-configuration)
-      # Do not set --user: runner must be root here so we can `apt-get install unzip`
-      # (required by oven-sh/setup-bun to extract the Bun zip). Browser dirs are world-readable in the image.
       options: --ipc=host --init
     steps:
       - name: Checkout Repo
@@ -156,9 +154,11 @@ jobs:
         shell: bash
         run: |
           BUN_VERSION="$(node -e 'const match = /^bun@(\d+\.\d+\.\d+)$/.exec(require("./package.json").packageManager); if (!match) throw Error("Expected a numeric bun@ packageManager"); process.stdout.write(match[1]);')"
-          npm install --global "bun@$BUN_VERSION" --no-audit --no-fund
-          test "$(bun --version)" = "$BUN_VERSION"
-          test "$(bunx --version)" = "$BUN_VERSION"
+          test "$(node -p 'require("./.github/bun-bootstrap/package.json").dependencies.bun')" = "$BUN_VERSION"
+          npm ci --prefix .github/bun-bootstrap --no-audit --no-fund
+          echo "$GITHUB_WORKSPACE/.github/bun-bootstrap/node_modules/.bin" >> "$GITHUB_PATH"
+          test "$(.github/bun-bootstrap/node_modules/.bin/bun --version)" = "$BUN_VERSION"
+          test "$(.github/bun-bootstrap/node_modules/.bin/bunx --version)" = "$BUN_VERSION"
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
