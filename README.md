@@ -118,6 +118,10 @@ docs: update README
 2. Merge to `main`
 3. CI opens a **Version Packages** PR; merging it publishes `@firtoz/*` to npm.
 
+Publishing uses npm trusted publishing (OIDC), without a long-lived npm publish token. In each package's npm **Settings → Trusted Publisher**, authorize GitHub Actions with user `firtoz`, repository `fullstack-toolkit`, workflow filename `release.yml`, environment `deploy`, and **Allow npm publish**. The release job alone has `id-token: write`; the existing checks still run before publishing.
+
+npm requires a separate connection for every package; there is no scope-wide connection. Create each connection when its next release is ready: npm requires the first successful publish within two days to validate it. Socka's connection is configured; the other packages need their own connection before their next release. See [npm's trusted publishing guide](https://docs.npmjs.com/trusted-publishers/).
+
 ---
 
 ## License
